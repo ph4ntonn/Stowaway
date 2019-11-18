@@ -22,6 +22,7 @@ type loServer struct {
 }
 
 var allowProtocol []string
+var newbee int = 0
 
 //Function definition below
 func init() {
@@ -69,8 +70,7 @@ func newClient(c *cli.Context) error {
 
 	//go proxyStream(conn, reserver.requestPort)
 
-	listenStatus := listenLocalPort(loserver.localPort, reserver.remoteAddr, reserver.requestPort, protocol, conn)
-
+	listenStatus := listenLocalPort(loserver.localPort, reserver.remoteAddr, reserver.requestPort, protocol, conn, newbee, secret)
 	if listenStatus != nil {
 		logrus.Println(listenStatus)
 		os.Exit(1)
@@ -99,7 +99,7 @@ func checkPort(port string) error {
 	return fmt.Errorf("Invalid port")
 }
 
-func listenLocalPort(port string, remote string, requestPort string, protocol string, conn net.Conn) error {
+func listenLocalPort(port string, remote string, requestPort string, protocol string, conn net.Conn, newbee int, secret string) error {
 	for _, pro := range allowProtocol {
 		if protocol == pro {
 			break
@@ -120,6 +120,10 @@ func listenLocalPort(port string, remote string, requestPort string, protocol st
 			return fmt.Errorf("Accept data failed")
 		}
 		logrus.Printf("New connection: %s", fromsth.RemoteAddr().String())
+		if newbee != 0 {
+			conn = connectReServer(remote, secret, protocol, requestPort)
+		}
+		newbee = 1
 		go handleConnection(fromsth, conn)
 		go handleConnection(conn, fromsth)
 	}

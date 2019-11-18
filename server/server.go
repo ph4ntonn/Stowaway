@@ -45,7 +45,7 @@ func startListen(listenPort string, secret string, protocol string) error {
 		if err != nil {
 			return fmt.Errorf("Cannot read data from socket")
 		}
-		fmt.Printf("New Client: %s\n", conn.RemoteAddr().String())
+		logrus.Printf("New Client: %s\n", conn.RemoteAddr().String())
 		go handleConnection(conn, secret)
 		go dial(conn)
 		go sliceStream(conn)
