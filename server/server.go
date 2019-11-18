@@ -35,7 +35,7 @@ func newServer(c *cli.Context) {
 }
 
 func startListen(listenPort string, secret string, protocol string) error {
-	localAddr := fmt.Sprintf("127.0.0.1:%s", listenPort)
+	localAddr := fmt.Sprintf("0.0.0.0:%s", listenPort)
 	localListener, err := net.Listen(protocol, localAddr)
 	if err != nil {
 		return fmt.Errorf("Cannot listen %s", localAddr)

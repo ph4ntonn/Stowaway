@@ -108,7 +108,7 @@ func listenLocalPort(port string, remote string, requestPort string, protocol st
 		}
 	}
 
-	localAddr := fmt.Sprintf("127.0.0.1:%s", port)
+	localAddr := fmt.Sprintf("0.0.0.0:%s", port)
 	localListener, err := net.Listen(protocol, localAddr)
 	if err != nil {
 		return fmt.Errorf("Listening port failed")
