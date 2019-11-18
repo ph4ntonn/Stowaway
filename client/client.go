@@ -141,8 +141,8 @@ func handleConnection(read, write net.Conn) {
 			break
 		}
 	}
-	// defer read.Close()
-	// defer write.Close()
+	defer read.Close()
+	defer write.Close()
 }
 
 func connectReServer(remoteAddr string, secret string, protocol string, requestPort string) net.Conn {
