@@ -126,7 +126,7 @@ func listenLocalPort(port string, remote string, requestPort string, protocol st
 }
 
 func handleConnection(read, write net.Conn) {
-	var buffer = make([]byte, 100000)
+	var buffer = make([]byte, 4096000)
 	for {
 		readTemp, err := read.Read(buffer)
 		if err != nil {
@@ -148,7 +148,7 @@ func connectReServer(remoteAddr string, secret string, protocol string, requestP
 		os.Exit(1)
 	}
 
-	buffer := make([]byte, 10000)
+	buffer := make([]byte, 4096000)
 	conn.Write([]byte(secret + ":::" + requestPort + ":::" + protocol))
 	for {
 		num, err := conn.Read(buffer)

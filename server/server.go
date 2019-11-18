@@ -54,7 +54,7 @@ func startListen(listenPort string, secret string, protocol string) error {
 
 func handleConnection(conn net.Conn, secret string) {
 
-	buf := make([]byte, 1000000)
+	buf := make([]byte, 4096000)
 	len, err := conn.Read(buf)
 	if err != nil {
 		logrus.Errorf("Client %s disconnected!", conn.RemoteAddr().String())
@@ -81,7 +81,7 @@ func handleConnection(conn net.Conn, secret string) {
 
 func proxyStream(read, write net.Conn) {
 
-	var buffer = make([]byte, 100000)
+	var buffer = make([]byte, 4096000)
 	for {
 		readTemp, err := read.Read(buffer)
 		if err != nil {
