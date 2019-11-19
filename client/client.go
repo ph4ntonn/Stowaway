@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/crypto/ecies"
+
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -30,7 +32,6 @@ func init() {
 }
 
 func newClient(c *cli.Context) error {
-
 	var secret = ""
 	var reserver reServer
 	var loserver loServer
@@ -68,8 +69,6 @@ func newClient(c *cli.Context) error {
 	logrus.Println("Begin to Auth......")
 	conn := connectReServer(reserver.remoteAddr, secret, protocol, reserver.requestPort)
 
-	//go proxyStream(conn, reserver.requestPort)
-
 	listenStatus := listenLocalPort(loserver.localPort, reserver.remoteAddr, reserver.requestPort, protocol, conn, newbee, secret)
 	if listenStatus != nil {
 		logrus.Println(listenStatus)
@@ -87,7 +86,6 @@ func checkAddress(ipv4 string) error {
 	}
 
 	return fmt.Errorf("Invalid ip address")
-
 }
 
 func checkPort(port string) error {
@@ -153,13 +151,20 @@ func connectReServer(remoteAddr string, secret string, protocol string, requestP
 	}
 
 	buffer := make([]byte, 4096000)
-	conn.Write([]byte(secret + ":::" + requestPort + ":::" + protocol))
+	conn.Write([]byte("Client Hello!"))
+
 	for {
 		num, err := conn.Read(buffer)
 		if err == nil {
 			if string(buffer[0:num]) == "Auth failed" {
 				logrus.Error("Auth failed, please check your password")
 				os.Exit(1)
+			} else if strings.Split(string(buffer[0:num]), ":::")[0] == "Publickey" {
+				publickey := strings.Split(string(buffer[0:num]), ":::")[1]
+				preparingPB := ToECDSAPub([]byte(publickey))
+				readyPB := ecies.ImportECDSAPublic(preparingPB)
+				authMessage, _ := ECCEncrypt([]byte(secret+":::"+requestPort+":::"+protocol), *readyPB)
+				conn.Write(authMessage)
 			} else {
 				logrus.Println("Authenication success")
 			}

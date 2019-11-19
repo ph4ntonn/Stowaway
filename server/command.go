@@ -10,7 +10,6 @@ import (
 // Command  cli settings
 var Command = &cli.Command{
 	Name: "listen",
-	// Flags: []cli.Flag{f},
 	Flags: []cli.Flag{
 		&cli.BoolFlag{
 			Name:    "debug",

@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/crypto/ecies"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -53,34 +54,45 @@ func startListen(listenPort string, secret string, protocol string) error {
 }
 
 func handleConnection(conn net.Conn, secret string) {
-
+	prk, _ := GetKey()
+	prk2 := ecies.ImportECDSA(prk)
 	buf := make([]byte, 4096000)
-	len, err := conn.Read(buf)
-	if err != nil {
-		logrus.Errorf("Client %s disconnected!", conn.RemoteAddr().String())
 
-	}
+	for num := 0; num < 2; num++ {
+		len, err := conn.Read(buf)
+		if err != nil {
+			logrus.Errorf("Client %s disconnected!", conn.RemoteAddr().String())
+		}
+		if string(buf[:len]) == "Client Hello!" {
+			logrus.Info("Client Hello received!")
+			puk2 := prk2.PublicKey
+			pubkey := Export_pub(puk2)
+			preparePB := []byte("Publickey:::" + string(pubkey))
+			conn.Write(preparePB)
+		} else {
+			authdata := buf[:len]
+			tempdata, _ := ECCDecrypt(authdata, *prk2)
+			dedata := string(tempdata)
+			clientSecret := strings.Split(dedata, ":::")[0]
+			requestPort := strings.Split(dedata, ":::")[1]
+			protocol := strings.Split(dedata, ":::")[2]
 
-	clientSecret := strings.Split(string(buf[0:len]), ":::")[0]
-	requestPort := strings.Split(string(buf[0:len]), ":::")[1]
-	protocol := strings.Split(string(buf[0:len]), ":::")[2]
-
-	if clientSecret == secret {
-		logrus.Info("Auth success")
-		conn.Write([]byte("Auth success"))
-		portChan <- requestPort
-		protocolChan <- protocol
-	} else {
-		logrus.Error("Auth Failed!")
-		conn.Write([]byte("Auth failed"))
-		conn.Close()
-
+			if clientSecret == secret {
+				logrus.Info("Auth success")
+				conn.Write([]byte("Auth success"))
+				portChan <- requestPort
+				protocolChan <- protocol
+			} else {
+				logrus.Error("Auth Failed!")
+				conn.Write([]byte("Auth failed"))
+				conn.Close()
+			}
+		}
 	}
 
 }
 
 func proxyStream(read, write net.Conn) {
-
 	var buffer = make([]byte, 4096000)
 	for {
 		readTemp, err := read.Read(buffer)
@@ -94,7 +106,6 @@ func proxyStream(read, write net.Conn) {
 	}
 	defer read.Close()
 	defer write.Close()
-
 }
 
 func dial(sock net.Conn) {
@@ -108,7 +119,6 @@ func dial(sock net.Conn) {
 		os.Exit(1)
 	}
 	localChan <- conn
-
 }
 
 func sliceStream(conn net.Conn) {
