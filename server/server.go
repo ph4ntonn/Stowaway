@@ -56,8 +56,7 @@ func startListen(listenPort string, secret string, protocol string) error {
 func handleConnection(conn net.Conn, secret string) {
 	prk, _ := GetKey()
 	prk2 := ecies.ImportECDSA(prk)
-	buf := make([]byte, 4096000)
-
+	buf := make([]byte, 409600)
 	for num := 0; num < 2; num++ {
 		len, err := conn.Read(buf)
 		if err != nil {
@@ -69,8 +68,8 @@ func handleConnection(conn net.Conn, secret string) {
 			pubkey := Export_pub(puk2)
 			preparePB := []byte("Publickey:::" + string(pubkey))
 			conn.Write(preparePB)
-		} else {
-			authdata := buf[:len]
+		} else if string(buf[0:6]) == "Legal:" {
+			authdata := buf[6:len]
 			tempdata, _ := ECCDecrypt(authdata, *prk2)
 			dedata := string(tempdata)
 			clientSecret := strings.Split(dedata, ":::")[0]
@@ -85,15 +84,24 @@ func handleConnection(conn net.Conn, secret string) {
 			} else {
 				logrus.Error("Auth Failed!")
 				conn.Write([]byte("Auth failed"))
+				portChan <- ""
+				protocolChan <- ""
 				conn.Close()
+				break
 			}
+		} else {
+			logrus.Error("Illegal connection")
+			portChan <- ""
+			protocolChan <- ""
+			conn.Close()
+			break
 		}
 	}
 
 }
 
 func proxyStream(read, write net.Conn) {
-	var buffer = make([]byte, 4096000)
+	var buffer = make([]byte, 409600)
 	for {
 		readTemp, err := read.Read(buffer)
 		if err != nil {
@@ -111,19 +119,23 @@ func proxyStream(read, write net.Conn) {
 func dial(sock net.Conn) {
 	requestPort := <-portChan
 	requestProtocol := <-protocolChan
-
-	remoteAddr := fmt.Sprintf("127.0.0.1:%s", requestPort)
-	conn, err := net.Dial(requestProtocol, remoteAddr)
-	if err != nil {
-		logrus.Error("Cannot dial to localport")
-		os.Exit(1)
+	if requestPort != "" && requestProtocol != "" {
+		remoteAddr := fmt.Sprintf("127.0.0.1:%s", requestPort)
+		conn, err := net.Dial(requestProtocol, remoteAddr)
+		if err != nil {
+			logrus.Error("Cannot dial to localport")
+			os.Exit(1)
+		}
+		localChan <- conn
+	} else {
+		localChan <- nil
 	}
-	localChan <- conn
+
 }
 
 func sliceStream(conn net.Conn) {
 	write, ok := <-localChan
-	if ok {
+	if ok && write != nil {
 		go proxyStream(conn, write)
 		go proxyStream(write, conn)
 	}

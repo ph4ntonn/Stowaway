@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"fmt"
 	"net"
 	"os"
@@ -128,7 +129,7 @@ func listenLocalPort(port string, remote string, requestPort string, protocol st
 }
 
 func handleConnection(read, write net.Conn) {
-	var buffer = make([]byte, 4096000)
+	var buffer = make([]byte, 409600)
 	for {
 		readTemp, err := read.Read(buffer)
 		if err != nil {
@@ -150,7 +151,7 @@ func connectReServer(remoteAddr string, secret string, protocol string, requestP
 		os.Exit(1)
 	}
 
-	buffer := make([]byte, 4096000)
+	buffer := make([]byte, 409600)
 	conn.Write([]byte("Client Hello!"))
 
 	for {
@@ -158,18 +159,22 @@ func connectReServer(remoteAddr string, secret string, protocol string, requestP
 		if err == nil {
 			if string(buffer[0:num]) == "Auth failed" {
 				logrus.Error("Auth failed, please check your password")
+				conn.Close()
 				os.Exit(1)
 			} else if strings.Split(string(buffer[0:num]), ":::")[0] == "Publickey" {
 				publickey := strings.Split(string(buffer[0:num]), ":::")[1]
 				preparingPB := ToECDSAPub([]byte(publickey))
 				readyPB := ecies.ImportECDSAPublic(preparingPB)
-				authMessage, _ := ECCEncrypt([]byte(secret+":::"+requestPort+":::"+protocol), *readyPB)
+				tempMessage, _ := ECCEncrypt([]byte(secret+":::"+requestPort+":::"+protocol), *readyPB)
+				combineMessage := [][]byte{[]byte("Legal:"), tempMessage}
+				authMessage := bytes.Join(combineMessage, []byte{})
 				conn.Write(authMessage)
 			} else {
 				logrus.Println("Authenication success")
 			}
 		} else {
 			logrus.Error("Auth Failed, socket closed by peer")
+			conn.Close()
 			os.Exit(1)
 		}
 		if num > 0 && string(buffer[0:num]) == "Auth success" {
