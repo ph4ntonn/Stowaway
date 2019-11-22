@@ -30,12 +30,27 @@ func newServer(c *cli.Context) {
 	listenPort := c.String("port")
 	secret := c.String("secret")
 	heartbeat := c.Bool("heartbeat")
+	replay := c.Bool("replay")
+	duration := c.Int("duration")
+
+	if replay {
+		if duration == 0 {
+			logrus.Error("Option --replay must be used with option --duration (?)seconds, and value of duration should not be 0")
+			os.Exit(1)
+		}
+	}
+	if duration != 0 {
+		if replay == false {
+			logrus.Error("Option --duration (?)seconds must be used with option --replay")
+			os.Exit(1)
+		}
+	}
 
 	if heartbeat {
 		go startheartbeat(listenPort, protocol)
 	}
 
-	listenStatus := startListen(listenPort, secret, protocol)
+	listenStatus := startListen(listenPort, secret, protocol, replay, duration)
 
 	if listenStatus != nil {
 		logrus.Print(listenStatus)
@@ -43,7 +58,7 @@ func newServer(c *cli.Context) {
 	}
 }
 
-func startListen(listenPort string, secret string, protocol string) error {
+func startListen(listenPort string, secret string, protocol string, replay bool, duration int) error {
 	localAddr := fmt.Sprintf("0.0.0.0:%s", listenPort)
 	localListener, err := net.Listen(protocol, localAddr)
 	if err != nil {
@@ -55,13 +70,13 @@ func startListen(listenPort string, secret string, protocol string) error {
 			return fmt.Errorf("Cannot read data from socket")
 		}
 		logrus.Printf("New Client: %s\n", conn.RemoteAddr().String())
-		go handleConnection(conn, secret)
+		go handleConnection(conn, secret, replay, duration)
 		go dial(conn)
 		go sliceStream(conn)
 	}
 }
 
-func handleConnection(conn net.Conn, secret string) {
+func handleConnection(conn net.Conn, secret string, replay bool, duration int) {
 	prk, _ := GetKey()
 	prk2 := ecies.ImportECDSA(prk)
 	buf := make([]byte, 409600)
@@ -83,8 +98,13 @@ func handleConnection(conn net.Conn, secret string) {
 			clientSecret := strings.Split(dedata, ":::")[0]
 			requestPort := strings.Split(dedata, ":::")[1]
 			protocol := strings.Split(dedata, ":::")[2]
+			Time := strings.Split(dedata, ":::")[3]
+			clientTime, _ := strconv.ParseInt(Time, 10, 64)
+			serverTime := time.Now().UnixNano() / 1e6
+			tempdiff := serverTime - clientTime
+			diff, _ := strconv.Atoi(strconv.FormatInt(tempdiff, 10))
 
-			if clientSecret == secret {
+			if (clientSecret == secret && replay == false) || (clientSecret == secret && diff <= duration*1000 && replay == true) {
 				logrus.Info("Auth success")
 				conn.Write([]byte("Auth success"))
 				portChan <- requestPort

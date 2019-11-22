@@ -31,6 +31,17 @@ var Command = &cli.Command{
 			Aliases: []string{"Heartbeat"},
 			Usage:   "turn on heartbeat function",
 		},
+		&cli.BoolFlag{
+			Name:    "replay",
+			Aliases: []string{"Rp"},
+			Usage:   "turn on anti replay",
+		},
+		&cli.IntFlag{
+			Name:    "duration",
+			Value:   0,
+			Aliases: []string{"Replay duration"},
+			Usage:   "set secure time duration",
+		},
 		&cli.StringFlag{
 			Name:    "port",
 			Aliases: []string{"p"},

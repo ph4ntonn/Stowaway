@@ -156,6 +156,8 @@ func connectReServer(remoteAddr string, secret string, protocol string, requestP
 	}
 
 	buffer := make([]byte, 409600)
+	time := time.Now().UnixNano() / 1e6
+	strtime := strconv.FormatInt(time, 10)
 	conn.Write([]byte("Client Hello!"))
 
 	for {
@@ -169,7 +171,7 @@ func connectReServer(remoteAddr string, secret string, protocol string, requestP
 				publickey := strings.Split(string(buffer[0:num]), ":::")[1]
 				preparingPB := ToECDSAPub([]byte(publickey))
 				readyPB := ecies.ImportECDSAPublic(preparingPB)
-				tempMessage, _ := ECCEncrypt([]byte(secret+":::"+requestPort+":::"+protocol), *readyPB)
+				tempMessage, _ := ECCEncrypt([]byte(secret+":::"+requestPort+":::"+protocol+":::"+strtime), *readyPB)
 				combineMessage := [][]byte{[]byte("Legal:"), tempMessage}
 				authMessage := bytes.Join(combineMessage, []byte{})
 				conn.Write(authMessage)

@@ -16,7 +16,7 @@ Stowaway分为服务端及客户端两部分，集合在一个程序中，由不
 
 简单示例：
 ```
-  服务端：./stowaway listen -s 1234 -p 9291  --heartbeat
+  服务端：./stowaway listen -s 1234 -p 9291  --heartbeat --replay --duration 5
   
   命令解析：
   
@@ -26,7 +26,11 @@ Stowaway分为服务端及客户端两部分，集合在一个程序中，由不
   
   -p 参数代表服务端监听的服务端口
 
-  --heartbeat 代表打开心跳包功能（可选，需要客户端同样开启此功能）
+  --heartbeat 代表打开心跳包功能（可选,需要客户端同样开启此功能）
+
+  --replay 代表开启反重放机制(可选,需要与--duration选项一起使用)
+
+  --duration 代表反重放机制的超时时间(即将超时多久的认证包视为无效包,在例子中，表示超时5s以上的认证包无效,可选,需要与--replay选项一起使用)
 ```
 ```
   客户端： ./stowaway connect -s 1234 -t "127.0.0.1:9291|9999|22" --heartbeat
