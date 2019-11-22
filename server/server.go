@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"strconv"
@@ -108,16 +109,10 @@ func handleConnection(conn net.Conn, secret string) {
 }
 
 func proxyStream(read, write net.Conn) {
-	var buffer = make([]byte, 409600)
-	for {
-		readTemp, err := read.Read(buffer)
-		if err != nil {
-			break
-		}
-		readTemp, err = write.Write(buffer[:readTemp])
-		if err != nil {
-			break
-		}
+	_, err := io.Copy(write, read)
+	if err != nil {
+		logrus.Errorf("Fatal error:%s", err)
+		return
 	}
 	defer read.Close()
 	defer write.Close()
@@ -157,22 +152,37 @@ func startheartbeat(listenPort string, protocol string) {
 		return
 	}
 	for {
+		buffer := make([]byte, 1024)
 		conn, err := localListener.Accept()
 		if err != nil {
 			logrus.Errorf("Warning: %s \n Turning off hearbeat function...", err)
 		}
-		logrus.Printf("Heartbeat function start")
-		go heartbeat(conn)
+		len, readerr := conn.Read(buffer)
+		if readerr != nil {
+			logrus.Errorf("Warning: %s \n Turning off hearbeat function...", err)
+		}
+		if string(buffer[:len]) == "Ping" {
+			logrus.Printf("Heartbeat function start")
+			go heartbeat(conn)
+		} else {
+			logrus.Error("Illegal connection")
+			conn.Close()
+		}
 	}
 }
 
 func heartbeat(conn net.Conn) {
 	hearBeat := []byte("Alive")
+	times := 0
 	for {
 		time.Sleep(time.Duration(2) * time.Second)
 		_, err := conn.Write(hearBeat)
-		if err != nil {
+		if err != nil && times < 5 {
 			logrus.Errorf("Cannot send heartbeat!Client %s seems down", conn.RemoteAddr().String())
+			times++
+		} else if times >= 5 {
+			logrus.Errorf("Client %s down.Connectin has been closed.", conn.RemoteAddr().String())
+			return
 		}
 	}
 }

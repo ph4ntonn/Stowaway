@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"strconv"
@@ -28,6 +29,7 @@ type loServer struct {
 var allowProtocol []string
 var newbee int = 0
 var heartbeatChan = make(chan bool)
+var serverstatusChan = make(chan bool)
 
 //Function definition below
 func init() {
@@ -57,7 +59,7 @@ func newClient(c *cli.Context) error {
 	remotePortStatus := checkPort(reserver.requestPort)
 
 	if heartbeat {
-		heartbeatTimer := time.NewTimer(time.Second * 10)
+		heartbeatTimer := time.NewTimer(time.Second * 7)
 		go startheartbeat(reserver.remoteAddr, protocol, heartbeatTimer)
 		go listenheartbeat(heartbeatTimer)
 	}
@@ -137,16 +139,10 @@ func listenLocalPort(port string, remote string, requestPort string, protocol st
 }
 
 func handleConnection(read, write net.Conn) {
-	var buffer = make([]byte, 409600)
-	for {
-		readTemp, err := read.Read(buffer)
-		if err != nil {
-			break
-		}
-		readTemp, err = write.Write(buffer[:readTemp])
-		if err != nil {
-			break
-		}
+	_, err := io.Copy(write, read)
+	if err != nil {
+		logrus.Errorf("Fatal error:%s", err)
+		return
 	}
 	defer read.Close()
 	defer write.Close()
@@ -200,22 +196,25 @@ func startheartbeat(remote string, protocol string, heartbeatTimer *time.Timer) 
 	heartbeatport++
 	remoteheartbeat := addr + ":" + strconv.Itoa(heartbeatport)
 	conn, err := net.Dial(protocol, remoteheartbeat)
-	defer conn.Close()
 	if err != nil {
-		logrus.Errorf("Cannot connect the reserver's port %s\n Turning off heartbeat function", strconv.Itoa(heartbeatport))
+		logrus.Errorf("Cannot connect the reserver's port %s", strconv.Itoa(heartbeatport))
+		logrus.Error("Turning off heartbeat function......")
 		heartbeatChan <- false
 		return
 	} else {
 		heartbeatChan <- true
+		conn.Write([]byte("Ping"))
 	}
 	for {
 		len, err := conn.Read(buffer)
 		if err != nil {
-			logrus.Errorf("Server seems down")
+			logrus.Errorf("Server seems down, Waiting for heartbeat......")
+			<-serverstatusChan
+			conn.Close()
 			break
 		}
 		if string(buffer[:len]) == "Alive" {
-			heartbeatTimer.Reset(time.Second * 10)
+			heartbeatTimer.Reset(time.Second * 7)
 		}
 	}
 }
@@ -226,8 +225,12 @@ func listenheartbeat(heartbeatTimer *time.Timer) {
 		return
 	}
 	<-heartbeatTimer.C
-	for {
-		time.Sleep(time.Duration(2) * time.Second)
+	for loop := 0; loop < 5; loop++ {
 		logrus.Error("Server seems down! Please check the server if it's still up ")
+		time.Sleep(time.Duration(2) * time.Second)
 	}
+	logrus.Error("Server down! Please reconnect!")
+	logrus.Error("Client Exiting......")
+	serverstatusChan <- true
+	os.Exit(1)
 }
