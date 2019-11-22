@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/crypto/ecies"
 	"github.com/sirupsen/logrus"
@@ -26,6 +28,11 @@ func newServer(c *cli.Context) {
 	protocol := c.String("protocol")
 	listenPort := c.String("port")
 	secret := c.String("secret")
+	heartbeat := c.Bool("heartbeat")
+
+	if heartbeat {
+		go startheartbeat(listenPort, protocol)
+	}
 
 	listenStatus := startListen(listenPort, secret, protocol)
 
@@ -60,7 +67,7 @@ func handleConnection(conn net.Conn, secret string) {
 	for num := 0; num < 2; num++ {
 		len, err := conn.Read(buf)
 		if err != nil {
-			logrus.Errorf("Client %s disconnected!", conn.RemoteAddr().String())
+			logrus.Errorf("Warning:%s", err)
 		}
 		if string(buf[:len]) == "Client Hello!" {
 			logrus.Info("Client Hello received!")
@@ -138,5 +145,34 @@ func sliceStream(conn net.Conn) {
 	if ok && write != nil {
 		go proxyStream(conn, write)
 		go proxyStream(write, conn)
+	}
+}
+
+func startheartbeat(listenPort string, protocol string) {
+	port, _ := strconv.Atoi(listenPort)
+	localAddr := fmt.Sprintf("0.0.0.0:%s", strconv.Itoa(port+1))
+	localListener, err := net.Listen(protocol, localAddr)
+	if err != nil {
+		logrus.Errorf("Cannot start heartbeat on port %s, turning off hearbeat function...", strconv.Itoa(port+1))
+		return
+	}
+	for {
+		conn, err := localListener.Accept()
+		if err != nil {
+			logrus.Errorf("Warning: %s \n Turning off hearbeat function...", err)
+		}
+		logrus.Printf("Heartbeat function start")
+		go heartbeat(conn)
+	}
+}
+
+func heartbeat(conn net.Conn) {
+	hearBeat := []byte("Alive")
+	for {
+		time.Sleep(time.Duration(2) * time.Second)
+		_, err := conn.Write(hearBeat)
+		if err != nil {
+			logrus.Errorf("Cannot send heartbeat!Client %s seems down", conn.RemoteAddr().String())
+		}
 	}
 }

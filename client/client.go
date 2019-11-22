@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/crypto/ecies"
 
@@ -26,6 +27,7 @@ type loServer struct {
 
 var allowProtocol []string
 var newbee int = 0
+var heartbeatChan = make(chan bool)
 
 //Function definition below
 func init() {
@@ -39,10 +41,10 @@ func newClient(c *cli.Context) error {
 
 	protocol := c.String("protocol")
 	tunnel := c.StringSlice("tunnel")
+	heartbeat := c.Bool("heartbeat")
 	if c.String("secret") != "" {
 		secret = c.String("secret")
 	}
-
 	for _, remote := range tunnel {
 		args := strings.Split(remote, "|")
 		reserver.remoteAddr = args[0]
@@ -53,6 +55,12 @@ func newClient(c *cli.Context) error {
 	addrStatus := checkAddress(reserver.remoteAddr)
 	portStatus := checkPort(loserver.localPort)
 	remotePortStatus := checkPort(reserver.requestPort)
+
+	if heartbeat {
+		heartbeatTimer := time.NewTimer(time.Second * 10)
+		go startheartbeat(reserver.remoteAddr, protocol, heartbeatTimer)
+		go listenheartbeat(heartbeatTimer)
+	}
 
 	if addrStatus != nil || portStatus != nil || remotePortStatus != nil {
 		if addrStatus != nil {
@@ -181,5 +189,45 @@ func connectReServer(remoteAddr string, secret string, protocol string, requestP
 			logrus.Println("Ready to proxy.....")
 			return conn
 		}
+	}
+}
+
+func startheartbeat(remote string, protocol string, heartbeatTimer *time.Timer) {
+	buffer := make([]byte, 1024)
+	addr := strings.Split(remote, ":")[0]
+	port := strings.Split(remote, ":")[1]
+	heartbeatport, _ := strconv.Atoi(port)
+	heartbeatport++
+	remoteheartbeat := addr + ":" + strconv.Itoa(heartbeatport)
+	conn, err := net.Dial(protocol, remoteheartbeat)
+	defer conn.Close()
+	if err != nil {
+		logrus.Errorf("Cannot connect the reserver's port %s\n Turning off heartbeat function", strconv.Itoa(heartbeatport))
+		heartbeatChan <- false
+		return
+	} else {
+		heartbeatChan <- true
+	}
+	for {
+		len, err := conn.Read(buffer)
+		if err != nil {
+			logrus.Errorf("Server seems down")
+			break
+		}
+		if string(buffer[:len]) == "Alive" {
+			heartbeatTimer.Reset(time.Second * 10)
+		}
+	}
+}
+
+func listenheartbeat(heartbeatTimer *time.Timer) {
+	startornot := <-heartbeatChan
+	if startornot == false {
+		return
+	}
+	<-heartbeatTimer.C
+	for {
+		time.Sleep(time.Duration(2) * time.Second)
+		logrus.Error("Server seems down! Please check the server if it's still up ")
 	}
 }

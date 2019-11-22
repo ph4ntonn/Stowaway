@@ -27,6 +27,11 @@ var Command = &cli.Command{
 			Value:   "tcp",
 			Usage:   "comm protocol",
 		},
+		&cli.BoolFlag{
+			Name:    "heartbeat",
+			Aliases: []string{"Heartbeat"},
+			Usage:   "turn on heartbeat function",
+		},
 		&cli.StringSliceFlag{
 			Name:    "tunnel",
 			Aliases: []string{"t"},

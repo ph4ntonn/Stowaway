@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"stowaway/client"
-	"stowaway/server"
+	"temp/Stowaway/client"
+	"temp/Stowaway/server"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
