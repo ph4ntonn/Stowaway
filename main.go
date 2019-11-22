@@ -1,11 +1,11 @@
 package main
 
 import (
+	"Stowaway/client"
+	"Stowaway/server"
 	"fmt"
 	"os"
 	"os/signal"
-	"temp/Stowaway/client"
-	"temp/Stowaway/server"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
