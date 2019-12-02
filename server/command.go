@@ -1,8 +1,6 @@
 package server
 
 import (
-	"fmt"
-
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -52,10 +50,12 @@ var Command = &cli.Command{
 		if c.Bool("debug") {
 			log.SetLevel(log.DebugLevel)
 		}
-		newServer(c)
 		if c.String("secret") != "" {
-			fmt.Printf("Start listening with secret %s on port %s\n", c.String("secret"), c.String("port"))
+			log.Infof("Start listening with secret %s on port %s\n", c.String("secret"), c.String("port"))
+		} else {
+			log.Infof("Start listening on port %s\n", c.String("port"))
 		}
+		newServer(c)
 		return nil
 	},
 }

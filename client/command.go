@@ -1,8 +1,6 @@
 package client
 
 import (
-	"fmt"
-
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -42,10 +40,12 @@ var Command = &cli.Command{
 		if c.Bool("debug") {
 			log.SetLevel(log.DebugLevel)
 		}
-		newClient(c)
 		if c.String("secret") != "" {
-			fmt.Printf("Start connection with secret : %s\n", c.String("secret"))
+			log.Infof("Start connection with secret : %s\n", c.String("secret"))
+		} else {
+			log.Infof("Connection started!")
 		}
+		newClient(c)
 		return nil
 	},
 }

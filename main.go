@@ -3,6 +3,7 @@ package main
 import (
 	"Stowaway/client"
 	"Stowaway/server"
+	"Stowaway/socks5"
 	"fmt"
 	"os"
 	"os/signal"
@@ -37,6 +38,7 @@ func main() {
 	app.Commands = []*cli.Command{
 		client.Command,
 		server.Command,
+		socks5.Command,
 	}
 	err := app.Run(os.Args)
 	if err != nil {
