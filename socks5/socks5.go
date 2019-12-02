@@ -87,6 +87,9 @@ func authClient(conn net.Conn, username string, secret string) {
 				logrus.Error("Illegal client!")
 				return
 			}
+		} else {
+			logrus.Error("Not socks5 message!")
+			return
 		}
 	}
 }
