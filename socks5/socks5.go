@@ -84,6 +84,7 @@ func authClient(conn net.Conn, username string, secret string) {
 				go proxyhttp(conn)
 				return
 			} else {
+				conn.Close()
 				logrus.Error("Illegal client!")
 				return
 			}
