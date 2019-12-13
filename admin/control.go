@@ -40,3 +40,22 @@ func Banner() {
 			{ v0.1  Author:ph4ntom }
 `)
 }
+
+func ShowMainHelp() {
+	fmt.Println(`
+	help                                     Show Help information.
+	exit                                     Exit.
+	chain                                    Display connected node information
+	use        [id]                          Select the target node you want to use.
+  `)
+}
+
+func ShowNodeHelp() {
+	fmt.Println(`
+	help                                     Show Help information.
+	exit                                     Exit.
+	ssh        [ip:port] [username] [pass]   Start SSH through selected node.
+	shell                                    Start an interactive shell on selected node.
+	socks      [lport]                       Start a socks5 server.
+  `)
+}

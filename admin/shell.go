@@ -106,6 +106,10 @@ func HandleNodeCommand(startNodeControlConn net.Conn, NodeID string) {
 		case "ssh":
 			go StartSSHService(startNodeControlConn, AdminCommand, nodeID)
 			HandleSSHToNode(startNodeControlConn, nodeID)
+		case "help":
+			ShowNodeHelp()
+			ReadyChange <- true
+			IsShellMode <- true
 		case "":
 			ReadyChange <- true
 			IsShellMode <- true

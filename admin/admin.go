@@ -157,6 +157,10 @@ func HandleCommandToControlConn(startNodeControlConn net.Conn) {
 			ShowChain()
 			ReadyChange <- true
 			IsShellMode <- true
+		case "help":
+			ShowMainHelp()
+			ReadyChange <- true
+			IsShellMode <- true
 		case "":
 			ReadyChange <- true
 			IsShellMode <- true
@@ -247,5 +251,4 @@ func StartSSHService(startNodeControlConn net.Conn, info []string, nodeid uint32
 	information := fmt.Sprintf("%s::%s::%s", info[1], info[2], info[3])
 	sshCommand, _ := common.ConstructCommand("SSH", information, nodeid)
 	startNodeControlConn.Write(sshCommand)
-
 }

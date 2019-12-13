@@ -102,6 +102,7 @@ func HandleDataConnToAdmin(dataConnToAdmin net.Conn, NODEID uint32) {
 	}
 }
 
+//暂时不需要
 func HandleDataConnFromAdmin(dataConnToAdmin net.Conn, NODEID uint32) {
 	// for {
 	// 	AdminData, err := common.ExtractDataResult(dataConnToAdmin)
@@ -306,6 +307,7 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 	}
 }
 
+//暂时不需要
 func HandleUpperNodeDataConn(dataConnToUpperNode net.Conn) {
 
 }
