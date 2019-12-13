@@ -1,0 +1,5 @@
+package common
+
+func GetIP() {
+
+}
