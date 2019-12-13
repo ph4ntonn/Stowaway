@@ -2,6 +2,7 @@ package admin
 
 import (
 	"Stowaway/common"
+	"fmt"
 	"net"
 	"os"
 	"os/signal"
@@ -24,4 +25,18 @@ func MonitorCtrlC(startNodeControlConn net.Conn) {
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	<-signalChan
 	SendOffLineToStartNode(startNodeControlConn)
+}
+
+func Banner() {
+	fmt.Print(`
+▄▀▀▀▀▄  ▄▀▀▀█▀▀▄  ▄▀▀▀▀▄   ▄▀▀▄    ▄▀▀▄  ▄▀▀█▄   ▄▀▀▄    ▄▀▀▄  ▄▀▀█▄   ▄▀▀▄ ▀▀▄ 
+█ █   ▐ █    █  ▐ █      █ █   █    ▐  █ ▐ ▄▀ ▀▄ █   █    ▐  █ ▐ ▄▀ ▀▄ █   ▀▄ ▄▀ 
+   ▀▄   ▐   █     █      █ ▐  █        █   █▄▄▄█ ▐  █        █   █▄▄▄█ ▐     █   
+▀▄   █     █      ▀▄    ▄▀   █   ▄    █   ▄▀   █   █   ▄    █   ▄▀   █       █   
+ █▀▀▀    ▄▀         ▀▀▀▀      ▀▄▀ ▀▄ ▄▀  █   ▄▀     ▀▄▀ ▀▄ ▄▀  █   ▄▀      ▄▀    
+ ▐      █                           ▀    ▐   ▐            ▀    ▐   ▐       █     
+		▐                                                                  ▐    
+
+			{ v0.1  Author:ph4ntom }
+`)
 }

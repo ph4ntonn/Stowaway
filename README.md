@@ -1,100 +1,116 @@
 # Stowaway
 
-Stowaway是一个利用go语言编写的简单的ssh转发工具
+Stowaway是一个利用go语言编写的多级代理工具
 
-此程序旨在使用户可以在不安全的网络中安全地访问位于安全网络中的另一主机所提供的受限制的ssh服务
+用户可使用此程序将外部流量通过多个节点代理至内网，并实现管理功能
 
-认证过程采用ecc加密
+PS:demo文件夹下为其雏形demo，亦可使用，详见demo文件下的readme文件
 
-PS:也可用作SOCKS5服务端程序
+> 此工具仅限于安全研究和教学，用户承担因使用此工具而导致的所有法律和相关责任！ 作者不承担任何法律和相关责任！
 
-# Usage
+## 特性
 
-当你将Stowaway作为ssh转发工具时，其分为服务端及客户端两部分，集合在一个程序中，由不同的参数控制
+- 一目了然的节点管理
+- 多级socks5流量代理转发
+- ssh隧道
+- 远程交互式shell
+
+## Usage
+
+Stowaway分为admin端和agent端两种形式，集成在一个程序中以不同参数控制
+
 
 不想编译的盆油可以直接用release下编译完成的程序
 
 简单示例：
 ```
-  服务端：./stowaway listen -s 1234 -p 9291  --heartbeat --replay --duration 5
+  Admin端：./stowaway admin -l 9999
   
   命令解析：
   
-  listen代表以服务端模式启动
+  admin代表以admin模式启动
   
-  -s 参数代表本次通讯所使用的认证密钥
+  -l 参数代表监听端口
   
-  -p 参数代表服务端监听的服务端口
-
-  --heartbeat 代表打开心跳包功能（可选,需要客户端同样开启此功能）
-
-  --replay 代表开启反重放机制(可选,需要与--duration选项一起使用)
-
-  --duration 代表反重放机制的超时时间(即将超时多久的认证包视为无效包,在例子中，表示超时5s以上的认证包无效,可选,需要与--replay选项一起使用)
+ 
 ```
 ```
-  客户端： ./stowaway connect -s 1234 -t "127.0.0.1:9291|9999|22" --heartbeat
+  agent端： ./stowaway agent -m 127.0.0.1:9999 -l 10000 --startnode
   
   命令解析：
   
-  connect代表以客户端模式启动
+  agent代表以agent端模式启动
   
-  -s 如上
+  -m 代表上一级节点的地址
   
-  -t 代表本次通讯所使用的隧道参数，格式为：
+  -l 代表监听端口
+
+  --startnode 代表此节点是agent端的第一个节点（若无--startnode表示为普通节点，命令与startnode一致）
   
-  远程主机ip:服务端口|本地欲转发的端口|远程服务器接受转发的端口
-  
-  简单来说，上面的命令可解释为：
-  
-  利用secret 1234 与位于127.0.0.1:9291上的服务端程序进行认证，请求将本地的9999端口转发至服务端程序所在主机的22号端口
-
- --heartbeat 代表打开心跳包功能（可选，需要服务端同样开启此功能） 
 ```
 
-当你将Stowaway作为socks5服务程序使用时,示例如下：
+## Example
+
+一个简单的例子(以一个admin端三个agent端为例）：
+
+Admin端：
+
+![admin](https://github.com/ph4ntonn/Stowaway/blob/master/img/admin.png)
+
+Startnode端：
+
+![startnode](https://github.com/ph4ntonn/Stowaway/blob/master/img/startnode.png)
+
+第一个普通Node：
+
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/node1.png)
+
+
+第二个普通Node：
+
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/node2.png)
+
+连入完成后，admin端查看节点：
+
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/chain.png)
+
+此时在admin端操控第二个普通node节点：
+
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/manipulate.png)
+
+打开远程shell：
+
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/shell.png)
+
+此时就可以在admin端操纵第二个普通节点的shell
+
+打开socks5代理：
+
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/socks5.png)
+
+此时用户即可以将admin端的7777端口作为socks5代理端口，将流量代理至第二个普通node节点
+
+打开ssh：
+
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/ssh.png)
+
+此时就可以在admin端将ssh流量代理至第二个普通节点
+
 ```
-SOCKS5:  ./stowaway socks5 -u 123 -s 321 -p 43690
-
-命令解析：
-
-socks5代表以socks5服务端模式启动
-
--u 代表认证所用的用户名(可选)
-
--s 代表认证所用的密码(可选)
-
-（当-u和-s选项都不指定时，即代表无需认证）
-
--p 代表sock5服务器监听的端口
+具体命令使用可输入help查询
 ```
-#  Example
+## TODO
 
-一个简单的例子：
+- [ ] 节点间通信流量加密
+- [ ] 关闭代理与端口转发
+- [ ] 重连功能
+- [ ] 清理代码，优化逻辑
 
-服务端：
+### 注意事项
 
-![server](https://github.com/ph4ntonn/Stowaway/blob/master/img/server.png)
-
-客户端：
-
-![client](https://github.com/ph4ntonn/Stowaway/blob/master/img/client.png)
-
-连接：
-
-![connect](https://github.com/ph4ntonn/Stowaway/blob/master/img/connect.png)
-
-```
-此时连接127.0.0.1的9999端口即相当于访问了22号端口
-```
-# TODO
-```
-优化转发http流的功能
-
-优化代码
-
-and more more ........
-```
-```
-(这个程序只是写着玩的hh，小声bb
-```
+- 此程序仅是闲暇时开发，结构及代码结构不够严谨，功能可能存在bug，请多多谅解
+- 当admin端掉线，所有后续连接的agent端都会退出
+- 当多个agent端中有一个掉线，后续的agent端都会掉线
+- 在admin启动后，必须有节点连入才可操作
+- 需要自己编译的童鞋可在根目录利用：```go build -ldflags="-w -s"```自行编译以适配多种平台
+- 暂时不支持windows

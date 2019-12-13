@@ -30,6 +30,7 @@ func NewAdmin(c *cli.Context) error {
 	listenPort := c.String("listen")
 	//ccPort := c.String("control")
 	// go StartListen(listenPort)
+	Banner()
 	go StartListen(listenPort)
 	go AddToChain()
 	CliStatus = &InitStatus
