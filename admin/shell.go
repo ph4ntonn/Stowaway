@@ -62,8 +62,13 @@ func HandleSSHToNode(startNodeControlConn net.Conn, nodeID uint32) {
 		case "\n":
 			fmt.Print("(ssh mode)>>>")
 		default:
-			respCommand, _ := common.ConstructCommand("SSHCOMMAND", command, nodeID)
-			startNodeControlConn.Write(respCommand)
+			if SSHSUCCESS {
+				respCommand, _ := common.ConstructCommand("SSHCOMMAND", command, nodeID)
+				startNodeControlConn.Write(respCommand)
+			} else {
+				fmt.Println("Illegal command, enter help to get available commands")
+				return
+			}
 		}
 	}
 }

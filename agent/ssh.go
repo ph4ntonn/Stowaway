@@ -14,7 +14,7 @@ var Stdin io.Writer
 var Stdout io.Reader
 var Sshhost *ssh.Session
 
-func StartSSH(controlConnToAdmin net.Conn, info string, nodeid uint32) {
+func StartSSH(controlConnToAdmin net.Conn, info string, nodeid uint32) error {
 	spiltedinfo := strings.Split(info, "::")
 	host := spiltedinfo[0]
 	username := spiltedinfo[1]
@@ -25,20 +25,27 @@ func StartSSH(controlConnToAdmin net.Conn, info string, nodeid uint32) {
 		Auth:            []ssh.AuthMethod{ssh.Password(password)},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	})
+	if err != nil {
+		sshMess, _ := common.ConstructCommand("SSHRESP", "FAILED", nodeid)
+		controlConnToAdmin.Write(sshMess)
+		return err
+	}
 	Sshhost, err = sshdial.NewSession()
 
 	if err != nil {
 		sshMess, _ := common.ConstructCommand("SSHRESP", "FAILED", nodeid)
 		controlConnToAdmin.Write(sshMess)
-		return
+		return err
 	}
 	Stdout, err = Sshhost.StdoutPipe()
 	if err != nil {
 		fmt.Println(err)
+		return err
 	}
 	Stdin, err = Sshhost.StdinPipe()
 	if err != nil {
 		fmt.Println(err)
+		return err
 	}
 	Sshhost.Stderr = Sshhost.Stdout
 	Sshhost.Shell()
@@ -46,11 +53,12 @@ func StartSSH(controlConnToAdmin net.Conn, info string, nodeid uint32) {
 	controlConnToAdmin.Write(sshMess)
 	if err != nil {
 		fmt.Println(err)
+		return err
 	}
+	return nil
 }
 
 func WriteCommand(command string) {
-	fmt.Println("write in", command)
 	Stdin.Write([]byte(command))
 }
 
@@ -59,7 +67,6 @@ func ReadCommand() {
 	for {
 		len, err := Stdout.Read(buffer)
 		if err != nil {
-			fmt.Println("err from sshhost")
 			break
 		}
 		sshRespMess, _ := common.ConstructDataResult(0, "1", "SSHMESS", string(buffer[:len]))

@@ -18,7 +18,7 @@ import (
 var CONNECTEDNODE string = "0.0.0.0"
 var CommandToUpperNodeChan = make(chan []byte)
 var cmdResult = make(chan []byte)
-var PROXY_COMMAND_CHAN = make(chan []byte)
+var PROXY_COMMAND_CHAN = make(chan []byte, 1)
 var LowerNodeCommChan = make(chan []byte, 1)
 var Monitor string
 var ListenPort string
@@ -160,10 +160,13 @@ func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 				go StartSocks(controlConnToAdmin, socksPort, socksUsername, socksPass)
 			case "SSH":
 				fmt.Println("Get command to start SSH")
-				StartSSH(controlConnToAdmin, command.Info, NODEID)
-				go ReadCommand()
+				err := StartSSH(controlConnToAdmin, command.Info, NODEID)
+				if err == nil {
+					go ReadCommand()
+				} else {
+					break
+				}
 			case "SSHCOMMAND":
-				fmt.Println(command)
 				go WriteCommand(command.Info)
 			case "ADMINOFFLINE":
 				logrus.Error("Admin seems offline!")

@@ -24,6 +24,7 @@ var StartNode [1]string = [1]string{"0.0.0.0"}
 var NodesReadyToadd = make(chan map[uint32]string)
 var CurrentDir string
 var StartNodeStatus string
+var SSHSUCCESS bool
 
 func NewAdmin(c *cli.Context) error {
 	//commSecret := c.String("secret")
@@ -204,9 +205,13 @@ func HandleCommandFromControlConn(startNodeControlConn net.Conn) { //处理由st
 		case "SSHRESP":
 			switch command.Info {
 			case "SUCCESS":
+				SSHSUCCESS = true
 				fmt.Println("[*]Node start ssh successfully!")
 			case "FAILED":
-				fmt.Println("[*]Node start ssh failed!")
+				SSHSUCCESS = false
+				fmt.Println("[*]Node start ssh failed!Check if target's ssh service is on or username and pass given are right")
+				ReadyChange <- true
+				IsShellMode <- true
 			}
 		}
 
