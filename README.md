@@ -114,9 +114,14 @@ Startnode端：
 
 ### 注意事项
 
-- 此程序仅是闲暇时开发，结构及代码结构不够严谨，功能可能存在bug，请多多谅解
+- 此程序仅是闲暇时开发学习，结构及代码结构不够严谨，功能可能存在bug，请多多谅解
 - 当admin端掉线，所有后续连接的agent端都会退出
 - 当多个agent端中有一个掉线，后续的agent端都会掉线
 - 在admin启动后，必须有节点连入才可操作
 - 需要自己编译的童鞋可在根目录利用：```go build -ldflags="-w -s"```自行编译以适配多种平台
 - 暂时不支持windows
+
+### 致谢
+
+- [rootkiter#Termite](https://github.com/rootkiter/Termite)
+- [Venom](https://github.com/Dliv3/Venom)
