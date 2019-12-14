@@ -43,6 +43,7 @@ func NewAgent(c *cli.Context) {
 	}
 }
 
+// 后续想让startnode与simplenode实现不一样的功能，故将两种node实现代码分开写
 func StartNodeInit(monitor string, listenPort string) {
 	NODEID = uint32(1)
 	ControlConnToAdmin, DataConnToAdmin, finalid, err := node.StartNodeConn(monitor, listenPort, NODEID)
