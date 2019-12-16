@@ -16,13 +16,13 @@ var ControlConnForLowerNodeChan = make(chan net.Conn, 1)
 var DataConnForLowerNodeChan = make(chan net.Conn, 1)
 var NewNodeMessageChan = make(chan []byte, 1)
 
-func StartNodeConn(monitor string, listenPort string, nodeID uint32) (net.Conn, net.Conn, uint32, error) {
+func StartNodeConn(monitor string, listenPort string, nodeID uint32, key []byte) (net.Conn, net.Conn, uint32, error) {
 	controlConnToUpperNode, err := net.Dial("tcp", monitor)
 	if err != nil {
 		logrus.Error("Connection refused!")
 		return controlConnToUpperNode, controlConnToUpperNode, 11235, err
 	}
-	respcommand, err := common.ConstructCommand("INIT", "FIRSTCONNECT", nodeID)
+	respcommand, err := common.ConstructCommand("INIT", "FIRSTCONNECT", nodeID, key)
 	if err != nil {
 		logrus.Errorf("Error occured: %s", err)
 	}
@@ -30,7 +30,7 @@ func StartNodeConn(monitor string, listenPort string, nodeID uint32) (net.Conn, 
 	if err != nil {
 		logrus.Errorf("Error occured: %s", err)
 	}
-	respcommand, err = common.ConstructCommand("LISTENPORT", listenPort, nodeID)
+	respcommand, err = common.ConstructCommand("LISTENPORT", listenPort, nodeID, key)
 	if err != nil {
 		logrus.Errorf("Error occured: %s", err)
 	}
@@ -39,7 +39,7 @@ func StartNodeConn(monitor string, listenPort string, nodeID uint32) (net.Conn, 
 		logrus.Errorf("Error occured: %s", err)
 	}
 	for {
-		command, _ := common.ExtractCommand(controlConnToUpperNode)
+		command, _ := common.ExtractCommand(controlConnToUpperNode, key)
 		switch command.Command {
 		case "ID":
 			nodeID = command.NodeId
@@ -56,7 +56,7 @@ func StartNodeConn(monitor string, listenPort string, nodeID uint32) (net.Conn, 
 	}
 }
 
-func StartNodeListen(listenPort string, NodeId uint32, nodeconnected string) (net.Conn, net.Conn, []byte, error) {
+func StartNodeListen(listenPort string, NodeId uint32, nodeconnected string, key []byte) (net.Conn, net.Conn, []byte, error) {
 	listenAddr := fmt.Sprintf("0.0.0.0:%s", listenPort)
 	WaitingForLowerNode, err := net.Listen("tcp", listenAddr)
 
@@ -73,7 +73,7 @@ func StartNodeListen(listenPort string, NodeId uint32, nodeconnected string) (ne
 			continue
 		}
 		if nodeconnected == "0.0.0.0" {
-			command, err := common.ExtractCommand(ConnToLowerNode)
+			command, err := common.ExtractCommand(ConnToLowerNode, key)
 			if err != nil {
 				logrus.Error(err)
 				continue
@@ -81,9 +81,9 @@ func StartNodeListen(listenPort string, NodeId uint32, nodeconnected string) (ne
 			if command.Command == "INIT" {
 				if command.NodeId == 0 {
 					respNodeID := NodeId + 1
-					respCommand, _ := common.ConstructCommand("ID", "", respNodeID)
+					respCommand, _ := common.ConstructCommand("ID", "", respNodeID, key)
 					_, err := ConnToLowerNode.Write(respCommand)
-					NewNodeMessage, _ = common.ConstructCommand("NEW", ConnToLowerNode.RemoteAddr().String(), respNodeID)
+					NewNodeMessage, _ = common.ConstructCommand("NEW", ConnToLowerNode.RemoteAddr().String(), respNodeID, key)
 					if err != nil {
 						logrus.Error(err)
 						continue
@@ -91,20 +91,20 @@ func StartNodeListen(listenPort string, NodeId uint32, nodeconnected string) (ne
 					controlConnToLowerNode := ConnToLowerNode
 					result[0] = controlConnToLowerNode
 					nodeconnected = strings.Split(ConnToLowerNode.RemoteAddr().String(), ":")[0]
-					respCommand, _ = common.ConstructCommand("ACCEPT", "DATA", respNodeID)
+					respCommand, _ = common.ConstructCommand("ACCEPT", "DATA", respNodeID, key)
 					_, err = ConnToLowerNode.Write(respCommand)
 					if err != nil {
 						logrus.Error(err)
 						continue
 					}
 				} else {
-					respCommand, _ := common.ConstructCommand("ID", "", command.NodeId)
+					respCommand, _ := common.ConstructCommand("ID", "", command.NodeId, key)
 					_, err := ConnToLowerNode.Write(respCommand)
 					if err != nil {
 						logrus.Error(err)
 						continue
 					}
-					respCommand, _ = common.ConstructCommand("ACCEPT", "DATA", command.NodeId)
+					respCommand, _ = common.ConstructCommand("ACCEPT", "DATA", command.NodeId, key)
 					_, err = ConnToLowerNode.Write(respCommand)
 					if err != nil {
 						logrus.Error(err)
@@ -114,6 +114,8 @@ func StartNodeListen(listenPort string, NodeId uint32, nodeconnected string) (ne
 					result[0] = controlConnToLowerNode
 					nodeconnected = strings.Split(ConnToLowerNode.RemoteAddr().String(), ":")[0]
 				}
+			} else {
+				logrus.Error("Illegal connection!")
 			}
 		} else if nodeconnected == strings.Split(ConnToLowerNode.RemoteAddr().String(), ":")[0] {
 			dataConToLowerNode := ConnToLowerNode

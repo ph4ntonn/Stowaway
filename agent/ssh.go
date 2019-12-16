@@ -26,14 +26,14 @@ func StartSSH(controlConnToAdmin net.Conn, info string, nodeid uint32) error {
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	})
 	if err != nil {
-		sshMess, _ := common.ConstructCommand("SSHRESP", "FAILED", nodeid)
+		sshMess, _ := common.ConstructCommand("SSHRESP", "FAILED", nodeid, AESKey)
 		controlConnToAdmin.Write(sshMess)
 		return err
 	}
 	Sshhost, err = sshdial.NewSession()
 
 	if err != nil {
-		sshMess, _ := common.ConstructCommand("SSHRESP", "FAILED", nodeid)
+		sshMess, _ := common.ConstructCommand("SSHRESP", "FAILED", nodeid, AESKey)
 		controlConnToAdmin.Write(sshMess)
 		return err
 	}
@@ -49,7 +49,7 @@ func StartSSH(controlConnToAdmin net.Conn, info string, nodeid uint32) error {
 	}
 	Sshhost.Stderr = Sshhost.Stdout
 	Sshhost.Shell()
-	sshMess, _ := common.ConstructCommand("SSHRESP", "SUCCESS", nodeid)
+	sshMess, _ := common.ConstructCommand("SSHRESP", "SUCCESS", nodeid, AESKey)
 	controlConnToAdmin.Write(sshMess)
 	if err != nil {
 		fmt.Println(err)
@@ -69,7 +69,7 @@ func ReadCommand() {
 		if err != nil {
 			break
 		}
-		sshRespMess, _ := common.ConstructDataResult(0, "1", "SSHMESS", string(buffer[:len]))
+		sshRespMess, _ := common.ConstructDataResult(0, "1", "SSHMESS", string(buffer[:len]), AESKey)
 		cmdResult <- sshRespMess
 	}
 }

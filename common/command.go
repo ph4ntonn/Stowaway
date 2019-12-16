@@ -2,10 +2,14 @@ package common
 
 import (
 	"Stowaway/config"
+	"Stowaway/crypto"
 	"bytes"
 	"encoding/binary"
 	"io"
 	"net"
+	"os"
+
+	"github.com/sirupsen/logrus"
 )
 
 type Command struct {
@@ -34,12 +38,16 @@ type Data struct {
 	Result string
 }
 
-func ExtractCommand(conn net.Conn) (*Command, error) {
+func ExtractCommand(conn net.Conn, key []byte) (*Command, error) {
 	var (
 		command    = &Command{}
 		idlen      = make([]byte, config.ID_LEN)
 		commandlen = make([]byte, config.HEADER_LEN)
 	)
+	if len(key) != 0 {
+		key, _ = crypto.KeyPadding(key)
+	}
+
 	_, err := io.ReadFull(conn, idlen)
 	if err != nil {
 		return command, err
@@ -59,7 +67,11 @@ func ExtractCommand(conn net.Conn) (*Command, error) {
 	if err != nil {
 		return command, err
 	}
-	command.Command = string(commandbuffer[:])
+	if len(key) != 0 {
+		command.Command = string(crypto.AESDecrypt(commandbuffer[:], key))
+	} else {
+		command.Command = string(commandbuffer[:])
+	}
 
 	infolen := make([]byte, config.INFO_LEN)
 	_, err = io.ReadFull(conn, infolen)
@@ -73,13 +85,52 @@ func ExtractCommand(conn net.Conn) (*Command, error) {
 	if err != nil {
 		return command, err
 	}
-	command.Info = string(infobuffer[:])
+	if len(key) != 0 {
+		command.Info = string(crypto.AESDecrypt(infobuffer[:], key))
+	} else {
+		command.Info = string(infobuffer[:])
+	}
 
 	return command, nil
+
+	// var (
+	// 	command = &Command{}
+	// 	templen = make([]byte, config.TEMP_LEN)
+	// )
+	// for {
+	// 	len, err := conn.Read(templen)
+	// }
+	// if err != nil {
+	// 	return command, err
+	// }
+	// fmt.Println(datalen[:len])
+	// oriData := crypto.AESDecrypt(datalen[:len], key)
+
+	// idlen := oriData[:4]
+	// command.NodeId = binary.BigEndian.Uint32(idlen)
+
+	// commandlen := oriData[4:8]
+	// command.CommandLength = binary.BigEndian.Uint32(commandlen)
+
+	// commandbuffer := oriData[8 : 8+command.CommandLength]
+	// command.Command = string(commandbuffer)
+
+	// infolen := oriData[8+command.CommandLength : 13+command.CommandLength]
+	// command.InfoLength = binary.BigEndian.Uint32(infolen)
+
+	// infobuffer := oriData[13+command.CommandLength : 13+command.CommandLength+command.InfoLength]
+	// command.Info = string(infobuffer)
+	// fmt.Println(command)
+	// _, err = io.ReadFull(conn, idlen)
+	// if err != nil {
+	// 	return command, err
+	// }
+
 }
 
-func ConstructCommand(command string, info string, id uint32) ([]byte, error) {
+func ConstructCommand(command string, info string, id uint32, key []byte) ([]byte, error) {
 	var buffer bytes.Buffer
+
 	InfoLength := make([]byte, 5)
 	CommandLength := make([]byte, 4)
 	Nodeid := make([]byte, 4)
@@ -87,21 +138,33 @@ func ConstructCommand(command string, info string, id uint32) ([]byte, error) {
 	Command := []byte(command)
 	Info := []byte(info)
 
+	if len(key) != 0 {
+		key, err := crypto.KeyPadding(key)
+		if err != nil {
+			logrus.Error(err)
+			os.Exit(1)
+		}
+		Command = crypto.AESEncrypt(Command, key)
+		Info = crypto.AESEncrypt(Info, key)
+	}
+
 	binary.BigEndian.PutUint32(Nodeid, id)
-	binary.BigEndian.PutUint32(CommandLength, uint32(len(command)))
-	binary.BigEndian.PutUint32(InfoLength, uint32(len(info)))
+	binary.BigEndian.PutUint32(CommandLength, uint32(len(Command)))
+	binary.BigEndian.PutUint32(InfoLength, uint32(len(Info)))
 
 	buffer.Write(Nodeid)
 	buffer.Write(CommandLength)
 	buffer.Write(Command)
 	buffer.Write(InfoLength)
 	buffer.Write(Info)
+
 	final := buffer.Bytes()
 
 	return final, nil
+
 }
 
-func ConstructDataResult(nodeid uint32, success string, datatype string, result string) ([]byte, error) {
+func ConstructDataResult(nodeid uint32, success string, datatype string, result string, key []byte) ([]byte, error) {
 	var buffer bytes.Buffer
 	NodeIdLength := make([]byte, 4)
 	DatatypeLength := make([]byte, 5)
@@ -111,9 +174,19 @@ func ConstructDataResult(nodeid uint32, success string, datatype string, result 
 	Datatype := []byte(datatype)
 	Result := []byte(result)
 
+	if len(key) != 0 {
+		key, err := crypto.KeyPadding(key)
+		if err != nil {
+			logrus.Error(err)
+			os.Exit(1)
+		}
+		Datatype = crypto.AESEncrypt(Datatype, key)
+		Result = crypto.AESEncrypt(Result, key)
+	}
+
 	binary.BigEndian.PutUint32(NodeIdLength, nodeid)
-	binary.BigEndian.PutUint32(DatatypeLength, uint32(len(datatype)))
-	binary.BigEndian.PutUint32(ResultLength, uint32(len(result)))
+	binary.BigEndian.PutUint32(DatatypeLength, uint32(len(Datatype)))
+	binary.BigEndian.PutUint32(ResultLength, uint32(len(Result)))
 
 	buffer.Write(NodeIdLength)
 	buffer.Write(Success)
@@ -127,7 +200,7 @@ func ConstructDataResult(nodeid uint32, success string, datatype string, result 
 	return final, nil
 }
 
-func ExtractDataResult(conn net.Conn) (*Data, error) {
+func ExtractDataResult(conn net.Conn, key []byte) (*Data, error) {
 	var (
 		data        = &Data{}
 		nodelen     = make([]byte, config.NODE_LEN)
@@ -135,6 +208,11 @@ func ExtractDataResult(conn net.Conn) (*Data, error) {
 		datatypelen = make([]byte, config.DATATYPE_LEN)
 		resultlen   = make([]byte, config.RESULT_LEN)
 	)
+
+	if len(key) != 0 {
+		key, _ = crypto.KeyPadding(key)
+	}
+
 	_, err := io.ReadFull(conn, nodelen)
 	if err != nil {
 		return data, err
@@ -160,7 +238,11 @@ func ExtractDataResult(conn net.Conn) (*Data, error) {
 	if err != nil {
 		return data, err
 	}
-	data.Datatype = string(datatypebuffer[:])
+	if len(key) != 0 {
+		data.Datatype = string(crypto.AESDecrypt(datatypebuffer[:], key))
+	} else {
+		data.Datatype = string(datatypebuffer[:])
+	}
 
 	_, err = io.ReadFull(conn, resultlen)
 	if err != nil {
@@ -173,7 +255,11 @@ func ExtractDataResult(conn net.Conn) (*Data, error) {
 	if err != nil {
 		return data, err
 	}
-	data.Result = string(resultbuffer[:])
+	if len(key) != 0 {
+		data.Result = string(crypto.AESDecrypt(resultbuffer[:], key))
+	} else {
+		data.Result = string(resultbuffer[:])
+	}
 
 	return data, nil
 }

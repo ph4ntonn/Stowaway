@@ -19,12 +19,12 @@ func StartSocks(controlConnToAdmin net.Conn, socksPort, socksUsername, socksPass
 	socksAddr := fmt.Sprintf("0.0.0.0:%s", socksPort)
 	socksServer, err := net.Listen("tcp", socksAddr)
 	if err != nil {
-		socksstartmess, _ := common.ConstructCommand("SOCKSRESP", "FAILED", NODEID)
+		socksstartmess, _ := common.ConstructCommand("SOCKSRESP", "FAILED", NODEID, AESKey)
 		controlConnToAdmin.Write(socksstartmess)
 		fmt.Println(err)
 		return
 	} else {
-		socksstartmess, _ := common.ConstructCommand("SOCKSRESP", "SUCCESS", NODEID)
+		socksstartmess, _ := common.ConstructCommand("SOCKSRESP", "SUCCESS", NODEID, AESKey)
 		controlConnToAdmin.Write(socksstartmess)
 	}
 

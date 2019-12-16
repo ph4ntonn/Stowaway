@@ -12,7 +12,7 @@ import (
 )
 
 func SendOffLineToStartNode(startNodeControlConn net.Conn) {
-	respCommand, _ := common.ConstructCommand("ADMINOFFLINE", "", 1)
+	respCommand, _ := common.ConstructCommand("ADMINOFFLINE", "", 1, AESKey)
 	_, err := startNodeControlConn.Write(respCommand)
 	if err != nil {
 		logrus.Error(err)

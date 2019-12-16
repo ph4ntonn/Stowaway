@@ -25,9 +25,10 @@ var ListenPort string
 var ControlConnToAdmin net.Conn
 var DataConnToAdmin net.Conn
 var NODEID uint32 = uint32(1)
+var AESKey []byte
 
 func NewAgent(c *cli.Context) {
-	//commSecret := c.String("secret")
+	AESKey = []byte(c.String("secret"))
 	listenPort := c.String("listen")
 	//ccPort := c.String("control")
 	monitor := c.String("monitor")
@@ -46,13 +47,13 @@ func NewAgent(c *cli.Context) {
 // 后续想让startnode与simplenode实现不一样的功能，故将两种node实现代码分开写
 func StartNodeInit(monitor string, listenPort string) {
 	NODEID = uint32(1)
-	ControlConnToAdmin, DataConnToAdmin, finalid, err := node.StartNodeConn(monitor, listenPort, NODEID)
+	ControlConnToAdmin, DataConnToAdmin, finalid, err := node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
 	NODEID = uint32(finalid)
 	if err != nil {
 		os.Exit(1)
 	}
 	go HandleStartNodeConn(ControlConnToAdmin, DataConnToAdmin, monitor, NODEID)
-	go node.StartNodeListen(listenPort, NODEID, CONNECTEDNODE)
+	go node.StartNodeListen(listenPort, NODEID, CONNECTEDNODE, AESKey)
 	go WaitForExit(NODEID)
 	for {
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
@@ -68,10 +69,10 @@ func StartNodeInit(monitor string, listenPort string) {
 
 func SimpleNodeInit(monitor string, listenPort string) {
 	NODEID = uint32(0)
-	controlConnToUpperNode, dataConnToUpperNode, finalid, _ := node.StartNodeConn(monitor, listenPort, NODEID)
+	controlConnToUpperNode, dataConnToUpperNode, finalid, _ := node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
 	NODEID = uint32(finalid)
 	go HandleSimpleNodeConn(controlConnToUpperNode, dataConnToUpperNode, monitor, NODEID)
-	go node.StartNodeListen(listenPort, NODEID, CONNECTEDNODE)
+	go node.StartNodeListen(listenPort, NODEID, CONNECTEDNODE, AESKey)
 	go WaitForExit(NODEID)
 	for {
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
@@ -128,7 +129,10 @@ func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 	cmd, stdout, stdin := CreatInteractiveShell()
 	var neverexit bool = true
 	for {
-		command, _ := common.ExtractCommand(controlConnToAdmin)
+		command, err := common.ExtractCommand(controlConnToAdmin, AESKey)
+		if err != nil {
+			return
+		}
 		if command.NodeId == NODEID {
 			switch command.Command {
 			case "SHELL":
@@ -171,17 +175,17 @@ func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 				go WriteCommand(command.Info)
 			case "ADMINOFFLINE":
 				logrus.Error("Admin seems offline!")
-				offlineCommand, _ := common.ConstructCommand("ADMINOFFLINE", "", 2)
+				offlineCommand, _ := common.ConstructCommand("ADMINOFFLINE", "", 2, AESKey)
 				PROXY_COMMAND_CHAN <- offlineCommand
 				time.Sleep(2 * time.Second)
 				os.Exit(1)
 			}
 		} else {
 			if command.Command != "SOCKS" {
-				passthroughCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId)
+				passthroughCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId, AESKey)
 				go ProxyToNextNode(passthroughCommand)
 			} else {
-				passthroughCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId)
+				passthroughCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId, AESKey)
 				go ProxyToNextNode(passthroughCommand)
 				go StartSocksProxy(command.Info)
 			}
@@ -197,7 +201,7 @@ func HandleLowerNodeConn(controlConnForLowerNode net.Conn, dataConnForLowerNode 
 		len, err := dataConnForLowerNode.Read(buffer)
 		if err != nil {
 			logrus.Error("Node ", NODEID+1, " seems offline")
-			offlineMess, _ := common.ConstructCommand("AGENTOFFLINE", "", NODEID+1)
+			offlineMess, _ := common.ConstructCommand("AGENTOFFLINE", "", NODEID+1, AESKey)
 			LowerNodeCommChan <- offlineMess
 			break
 		}
@@ -218,10 +222,13 @@ func HandleControlConnToLowerNode(controlConnForLowerNode net.Conn, NODEID uint3
 
 func HandleControlConnFromLowerNode(controlConnForLowerNode net.Conn, NODEID uint32, LowerNodeCommChan chan []byte) {
 	for {
-		command, _ := common.ExtractCommand(controlConnForLowerNode)
+		command, err := common.ExtractCommand(controlConnForLowerNode, AESKey)
+		if err != nil {
+			return
+		}
 		if command.NodeId == NODEID { //暂时只有admin需要处理
 		} else {
-			proxyCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId)
+			proxyCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId, AESKey)
 			LowerNodeCommChan <- proxyCommand
 		}
 	}
@@ -248,7 +255,10 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 	cmd, stdout, stdin := CreatInteractiveShell()
 	var neverexit bool = true
 	for {
-		command, _ := common.ExtractCommand(controlConnToUpperNode)
+		command, err := common.ExtractCommand(controlConnToUpperNode, AESKey)
+		if err != nil {
+			return
+		}
 		if command.NodeId == NODEID {
 			switch command.Command {
 			case "SHELL":
@@ -269,7 +279,7 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 					continue
 				case "OFFLINE":
 					logrus.Error("Node ", NODEID-1, "seems down")
-					offlineMess, _ := common.ConstructCommand("OFFLINE", "", NODEID+1)
+					offlineMess, _ := common.ConstructCommand("OFFLINE", "", NODEID+1, AESKey)
 					PROXY_COMMAND_CHAN <- offlineMess
 					os.Exit(1)
 				default:
@@ -286,24 +296,27 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 				go StartSocks(controlConnToUpperNode, socksPort, socksUsername, socksPass)
 			case "SSH":
 				fmt.Println("Get command to start SSH")
-				StartSSH(controlConnToUpperNode, command.Info, NODEID)
-				go ReadCommand()
+				err := StartSSH(controlConnToUpperNode, command.Info, NODEID)
+				if err == nil {
+					go ReadCommand()
+				} else {
+					break
+				}
 			case "SSHCOMMAND":
-				fmt.Println(command)
 				go WriteCommand(command.Info)
 			case "ADMINOFFLINE":
 				logrus.Error("Admin seems offline")
-				offlineCommand, _ := common.ConstructCommand("ADMINOFFLINE", "", NODEID+1)
+				offlineCommand, _ := common.ConstructCommand("ADMINOFFLINE", "", NODEID+1, AESKey)
 				PROXY_COMMAND_CHAN <- offlineCommand
 				time.Sleep(2 * time.Second)
 				os.Exit(1)
 			}
 		} else {
 			if command.Command != "SOCKS" {
-				passthroughCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId)
+				passthroughCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId, AESKey)
 				go ProxyToNextNode(passthroughCommand)
 			} else {
-				passthroughCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId)
+				passthroughCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId, AESKey)
 				go ProxyToNextNode(passthroughCommand)
 				go StartSocksProxy(command.Info)
 			}
@@ -335,7 +348,7 @@ func WaitForExit(NODEID uint32) {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt, os.Kill, syscall.SIGHUP, syscall.SIGUSR2)
 	<-signalChan
-	offlineMess, _ := common.ConstructCommand("OFFLINE", "", NODEID+1)
+	offlineMess, _ := common.ConstructCommand("OFFLINE", "", NODEID+1, AESKey)
 	PROXY_COMMAND_CHAN <- offlineMess
 	time.Sleep(5 * time.Second)
 	os.Exit(1)

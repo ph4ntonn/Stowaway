@@ -13,7 +13,7 @@ func TryReconnect() {
 	for {
 		time.Sleep(10 * time.Second)
 
-		ControlConnToAdmin, DataConnToAdmin, NODEID, err = node.StartNodeConn(Monitor, ListenPort, NODEID)
+		ControlConnToAdmin, DataConnToAdmin, NODEID, err = node.StartNodeConn(Monitor, ListenPort, NODEID, AESKey)
 		if err == nil {
 			Reconnsuccess <- true
 			Reconnsuccess <- true

@@ -38,7 +38,7 @@ func StartShell(command string, cmd *exec.Cmd, stdin io.Writer, stdout io.Reader
 			fmt.Println("error: ", err)
 			return
 		}
-		respShell, err := common.ConstructDataResult(0, success, dataType, string(buf[:count]))
+		respShell, err := common.ConstructDataResult(0, success, dataType, string(buf[:count]), AESKey)
 		cmdResult <- respShell
 	}
 }

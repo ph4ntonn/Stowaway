@@ -26,13 +26,13 @@ func HandleShellToNode(startNodeControlConn net.Conn, nodeID uint32) {
 			} else {
 				*CliStatus = "node " + fmt.Sprint(nodeID)
 			}
-			respCommand, _ := common.ConstructCommand("SHELL", command, nodeID)
+			respCommand, _ := common.ConstructCommand("SHELL", command, nodeID, AESKey)
 			startNodeControlConn.Write(respCommand)
 			ReadyChange <- true
 			IsShellMode <- true
 			return
 		default:
-			respCommand, _ := common.ConstructCommand("SHELL", command, nodeID)
+			respCommand, _ := common.ConstructCommand("SHELL", command, nodeID, AESKey)
 			startNodeControlConn.Write(respCommand)
 		}
 	}
@@ -40,36 +40,37 @@ func HandleShellToNode(startNodeControlConn net.Conn, nodeID uint32) {
 
 func HandleSSHToNode(startNodeControlConn net.Conn, nodeID uint32) {
 	inputReader := bufio.NewReader(os.Stdin)
-	fmt.Print("(ssh mode)>>>")
-	for {
-		command, err := inputReader.ReadString('\n')
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-		switch command {
-		case "exit\n":
-			if nodeID == 1 {
-				*CliStatus = "startnode"
-			} else {
-				*CliStatus = "node " + fmt.Sprint(nodeID)
+	logrus.Info("Waiting for response,please be patient")
+	if conrinueornot := <-SSHSUCCESS; conrinueornot {
+		fmt.Print("(ssh mode)>>>")
+		for {
+			command, err := inputReader.ReadString('\n')
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
 			}
-			respCommand, _ := common.ConstructCommand("SSHCOMMAND", command, nodeID)
-			startNodeControlConn.Write(respCommand)
-			ReadyChange <- true
-			IsShellMode <- true
-			return
-		case "\n":
-			fmt.Print("(ssh mode)>>>")
-		default:
-			if SSHSUCCESS {
-				respCommand, _ := common.ConstructCommand("SSHCOMMAND", command, nodeID)
+			switch command {
+			case "exit\n":
+				if nodeID == 1 {
+					*CliStatus = "startnode"
+				} else {
+					*CliStatus = "node " + fmt.Sprint(nodeID)
+				}
+				respCommand, _ := common.ConstructCommand("SSHCOMMAND", command, nodeID, AESKey)
 				startNodeControlConn.Write(respCommand)
-			} else {
-				fmt.Println("Illegal command, enter help to get available commands")
+				ReadyChange <- true
+				IsShellMode <- true
 				return
+			case "\n":
+				fmt.Print("(ssh mode)>>>")
+			default:
+				respCommand, _ := common.ConstructCommand("SSHCOMMAND", command, nodeID, AESKey)
+				startNodeControlConn.Write(respCommand)
+
 			}
 		}
+	} else {
+		return
 	}
 }
 
@@ -80,7 +81,7 @@ func HandleNodeCommand(startNodeControlConn net.Conn, NodeID string) {
 		AdminCommand := <-ADMINCOMMANDCHAN
 		switch AdminCommand[0] {
 		case "shell":
-			respCommand, err := common.ConstructCommand("SHELL", "", nodeID)
+			respCommand, err := common.ConstructCommand("SHELL", "", nodeID, AESKey)
 			_, err = startNodeControlConn.Write(respCommand)
 			if err != nil {
 				logrus.Errorf("ERROR OCCURED!: %s", err)
@@ -98,7 +99,7 @@ func HandleNodeCommand(startNodeControlConn net.Conn, NodeID string) {
 			} else {
 				socksStartData = fmt.Sprintf("%s:%s:%s", AdminCommand[1], AdminCommand[2], AdminCommand[3])
 			}
-			respCommand, err := common.ConstructCommand("SOCKS", socksStartData, nodeID)
+			respCommand, err := common.ConstructCommand("SOCKS", socksStartData, nodeID, AESKey)
 			_, err = startNodeControlConn.Write(respCommand)
 			if err != nil {
 				logrus.Error("StartNode seems offline")

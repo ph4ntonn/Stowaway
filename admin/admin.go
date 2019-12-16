@@ -18,16 +18,17 @@ var CliStatus *string
 var InitStatus string = "admin"
 var ReadyChange = make(chan bool)
 var IsShellMode = make(chan bool)
+var SSHSUCCESS = make(chan bool, 1)
 var NodeSocksStarted = make(chan bool, 1)
 var SocksRespChan = make(chan string, 1)
 var StartNode [1]string = [1]string{"0.0.0.0"}
 var NodesReadyToadd = make(chan map[uint32]string)
 var CurrentDir string
 var StartNodeStatus string
-var SSHSUCCESS bool
+var AESKey []byte
 
 func NewAdmin(c *cli.Context) error {
-	//commSecret := c.String("secret")
+	AESKey = []byte(c.String("secret"))
 	listenPort := c.String("listen")
 	//ccPort := c.String("control")
 	// go StartListen(listenPort)
@@ -64,12 +65,12 @@ func StartListen(listenPort string) error {
 
 func HandleInitControlConn(startNodeControlConn net.Conn) {
 	for {
-		command, err := common.ExtractCommand(startNodeControlConn)
+		command, err := common.ExtractCommand(startNodeControlConn, AESKey)
 		switch command.Command {
 		case "INIT":
 			switch command.Info {
 			case "FIRSTCONNECT":
-				respCommand, err := common.ConstructCommand("ACCEPT", "DATA", 1)
+				respCommand, err := common.ConstructCommand("ACCEPT", "DATA", 1, AESKey)
 				StartNode[0] = strings.Split(startNodeControlConn.RemoteAddr().String(), ":")[0]
 				_, err = startNodeControlConn.Write(respCommand)
 				if err != nil {
@@ -92,7 +93,7 @@ func HandleInitControlConn(startNodeControlConn net.Conn) {
 
 func HandleDataConn(startNodeDataConn net.Conn) {
 	for {
-		nodeResp, err := common.ExtractDataResult(startNodeDataConn)
+		nodeResp, err := common.ExtractDataResult(startNodeDataConn, AESKey)
 		if err != nil {
 			logrus.Error("StartNode seems offline")
 			break
@@ -181,7 +182,7 @@ func HandleCommandToControlConn(startNodeControlConn net.Conn) {
 
 func HandleCommandFromControlConn(startNodeControlConn net.Conn) { //处理由startnode proxy过来的lower node 回送命令
 	for {
-		command, _ := common.ExtractCommand(startNodeControlConn)
+		command, _ := common.ExtractCommand(startNodeControlConn, AESKey)
 		switch command.Command {
 		case "NEW":
 			logrus.Info("New node join! Node Id is ", command.NodeId)
@@ -205,10 +206,10 @@ func HandleCommandFromControlConn(startNodeControlConn net.Conn) { //处理由st
 		case "SSHRESP":
 			switch command.Info {
 			case "SUCCESS":
-				SSHSUCCESS = true
+				SSHSUCCESS <- true
 				fmt.Println("[*]Node start ssh successfully!")
 			case "FAILED":
-				SSHSUCCESS = false
+				SSHSUCCESS <- false
 				fmt.Println("[*]Node start ssh failed!Check if target's ssh service is on or username and pass given are right")
 				ReadyChange <- true
 				IsShellMode <- true
@@ -254,6 +255,6 @@ func ProxySocksToclient(client net.Conn, targetport string) {
 
 func StartSSHService(startNodeControlConn net.Conn, info []string, nodeid uint32) {
 	information := fmt.Sprintf("%s::%s::%s", info[1], info[2], info[3])
-	sshCommand, _ := common.ConstructCommand("SSH", information, nodeid)
+	sshCommand, _ := common.ConstructCommand("SSH", information, nodeid, AESKey)
 	startNodeControlConn.Write(sshCommand)
 }
