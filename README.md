@@ -14,7 +14,7 @@ PPS:大佬们轻喷，后续会继续优化代码！
 
 - 一目了然的节点管理
 - 多级socks5流量代理转发
-- ssh隧道
+- ssh流量代理
 - 远程交互式shell
 - 节点间流量以AES-256(CBC模式)进行加密
 
@@ -104,7 +104,7 @@ Startnode端：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/ssh.png)
 
-此时就可以在admin端将ssh流量代理至第二个普通节点
+此时就可以在admin端将ssh流量代理至第二个普通节点，由第二个普通节点来访问指定的ssh服务
 
 ```
 具体命令使用可输入help查询
