@@ -76,15 +76,15 @@ socks5代表以socks5服务端模式启动
 
 服务端：
 
-![server](https://github.com/ph4ntonn/Stowaway/blob/master/img/server.png)
+![server](https://github.com/ph4ntonn/Stowaway/blob/master/demo/img/server.png)
 
 客户端：
 
-![client](https://github.com/ph4ntonn/Stowaway/blob/master/img/client.png)
+![client](https://github.com/ph4ntonn/Stowaway/blob/master/demo/img/client.png)
 
 连接：
 
-![connect](https://github.com/ph4ntonn/Stowaway/blob/master/img/connect.png)
+![connect](https://github.com/ph4ntonn/Stowaway/blob/master/demo/img/connect.png)
 
 ```
 此时连接127.0.0.1的9999端口即相当于访问了22号端口
