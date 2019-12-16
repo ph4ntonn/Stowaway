@@ -16,6 +16,7 @@ PPS:大佬们轻喷，后续会继续优化代码！
 - 多级socks5流量代理转发
 - ssh隧道
 - 远程交互式shell
+- 节点间流量以AES-256(CBC模式)进行加密
 
 ## Usage
 
@@ -26,19 +27,21 @@ Stowaway分为admin端和agent端两种形式，集成在一个程序中以不�
 
 简单示例：
 ```
-  Admin端：./stowaway admin -l 9999
+  Admin端：./stowaway admin -l 9999 -s 123
   
   命令解析：
   
   admin代表以admin模式启动
   
   -l 参数代表监听端口
+
+  -s 参数代表节点通信加密密钥(admin端与agent端必须一致!)
   
-  暂时就这一个参数！！！！！！
+  暂时就这两个参数！！！！！！
  
 ```
 ```
-  agent端： ./stowaway agent -m 127.0.0.1:9999 -l 10000 --startnode
+  agent端： ./stowaway agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123
   
   命令解析：
   
@@ -48,9 +51,11 @@ Stowaway分为admin端和agent端两种形式，集成在一个程序中以不�
   
   -l 代表监听端口
 
+  -s 参数代表节点通信加密密钥(admin端与agent端必须一致!)
+
   --startnode 代表此节点是agent端的第一个节点（若无--startnode表示为普通节点，命令与startnode一致）
 
-  暂时就这三个参数！！！！！！
+  暂时就这四个参数！！！！！！
   
 ```
 
