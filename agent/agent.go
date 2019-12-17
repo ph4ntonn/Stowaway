@@ -26,6 +26,7 @@ var LowerNodeCommChan = make(chan []byte, 1)
 
 var ControlConnToAdmin net.Conn
 var DataConnToAdmin net.Conn
+var SocksServer net.Listener
 
 var NODEID uint32 = uint32(1)
 var AESKey []byte
@@ -166,6 +167,13 @@ func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 				socksUsername := socksInit[1]
 				socksPass := socksInit[2]
 				go StartSocks(controlConnToAdmin, socksPort, socksUsername, socksPass)
+			case "SOCKSOFF":
+				logrus.Info("Get command to stop SOCKS")
+				err := SocksServer.Close()
+				if err != nil {
+					logrus.Error("Shut down socks service fail")
+					break
+				}
 			case "SSH":
 				fmt.Println("Get command to start SSH")
 				err := StartSSH(controlConnToAdmin, command.Info, NODEID)
@@ -300,6 +308,13 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 				socksUsername := socksInit[1]
 				socksPass := socksInit[2]
 				go StartSocks(controlConnToUpperNode, socksPort, socksUsername, socksPass)
+			case "SOCKSOFF":
+				logrus.Info("Get command to stop SOCKS")
+				err := SocksServer.Close()
+				if err != nil {
+					logrus.Error("Shut down socks service fail")
+					break
+				}
 			case "SSH":
 				fmt.Println("Get command to start SSH")
 				err := StartSSH(controlConnToUpperNode, command.Info, NODEID)

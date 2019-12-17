@@ -100,7 +100,7 @@ Startnode端：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/socks5.png)
 
-此时用户即可以将admin端的7777端口作为socks5代理端口，将流量代理至第二个普通node节点
+此时用户即可以将admin端的7777端口作为socks5代理端口，将流量代理至第二个普通node节点(当想关闭socks服务时，在节点模式下输入stopsocks即可关闭与此节点相关的socks代理服务)
 
 打开ssh：
 
@@ -116,7 +116,7 @@ PS: 在ssh模式下，你可以用pwd来判断自己所处的文件夹（好吧�
 ## TODO
 
 - [x] 节点间通信流量加密
-- [ ] 关闭代理与端口转发
+- [x] 关闭代理与端口转发
 - [ ] 重连功能
 - [ ] 清理代码，优化逻辑
 - [ ] 增加cc功能

@@ -104,7 +104,7 @@ Start socks5 proxy service：
 
 Now you can use the admin's port 7777 as the socks5 proxy service
 
-And it can proxy your traffic to the second simple node and the second simple node will do its work as socks server
+And it can proxy your traffic to the second simple node and the second simple node will do its work as socks server（ When you want to shut down this socks5 service, just type in "stopsocks" under this mode to turn off it)
 
 Open ssh：
 
@@ -120,7 +120,7 @@ For more detail, just type help to get further informations
 ## TODO
 
 - [x] Network traffic encryption
-- [ ] Method to turn off socks5 proxy
+- [x] Method to turn off socks5 proxy
 - [ ] Reconnection
 - [ ] Clean codes, optimize logic
 - [ ] Add cc function

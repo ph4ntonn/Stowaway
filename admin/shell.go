@@ -105,7 +105,19 @@ func HandleNodeCommand(startNodeControlConn net.Conn, NodeID string) {
 				logrus.Error("StartNode seems offline")
 			}
 			if <-NodeSocksStarted {
-				go StartSocksService(AdminCommand)
+				go StartSocksService(AdminCommand, startNodeControlConn, nodeID)
+			}
+			ReadyChange <- true
+			IsShellMode <- true
+		case "stopsocks":
+			respCommand, err := common.ConstructCommand("SOCKSOFF", " ", nodeID, AESKey)
+			_, err = startNodeControlConn.Write(respCommand)
+			if err != nil {
+				logrus.Error("StartNode seems offline")
+			}
+			err = SocksListener.Close()
+			if err != nil {
+				logrus.Error("You have never started socks service!")
 			}
 			ReadyChange <- true
 			IsShellMode <- true

@@ -28,6 +28,8 @@ var SocksRespChan = make(chan string, 1)
 var NodesReadyToadd = make(chan map[uint32]string)
 var AESKey []byte
 
+var SocksListener net.Listener
+
 //启动admin
 func NewAdmin(c *cli.Context) error {
 	AESKey = []byte(c.String("secret"))
@@ -234,7 +236,8 @@ func HandleCommandFromControlConn(startNodeControlConn net.Conn) {
 }
 
 // 启动socks5
-func StartSocksService(command []string) {
+func StartSocksService(command []string, startNodeControlConn net.Conn, nodeID uint32) {
+	var err error
 	socksport := command[1]
 	checkport, _ := strconv.Atoi(socksport)
 	if checkport <= 0 || checkport > 65535 {
@@ -243,13 +246,22 @@ func StartSocksService(command []string) {
 	}
 
 	socks5Addr := fmt.Sprintf("0.0.0.0:%s", socksport)
-	localListener, err := net.Listen("tcp", socks5Addr)
+	SocksListener, err = net.Listen("tcp", socks5Addr)
 	if err != nil {
+		respCommand, _ := common.ConstructCommand("SOCKSOFF", " ", nodeID, AESKey)
+		_, err = startNodeControlConn.Write(respCommand)
+		if err != nil {
+			logrus.Error("Cannot stop agent's socks service,check the connection!")
+		}
 		logrus.Error("Cannot listen this port!")
 		return
 	}
 	for {
-		conn, _ := localListener.Accept()
+		conn, err := SocksListener.Accept()
+		if err != nil {
+			logrus.Info("Socks service stoped")
+			return
+		}
 		go ProxySocksToclient(conn, socksport)
 	}
 }
@@ -262,6 +274,7 @@ func ProxySocksToclient(client net.Conn, targetport string) {
 	socksproxyconn, err := net.Dial("tcp", socksAddr)
 	if err != nil {
 		logrus.Error("Cannot connect to socks server")
+		return
 	}
 	go io.Copy(client, socksproxyconn)
 	io.Copy(socksproxyconn, client)

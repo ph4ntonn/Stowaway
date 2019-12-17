@@ -14,10 +14,12 @@ import (
 )
 
 func StartSocks(controlConnToAdmin net.Conn, socksPort, socksUsername, socksPass string) {
+	var err error
 	tempport, _ := strconv.Atoi(socksPort)
 	socksPort = strconv.Itoa(tempport + int(NODEID))
 	socksAddr := fmt.Sprintf("0.0.0.0:%s", socksPort)
-	socksServer, err := net.Listen("tcp", socksAddr)
+	SocksServer, err = net.Listen("tcp", socksAddr)
+
 	if err != nil {
 		socksstartmess, _ := common.ConstructCommand("SOCKSRESP", "FAILED", NODEID, AESKey)
 		controlConnToAdmin.Write(socksstartmess)
@@ -29,7 +31,10 @@ func StartSocks(controlConnToAdmin net.Conn, socksPort, socksUsername, socksPass
 	}
 
 	for {
-		socksConn, _ := socksServer.Accept()
+		socksConn, err := SocksServer.Accept()
+		if err != nil {
+			return
+		}
 		go socks.AuthClient(socksConn, socksUsername, socksPass)
 	}
 }
