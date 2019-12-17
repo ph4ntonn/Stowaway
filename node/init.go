@@ -56,14 +56,15 @@ func StartNodeConn(monitor string, listenPort string, nodeID uint32, key []byte)
 	}
 }
 
-func StartNodeListen(listenPort string, NodeId uint32, nodeconnected string, key []byte) (net.Conn, net.Conn, []byte, error) {
+func StartNodeListen(listenPort string, NodeId uint32, key []byte) (net.Conn, net.Conn, []byte, error) {
+	var nodeconnected string = "0.0.0.0"
 	listenAddr := fmt.Sprintf("0.0.0.0:%s", listenPort)
 	WaitingForLowerNode, err := net.Listen("tcp", listenAddr)
 
 	var result [1]net.Conn
 
 	if err != nil {
-		logrus.Error("Cannot listen on port %s", listenPort)
+		logrus.Errorf("Cannot listen on port %s", listenPort)
 		os.Exit(1)
 	}
 	for {

@@ -15,21 +15,23 @@ import (
 	"github.com/urfave/cli"
 )
 
-var ConnectedNode string = "0.0.0.0"
-var Monitor string
-var ListenPort string
+var (
+	NODEID uint32 = uint32(1)
 
-var CommandToUpperNodeChan = make(chan []byte)
-var cmdResult = make(chan []byte)
-var PROXY_COMMAND_CHAN = make(chan []byte, 1)
-var LowerNodeCommChan = make(chan []byte, 1)
+	Monitor    string
+	ListenPort string
 
-var ControlConnToAdmin net.Conn
-var DataConnToAdmin net.Conn
-var SocksServer net.Listener
+	CommandToUpperNodeChan = make(chan []byte)
+	cmdResult              = make(chan []byte)
+	PROXY_COMMAND_CHAN     = make(chan []byte, 1)
+	LowerNodeCommChan      = make(chan []byte, 1)
 
-var NODEID uint32 = uint32(1)
-var AESKey []byte
+	ControlConnToAdmin net.Conn
+	DataConnToAdmin    net.Conn
+	SocksServer        net.Listener
+
+	AESKey []byte
+)
 
 func NewAgent(c *cli.Context) {
 	AESKey = []byte(c.String("secret"))
@@ -57,7 +59,7 @@ func StartNodeInit(monitor string, listenPort string) {
 		os.Exit(1)
 	}
 	go HandleStartNodeConn(ControlConnToAdmin, DataConnToAdmin, monitor, NODEID)
-	go node.StartNodeListen(listenPort, NODEID, ConnectedNode, AESKey)
+	go node.StartNodeListen(listenPort, NODEID, AESKey)
 	go WaitForExit(NODEID)
 	for {
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
@@ -76,7 +78,7 @@ func SimpleNodeInit(monitor string, listenPort string) {
 	controlConnToUpperNode, dataConnToUpperNode, finalid, _ := node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
 	NODEID = uint32(finalid)
 	go HandleSimpleNodeConn(controlConnToUpperNode, dataConnToUpperNode, monitor, NODEID)
-	go node.StartNodeListen(listenPort, NODEID, ConnectedNode, AESKey)
+	go node.StartNodeListen(listenPort, NODEID, AESKey)
 	go WaitForExit(NODEID)
 	for {
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
@@ -190,6 +192,9 @@ func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 				PROXY_COMMAND_CHAN <- offlineCommand
 				time.Sleep(2 * time.Second)
 				os.Exit(1)
+			default:
+				logrus.Error("Unknown command")
+				continue
 			}
 		} else {
 			if command.Command != "SOCKS" {
@@ -331,6 +336,9 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 				PROXY_COMMAND_CHAN <- offlineCommand
 				time.Sleep(2 * time.Second)
 				os.Exit(1) //admin下线后可以不断开，这里选择结束程序
+			default:
+				logrus.Error("Unknown command")
+				continue
 			}
 		} else {
 			if command.Command != "SOCKS" {

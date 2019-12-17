@@ -14,21 +14,23 @@ import (
 	"github.com/urfave/cli"
 )
 
-var CliStatus *string
-var StartNodeStatus string
-var InitStatus string = "admin"
-var StartNode string = "0.0.0.0"
+var (
+	CliStatus       *string
+	StartNodeStatus string
+	InitStatus      string = "admin"
+	StartNode       string = "0.0.0.0"
 
-var ReadyChange = make(chan bool)
-var IsShellMode = make(chan bool)
-var SSHSUCCESS = make(chan bool, 1)
-var NodeSocksStarted = make(chan bool, 1)
-var SocksRespChan = make(chan string, 1)
+	ReadyChange      = make(chan bool)
+	IsShellMode      = make(chan bool)
+	SSHSUCCESS       = make(chan bool, 1)
+	NodeSocksStarted = make(chan bool, 1)
+	SocksRespChan    = make(chan string, 1)
+	NodesReadyToadd  = make(chan map[uint32]string)
 
-var NodesReadyToadd = make(chan map[uint32]string)
-var AESKey []byte
+	AESKey []byte
 
-var SocksListener net.Listener
+	SocksListener net.Listener
+)
 
 //启动admin
 func NewAdmin(c *cli.Context) error {
@@ -230,6 +232,9 @@ func HandleCommandFromControlConn(startNodeControlConn net.Conn) {
 				ReadyChange <- true
 				IsShellMode <- true
 			}
+		default:
+			logrus.Error("Unknown Command")
+			continue
 		}
 
 	}
