@@ -315,7 +315,7 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 				offlineCommand, _ := common.ConstructCommand("ADMINOFFLINE", "", NODEID+1, AESKey)
 				PROXY_COMMAND_CHAN <- offlineCommand
 				time.Sleep(2 * time.Second)
-				os.Exit(1)
+				os.Exit(1) //admin下线后可以不断开，这里选择结束程序
 			}
 		} else {
 			if command.Command != "SOCKS" {
