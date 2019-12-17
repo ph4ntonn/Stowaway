@@ -15,18 +15,20 @@ import (
 )
 
 var CliStatus *string
+var StartNodeStatus string
 var InitStatus string = "admin"
+var StartNode string = "0.0.0.0"
+
 var ReadyChange = make(chan bool)
 var IsShellMode = make(chan bool)
 var SSHSUCCESS = make(chan bool, 1)
 var NodeSocksStarted = make(chan bool, 1)
 var SocksRespChan = make(chan string, 1)
-var StartNode [1]string = [1]string{"0.0.0.0"}
+
 var NodesReadyToadd = make(chan map[uint32]string)
-var CurrentDir string
-var StartNodeStatus string
 var AESKey []byte
 
+//启动admin
 func NewAdmin(c *cli.Context) error {
 	AESKey = []byte(c.String("secret"))
 	listenPort := c.String("listen")
@@ -40,29 +42,27 @@ func NewAdmin(c *cli.Context) error {
 	return nil
 }
 
-func StartListen(listenPort string) error {
+//启动监听
+func StartListen(listenPort string) {
 	localAddr := fmt.Sprintf("0.0.0.0:%s", listenPort)
 	localListener, err := net.Listen("tcp", localAddr)
 	if err != nil {
-		return fmt.Errorf("Cannot listen %s", localAddr)
+		logrus.Errorf("Cannot listen %s", localAddr)
+		os.Exit(1)
 	}
 	for {
-		conn, err := localListener.Accept()
-		startNodeIP := strings.Split(conn.RemoteAddr().String(), ":")[0]
-		if err != nil {
-			return fmt.Errorf("Cannot read data from socket")
-		}
-		if startNodeIP == StartNode[0] && StartNode[0] != "0.0.0.0" {
+		conn, _ := localListener.Accept()                                //一定要有连接进入才可继续操作，故没有连接时，admin端无法操作
+		startNodeIP := strings.Split(conn.RemoteAddr().String(), ":")[0] //记录一下startnode的ip，为数据信道建立作准备
+		if startNodeIP == StartNode && StartNode != "0.0.0.0" {          //两次ip是否相同
 			logrus.Printf("StartNode connected from %s!\n", conn.RemoteAddr().String())
 			go HandleDataConn(conn)
-		} else if startNodeIP != StartNode[0] && StartNode[0] == "0.0.0.0" {
-			//logrus.Printf("StartNode connected from %s!\n", conn.RemoteAddr().String())
+		} else if startNodeIP != StartNode && StartNode == "0.0.0.0" {
 			go HandleInitControlConn(conn)
-		} else {
 		}
 	}
 }
 
+// 初始化与startnode的连接
 func HandleInitControlConn(startNodeControlConn net.Conn) {
 	for {
 		command, err := common.ExtractCommand(startNodeControlConn, AESKey)
@@ -71,17 +71,18 @@ func HandleInitControlConn(startNodeControlConn net.Conn) {
 			switch command.Info {
 			case "FIRSTCONNECT":
 				respCommand, err := common.ConstructCommand("ACCEPT", "DATA", 1, AESKey)
-				StartNode[0] = strings.Split(startNodeControlConn.RemoteAddr().String(), ":")[0]
+				StartNode = strings.Split(startNodeControlConn.RemoteAddr().String(), ":")[0]
 				_, err = startNodeControlConn.Write(respCommand)
 				if err != nil {
-					logrus.Errorf("ERROR OCCURED!: %s", err)
+					logrus.Errorf("Startnode seems offline, control channel set up failed.Exiting...")
+					return
 				}
 				go HandleCommandFromControlConn(startNodeControlConn)
 				go HandleCommandToControlConn(startNodeControlConn)
 				go MonitorCtrlC(startNodeControlConn)
 			}
 		case "LISTENPORT":
-			StartNodeStatus = command.Info
+			StartNodeStatus = command.Info //获取一下agent端监听端口的信息
 			return
 		}
 		if err != nil {
@@ -91,11 +92,18 @@ func HandleInitControlConn(startNodeControlConn net.Conn) {
 	}
 }
 
+// 处理与startnode的数据信道
 func HandleDataConn(startNodeDataConn net.Conn) {
 	for {
 		nodeResp, err := common.ExtractDataResult(startNodeDataConn, AESKey)
 		if err != nil {
 			logrus.Error("StartNode seems offline")
+			for Nodeid, _ := range Nodes {
+				if Nodeid >= 1 {
+					delete(Nodes, Nodeid)
+				}
+			}
+			StartNode = "offline"
 			break
 		}
 		switch nodeResp.Datatype {
@@ -116,13 +124,14 @@ func HandleDataConn(startNodeDataConn net.Conn) {
 	}
 }
 
+// 处理由admin发往startnode的控制信号
 func HandleCommandToControlConn(startNodeControlConn net.Conn) {
 	for {
 		AdminCommand := <-ADMINCOMMANDCHAN
 		switch AdminCommand[0] {
 		case "use":
 			if len(AdminCommand) == 2 {
-				if StartNode[0] == "0.0.0.0" {
+				if StartNode == "0.0.0.0" {
 					fmt.Println("There are no nodes connected!")
 					ReadyChange <- true
 					IsShellMode <- true
@@ -180,9 +189,14 @@ func HandleCommandToControlConn(startNodeControlConn net.Conn) {
 	}
 }
 
-func HandleCommandFromControlConn(startNodeControlConn net.Conn) { //处理由startnode proxy过来的lower node 回送命令
+//处理由startnode proxy过来的lower node 回送命令（包括startnode本身）
+func HandleCommandFromControlConn(startNodeControlConn net.Conn) {
 	for {
-		command, _ := common.ExtractCommand(startNodeControlConn, AESKey)
+		command, err := common.ExtractCommand(startNodeControlConn, AESKey)
+		if err != nil {
+			startNodeControlConn.Close() // startnode下线，关闭conn，防止死循环导致cpu占用过高
+			break
+		}
 		switch command.Command {
 		case "NEW":
 			logrus.Info("New node join! Node Id is ", command.NodeId)
@@ -219,6 +233,7 @@ func HandleCommandFromControlConn(startNodeControlConn net.Conn) { //处理由st
 	}
 }
 
+// 启动socks5
 func StartSocksService(command []string) {
 	socksport := command[1]
 	checkport, _ := strconv.Atoi(socksport)
@@ -239,6 +254,7 @@ func StartSocksService(command []string) {
 	}
 }
 
+//处理socks5流量
 func ProxySocksToclient(client net.Conn, targetport string) {
 	temp, _ := strconv.Atoi(targetport)
 	targetport = strconv.Itoa(temp + 1)
@@ -253,6 +269,7 @@ func ProxySocksToclient(client net.Conn, targetport string) {
 	defer socksproxyconn.Close()
 }
 
+// 发送ssh开启命令
 func StartSSHService(startNodeControlConn net.Conn, info []string, nodeid uint32) {
 	information := fmt.Sprintf("%s::%s::%s", info[1], info[2], info[3])
 	sshCommand, _ := common.ConstructCommand("SSH", information, nodeid, AESKey)

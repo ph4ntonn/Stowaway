@@ -15,15 +15,18 @@ import (
 	"github.com/urfave/cli"
 )
 
-var CONNECTEDNODE string = "0.0.0.0"
+var ConnectedNode string = "0.0.0.0"
+var Monitor string
+var ListenPort string
+
 var CommandToUpperNodeChan = make(chan []byte)
 var cmdResult = make(chan []byte)
 var PROXY_COMMAND_CHAN = make(chan []byte, 1)
 var LowerNodeCommChan = make(chan []byte, 1)
-var Monitor string
-var ListenPort string
+
 var ControlConnToAdmin net.Conn
 var DataConnToAdmin net.Conn
+
 var NODEID uint32 = uint32(1)
 var AESKey []byte
 
@@ -53,7 +56,7 @@ func StartNodeInit(monitor string, listenPort string) {
 		os.Exit(1)
 	}
 	go HandleStartNodeConn(ControlConnToAdmin, DataConnToAdmin, monitor, NODEID)
-	go node.StartNodeListen(listenPort, NODEID, CONNECTEDNODE, AESKey)
+	go node.StartNodeListen(listenPort, NODEID, ConnectedNode, AESKey)
 	go WaitForExit(NODEID)
 	for {
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
@@ -72,7 +75,7 @@ func SimpleNodeInit(monitor string, listenPort string) {
 	controlConnToUpperNode, dataConnToUpperNode, finalid, _ := node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
 	NODEID = uint32(finalid)
 	go HandleSimpleNodeConn(controlConnToUpperNode, dataConnToUpperNode, monitor, NODEID)
-	go node.StartNodeListen(listenPort, NODEID, CONNECTEDNODE, AESKey)
+	go node.StartNodeListen(listenPort, NODEID, ConnectedNode, AESKey)
 	go WaitForExit(NODEID)
 	for {
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
@@ -224,6 +227,8 @@ func HandleControlConnFromLowerNode(controlConnForLowerNode net.Conn, NODEID uin
 	for {
 		command, err := common.ExtractCommand(controlConnForLowerNode, AESKey)
 		if err != nil {
+			offlineMess, _ := common.ConstructCommand("OFFLINE", "", NODEID+1, AESKey)
+			PROXY_COMMAND_CHAN <- offlineMess
 			return
 		}
 		if command.NodeId == NODEID { //暂时只有admin需要处理
@@ -257,7 +262,8 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 	for {
 		command, err := common.ExtractCommand(controlConnToUpperNode, AESKey)
 		if err != nil {
-			return
+			logrus.Error("upper node offline")
+			os.Exit(1)
 		}
 		if command.NodeId == NODEID {
 			switch command.Command {

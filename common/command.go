@@ -27,7 +27,7 @@ type Command struct {
 type Data struct {
 	NodeId uint32
 
-	Success string
+	Success string //保留此字段，为后续功能留用
 
 	DatatypeLength uint32
 

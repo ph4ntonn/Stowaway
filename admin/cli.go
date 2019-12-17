@@ -7,8 +7,6 @@ import (
 	"strings"
 )
 
-// var ADMINCOMMANDCHAN chan string
-
 var ADMINCOMMANDCHAN = make(chan []string)
 var Nodes = make(map[uint32]string)
 
@@ -31,8 +29,8 @@ func Controlpanel() {
 }
 
 func ShowChain() {
-	if StartNode[0] != "0.0.0.0" {
-		fmt.Printf("StartNode:[1] %s\n", StartNode[0])
+	if StartNode != "0.0.0.0" {
+		fmt.Printf("StartNode:[1] %s\n", StartNode)
 		for Nodeid, Nodeaddress := range Nodes {
 			id := fmt.Sprint(Nodeid)
 			fmt.Printf("Nodes [%s]: %s\n", id, Nodeaddress)
