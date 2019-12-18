@@ -72,21 +72,17 @@ func HandleInitControlConn(startNodeControlConn net.Conn) {
 		command, err := common.ExtractCommand(startNodeControlConn, AESKey)
 		switch command.Command {
 		case "INIT":
-			switch command.Info {
-			case "FIRSTCONNECT":
-				respCommand, err := common.ConstructCommand("ACCEPT", "DATA", 1, AESKey)
-				StartNode = strings.Split(startNodeControlConn.RemoteAddr().String(), ":")[0]
-				_, err = startNodeControlConn.Write(respCommand)
-				if err != nil {
-					logrus.Errorf("Startnode seems offline, control channel set up failed.Exiting...")
-					return
-				}
-				go HandleCommandFromControlConn(startNodeControlConn)
-				go HandleCommandToControlConn(startNodeControlConn)
-				go MonitorCtrlC(startNodeControlConn)
-			}
-		case "LISTENPORT":
 			StartNodeStatus = command.Info //获取一下agent端监听端口的信息
+			respCommand, err := common.ConstructCommand("ACCEPT", "DATA", 1, AESKey)
+			StartNode = strings.Split(startNodeControlConn.RemoteAddr().String(), ":")[0]
+			_, err = startNodeControlConn.Write(respCommand)
+			if err != nil {
+				logrus.Errorf("Startnode seems offline, control channel set up failed.Exiting...")
+				return
+			}
+			go HandleCommandFromControlConn(startNodeControlConn)
+			go HandleCommandToControlConn(startNodeControlConn)
+			go MonitorCtrlC(startNodeControlConn)
 			return
 		}
 		if err != nil {

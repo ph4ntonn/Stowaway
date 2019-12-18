@@ -22,15 +22,7 @@ func StartNodeConn(monitor string, listenPort string, nodeID uint32, key []byte)
 		logrus.Error("Connection refused!")
 		return controlConnToUpperNode, controlConnToUpperNode, 11235, err
 	}
-	respcommand, err := common.ConstructCommand("INIT", "FIRSTCONNECT", nodeID, key)
-	if err != nil {
-		logrus.Errorf("Error occured: %s", err)
-	}
-	_, err = controlConnToUpperNode.Write(respcommand)
-	if err != nil {
-		logrus.Errorf("Error occured: %s", err)
-	}
-	respcommand, err = common.ConstructCommand("LISTENPORT", listenPort, nodeID, key)
+	respcommand, err := common.ConstructCommand("INIT", listenPort, nodeID, key)
 	if err != nil {
 		logrus.Errorf("Error occured: %s", err)
 	}
