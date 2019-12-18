@@ -20,16 +20,18 @@ var (
 	InitStatus      string = "admin"
 	StartNode       string = "0.0.0.0"
 
-	ReadyChange      = make(chan bool)
-	IsShellMode      = make(chan bool)
-	SSHSUCCESS       = make(chan bool, 1)
-	NodeSocksStarted = make(chan bool, 1)
-	SocksRespChan    = make(chan string, 1)
-	NodesReadyToadd  = make(chan map[uint32]string)
+	ReadyChange         = make(chan bool)
+	IsShellMode         = make(chan bool)
+	SSHSUCCESS          = make(chan bool, 1)
+	NodeSocksStarted    = make(chan bool, 1)
+	SocksRespChan       = make(chan string, 1)
+	SocksConnFromClient = make(chan net.Conn, 100)
+	NodesReadyToadd     = make(chan map[uint32]string)
 
 	AESKey []byte
 
-	SocksListener net.Listener
+	SocksListenerForClient net.Listener
+	SocksListenerForAgent  net.Listener
 )
 
 //启动admin
@@ -236,8 +238,8 @@ func HandleCommandFromControlConn(startNodeControlConn net.Conn) {
 	}
 }
 
-// 启动socks5
-func StartSocksService(command []string, startNodeControlConn net.Conn, nodeID uint32) {
+// 启动socks5 for client
+func StartSocksServiceForClient(command []string, startNodeControlConn net.Conn, nodeID uint32) {
 	var err error
 	socksport := command[1]
 	checkport, _ := strconv.Atoi(socksport)
@@ -247,7 +249,7 @@ func StartSocksService(command []string, startNodeControlConn net.Conn, nodeID u
 	}
 
 	socks5Addr := fmt.Sprintf("0.0.0.0:%s", socksport)
-	SocksListener, err = net.Listen("tcp", socks5Addr)
+	SocksListenerForClient, err = net.Listen("tcp", socks5Addr)
 	if err != nil {
 		respCommand, _ := common.ConstructCommand("SOCKSOFF", " ", nodeID, AESKey)
 		_, err = startNodeControlConn.Write(respCommand)
@@ -258,29 +260,55 @@ func StartSocksService(command []string, startNodeControlConn net.Conn, nodeID u
 		return
 	}
 	for {
-		conn, err := SocksListener.Accept()
+		conn, err := SocksListenerForClient.Accept()
 		if err != nil {
 			logrus.Info("Socks service stoped")
 			return
 		}
-		go ProxySocksToclient(conn, socksport)
+		respCommand, _ := common.ConstructCommand("NEWSOCKS", socksport, nodeID, AESKey)
+		_, err = startNodeControlConn.Write(respCommand)
+
+		SocksConnFromClient <- conn
+	}
+}
+
+func StartSocksServiceForAgent(command []string, startNodeControlConn net.Conn, nodeID uint32) {
+	var err error
+	socksport := command[1]
+	checkport, _ := strconv.Atoi(socksport)
+	if checkport+1 <= 0 || checkport+1 > 65535 {
+		logrus.Error("Port Illegal!")
+		return
+	}
+	socksport = strconv.Itoa(checkport + 1)
+	socks5Addr := fmt.Sprintf("0.0.0.0:%s", socksport)
+	SocksListenerForAgent, err = net.Listen("tcp", socks5Addr)
+	if err != nil {
+		respCommand, _ := common.ConstructCommand("SOCKSOFF", " ", nodeID, AESKey)
+		_, err = startNodeControlConn.Write(respCommand)
+		if err != nil {
+			logrus.Error("Cannot stop agent's socks service,check the connection!")
+		}
+		logrus.Error("Cannot listen this port!")
+		return
+	}
+	for {
+		conn, err := SocksListenerForAgent.Accept()
+		if err != nil {
+			logrus.Info("Socks service stoped")
+			return
+		}
+		go ProxySocksToclient(conn)
 	}
 }
 
 //处理socks5流量
-func ProxySocksToclient(client net.Conn, targetport string) {
-	temp, _ := strconv.Atoi(targetport)
-	targetport = strconv.Itoa(temp + 1)
-	socksAddr := fmt.Sprintf("%s:%s", Nodes[1], targetport)
-	socksproxyconn, err := net.Dial("tcp", socksAddr)
-	if err != nil {
-		logrus.Error("Cannot connect to socks server")
-		return
-	}
-	go io.Copy(client, socksproxyconn)
-	io.Copy(socksproxyconn, client)
+func ProxySocksToclient(agent net.Conn) {
+	client := <-SocksConnFromClient
+	go io.Copy(client, agent)
+	io.Copy(agent, client)
 	defer client.Close()
-	defer socksproxyconn.Close()
+	defer agent.Close()
 }
 
 // 发送ssh开启命令

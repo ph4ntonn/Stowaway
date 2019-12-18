@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -176,6 +177,12 @@ func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 					logrus.Error("Shut down socks service fail")
 					break
 				}
+			case "NEWSOCKS":
+				tempport, _ := strconv.Atoi(command.Info)
+				connport := tempport + int(NODEID)
+				finalport := strconv.Itoa(connport)
+				socksAddr := strings.Split(Monitor, ":")[0] + ":" + finalport
+				go SocksConnToUpperNode(socksAddr, command.Info)
 			case "SSH":
 				fmt.Println("Get command to start SSH")
 				err := StartSSH(controlConnToAdmin, command.Info, NODEID)
@@ -197,7 +204,16 @@ func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 				continue
 			}
 		} else {
-			if command.Command != "SOCKS" {
+			if command.Command != "SOCKS" && command.Command != "SOCKSOFF" {
+				passthroughCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId, AESKey)
+				go ProxyToNextNode(passthroughCommand)
+			} else if command.Command == "SOCKSOFF" {
+				logrus.Info("Get command to stop SOCKS")
+				err := SocksServer.Close()
+				if err != nil {
+					logrus.Error("Shut down socks service fail")
+					break
+				}
 				passthroughCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId, AESKey)
 				go ProxyToNextNode(passthroughCommand)
 			} else {
@@ -313,6 +329,12 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 				socksUsername := socksInit[1]
 				socksPass := socksInit[2]
 				go StartSocks(controlConnToUpperNode, socksPort, socksUsername, socksPass)
+			case "NEWSOCKS":
+				tempport, _ := strconv.Atoi(command.Info)
+				connport := tempport + int(NODEID)
+				finalport := strconv.Itoa(connport)
+				socksAddr := strings.Split(Monitor, ":")[0] + ":" + finalport
+				go SocksConnToUpperNode(socksAddr, command.Info)
 			case "SOCKSOFF":
 				logrus.Info("Get command to stop SOCKS")
 				err := SocksServer.Close()
@@ -341,7 +363,16 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 				continue
 			}
 		} else {
-			if command.Command != "SOCKS" {
+			if command.Command != "SOCKS" && command.Command != "SOCKSOFF" {
+				passthroughCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId, AESKey)
+				go ProxyToNextNode(passthroughCommand)
+			} else if command.Command == "SOCKSOFF" {
+				logrus.Info("Get command to stop SOCKS")
+				err := SocksServer.Close()
+				if err != nil {
+					logrus.Error("Shut down socks service fail")
+					break
+				}
 				passthroughCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId, AESKey)
 				go ProxyToNextNode(passthroughCommand)
 			} else {
