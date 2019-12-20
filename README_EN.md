@@ -54,7 +54,7 @@ Simple example：
 
   -s    It means Stowaway has used 123 as the encrypt key during the communication 
 
-  --startnode  It means Stowaway is started as FIRST agent node(there are two submode of agent mode,if you want to start the second, third one....., just remove this option)
+  --startnode  It means Stowaway is started as FIRST agent node(if the node is the first one , you MUST add this option!!! And there are two submode of agent mode,if you want to start the second, third one....., just remove this option)
 
   Be aware! -s option's value must be as same as the agents' 
 
