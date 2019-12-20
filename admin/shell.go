@@ -106,7 +106,6 @@ func HandleNodeCommand(startNodeControlConn net.Conn, NodeID string) {
 			}
 			if <-NodeSocksStarted {
 				go StartSocksServiceForClient(AdminCommand, startNodeControlConn, nodeID)
-				go StartSocksServiceForAgent(AdminCommand, startNodeControlConn, nodeID)
 			}
 			ReadyChange <- true
 			IsShellMode <- true

@@ -69,7 +69,7 @@ func ReadCommand() {
 		if err != nil {
 			break
 		}
-		sshRespMess, _ := common.ConstructDataResult(0, "1", "SSHMESS", string(buffer[:len]), AESKey)
+		sshRespMess, _ := common.ConstructDataResult(0, 0, "1", "SSHMESS", string(buffer[:len]), AESKey)
 		cmdResult <- sshRespMess
 	}
 }

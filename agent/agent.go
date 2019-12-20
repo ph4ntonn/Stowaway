@@ -7,8 +7,8 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -16,16 +16,25 @@ import (
 	"github.com/urfave/cli"
 )
 
+type SafeMap struct {
+	sync.RWMutex
+	SocksDataChan map[uint32]chan string
+}
+
 var (
 	NODEID uint32 = uint32(1)
 
-	Monitor    string
-	ListenPort string
+	Monitor       string
+	ListenPort    string
+	SocksUsername string
+	SocksPass     string
 
 	CommandToUpperNodeChan = make(chan []byte)
 	cmdResult              = make(chan []byte)
 	PROXY_COMMAND_CHAN     = make(chan []byte, 1)
+	PROXY_DATA_CHAN        = make(chan []byte, 1)
 	LowerNodeCommChan      = make(chan []byte, 1)
+	SocksDataChanMap       *SafeMap
 
 	ControlConnToAdmin net.Conn
 	DataConnToAdmin    net.Conn
@@ -34,7 +43,14 @@ var (
 	AESKey []byte
 )
 
+func newSafeMap() *SafeMap {
+	sm := new(SafeMap)
+	sm.SocksDataChan = make(map[uint32]chan string, 10)
+	return sm
+}
+
 func NewAgent(c *cli.Context) {
+	SocksDataChanMap = newSafeMap()
 	AESKey = []byte(c.String("secret"))
 	listenPort := c.String("listen")
 	//ccPort := c.String("control")
@@ -54,7 +70,8 @@ func NewAgent(c *cli.Context) {
 // 后续想让startnode与simplenode实现不一样的功能，故将两种node实现代码分开写
 func StartNodeInit(monitor string, listenPort string) {
 	NODEID = uint32(1)
-	ControlConnToAdmin, DataConnToAdmin, finalid, err := node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
+	var finalid uint32
+	ControlConnToAdmin, DataConnToAdmin, finalid, err = node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
 	NODEID = uint32(finalid)
 	if err != nil {
 		os.Exit(1)
@@ -76,9 +93,10 @@ func StartNodeInit(monitor string, listenPort string) {
 
 func SimpleNodeInit(monitor string, listenPort string) {
 	NODEID = uint32(0)
-	controlConnToUpperNode, dataConnToUpperNode, finalid, _ := node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
+	var finalid uint32
+	ControlConnToAdmin, DataConnToAdmin, finalid, _ = node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
 	NODEID = uint32(finalid)
-	go HandleSimpleNodeConn(controlConnToUpperNode, dataConnToUpperNode, monitor, NODEID)
+	go HandleSimpleNodeConn(ControlConnToAdmin, DataConnToAdmin, monitor, NODEID)
 	go node.StartNodeListen(listenPort, NODEID, AESKey)
 	go WaitForExit(NODEID)
 	for {
@@ -87,7 +105,7 @@ func SimpleNodeInit(monitor string, listenPort string) {
 		NewNodeMessage := <-node.NewNodeMessageChan
 		PROXY_COMMAND_CHAN = make(chan []byte)
 		LowerNodeCommChan <- NewNodeMessage
-		go ProxyLowerNodeCommToUpperNode(controlConnToUpperNode, LowerNodeCommChan)
+		go ProxyLowerNodeCommToUpperNode(ControlConnToAdmin, LowerNodeCommChan)
 		go HandleLowerNodeConn(controlConnForLowerNode, dataConnForLowerNode, NODEID, LowerNodeCommChan)
 	}
 
@@ -111,21 +129,32 @@ func HandleDataConnToAdmin(dataConnToAdmin net.Conn, NODEID uint32) {
 	}
 }
 
-//暂时不需要
 func HandleDataConnFromAdmin(dataConnToAdmin net.Conn, NODEID uint32) {
-	// for {
-	// 	AdminData, err := common.ExtractDataResult(dataConnToAdmin)
-	// 	if err != nil {
-	// 		fmt.Println(err)
-	// 	}
-	// 	if AdminData.NodeId == NODEID {
-	// 		switch AdminData.Datatype {
-	// 		case "SOCKS5":
-	// 			fmt.Println(AdminData.Result)
-	// 			go socks.CheckBuffer(dataConnToAdmin, []byte(AdminData.Result), int(AdminData.ResultLength))
-	// 		}
-	// 	}
-	// }
+	for {
+		AdminData, err := common.ExtractDataResult(dataConnToAdmin, AESKey)
+		if err != nil {
+			return
+		}
+		if AdminData.NodeId == NODEID {
+			switch AdminData.Datatype {
+			case "SOCKSDATA":
+				if _, ok := SocksDataChanMap.SocksDataChan[AdminData.Clientsocks]; ok {
+					SocksDataChanMap.SocksDataChan[AdminData.Clientsocks] <- AdminData.Result
+
+				} else {
+					//fmt.Println("create new chan", AdminData.Clientsocks)
+					tempchan := make(chan string, 1)
+					SocksDataChanMap.SocksDataChan[AdminData.Clientsocks] = tempchan
+					go HanleClientSocksConn(SocksDataChanMap.SocksDataChan[AdminData.Clientsocks], SocksUsername, SocksPass, AdminData.Clientsocks)
+					SocksDataChanMap.SocksDataChan[AdminData.Clientsocks] <- AdminData.Result
+				}
+
+			}
+		} else {
+			ProxyData, _ := common.ConstructDataResult(AdminData.NodeId, AdminData.Clientsocks, AdminData.Success, AdminData.Datatype, AdminData.Result, AESKey)
+			go ProxyDataToNextNode(ProxyData)
+		}
+	}
 }
 
 func HandleControlConnToAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
@@ -167,9 +196,9 @@ func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 				logrus.Info("Get command to start SOCKS")
 				socksInit := strings.Split(command.Info, ":")
 				socksPort := socksInit[0]
-				socksUsername := socksInit[1]
-				socksPass := socksInit[2]
-				go StartSocks(controlConnToAdmin, socksPort, socksUsername, socksPass)
+				SocksUsername := socksInit[1]
+				SocksPass := socksInit[2]
+				go StartSocks(controlConnToAdmin, socksPort, SocksUsername, SocksPass)
 			case "SOCKSOFF":
 				logrus.Info("Get command to stop SOCKS")
 				err := SocksServer.Close()
@@ -177,12 +206,6 @@ func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 					logrus.Error("Shut down socks service fail")
 					break
 				}
-			case "NEWSOCKS":
-				tempport, _ := strconv.Atoi(command.Info)
-				connport := tempport + int(NODEID)
-				finalport := strconv.Itoa(connport)
-				socksAddr := strings.Split(Monitor, ":")[0] + ":" + finalport
-				go SocksConnToUpperNode(socksAddr, command.Info)
 			case "SSH":
 				fmt.Println("Get command to start SSH")
 				err := StartSSH(controlConnToAdmin, command.Info, NODEID)
@@ -206,7 +229,7 @@ func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 		} else {
 			if command.Command != "SOCKS" && command.Command != "SOCKSOFF" {
 				passthroughCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId, AESKey)
-				go ProxyToNextNode(passthroughCommand)
+				go ProxyCommToNextNode(passthroughCommand)
 			} else if command.Command == "SOCKSOFF" {
 				logrus.Info("Get command to stop SOCKS")
 				err := SocksServer.Close()
@@ -215,11 +238,11 @@ func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 					break
 				}
 				passthroughCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId, AESKey)
-				go ProxyToNextNode(passthroughCommand)
+				go ProxyCommToNextNode(passthroughCommand)
 			} else {
 				passthroughCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId, AESKey)
-				go ProxyToNextNode(passthroughCommand)
-				go StartSocksProxy(command.Info)
+				go ProxyCommToNextNode(passthroughCommand)
+				//go StartSocksProxy(command.Info)
 			}
 		}
 	}
@@ -228,17 +251,8 @@ func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 func HandleLowerNodeConn(controlConnForLowerNode net.Conn, dataConnForLowerNode net.Conn, NODEID uint32, LowerNodeCommChan chan []byte) {
 	go HandleControlConnToLowerNode(controlConnForLowerNode, NODEID, LowerNodeCommChan)
 	go HandleControlConnFromLowerNode(controlConnForLowerNode, NODEID, LowerNodeCommChan)
-	for {
-		buffer := make([]byte, 409600)
-		len, err := dataConnForLowerNode.Read(buffer)
-		if err != nil {
-			logrus.Error("Node ", NODEID+1, " seems offline")
-			offlineMess, _ := common.ConstructCommand("AGENTOFFLINE", "", NODEID+1, AESKey)
-			LowerNodeCommChan <- offlineMess
-			break
-		}
-		cmdResult <- buffer[:len]
-	}
+	go HandleDataConnFromLowerNode(dataConnForLowerNode, NODEID)
+	go HandleDataConnToLowerNode(dataConnForLowerNode, NODEID)
 }
 
 func HandleControlConnToLowerNode(controlConnForLowerNode net.Conn, NODEID uint32, LowerNodeCommChan chan []byte) {
@@ -268,9 +282,35 @@ func HandleControlConnFromLowerNode(controlConnForLowerNode net.Conn, NODEID uin
 	}
 }
 
+func HandleDataConnFromLowerNode(dataConnForLowerNode net.Conn, NODEID uint32) {
+	for {
+		buffer := make([]byte, 409600)
+		len, err := dataConnForLowerNode.Read(buffer)
+		if err != nil {
+			logrus.Error("Node ", NODEID+1, " seems offline")
+			offlineMess, _ := common.ConstructCommand("AGENTOFFLINE", "", NODEID+1, AESKey)
+			LowerNodeCommChan <- offlineMess
+			break
+		}
+		cmdResult <- buffer[:len]
+	}
+}
+
+func HandleDataConnToLowerNode(dataConnForLowerNode net.Conn, NODEID uint32) {
+	for {
+		proxy_data := <-PROXY_DATA_CHAN
+		_, err := dataConnForLowerNode.Write(proxy_data)
+		if err != nil {
+			logrus.Error(err)
+			continue
+		}
+	}
+}
+
 func HandleSimpleNodeConn(controlConnToUpperNode net.Conn, dataConnToUpperNode net.Conn, monitor string, NODEID uint32) {
 	go HandleControlConnFromUpperNode(controlConnToUpperNode, NODEID)
 	go HandleControlConnToUpperNode(controlConnToUpperNode, NODEID)
+	go HandleUpperNodeDataConn(dataConnToUpperNode)
 	for {
 		proxyCmdResult := <-cmdResult
 		_, err := dataConnToUpperNode.Write(proxyCmdResult)
@@ -278,6 +318,7 @@ func HandleSimpleNodeConn(controlConnToUpperNode net.Conn, dataConnToUpperNode n
 			logrus.Errorf("ERROR OCCURED!: %s", err)
 		}
 	}
+	//go HandleUpperNodeDataConn(dataConnToUpperNode)
 }
 
 func HandleControlConnToUpperNode(controlConnToUpperNode net.Conn, NODEID uint32) {
@@ -326,15 +367,9 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 				logrus.Info("Get command to start SOCKS")
 				socksInit := strings.Split(command.Info, ":")
 				socksPort := socksInit[0]
-				socksUsername := socksInit[1]
-				socksPass := socksInit[2]
-				go StartSocks(controlConnToUpperNode, socksPort, socksUsername, socksPass)
-			case "NEWSOCKS":
-				tempport, _ := strconv.Atoi(command.Info)
-				connport := tempport + int(NODEID)
-				finalport := strconv.Itoa(connport)
-				socksAddr := strings.Split(Monitor, ":")[0] + ":" + finalport
-				go SocksConnToUpperNode(socksAddr, command.Info)
+				SocksUsername := socksInit[1]
+				SocksPass := socksInit[2]
+				go StartSocks(controlConnToUpperNode, socksPort, SocksUsername, SocksPass)
 			case "SOCKSOFF":
 				logrus.Info("Get command to stop SOCKS")
 				err := SocksServer.Close()
@@ -365,7 +400,7 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 		} else {
 			if command.Command != "SOCKS" && command.Command != "SOCKSOFF" {
 				passthroughCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId, AESKey)
-				go ProxyToNextNode(passthroughCommand)
+				go ProxyCommToNextNode(passthroughCommand)
 			} else if command.Command == "SOCKSOFF" {
 				logrus.Info("Get command to stop SOCKS")
 				err := SocksServer.Close()
@@ -374,19 +409,42 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 					break
 				}
 				passthroughCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId, AESKey)
-				go ProxyToNextNode(passthroughCommand)
+				go ProxyCommToNextNode(passthroughCommand)
 			} else {
 				passthroughCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId, AESKey)
-				go ProxyToNextNode(passthroughCommand)
-				go StartSocksProxy(command.Info)
+				go ProxyCommToNextNode(passthroughCommand)
+				//go StartSocksProxy(command.Info)
 			}
 		}
 	}
 }
 
-//暂时不需要
 func HandleUpperNodeDataConn(dataConnToUpperNode net.Conn) {
+	for {
+		AdminData, err := common.ExtractDataResult(dataConnToUpperNode, AESKey)
+		if err != nil {
+			return
+		}
+		if AdminData.NodeId == NODEID {
+			switch AdminData.Datatype {
+			case "SOCKSDATA":
+				if _, ok := SocksDataChanMap.SocksDataChan[AdminData.Clientsocks]; ok {
+					SocksDataChanMap.SocksDataChan[AdminData.Clientsocks] <- AdminData.Result
 
+				} else {
+					//fmt.Println("create new chan", AdminData.Clientsocks)
+					tempchan := make(chan string, 1)
+					SocksDataChanMap.SocksDataChan[AdminData.Clientsocks] = tempchan
+					go HanleClientSocksConn(SocksDataChanMap.SocksDataChan[AdminData.Clientsocks], SocksUsername, SocksPass, AdminData.Clientsocks)
+					SocksDataChanMap.SocksDataChan[AdminData.Clientsocks] <- AdminData.Result
+				}
+
+			}
+		} else {
+			ProxyData, _ := common.ConstructDataResult(AdminData.NodeId, AdminData.Clientsocks, AdminData.Success, AdminData.Datatype, AdminData.Result, AESKey)
+			go ProxyDataToNextNode(ProxyData)
+		}
+	}
 }
 
 func ProxyLowerNodeCommToUpperNode(upper net.Conn, LowerNodeCommChan chan []byte) {
@@ -400,8 +458,12 @@ func ProxyLowerNodeCommToUpperNode(upper net.Conn, LowerNodeCommChan chan []byte
 	}
 }
 
-func ProxyToNextNode(proxyCommand []byte) {
+func ProxyCommToNextNode(proxyCommand []byte) {
 	PROXY_COMMAND_CHAN <- proxyCommand
+}
+
+func ProxyDataToNextNode(proxyData []byte) {
+	PROXY_DATA_CHAN <- proxyData
 }
 
 func WaitForExit(NODEID uint32) {

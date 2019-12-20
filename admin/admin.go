@@ -2,11 +2,11 @@ package admin
 
 import (
 	"fmt"
-	"io"
 	"net"
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"Stowaway/common"
 
@@ -14,28 +14,39 @@ import (
 	"github.com/urfave/cli"
 )
 
+type SafeMap struct {
+	sync.RWMutex
+	ClientSocketsMap map[uint32]net.Conn
+}
+
 var (
 	CliStatus       *string
 	StartNodeStatus string
 	InitStatus      string = "admin"
 	StartNode       string = "0.0.0.0"
 
-	ReadyChange         = make(chan bool)
-	IsShellMode         = make(chan bool)
-	SSHSUCCESS          = make(chan bool, 1)
-	NodeSocksStarted    = make(chan bool, 1)
-	SocksRespChan       = make(chan string, 1)
-	SocksConnFromClient = make(chan net.Conn, 100)
-	NodesReadyToadd     = make(chan map[uint32]string)
+	ReadyChange      = make(chan bool)
+	IsShellMode      = make(chan bool)
+	SSHSUCCESS       = make(chan bool, 1)
+	NodeSocksStarted = make(chan bool, 1)
+	SocksRespChan    = make(chan string, 1)
+	NodesReadyToadd  = make(chan map[uint32]string)
+	ClientSockets    *SafeMap
+	//ClientSocketsForResponse *SafeMap
 
-	AESKey []byte
+	ClientNum uint32 = 0
+	AESKey    []byte
 
+	DataConn               net.Conn
 	SocksListenerForClient net.Listener
 	SocksListenerForAgent  net.Listener
 )
 
+//ClientSockets.ClientSocketsMap = make(map[uint32]net.Conn)
 //启动admin
 func NewAdmin(c *cli.Context) error {
+	ClientSockets = newSafeMap()
+	//ClientSocketsForResponse = newSafeMap()
 	AESKey = []byte(c.String("secret"))
 	listenPort := c.String("listen")
 	//ccPort := c.String("control")
@@ -46,6 +57,12 @@ func NewAdmin(c *cli.Context) error {
 	CliStatus = &InitStatus
 	Controlpanel()
 	return nil
+}
+
+func newSafeMap() *SafeMap {
+	sm := new(SafeMap)
+	sm.ClientSocketsMap = make(map[uint32]net.Conn)
+	return sm
 }
 
 //启动监听
@@ -61,6 +78,7 @@ func StartListen(listenPort string) {
 		startNodeIP := strings.Split(conn.RemoteAddr().String(), ":")[0] //记录一下startnode的ip，为数据信道建立作准备
 		if startNodeIP == StartNode && StartNode != "0.0.0.0" {          //两次ip是否相同
 			logrus.Printf("StartNode connected from %s!\n", conn.RemoteAddr().String())
+			DataConn = conn
 			go HandleDataConn(conn)
 		} else if startNodeIP != StartNode && StartNode == "0.0.0.0" {
 			go HandleInitControlConn(conn)
@@ -122,6 +140,15 @@ func HandleDataConn(startNodeDataConn net.Conn) {
 			} else {
 				fmt.Println("Something wrong occured!Try another one")
 			}
+		case "SOCKSDATARESP":
+			ClientSockets.RLock()
+			// fmt.Println("get response!", string(nodeResp.Result))
+			_, err := ClientSockets.ClientSocketsMap[nodeResp.Clientsocks].Write([]byte(nodeResp.Result))
+			if err != nil {
+				ClientSockets.RUnlock()
+				continue
+			}
+			ClientSockets.RUnlock()
 		}
 	}
 }
@@ -265,50 +292,28 @@ func StartSocksServiceForClient(command []string, startNodeControlConn net.Conn,
 			logrus.Info("Socks service stoped")
 			return
 		}
-		respCommand, _ := common.ConstructCommand("NEWSOCKS", socksport, nodeID, AESKey)
-		_, err = startNodeControlConn.Write(respCommand)
-
-		SocksConnFromClient <- conn
+		ClientSockets.Lock()
+		ClientSockets.ClientSocketsMap[ClientNum] = conn
+		ClientSockets.Unlock()
+		ClientSockets.RLock()
+		go HandleNewSocksConn(ClientSockets.ClientSocketsMap[ClientNum], ClientNum, nodeID)
+		ClientSockets.RUnlock()
+		ClientNum++
 	}
 }
 
-func StartSocksServiceForAgent(command []string, startNodeControlConn net.Conn, nodeID uint32) {
-	var err error
-	socksport := command[1]
-	checkport, _ := strconv.Atoi(socksport)
-	if checkport+1 <= 0 || checkport+1 > 65535 {
-		logrus.Error("Port Illegal!")
-		return
-	}
-	socksport = strconv.Itoa(checkport + 1)
-	socks5Addr := fmt.Sprintf("0.0.0.0:%s", socksport)
-	SocksListenerForAgent, err = net.Listen("tcp", socks5Addr)
-	if err != nil {
-		respCommand, _ := common.ConstructCommand("SOCKSOFF", " ", nodeID, AESKey)
-		_, err = startNodeControlConn.Write(respCommand)
-		if err != nil {
-			logrus.Error("Cannot stop agent's socks service,check the connection!")
-		}
-		logrus.Error("Cannot listen this port!")
-		return
-	}
+func HandleNewSocksConn(clientsocks net.Conn, num uint32, nodeID uint32) {
+	buffer := make([]byte, 204800)
 	for {
-		conn, err := SocksListenerForAgent.Accept()
+		len, err := clientsocks.Read(buffer)
 		if err != nil {
-			logrus.Info("Socks service stoped")
+			clientsocks.Close()
 			return
+		} else {
+			respData, _ := common.ConstructDataResult(nodeID, num, " ", "SOCKSDATA", string(buffer[:len]), AESKey)
+			DataConn.Write(respData)
 		}
-		go ProxySocksToclient(conn)
 	}
-}
-
-//处理socks5流量
-func ProxySocksToclient(agent net.Conn) {
-	client := <-SocksConnFromClient
-	go io.Copy(client, agent)
-	io.Copy(agent, client)
-	defer client.Close()
-	defer agent.Close()
 }
 
 // 发送ssh开启命令

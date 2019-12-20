@@ -1,79 +1,76 @@
 package socks
 
 import (
+	"Stowaway/common"
 	"fmt"
-	"io"
 	"net"
 	"strconv"
 
 	"github.com/sirupsen/logrus"
 )
 
-func AuthClient(conn net.Conn, username string, secret string) {
-	buffer := make([]byte, 1024)
-	for {
-		_, err := conn.Read(buffer)
-		if err != nil {
-			logrus.Error(err)
-			return
-		}
-		if buffer[0] == 0x05 {
-			if buffer[2] == 0x02 {
-				conn.Write([]byte{0x05, 0x02})
-				_, err := conn.Read(buffer)
-				if err != nil {
-					logrus.Error(err)
-					return
-				}
-
-				ulen := int(buffer[1])
-				slen := int(buffer[2+ulen])
-				clientname := string(buffer[2 : 2+ulen])
-				clientpass := string(buffer[3+ulen : 3+ulen+slen])
-
-				if clientname != username || clientpass != secret {
-					logrus.Error("Illegal client!")
-					conn.Write([]byte{0x01, 0x01})
-					conn.Close()
-					return
-				} else {
-					conn.Write([]byte{0x01, 0x00})
-					go Proxyhttp(conn)
-					return
-				}
-			} else if buffer[2] == 0x00 && (username == "" || secret == "") {
-				conn.Write([]byte{0x05, 0x00})
-				go Proxyhttp(conn)
-				return
-			} else {
-				conn.Close()
-				logrus.Error("Illegal client!")
-				return
-			}
+func CheckMethod(conntoupper net.Conn, buffer []byte, username string, secret string, clientid uint32, key []byte) string {
+	if buffer[0] == 0x05 {
+		if buffer[2] == 0x02 {
+			respdata, _ := common.ConstructDataResult(0, clientid, " ", "SOCKSDATARESP", string([]byte{0x05, 0x02}), key)
+			conntoupper.Write(respdata)
+			return "PASSWORD"
+		} else if buffer[2] == 0x00 && (username == "" || secret == "") {
+			respdata, _ := common.ConstructDataResult(0, clientid, " ", "SOCKSDATARESP", string([]byte{0x05, 0x00}), key)
+			conntoupper.Write(respdata)
+			return "NONE"
 		} else {
-			logrus.Error("Not socks5 message!")
-			return
+			logrus.Error("Illegal client!")
 		}
 	}
+	return "RETURN"
 }
 
-func Proxyhttp(conn net.Conn) {
-	buffer := make([]byte, 409600)
-	len, _ := conn.Read(buffer)
+func AuthClient(conntoupper net.Conn, buffer []byte, username string, secret string, clientid uint32, key []byte) bool {
+	ulen := int(buffer[1])
+	slen := int(buffer[2+ulen])
+	clientname := string(buffer[2 : 2+ulen])
+	clientpass := string(buffer[3+ulen : 3+ulen+slen])
+
+	if clientname != username || clientpass != secret {
+		logrus.Error("Illegal client!")
+		respdata, _ := common.ConstructDataResult(0, clientid, " ", "SOCKSDATARESP", string([]byte{0x01, 0x01}), key)
+		conntoupper.Write(respdata)
+		return false
+	} else {
+		respdata, _ := common.ConstructDataResult(0, clientid, " ", "SOCKSDATARESP", string([]byte{0x01, 0x00}), key)
+		conntoupper.Write(respdata)
+		return true
+	}
+	// } else if buffer[2] == 0x00 && (username == "" || secret == "") {
+	// 	fmt.Println("i am here")
+	// 	conn.Write([]byte{0x05, 0x00})
+	// 	go Proxyhttp(conn)
+	// 	return
+	// }
+}
+
+func ConfirmTarget(conntoupper net.Conn, buffer []byte, checknum uint32, key []byte) (net.Conn, bool, bool) {
+	len := len(buffer)
+	connected := false
+	var server net.Conn
+	var serverflag bool
 	if buffer[0] == 0x05 {
 		switch buffer[1] {
 		case 0x01:
-			go TcpConnect(conn, buffer, len)
+			server, connected, serverflag = TcpConnect(conntoupper, buffer, len, checknum, key)
 		case 0x02:
-			go TcpBind(conn, buffer, len)
+			connected = TcpBind(conntoupper, buffer, len, checknum, key)
 		case 0x03:
-			go UdpAssociate(conn, buffer, len)
+			connected = UdpAssociate(conntoupper, buffer, len, checknum, key)
 		}
 	}
+	return server, connected, serverflag
 }
 
-func TcpConnect(client net.Conn, buffer []byte, len int) {
+func TcpConnect(conntoupper net.Conn, buffer []byte, len int, checknum uint32, key []byte) (net.Conn, bool, bool) {
 	host := ""
+	var server net.Conn
 	switch buffer[3] {
 	case 0x01:
 		host = net.IPv4(buffer[4], buffer[5], buffer[6], buffer[7]).String()
@@ -88,21 +85,37 @@ func TcpConnect(client net.Conn, buffer []byte, len int) {
 	port := strconv.Itoa(int(buffer[len-2])<<8 | int(buffer[len-1]))
 	server, err := net.Dial("tcp", net.JoinHostPort(host, port))
 	if err != nil {
-		client.Write([]byte{0x05, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
-		logrus.Error("Cannot connect to remote server")
-		return
+		respdata, _ := common.ConstructDataResult(0, checknum, " ", "SOCKSDATARESP", string([]byte{0x05, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}), key)
+		conntoupper.Write(respdata)
+		//logrus.Error("Cannot connect to remote web server", err)
+		return server, false, false
 	}
-	client.Write([]byte{0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
-	go io.Copy(server, client)
-	io.Copy(client, server)
-	defer server.Close()
-	defer client.Close()
+	respdata, _ := common.ConstructDataResult(0, checknum, " ", "SOCKSDATARESP", string([]byte{0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}), key)
+	conntoupper.Write(respdata)
+	return server, true, true
 }
 
-func TcpBind(client net.Conn, buffer []byte, len int) {
-	fmt.Println("Not ready") //limited use, add to Todo
+func Proxyhttp(conntoupper net.Conn, server net.Conn, checknum uint32, key []byte) error {
+	serverbuffer := make([]byte, 204800)
+	for {
+		len, err := server.Read(serverbuffer)
+		if err != nil {
+			server.Close()
+			return err
+		}
+		//fmt.Println("sever response is", string(serverbuffer[:len]))
+		respdata, _ := common.ConstructDataResult(0, checknum, " ", "SOCKSDATARESP", string(serverbuffer[:len]), key)
+		conntoupper.Write(respdata)
+	}
+	return nil
 }
 
-func UdpAssociate(client net.Conn, buffer []byte, len int) {
+func TcpBind(client net.Conn, buffer []byte, len int, checknum uint32, AESKey []byte) bool {
 	fmt.Println("Not ready") //limited use, add to Todo
+	return false
+}
+
+func UdpAssociate(client net.Conn, buffer []byte, len int, checknum uint32, AESKey []byte) bool {
+	fmt.Println("Not ready") //limited use, add to Todo
+	return false
 }
