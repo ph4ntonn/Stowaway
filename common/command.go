@@ -95,39 +95,6 @@ func ExtractCommand(conn net.Conn, key []byte) (*Command, error) {
 
 	return command, nil
 
-	// var (
-	// 	command = &Command{}
-	// 	templen = make([]byte, config.TEMP_LEN)
-	// )
-	// for {
-	// 	len, err := conn.Read(templen)
-	// }
-	// if err != nil {
-	// 	return command, err
-	// }
-	// fmt.Println(datalen[:len])
-	// oriData := crypto.AESDecrypt(datalen[:len], key)
-
-	// idlen := oriData[:4]
-	// command.NodeId = binary.BigEndian.Uint32(idlen)
-
-	// commandlen := oriData[4:8]
-	// command.CommandLength = binary.BigEndian.Uint32(commandlen)
-
-	// commandbuffer := oriData[8 : 8+command.CommandLength]
-	// command.Command = string(commandbuffer)
-
-	// infolen := oriData[8+command.CommandLength : 13+command.CommandLength]
-	// command.InfoLength = binary.BigEndian.Uint32(infolen)
-
-	// infobuffer := oriData[13+command.CommandLength : 13+command.CommandLength+command.InfoLength]
-	// command.Info = string(infobuffer)
-	// fmt.Println(command)
-	// _, err = io.ReadFull(conn, idlen)
-	// if err != nil {
-	// 	return command, err
-	// }
-
 }
 
 func ConstructCommand(command string, info string, id uint32, key []byte) ([]byte, error) {
