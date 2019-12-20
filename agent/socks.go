@@ -3,22 +3,12 @@ package agent
 import (
 	"Stowaway/common"
 	"Stowaway/socks"
-	"fmt"
 	"net"
 )
 
 func StartSocks(controlConnToAdmin net.Conn, socksPort, socksUsername, socksPass string) {
 	socksstartmess, _ := common.ConstructCommand("SOCKSRESP", "SUCCESS", NODEID, AESKey)
 	controlConnToAdmin.Write(socksstartmess)
-	// if err != nil {
-	// 	socksstartmess, _ := common.ConstructCommand("SOCKSRESP", "FAILED", NODEID, AESKey)
-	// 	controlConnToAdmin.Write(socksstartmess)
-	// 	fmt.Println(err)
-	// 	return
-	// } else {
-	// 	socksstartmess, _ := common.ConstructCommand("SOCKSRESP", "SUCCESS", NODEID, AESKey)
-	// 	controlConnToAdmin.Write(socksstartmess)
-	// }
 }
 
 func HanleClientSocksConn(info chan string, socksUsername, socksPass string, checknum uint32) {
@@ -52,7 +42,6 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 					_, err := server.Write([]byte(data))
 					if err != nil {
 						close(info)
-						fmt.Println("close one")
 						delete(SocksDataChanMap.SocksDataChan, checknum)
 						return
 					}

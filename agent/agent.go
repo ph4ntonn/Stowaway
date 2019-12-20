@@ -196,16 +196,9 @@ func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 				logrus.Info("Get command to start SOCKS")
 				socksInit := strings.Split(command.Info, ":")
 				socksPort := socksInit[0]
-				SocksUsername := socksInit[1]
-				SocksPass := socksInit[2]
+				SocksUsername = socksInit[1]
+				SocksPass = socksInit[2]
 				go StartSocks(controlConnToAdmin, socksPort, SocksUsername, SocksPass)
-			case "SOCKSOFF":
-				logrus.Info("Get command to stop SOCKS")
-				err := SocksServer.Close()
-				if err != nil {
-					logrus.Error("Shut down socks service fail")
-					break
-				}
 			case "SSH":
 				fmt.Println("Get command to start SSH")
 				err := StartSSH(controlConnToAdmin, command.Info, NODEID)
@@ -310,15 +303,8 @@ func HandleDataConnToLowerNode(dataConnForLowerNode net.Conn, NODEID uint32) {
 func HandleSimpleNodeConn(controlConnToUpperNode net.Conn, dataConnToUpperNode net.Conn, monitor string, NODEID uint32) {
 	go HandleControlConnFromUpperNode(controlConnToUpperNode, NODEID)
 	go HandleControlConnToUpperNode(controlConnToUpperNode, NODEID)
-	go HandleUpperNodeDataConn(dataConnToUpperNode)
-	for {
-		proxyCmdResult := <-cmdResult
-		_, err := dataConnToUpperNode.Write(proxyCmdResult)
-		if err != nil {
-			logrus.Errorf("ERROR OCCURED!: %s", err)
-		}
-	}
-	//go HandleUpperNodeDataConn(dataConnToUpperNode)
+	go HandleDataConnFromUpperNode(dataConnToUpperNode)
+	go HandleDataConnToUpperNode(dataConnToUpperNode)
 }
 
 func HandleControlConnToUpperNode(controlConnToUpperNode net.Conn, NODEID uint32) {
@@ -370,13 +356,6 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 				SocksUsername := socksInit[1]
 				SocksPass := socksInit[2]
 				go StartSocks(controlConnToUpperNode, socksPort, SocksUsername, SocksPass)
-			case "SOCKSOFF":
-				logrus.Info("Get command to stop SOCKS")
-				err := SocksServer.Close()
-				if err != nil {
-					logrus.Error("Shut down socks service fail")
-					break
-				}
 			case "SSH":
 				fmt.Println("Get command to start SSH")
 				err := StartSSH(controlConnToUpperNode, command.Info, NODEID)
@@ -419,7 +398,17 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 	}
 }
 
-func HandleUpperNodeDataConn(dataConnToUpperNode net.Conn) {
+func HandleDataConnToUpperNode(dataConnToUpperNode net.Conn) {
+	for {
+		proxyCmdResult := <-cmdResult
+		_, err := dataConnToUpperNode.Write(proxyCmdResult)
+		if err != nil {
+			logrus.Errorf("ERROR OCCURED!: %s", err)
+		}
+	}
+}
+
+func HandleDataConnFromUpperNode(dataConnToUpperNode net.Conn) {
 	for {
 		AdminData, err := common.ExtractDataResult(dataConnToUpperNode, AESKey)
 		if err != nil {

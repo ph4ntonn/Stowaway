@@ -39,7 +39,6 @@ var (
 
 	DataConn               net.Conn
 	SocksListenerForClient net.Listener
-	SocksListenerForAgent  net.Listener
 )
 
 //ClientSockets.ClientSocketsMap = make(map[uint32]net.Conn)

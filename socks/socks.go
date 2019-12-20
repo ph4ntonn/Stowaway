@@ -19,8 +19,6 @@ func CheckMethod(conntoupper net.Conn, buffer []byte, username string, secret st
 			respdata, _ := common.ConstructDataResult(0, clientid, " ", "SOCKSDATARESP", string([]byte{0x05, 0x00}), key)
 			conntoupper.Write(respdata)
 			return "NONE"
-		} else {
-			logrus.Error("Illegal client!")
 		}
 	}
 	return "RETURN"
