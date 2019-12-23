@@ -8,7 +8,7 @@ import (
 	"os/signal"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 const version = "0.0.1"
