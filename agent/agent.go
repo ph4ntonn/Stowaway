@@ -206,6 +206,9 @@ func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 				SocksUsername = socksInit[1]
 				SocksPass = socksInit[2]
 				go StartSocks(controlConnToAdmin, socksPort, SocksUsername, SocksPass)
+			case "SOCKSOFF":
+				logrus.Info("Get command to stop SOCKS")
+				SocksDataChanMap = newSafeMap() //清空map的数据，交给go回收
 			case "SSH":
 				fmt.Println("Get command to start SSH")
 				err := StartSSH(controlConnToAdmin, command.Info, NODEID)

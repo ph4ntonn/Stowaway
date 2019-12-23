@@ -114,6 +114,12 @@ func HandleNodeCommand(startNodeControlConn net.Conn, NodeID string) {
 			if err != nil {
 				logrus.Error("You have never started socks service!")
 			}
+			respCommand, _ := common.ConstructCommand("SOCKSOFF", " ", nodeID, AESKey)
+			_, err = startNodeControlConn.Write(respCommand)
+			if err != nil {
+				logrus.Error("StartNode seems offline")
+			}
+			ClientSockets = newSafeMap() //清空map，交给runtime垃圾回收
 			ReadyChange <- true
 			IsShellMode <- true
 		case "ssh":
