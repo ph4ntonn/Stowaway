@@ -19,25 +19,25 @@ type Command struct {
 
 	Command string //命令类型
 
-	InfoLength uint32
+	InfoLength uint32 //载荷长度
 
-	Info string
+	Info string //具体载荷
 }
 
 type Data struct {
-	NodeId uint32
+	NodeId uint32 //节点序号
 
-	Clientsocks uint32
+	Clientsocks uint32 //socks标号
 
 	Success string //保留此字段，为后续功能留用
 
-	DatatypeLength uint32
+	DatatypeLength uint32 //数据类型长度
 
-	Datatype string
+	Datatype string //数据类型
 
-	ResultLength uint32
+	ResultLength uint32 //具体载荷长度
 
-	Result string
+	Result string //具体载荷
 }
 
 func ExtractCommand(conn net.Conn, key []byte) (*Command, error) {

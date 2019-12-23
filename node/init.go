@@ -16,6 +16,7 @@ var ControlConnForLowerNodeChan = make(chan net.Conn, 1)
 var DataConnForLowerNodeChan = make(chan net.Conn, 1)
 var NewNodeMessageChan = make(chan []byte, 1)
 
+//初始化一个节点连接操作
 func StartNodeConn(monitor string, listenPort string, nodeID uint32, key []byte) (net.Conn, net.Conn, uint32, error) {
 	controlConnToUpperNode, err := net.Dial("tcp", monitor)
 	if err != nil {
@@ -48,6 +49,7 @@ func StartNodeConn(monitor string, listenPort string, nodeID uint32, key []byte)
 	}
 }
 
+//初始化节点监听操作
 func StartNodeListen(listenPort string, NodeId uint32, key []byte) (net.Conn, net.Conn, []byte, error) {
 	var nodeconnected string = "0.0.0.0"
 	listenAddr := fmt.Sprintf("0.0.0.0:%s", listenPort)

@@ -21,7 +21,7 @@ func CreatInteractiveShell() (*exec.Cmd, io.Reader, io.Writer) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	cmd.Stderr = cmd.Stdout
+	cmd.Stderr = cmd.Stdout //将stderr连接至stdout
 	cmd.Start()
 	return cmd, stdout, stdin
 }

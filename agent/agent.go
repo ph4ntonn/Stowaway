@@ -91,6 +91,7 @@ func StartNodeInit(monitor string, listenPort string) {
 
 }
 
+//普通的node节点
 func SimpleNodeInit(monitor string, listenPort string) {
 	NODEID = uint32(0)
 	var finalid uint32
@@ -111,6 +112,7 @@ func SimpleNodeInit(monitor string, listenPort string) {
 
 }
 
+//启动startnode
 func HandleStartNodeConn(controlConnToAdmin net.Conn, dataConnToAdmin net.Conn, monitor string, NODEID uint32) {
 	go HandleControlConnFromAdmin(controlConnToAdmin, NODEID)
 	go HandleControlConnToAdmin(controlConnToAdmin, NODEID)
@@ -118,6 +120,7 @@ func HandleStartNodeConn(controlConnToAdmin net.Conn, dataConnToAdmin net.Conn, 
 	go HandleDataConnToAdmin(dataConnToAdmin, NODEID)
 }
 
+//管理startnode发往admin的数据
 func HandleDataConnToAdmin(dataConnToAdmin net.Conn, NODEID uint32) {
 	for {
 		proxyCmdResult := <-cmdResult
@@ -129,6 +132,7 @@ func HandleDataConnToAdmin(dataConnToAdmin net.Conn, NODEID uint32) {
 	}
 }
 
+//看函数名猜功能.jpg XD
 func HandleDataConnFromAdmin(dataConnToAdmin net.Conn, NODEID uint32) {
 	for {
 		AdminData, err := common.ExtractDataResult(dataConnToAdmin, AESKey)
@@ -157,10 +161,13 @@ func HandleDataConnFromAdmin(dataConnToAdmin net.Conn, NODEID uint32) {
 	}
 }
 
+//同上
 func HandleControlConnToAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 	commandtoadmin := <-CommandToUpperNodeChan
 	controlConnToAdmin.Write(commandtoadmin)
 }
+
+//同上
 func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 	cmd, stdout, stdin := CreatInteractiveShell()
 	var neverexit bool = true
@@ -241,6 +248,7 @@ func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 	}
 }
 
+//管理下级节点
 func HandleLowerNodeConn(controlConnForLowerNode net.Conn, dataConnForLowerNode net.Conn, NODEID uint32, LowerNodeCommChan chan []byte) {
 	go HandleControlConnToLowerNode(controlConnForLowerNode, NODEID, LowerNodeCommChan)
 	go HandleControlConnFromLowerNode(controlConnForLowerNode, NODEID, LowerNodeCommChan)
@@ -248,6 +256,7 @@ func HandleLowerNodeConn(controlConnForLowerNode net.Conn, dataConnForLowerNode 
 	go HandleDataConnToLowerNode(dataConnForLowerNode, NODEID)
 }
 
+//管理发往下级节点的控制信道
 func HandleControlConnToLowerNode(controlConnForLowerNode net.Conn, NODEID uint32, LowerNodeCommChan chan []byte) {
 	for {
 		proxy_command := <-PROXY_COMMAND_CHAN
@@ -259,6 +268,7 @@ func HandleControlConnToLowerNode(controlConnForLowerNode net.Conn, NODEID uint3
 	}
 }
 
+//看到那个from了么
 func HandleControlConnFromLowerNode(controlConnForLowerNode net.Conn, NODEID uint32, LowerNodeCommChan chan []byte) {
 	for {
 		command, err := common.ExtractCommand(controlConnForLowerNode, AESKey)
@@ -300,6 +310,7 @@ func HandleDataConnToLowerNode(dataConnForLowerNode net.Conn, NODEID uint32) {
 	}
 }
 
+//启动普通节点
 func HandleSimpleNodeConn(controlConnToUpperNode net.Conn, dataConnToUpperNode net.Conn, monitor string, NODEID uint32) {
 	go HandleControlConnFromUpperNode(controlConnToUpperNode, NODEID)
 	go HandleControlConnToUpperNode(controlConnToUpperNode, NODEID)
@@ -455,6 +466,7 @@ func ProxyDataToNextNode(proxyData []byte) {
 	PROXY_DATA_CHAN <- proxyData
 }
 
+//捕捉程序退出信号
 func WaitForExit(NODEID uint32) {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt, os.Kill, syscall.SIGHUP, syscall.SIGUSR2)
