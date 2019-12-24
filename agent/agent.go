@@ -133,7 +133,7 @@ func HandleDataConnToAdmin(dataConnToAdmin net.Conn, NODEID uint32) {
 //看函数名猜功能.jpg XD
 func HandleDataConnFromAdmin(dataConnToAdmin net.Conn, NODEID uint32) {
 	for {
-		AdminData, err := common.ExtractDataResult(dataConnToAdmin, AESKey)
+		AdminData, err := common.ExtractDataResult(dataConnToAdmin, AESKey, NODEID)
 		if err != nil {
 			return
 		}
@@ -147,13 +147,13 @@ func HandleDataConnFromAdmin(dataConnToAdmin net.Conn, NODEID uint32) {
 					//fmt.Println("create new chan", AdminData.Clientsocks)
 					tempchan := make(chan string, 1)
 					SocksDataChanMap.SocksDataChan[AdminData.Clientsocks] = tempchan
-					go HanleClientSocksConn(SocksDataChanMap.SocksDataChan[AdminData.Clientsocks], SocksUsername, SocksPass, AdminData.Clientsocks)
+					go HanleClientSocksConn(SocksDataChanMap.SocksDataChan[AdminData.Clientsocks], SocksUsername, SocksPass, AdminData.Clientsocks, NODEID)
 					SocksDataChanMap.SocksDataChan[AdminData.Clientsocks] <- AdminData.Result
 				}
 
 			}
 		} else {
-			ProxyData, _ := common.ConstructDataResult(AdminData.NodeId, AdminData.Clientsocks, AdminData.Success, AdminData.Datatype, AdminData.Result, AESKey)
+			ProxyData, _ := common.ConstructDataResult(AdminData.NodeId, AdminData.Clientsocks, AdminData.Success, AdminData.Datatype, AdminData.Result, AESKey, NODEID)
 			go ProxyDataToNextNode(ProxyData)
 		}
 	}
@@ -182,11 +182,11 @@ func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 					logrus.Info("Get command to start shell")
 					if neverexit {
 						go func() {
-							StartShell("", cmd, stdin, stdout)
+							StartShell("", cmd, stdin, stdout, NODEID)
 						}()
 					} else {
 						go func() {
-							StartShell("\n", cmd, stdin, stdout)
+							StartShell("\n", cmd, stdin, stdout, NODEID)
 						}()
 					}
 				case "exit\n":
@@ -194,7 +194,7 @@ func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 					continue
 				default:
 					go func() {
-						StartShell(command.Info, cmd, stdin, stdout)
+						StartShell(command.Info, cmd, stdin, stdout, NODEID)
 					}()
 				}
 			case "SOCKS":
@@ -206,7 +206,6 @@ func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 				go StartSocks(controlConnToAdmin, socksPort, SocksUsername, SocksPass)
 			case "SOCKSOFF":
 				logrus.Info("Get command to stop SOCKS")
-				SocksDataChanMap = newSafeMap() //清空map的数据，交给go回收
 			case "SSH":
 				fmt.Println("Get command to start SSH")
 				err := StartSSH(controlConnToAdmin, command.Info, NODEID)
@@ -228,23 +227,9 @@ func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 				continue
 			}
 		} else {
-			if command.Command != "SOCKS" && command.Command != "SOCKSOFF" {
-				passthroughCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId, AESKey)
-				go ProxyCommToNextNode(passthroughCommand)
-			} else if command.Command == "SOCKSOFF" {
-				logrus.Info("Get command to stop SOCKS")
-				err := SocksServer.Close()
-				if err != nil {
-					logrus.Error("Shut down socks service fail")
-					break
-				}
-				passthroughCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId, AESKey)
-				go ProxyCommToNextNode(passthroughCommand)
-			} else {
-				passthroughCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId, AESKey)
-				go ProxyCommToNextNode(passthroughCommand)
-				//go StartSocksProxy(command.Info)
-			}
+			passthroughCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId, AESKey)
+			go ProxyCommToNextNode(passthroughCommand)
+			//go StartSocksProxy(command.Info)
 		}
 	}
 }
@@ -305,8 +290,7 @@ func HandleDataConnToLowerNode(dataConnForLowerNode net.Conn, NODEID uint32) {
 		proxy_data := <-PROXY_DATA_CHAN
 		_, err := dataConnForLowerNode.Write(proxy_data)
 		if err != nil {
-			logrus.Error(err)
-			continue
+			break
 		}
 	}
 }
@@ -341,11 +325,11 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 					logrus.Info("Get command to start shell")
 					if neverexit {
 						go func() {
-							StartShell("", cmd, stdin, stdout)
+							StartShell("", cmd, stdin, stdout, NODEID)
 						}()
 					} else {
 						go func() {
-							StartShell("\n", cmd, stdin, stdout)
+							StartShell("\n", cmd, stdin, stdout, NODEID)
 						}()
 					}
 				case "exit\n":
@@ -358,7 +342,7 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 					os.Exit(1)
 				default:
 					go func() {
-						StartShell(command.Info, cmd, stdin, stdout)
+						StartShell(command.Info, cmd, stdin, stdout, NODEID)
 					}()
 				}
 			case "SOCKS":
@@ -368,6 +352,8 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 				SocksUsername := socksInit[1]
 				SocksPass := socksInit[2]
 				go StartSocks(controlConnToUpperNode, socksPort, SocksUsername, SocksPass)
+			case "SOCKSOFF":
+				logrus.Info("Get command to stop SOCKS")
 			case "SSH":
 				fmt.Println("Get command to start SSH")
 				err := StartSSH(controlConnToUpperNode, command.Info, NODEID)
@@ -389,23 +375,9 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 				continue
 			}
 		} else {
-			if command.Command != "SOCKS" && command.Command != "SOCKSOFF" {
-				passthroughCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId, AESKey)
-				go ProxyCommToNextNode(passthroughCommand)
-			} else if command.Command == "SOCKSOFF" {
-				logrus.Info("Get command to stop SOCKS")
-				err := SocksServer.Close()
-				if err != nil {
-					logrus.Error("Shut down socks service fail")
-					break
-				}
-				passthroughCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId, AESKey)
-				go ProxyCommToNextNode(passthroughCommand)
-			} else {
-				passthroughCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId, AESKey)
-				go ProxyCommToNextNode(passthroughCommand)
-				//go StartSocksProxy(command.Info)
-			}
+			passthroughCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId, AESKey)
+			go ProxyCommToNextNode(passthroughCommand)
+			//go StartSocksProxy(command.Info)
 		}
 	}
 }
@@ -422,7 +394,7 @@ func HandleDataConnToUpperNode(dataConnToUpperNode net.Conn) {
 
 func HandleDataConnFromUpperNode(dataConnToUpperNode net.Conn) {
 	for {
-		AdminData, err := common.ExtractDataResult(dataConnToUpperNode, AESKey)
+		AdminData, err := common.ExtractDataResult(dataConnToUpperNode, AESKey, NODEID)
 		if err != nil {
 			return
 		}
@@ -436,13 +408,13 @@ func HandleDataConnFromUpperNode(dataConnToUpperNode net.Conn) {
 					//fmt.Println("create new chan", AdminData.Clientsocks)
 					tempchan := make(chan string, 1)
 					SocksDataChanMap.SocksDataChan[AdminData.Clientsocks] = tempchan
-					go HanleClientSocksConn(SocksDataChanMap.SocksDataChan[AdminData.Clientsocks], SocksUsername, SocksPass, AdminData.Clientsocks)
+					go HanleClientSocksConn(SocksDataChanMap.SocksDataChan[AdminData.Clientsocks], SocksUsername, SocksPass, AdminData.Clientsocks, NODEID)
 					SocksDataChanMap.SocksDataChan[AdminData.Clientsocks] <- AdminData.Result
 				}
 
 			}
 		} else {
-			ProxyData, _ := common.ConstructDataResult(AdminData.NodeId, AdminData.Clientsocks, AdminData.Success, AdminData.Datatype, AdminData.Result, AESKey)
+			ProxyData, _ := common.ConstructDataResult(AdminData.NodeId, AdminData.Clientsocks, AdminData.Success, AdminData.Datatype, AdminData.Result, AESKey, NODEID)
 			go ProxyDataToNextNode(ProxyData)
 		}
 	}

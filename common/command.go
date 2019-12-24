@@ -133,7 +133,7 @@ func ConstructCommand(command string, info string, id uint32, key []byte) ([]byt
 
 }
 
-func ConstructDataResult(nodeid uint32, clientsocks uint32, success string, datatype string, result string, key []byte) ([]byte, error) {
+func ConstructDataResult(nodeid uint32, clientsocks uint32, success string, datatype string, result string, key []byte, currentid uint32) ([]byte, error) {
 	var buffer bytes.Buffer
 	NodeIdLength := make([]byte, 4)
 	ClientsocksLength := make([]byte, 20)
@@ -144,7 +144,7 @@ func ConstructDataResult(nodeid uint32, clientsocks uint32, success string, data
 	Datatype := []byte(datatype)
 	Result := []byte(result)
 
-	if len(key) != 0 {
+	if len(key) != 0 && (nodeid == 0 || currentid == 0) {
 		key, err := crypto.KeyPadding(key)
 		if err != nil {
 			logrus.Error(err)
@@ -172,7 +172,7 @@ func ConstructDataResult(nodeid uint32, clientsocks uint32, success string, data
 	return final, nil
 }
 
-func ExtractDataResult(conn net.Conn, key []byte) (*Data, error) {
+func ExtractDataResult(conn net.Conn, key []byte, currentid uint32) (*Data, error) {
 	var (
 		data        = &Data{}
 		nodelen     = make([]byte, config.NODE_LEN)
@@ -218,7 +218,7 @@ func ExtractDataResult(conn net.Conn, key []byte) (*Data, error) {
 	if err != nil {
 		return data, err
 	}
-	if len(key) != 0 {
+	if len(key) != 0 && data.NodeId == currentid {
 		data.Datatype = string(crypto.AESDecrypt(datatypebuffer[:], key))
 	} else {
 		data.Datatype = string(datatypebuffer[:])
@@ -235,7 +235,7 @@ func ExtractDataResult(conn net.Conn, key []byte) (*Data, error) {
 	if err != nil {
 		return data, err
 	}
-	if len(key) != 0 {
+	if len(key) != 0 && data.NodeId == currentid {
 		data.Result = string(crypto.AESDecrypt(resultbuffer[:], key))
 	} else {
 		data.Result = string(resultbuffer[:])

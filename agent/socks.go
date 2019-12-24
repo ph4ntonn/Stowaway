@@ -11,7 +11,7 @@ func StartSocks(controlConnToAdmin net.Conn, socksPort, socksUsername, socksPass
 	controlConnToAdmin.Write(socksstartmess)
 }
 
-func HanleClientSocksConn(info chan string, socksUsername, socksPass string, checknum uint32) {
+func HanleClientSocksConn(info chan string, socksUsername, socksPass string, checknum uint32, currentid uint32) {
 	var (
 		server       net.Conn
 		serverflag   bool
@@ -22,16 +22,16 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 	for {
 		if isAuthed == false && method == "" {
 			data := <-info
-			method = socks.CheckMethod(DataConnToAdmin, []byte(data), socksUsername, socksPass, checknum, AESKey)
+			method = socks.CheckMethod(DataConnToAdmin, []byte(data), socksUsername, socksPass, checknum, AESKey, NODEID)
 			if method == "NONE" {
 				isAuthed = true
 			}
 		} else if isAuthed == false && method == "PASSWORD" {
 			data := <-info
-			isAuthed = socks.AuthClient(DataConnToAdmin, []byte(data), socksUsername, socksPass, checknum, AESKey)
+			isAuthed = socks.AuthClient(DataConnToAdmin, []byte(data), socksUsername, socksPass, checknum, AESKey, NODEID)
 		} else if isAuthed == true && tcpconnected == false {
 			data := <-info
-			server, tcpconnected, serverflag = socks.ConfirmTarget(DataConnToAdmin, []byte(data), checknum, AESKey)
+			server, tcpconnected, serverflag = socks.ConfirmTarget(DataConnToAdmin, []byte(data), checknum, AESKey, NODEID)
 			if serverflag == false {
 				return
 			}
@@ -47,7 +47,7 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 					}
 				}
 			}()
-			err := socks.Proxyhttp(DataConnToAdmin, server, checknum, AESKey)
+			err := socks.Proxyhttp(DataConnToAdmin, server, checknum, AESKey, currentid)
 			if err != nil {
 				return
 			}

@@ -9,14 +9,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func CheckMethod(conntoupper net.Conn, buffer []byte, username string, secret string, clientid uint32, key []byte) string {
+func CheckMethod(conntoupper net.Conn, buffer []byte, username string, secret string, clientid uint32, key []byte, currentid uint32) string {
 	if buffer[0] == 0x05 {
 		if buffer[2] == 0x02 {
-			respdata, _ := common.ConstructDataResult(0, clientid, " ", "SOCKSDATARESP", string([]byte{0x05, 0x02}), key)
+			respdata, _ := common.ConstructDataResult(0, clientid, " ", "SOCKSDATARESP", string([]byte{0x05, 0x02}), key, currentid)
 			conntoupper.Write(respdata)
 			return "PASSWORD"
 		} else if buffer[2] == 0x00 && (username == "" || secret == "") {
-			respdata, _ := common.ConstructDataResult(0, clientid, " ", "SOCKSDATARESP", string([]byte{0x05, 0x00}), key)
+			respdata, _ := common.ConstructDataResult(0, clientid, " ", "SOCKSDATARESP", string([]byte{0x05, 0x00}), key, currentid)
 			conntoupper.Write(respdata)
 			return "NONE"
 		}
@@ -24,7 +24,7 @@ func CheckMethod(conntoupper net.Conn, buffer []byte, username string, secret st
 	return "RETURN"
 }
 
-func AuthClient(conntoupper net.Conn, buffer []byte, username string, secret string, clientid uint32, key []byte) bool {
+func AuthClient(conntoupper net.Conn, buffer []byte, username string, secret string, clientid uint32, key []byte, currentid uint32) bool {
 	ulen := int(buffer[1])
 	slen := int(buffer[2+ulen])
 	clientname := string(buffer[2 : 2+ulen])
@@ -32,11 +32,11 @@ func AuthClient(conntoupper net.Conn, buffer []byte, username string, secret str
 
 	if clientname != username || clientpass != secret {
 		logrus.Error("Illegal client!")
-		respdata, _ := common.ConstructDataResult(0, clientid, " ", "SOCKSDATARESP", string([]byte{0x01, 0x01}), key)
+		respdata, _ := common.ConstructDataResult(0, clientid, " ", "SOCKSDATARESP", string([]byte{0x01, 0x01}), key, currentid)
 		conntoupper.Write(respdata)
 		return false
 	} else {
-		respdata, _ := common.ConstructDataResult(0, clientid, " ", "SOCKSDATARESP", string([]byte{0x01, 0x00}), key)
+		respdata, _ := common.ConstructDataResult(0, clientid, " ", "SOCKSDATARESP", string([]byte{0x01, 0x00}), key, currentid)
 		conntoupper.Write(respdata)
 		return true
 	}
@@ -48,7 +48,7 @@ func AuthClient(conntoupper net.Conn, buffer []byte, username string, secret str
 	// }
 }
 
-func ConfirmTarget(conntoupper net.Conn, buffer []byte, checknum uint32, key []byte) (net.Conn, bool, bool) {
+func ConfirmTarget(conntoupper net.Conn, buffer []byte, checknum uint32, key []byte, currentid uint32) (net.Conn, bool, bool) {
 	len := len(buffer)
 	connected := false
 	var server net.Conn
@@ -56,7 +56,7 @@ func ConfirmTarget(conntoupper net.Conn, buffer []byte, checknum uint32, key []b
 	if buffer[0] == 0x05 {
 		switch buffer[1] {
 		case 0x01:
-			server, connected, serverflag = TcpConnect(conntoupper, buffer, len, checknum, key)
+			server, connected, serverflag = TcpConnect(conntoupper, buffer, len, checknum, key, currentid)
 		case 0x02:
 			connected = TcpBind(conntoupper, buffer, len, checknum, key)
 		case 0x03:
@@ -66,7 +66,7 @@ func ConfirmTarget(conntoupper net.Conn, buffer []byte, checknum uint32, key []b
 	return server, connected, serverflag
 }
 
-func TcpConnect(conntoupper net.Conn, buffer []byte, len int, checknum uint32, key []byte) (net.Conn, bool, bool) {
+func TcpConnect(conntoupper net.Conn, buffer []byte, len int, checknum uint32, key []byte, currentid uint32) (net.Conn, bool, bool) {
 	host := ""
 	var server net.Conn
 	switch buffer[3] {
@@ -83,17 +83,17 @@ func TcpConnect(conntoupper net.Conn, buffer []byte, len int, checknum uint32, k
 	port := strconv.Itoa(int(buffer[len-2])<<8 | int(buffer[len-1]))
 	server, err := net.Dial("tcp", net.JoinHostPort(host, port))
 	if err != nil {
-		respdata, _ := common.ConstructDataResult(0, checknum, " ", "SOCKSDATARESP", string([]byte{0x05, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}), key)
+		respdata, _ := common.ConstructDataResult(0, checknum, " ", "SOCKSDATARESP", string([]byte{0x05, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}), key, currentid)
 		conntoupper.Write(respdata)
 		//logrus.Error("Cannot connect to remote web server", err)
 		return server, false, false
 	}
-	respdata, _ := common.ConstructDataResult(0, checknum, " ", "SOCKSDATARESP", string([]byte{0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}), key)
+	respdata, _ := common.ConstructDataResult(0, checknum, " ", "SOCKSDATARESP", string([]byte{0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}), key, currentid)
 	conntoupper.Write(respdata)
 	return server, true, true
 }
 
-func Proxyhttp(conntoupper net.Conn, server net.Conn, checknum uint32, key []byte) error {
+func Proxyhttp(conntoupper net.Conn, server net.Conn, checknum uint32, key []byte, currentid uint32) error {
 	serverbuffer := make([]byte, 204800)
 	for {
 		len, err := server.Read(serverbuffer)
@@ -102,7 +102,7 @@ func Proxyhttp(conntoupper net.Conn, server net.Conn, checknum uint32, key []byt
 			return err
 		}
 		//fmt.Println("sever response is", string(serverbuffer[:len]))
-		respdata, _ := common.ConstructDataResult(0, checknum, " ", "SOCKSDATARESP", string(serverbuffer[:len]), key)
+		respdata, _ := common.ConstructDataResult(0, checknum, " ", "SOCKSDATARESP", string(serverbuffer[:len]), key, currentid)
 		conntoupper.Write(respdata)
 	}
 	return nil

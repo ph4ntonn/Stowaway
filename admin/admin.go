@@ -111,7 +111,7 @@ func HandleInitControlConn(startNodeControlConn net.Conn) {
 // 处理与startnode的数据信道
 func HandleDataConn(startNodeDataConn net.Conn) {
 	for {
-		nodeResp, err := common.ExtractDataResult(startNodeDataConn, AESKey)
+		nodeResp, err := common.ExtractDataResult(startNodeDataConn, AESKey, 0)
 		if err != nil {
 			logrus.Error("StartNode seems offline")
 			for Nodeid, _ := range Nodes {
@@ -306,7 +306,7 @@ func HandleNewSocksConn(clientsocks net.Conn, num uint32, nodeID uint32) {
 			clientsocks.Close()
 			return
 		} else {
-			respData, _ := common.ConstructDataResult(nodeID, num, " ", "SOCKSDATA", string(buffer[:len]), AESKey)
+			respData, _ := common.ConstructDataResult(nodeID, num, " ", "SOCKSDATA", string(buffer[:len]), AESKey, 0)
 			DataConn.Write(respData)
 		}
 	}

@@ -119,7 +119,6 @@ func HandleNodeCommand(startNodeControlConn net.Conn, NodeID string) {
 			if err != nil {
 				logrus.Error("StartNode seems offline")
 			}
-			ClientSockets = newSafeMap() //清空map，交给runtime垃圾回收
 			ReadyChange <- true
 			IsShellMode <- true
 		case "ssh":
