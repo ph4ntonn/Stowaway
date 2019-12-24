@@ -32,7 +32,6 @@ var (
 	SocksRespChan    = make(chan string, 1)
 	NodesReadyToadd  = make(chan map[uint32]string)
 	ClientSockets    *SafeMap
-	//ClientSocketsForResponse *SafeMap
 
 	ClientNum uint32 = 0
 	AESKey    []byte
@@ -45,11 +44,9 @@ var (
 //启动admin
 func NewAdmin(c *cli.Context) error {
 	ClientSockets = newSafeMap()
-	//ClientSocketsForResponse = newSafeMap()
 	AESKey = []byte(c.String("secret"))
 	listenPort := c.String("listen")
 	//ccPort := c.String("control")
-	// go StartListen(listenPort)
 	Banner()
 	go StartListen(listenPort)
 	go AddToChain()

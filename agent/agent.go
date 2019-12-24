@@ -78,7 +78,6 @@ func StartNodeInit(monitor string, listenPort string) {
 	}
 	go HandleStartNodeConn(ControlConnToAdmin, DataConnToAdmin, monitor, NODEID)
 	go node.StartNodeListen(listenPort, NODEID, AESKey)
-	go WaitForExit(NODEID)
 	for {
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
 		dataConnForLowerNode := <-node.DataConnForLowerNodeChan
@@ -99,7 +98,6 @@ func SimpleNodeInit(monitor string, listenPort string) {
 	NODEID = uint32(finalid)
 	go HandleSimpleNodeConn(ControlConnToAdmin, DataConnToAdmin, monitor, NODEID)
 	go node.StartNodeListen(listenPort, NODEID, AESKey)
-	go WaitForExit(NODEID)
 	for {
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
 		dataConnForLowerNode := <-node.DataConnForLowerNodeChan
@@ -461,10 +459,12 @@ func ProxyLowerNodeCommToUpperNode(upper net.Conn, LowerNodeCommChan chan []byte
 	}
 }
 
+//将命令传递到下一节点
 func ProxyCommToNextNode(proxyCommand []byte) {
 	PROXY_COMMAND_CHAN <- proxyCommand
 }
 
+//将数据传递到下一节点
 func ProxyDataToNextNode(proxyData []byte) {
 	PROXY_DATA_CHAN <- proxyData
 }
