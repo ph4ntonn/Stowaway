@@ -145,6 +145,14 @@ func HandleDataConn(startNodeDataConn net.Conn) {
 				continue
 			}
 			ClientSockets.RUnlock()
+		case "FIN":
+			ClientSockets.RLock()
+			ClientSockets.ClientSocketsMap[nodeResp.Clientsocks].Close()
+			ClientSockets.RUnlock()
+			clientnum, _ := strconv.ParseInt(nodeResp.Result, 10, 32)
+			client := uint32(clientnum)
+			respCommand, _ := common.ConstructDataResult(client, nodeResp.Clientsocks, " ", "FINOK", " ", AESKey, 0)
+			startNodeDataConn.Write(respCommand)
 		}
 	}
 }

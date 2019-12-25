@@ -150,7 +150,10 @@ func HandleDataConnFromAdmin(dataConnToAdmin net.Conn, NODEID uint32) {
 					go HanleClientSocksConn(SocksDataChanMap.SocksDataChan[AdminData.Clientsocks], SocksUsername, SocksPass, AdminData.Clientsocks, NODEID)
 					SocksDataChanMap.SocksDataChan[AdminData.Clientsocks] <- AdminData.Result
 				}
-
+			case "FINOK":
+				close(SocksDataChanMap.SocksDataChan[AdminData.Clientsocks])
+				delete(SocksDataChanMap.SocksDataChan, AdminData.Clientsocks)
+				//fmt.Println("close one, still left", len(SocksDataChanMap.SocksDataChan))
 			}
 		} else {
 			ProxyData, _ := common.ConstructDataResult(AdminData.NodeId, AdminData.Clientsocks, AdminData.Success, AdminData.Datatype, AdminData.Result, AESKey, NODEID)
@@ -403,7 +406,6 @@ func HandleDataConnFromUpperNode(dataConnToUpperNode net.Conn) {
 			case "SOCKSDATA":
 				if _, ok := SocksDataChanMap.SocksDataChan[AdminData.Clientsocks]; ok {
 					SocksDataChanMap.SocksDataChan[AdminData.Clientsocks] <- AdminData.Result
-
 				} else {
 					//fmt.Println("create new chan", AdminData.Clientsocks)
 					tempchan := make(chan string, 1)
@@ -411,7 +413,10 @@ func HandleDataConnFromUpperNode(dataConnToUpperNode net.Conn) {
 					go HanleClientSocksConn(SocksDataChanMap.SocksDataChan[AdminData.Clientsocks], SocksUsername, SocksPass, AdminData.Clientsocks, NODEID)
 					SocksDataChanMap.SocksDataChan[AdminData.Clientsocks] <- AdminData.Result
 				}
-
+			case "FINOK":
+				close(SocksDataChanMap.SocksDataChan[AdminData.Clientsocks])
+				delete(SocksDataChanMap.SocksDataChan, AdminData.Clientsocks)
+				//fmt.Println("close one, still left", len(SocksDataChanMap.SocksDataChan))
 			}
 		} else {
 			ProxyData, _ := common.ConstructDataResult(AdminData.NodeId, AdminData.Clientsocks, AdminData.Success, AdminData.Datatype, AdminData.Result, AESKey, NODEID)
