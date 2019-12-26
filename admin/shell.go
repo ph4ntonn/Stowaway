@@ -122,8 +122,14 @@ func HandleNodeCommand(startNodeControlConn net.Conn, NodeID string) {
 			ReadyChange <- true
 			IsShellMode <- true
 		case "ssh":
-			go StartSSHService(startNodeControlConn, AdminCommand, nodeID)
-			HandleSSHToNode(startNodeControlConn, nodeID)
+			if len(AdminCommand) == 4 {
+				go StartSSHService(startNodeControlConn, AdminCommand, nodeID)
+				HandleSSHToNode(startNodeControlConn, nodeID)
+			} else {
+				fmt.Println("Wrong format! Should be ssh [ip:port] [name] [pass]")
+				ReadyChange <- true
+				IsShellMode <- true
+			}
 		case "help":
 			ShowNodeHelp()
 			ReadyChange <- true
