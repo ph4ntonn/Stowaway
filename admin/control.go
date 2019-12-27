@@ -37,7 +37,7 @@ func Banner() {
  ▐      █                           ▀    ▐   ▐            ▀    ▐   ▐       █     
 		▐                                                                  ▐    
 
-			{ v0.1  Author:ph4ntom }
+			{ v1.1  Author:ph4ntom }
 `)
 }
 

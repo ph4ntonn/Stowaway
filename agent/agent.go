@@ -124,8 +124,8 @@ func HandleDataConnToAdmin(dataConnToAdmin net.Conn, NODEID uint32) {
 		proxyCmdResult := <-cmdResult
 		_, err := dataConnToAdmin.Write(proxyCmdResult)
 		if err != nil {
-			logrus.Errorf("ERROR OCCURED!: %s", err)
-			continue
+			//logrus.Errorf("ERROR OCCURED!: %s", err)
+			return
 		}
 	}
 }
@@ -251,8 +251,8 @@ func HandleControlConnToLowerNode(controlConnForLowerNode net.Conn, NODEID uint3
 		proxy_command := <-PROXY_COMMAND_CHAN
 		_, err := controlConnForLowerNode.Write(proxy_command)
 		if err != nil {
-			logrus.Error(err)
-			continue
+			//logrus.Error(err)
+			return
 		}
 	}
 }
@@ -390,7 +390,8 @@ func HandleDataConnToUpperNode(dataConnToUpperNode net.Conn) {
 		proxyCmdResult := <-cmdResult
 		_, err := dataConnToUpperNode.Write(proxyCmdResult)
 		if err != nil {
-			logrus.Errorf("ERROR OCCURED!: %s", err)
+			//logrus.Errorf("ERROR OCCURED!: %s", err)
+			return
 		}
 	}
 }
