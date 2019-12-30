@@ -130,6 +130,15 @@ func HandleNodeCommand(startNodeControlConn net.Conn, NodeID string) {
 				ReadyChange <- true
 				IsShellMode <- true
 			}
+		case "connect":
+			if len(AdminCommand) == 2 {
+				respCommand, _ := common.ConstructCommand("CONNECT", AdminCommand[1], nodeID, AESKey)
+				startNodeControlConn.Write(respCommand)
+			} else {
+				fmt.Println("Wrong format! Should be connect [ip:port]")
+			}
+			ReadyChange <- true
+			IsShellMode <- true
 		case "help":
 			ShowNodeHelp()
 			ReadyChange <- true

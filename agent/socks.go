@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-func StartSocks(controlConnToAdmin net.Conn, socksPort, socksUsername, socksPass string) {
+func StartSocks(controlConnToAdmin net.Conn) {
 	socksstartmess, _ := common.ConstructCommand("SOCKSRESP", "SUCCESS", NODEID, AESKey)
 	controlConnToAdmin.Write(socksstartmess)
 }

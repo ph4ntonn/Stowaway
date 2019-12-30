@@ -124,3 +124,84 @@ func StartNodeListen(listenPort string, NodeId uint32, key []byte) (net.Conn, ne
 		}
 	}
 }
+
+func ConnectNextNode(target string, nodeid uint32, key []byte) {
+	controlConnToNextNode, err := net.Dial("tcp", target)
+
+	if err != nil {
+		logrus.Error("Connection refused!")
+		return
+	}
+
+	for {
+		command, err := common.ExtractCommand(controlConnToNextNode, key)
+		if err != nil {
+			logrus.Error(err)
+			return
+		}
+		switch command.Command {
+		case "INIT":
+			respNodeID := nodeid + 1
+			respCommand, _ := common.ConstructCommand("ID", "", respNodeID, key)
+			_, err := controlConnToNextNode.Write(respCommand)
+			NewNodeMessage, _ = common.ConstructCommand("NEW", controlConnToNextNode.RemoteAddr().String(), respNodeID, key)
+			if err != nil {
+				logrus.Error(err)
+				continue
+			}
+		case "IDOK":
+			dataConnToNextNode, err := net.Dial("tcp", target)
+			if err != nil {
+				logrus.Error("Connection refused!")
+				return
+			}
+			ControlConnForLowerNodeChan <- controlConnToNextNode
+			DataConnForLowerNodeChan <- dataConnToNextNode
+			NewNodeMessageChan <- NewNodeMessage
+			return
+		}
+	}
+}
+
+func AcceptConnFromUpperNode(listenPort string, nodeid uint32, key []byte) (net.Conn, net.Conn, uint32) {
+	listenAddr := fmt.Sprintf("0.0.0.0:%s", listenPort)
+	WaitingForConn, err := net.Listen("tcp", listenAddr)
+	var (
+		flag        = false
+		history     string
+		controlconn [1]net.Conn
+	)
+
+	if err != nil {
+		logrus.Errorf("Cannot listen on port %s", listenPort)
+		os.Exit(1)
+	}
+
+	for {
+		Comingconn, err := WaitingForConn.Accept()
+		if err != nil {
+			logrus.Error(err)
+			continue
+		}
+		if flag == false {
+			respcommand, _ := common.ConstructCommand("INIT", listenPort, nodeid, key)
+			Comingconn.Write(respcommand)
+			command, _ := common.ExtractCommand(Comingconn, key)
+			if command.Command == "ID" {
+				nodeid = command.NodeId
+				respcommand, _ = common.ConstructCommand("IDOK", "", nodeid, key)
+				Comingconn.Write(respcommand)
+				flag = true
+				history = strings.Split(Comingconn.RemoteAddr().String(), ":")[0]
+				controlconn[0] = Comingconn
+			} else {
+				continue
+			}
+		} else if history == strings.Split(Comingconn.RemoteAddr().String(), ":")[0] {
+			WaitingForConn.Close()
+			return controlconn[0], Comingconn, nodeid
+		} else {
+			continue
+		}
+	}
+}

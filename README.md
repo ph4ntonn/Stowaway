@@ -43,7 +43,7 @@ Stowaway分为admin端和agent端两种形式，集成在一个程序中以不�
  
 ```
 ```
-  agent端： ./stowaway agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123
+  agent端： ./stowaway agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 -r
   
   命令解析：
   
@@ -57,7 +57,9 @@ Stowaway分为admin端和agent端两种形式，集成在一个程序中以不�
 
   --startnode 代表此节点是agent端的第一个节点（第一个节点必须加上--startnode选项！若无--startnode表示为普通节点，命令与startnode一致）
 
-  暂时就这四个参数！！！！！！
+  -r 代表以反向模式启动（即下级节点需要本节点主动连接而不是等待下级节点主动连接到本节点，若正向连接可以去除此选项）
+
+  暂时就这五个参数！！！！！！
   
 ```
 
@@ -73,10 +75,11 @@ Startnode端：
 
 ![startnode](https://github.com/ph4ntonn/Stowaway/blob/master/img/startnode.png)
 
-第一个普通Node：
+第一个普通Node(设置为反向连接模式)：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/node1.png)
 
+此时，进入(use命令，本例中为use 1）此节点的上级节点（即startnode），利用命令connect 127.0.0.1:10001 即可将此反向模式节点加入网络
 
 第二个普通Node：
 
@@ -120,7 +123,7 @@ PS: 在ssh模式下，你可以用pwd来判断自己所处的文件夹（好吧�
 - [ ] 重连功能
 - [ ] 清理代码，优化逻辑
 - [ ] 增加cc功能
-- [ ] 节点反向连接
+- [x] 节点反向连接
 
 ### 注意事项
 

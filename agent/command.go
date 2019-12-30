@@ -36,6 +36,11 @@ var Command = &cli.Command{
 			Aliases: []string{"Startnode"},
 			Usage:   "act as startnode",
 		},
+		&cli.BoolFlag{
+			Name:    "reverse",
+			Aliases: []string{"r"},
+			Usage:   "connect to others actively",
+		},
 		&cli.StringFlag{
 			Name:    "monitor",
 			Aliases: []string{"m"},

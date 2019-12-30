@@ -42,7 +42,7 @@ Simple example：
  
 ```
 ```
-  agent mode： ./stowaway agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123
+  agent mode： ./stowaway agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 -r
   
   Meaning：
   
@@ -55,6 +55,8 @@ Simple example：
   -s    It means Stowaway has used 123 as the encrypt key during the communication 
 
   --startnode  It means Stowaway is started as FIRST agent node(if the node is the first one , you MUST add this option!!! And there are two submode of agent mode,if you want to start the second, third one....., just remove this option)
+
+  -r It means you want to start the node in reverse mode(For instance: you can add node 2 into the net via node 1 actively connect to node 2, instead of node 1 just waiting for the connection from node 2 )
 
   Be aware! -s option's value must be as same as the agents' 
 
@@ -74,10 +76,11 @@ Startnode：
 
 ![startnode](https://github.com/ph4ntonn/Stowaway/blob/master/img/startnode.png)
 
-First simple Node：
+First simple Node(setting as reverse mode）：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/node1.png)
 
+Now, use admin and type in "use 1" -> "connect 127.0.0.1:10001" ,then you can add node 1 into the net
 
 Second simple Node：
 
@@ -124,6 +127,7 @@ For more detail, just type help to get further informations
 - [ ] Reconnection
 - [ ] Clean codes, optimize logic
 - [ ] Add cc function
+- [x] Add reverse connect mode
 
 ### Attention
 

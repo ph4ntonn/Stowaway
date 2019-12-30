@@ -7,7 +7,6 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -54,25 +53,30 @@ func NewAgent(c *cli.Context) {
 	AESKey = []byte(c.String("secret"))
 	listenPort := c.String("listen")
 	//ccPort := c.String("control")
+	active := c.Bool("reverse")
 	monitor := c.String("monitor")
 	isStartNode := c.Bool("startnode")
 	Monitor = monitor
 	ListenPort = listenPort
-	if isStartNode {
+	if isStartNode && active == false {
 		go StartNodeInit(monitor, listenPort)
 		WaitForExit(NODEID)
-	} else {
+	} else if active == false {
 		go SimpleNodeInit(monitor, listenPort)
+		WaitForExit(NODEID)
+	} else if isStartNode && active {
+		go StartNodeReversemodeInit(monitor, listenPort)
+		WaitForExit(NODEID)
+	} else if active {
+		go SimpleNodeReversemodeInit(monitor, listenPort)
 		WaitForExit(NODEID)
 	}
 }
 
 // 后续想让startnode与simplenode实现不一样的功能，故将两种node实现代码分开写
-func StartNodeInit(monitor string, listenPort string) {
+func StartNodeInit(monitor, listenPort string) {
 	NODEID = uint32(1)
-	var finalid uint32
-	ControlConnToAdmin, DataConnToAdmin, finalid, err = node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
-	NODEID = uint32(finalid)
+	ControlConnToAdmin, DataConnToAdmin, NODEID, err = node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
 	if err != nil {
 		os.Exit(1)
 	}
@@ -91,11 +95,9 @@ func StartNodeInit(monitor string, listenPort string) {
 }
 
 //普通的node节点
-func SimpleNodeInit(monitor string, listenPort string) {
+func SimpleNodeInit(monitor, listenPort string) {
 	NODEID = uint32(0)
-	var finalid uint32
-	ControlConnToAdmin, DataConnToAdmin, finalid, _ = node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
-	NODEID = uint32(finalid)
+	ControlConnToAdmin, DataConnToAdmin, NODEID, _ = node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
 	go HandleSimpleNodeConn(ControlConnToAdmin, DataConnToAdmin, monitor, NODEID)
 	go node.StartNodeListen(listenPort, NODEID, AESKey)
 	for {
@@ -107,7 +109,42 @@ func SimpleNodeInit(monitor string, listenPort string) {
 		go ProxyLowerNodeCommToUpperNode(ControlConnToAdmin, LowerNodeCommChan)
 		go HandleLowerNodeConn(controlConnForLowerNode, dataConnForLowerNode, NODEID, LowerNodeCommChan)
 	}
+}
 
+//reverse mode下的startnode节点
+func StartNodeReversemodeInit(monitor, listenPort string) {
+	NODEID = uint32(1)
+	ControlConnToAdmin, DataConnToAdmin, NODEID, err = node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
+	if err != nil {
+		os.Exit(1)
+	}
+	go HandleStartNodeConn(ControlConnToAdmin, DataConnToAdmin, monitor, NODEID)
+	for {
+		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
+		dataConnForLowerNode := <-node.DataConnForLowerNodeChan
+		NewNodeMessage := <-node.NewNodeMessageChan
+		PROXY_COMMAND_CHAN = make(chan []byte)
+		LowerNodeCommChan <- NewNodeMessage
+		go ProxyLowerNodeCommToUpperNode(ControlConnToAdmin, LowerNodeCommChan)
+		go HandleLowerNodeConn(controlConnForLowerNode, dataConnForLowerNode, NODEID, LowerNodeCommChan)
+	}
+}
+
+//reverse mode下的普通节点
+func SimpleNodeReversemodeInit(monitor, listenPort string) {
+	NODEID = uint32(0)
+	ControlConnToAdmin, DataConnToAdmin, NODEID = node.AcceptConnFromUpperNode(listenPort, NODEID, AESKey)
+	go HandleSimpleNodeConn(ControlConnToAdmin, DataConnToAdmin, monitor, NODEID)
+	go node.StartNodeListen(listenPort, NODEID, AESKey)
+	for {
+		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
+		dataConnForLowerNode := <-node.DataConnForLowerNodeChan
+		NewNodeMessage := <-node.NewNodeMessageChan
+		PROXY_COMMAND_CHAN = make(chan []byte)
+		LowerNodeCommChan <- NewNodeMessage
+		go ProxyLowerNodeCommToUpperNode(ControlConnToAdmin, LowerNodeCommChan)
+		go HandleLowerNodeConn(controlConnForLowerNode, dataConnForLowerNode, NODEID, LowerNodeCommChan)
+	}
 }
 
 //启动startnode
@@ -202,11 +239,7 @@ func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 				}
 			case "SOCKS":
 				logrus.Info("Get command to start SOCKS")
-				socksInit := strings.Split(command.Info, ":")
-				socksPort := socksInit[0]
-				SocksUsername = socksInit[1]
-				SocksPass = socksInit[2]
-				go StartSocks(controlConnToAdmin, socksPort, SocksUsername, SocksPass)
+				go StartSocks(controlConnToAdmin)
 			case "SOCKSOFF":
 				logrus.Info("Get command to stop SOCKS")
 			case "SSH":
@@ -219,6 +252,8 @@ func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 				}
 			case "SSHCOMMAND":
 				go WriteCommand(command.Info)
+			case "CONNECT":
+				go node.ConnectNextNode(command.Info, NODEID, AESKey)
 			case "ADMINOFFLINE":
 				logrus.Error("Admin seems offline!")
 				offlineCommand, _ := common.ConstructCommand("ADMINOFFLINE", "", 2, AESKey)
@@ -350,11 +385,7 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 				}
 			case "SOCKS":
 				logrus.Info("Get command to start SOCKS")
-				socksInit := strings.Split(command.Info, ":")
-				socksPort := socksInit[0]
-				SocksUsername := socksInit[1]
-				SocksPass := socksInit[2]
-				go StartSocks(controlConnToUpperNode, socksPort, SocksUsername, SocksPass)
+				go StartSocks(controlConnToUpperNode)
 			case "SOCKSOFF":
 				logrus.Info("Get command to stop SOCKS")
 			case "SSH":
@@ -367,6 +398,8 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 				}
 			case "SSHCOMMAND":
 				go WriteCommand(command.Info)
+			case "CONNECT":
+				go node.ConnectNextNode(command.Info, NODEID, AESKey)
 			case "ADMINOFFLINE":
 				logrus.Error("Admin seems offline")
 				offlineCommand, _ := common.ConstructCommand("ADMINOFFLINE", "", NODEID+1, AESKey)

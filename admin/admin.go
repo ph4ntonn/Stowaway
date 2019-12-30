@@ -40,7 +40,6 @@ var (
 	SocksListenerForClient net.Listener
 )
 
-//ClientSockets.ClientSocketsMap = make(map[uint32]net.Conn)
 //启动admin
 func NewAdmin(c *cli.Context) error {
 	ClientSockets = newSafeMap()
@@ -48,6 +47,11 @@ func NewAdmin(c *cli.Context) error {
 	listenPort := c.String("listen")
 	//ccPort := c.String("control")
 	Banner()
+	if len(AESKey) != 0 {
+		logrus.Info("Now Connection is encrypting with secret ", c.String("secret"))
+	} else {
+		logrus.Error("Now Connection is maintianed without any encryption!")
+	}
 	go StartListen(listenPort)
 	go AddToChain()
 	CliStatus = &InitStatus
