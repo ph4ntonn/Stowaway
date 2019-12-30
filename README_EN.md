@@ -60,7 +60,7 @@ Simple example：
 
   Be aware! -s option's value must be as same as the agents' 
 
- For now, there are only four options above are supported!
+ For now, there are only five options above are supported!
   
 ```
 
