@@ -41,7 +41,7 @@ var (
 )
 
 //启动admin
-func NewAdmin(c *cli.Context) error {
+func NewAdmin(c *cli.Context) {
 	ClientSockets = newSafeMap()
 	AESKey = []byte(c.String("secret"))
 	listenPort := c.String("listen")
@@ -56,7 +56,6 @@ func NewAdmin(c *cli.Context) error {
 	go AddToChain()
 	CliStatus = &InitStatus
 	Controlpanel()
-	return nil
 }
 
 func newSafeMap() *SafeMap {

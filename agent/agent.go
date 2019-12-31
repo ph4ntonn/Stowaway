@@ -98,7 +98,7 @@ func StartNodeInit(monitor, listenPort string) {
 func SimpleNodeInit(monitor, listenPort string) {
 	NODEID = uint32(0)
 	ControlConnToAdmin, DataConnToAdmin, NODEID, _ = node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
-	go HandleSimpleNodeConn(ControlConnToAdmin, DataConnToAdmin, monitor, NODEID)
+	go HandleSimpleNodeConn(ControlConnToAdmin, DataConnToAdmin, NODEID)
 	go node.StartNodeListen(listenPort, NODEID, AESKey)
 	for {
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
@@ -134,7 +134,7 @@ func StartNodeReversemodeInit(monitor, listenPort string) {
 func SimpleNodeReversemodeInit(monitor, listenPort string) {
 	NODEID = uint32(0)
 	ControlConnToAdmin, DataConnToAdmin, NODEID = node.AcceptConnFromUpperNode(listenPort, NODEID, AESKey)
-	go HandleSimpleNodeConn(ControlConnToAdmin, DataConnToAdmin, monitor, NODEID)
+	go HandleSimpleNodeConn(ControlConnToAdmin, DataConnToAdmin, NODEID)
 	go node.StartNodeListen(listenPort, NODEID, AESKey)
 	for {
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
@@ -152,11 +152,11 @@ func HandleStartNodeConn(controlConnToAdmin net.Conn, dataConnToAdmin net.Conn, 
 	go HandleControlConnFromAdmin(controlConnToAdmin, NODEID)
 	go HandleControlConnToAdmin(controlConnToAdmin, NODEID)
 	go HandleDataConnFromAdmin(dataConnToAdmin, NODEID)
-	go HandleDataConnToAdmin(dataConnToAdmin, NODEID)
+	go HandleDataConnToAdmin(dataConnToAdmin)
 }
 
 //管理startnode发往admin的数据
-func HandleDataConnToAdmin(dataConnToAdmin net.Conn, NODEID uint32) {
+func HandleDataConnToAdmin(dataConnToAdmin net.Conn) {
 	for {
 		proxyCmdResult := <-cmdResult
 		_, err := dataConnToAdmin.Write(proxyCmdResult)
@@ -207,7 +207,7 @@ func HandleControlConnToAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 
 //同上
 func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
-	cmd, stdout, stdin := CreatInteractiveShell()
+	stdout, stdin := CreatInteractiveShell()
 	var neverexit bool = true
 	for {
 		command, err := common.ExtractCommand(controlConnToAdmin, AESKey)
@@ -222,11 +222,11 @@ func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 					logrus.Info("Get command to start shell")
 					if neverexit {
 						go func() {
-							StartShell("", cmd, stdin, stdout, NODEID)
+							StartShell("", stdin, stdout, NODEID)
 						}()
 					} else {
 						go func() {
-							StartShell("\n", cmd, stdin, stdout, NODEID)
+							StartShell("\n", stdin, stdout, NODEID)
 						}()
 					}
 				case "exit\n":
@@ -234,7 +234,7 @@ func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 					continue
 				default:
 					go func() {
-						StartShell(command.Info, cmd, stdin, stdout, NODEID)
+						StartShell(command.Info, stdin, stdout, NODEID)
 					}()
 				}
 			case "SOCKS":
@@ -274,14 +274,14 @@ func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 
 //管理下级节点
 func HandleLowerNodeConn(controlConnForLowerNode net.Conn, dataConnForLowerNode net.Conn, NODEID uint32, LowerNodeCommChan chan []byte) {
-	go HandleControlConnToLowerNode(controlConnForLowerNode, NODEID, LowerNodeCommChan)
+	go HandleControlConnToLowerNode(controlConnForLowerNode)
 	go HandleControlConnFromLowerNode(controlConnForLowerNode, NODEID, LowerNodeCommChan)
 	go HandleDataConnFromLowerNode(dataConnForLowerNode, NODEID)
 	go HandleDataConnToLowerNode(dataConnForLowerNode, NODEID)
 }
 
 //管理发往下级节点的控制信道
-func HandleControlConnToLowerNode(controlConnForLowerNode net.Conn, NODEID uint32, LowerNodeCommChan chan []byte) {
+func HandleControlConnToLowerNode(controlConnForLowerNode net.Conn) {
 	for {
 		proxy_command := <-PROXY_COMMAND_CHAN
 		_, err := controlConnForLowerNode.Write(proxy_command)
@@ -334,7 +334,7 @@ func HandleDataConnToLowerNode(dataConnForLowerNode net.Conn, NODEID uint32) {
 }
 
 //启动普通节点
-func HandleSimpleNodeConn(controlConnToUpperNode net.Conn, dataConnToUpperNode net.Conn, monitor string, NODEID uint32) {
+func HandleSimpleNodeConn(controlConnToUpperNode net.Conn, dataConnToUpperNode net.Conn, NODEID uint32) {
 	go HandleControlConnFromUpperNode(controlConnToUpperNode, NODEID)
 	go HandleControlConnToUpperNode(controlConnToUpperNode, NODEID)
 	go HandleDataConnFromUpperNode(dataConnToUpperNode)
@@ -347,7 +347,7 @@ func HandleControlConnToUpperNode(controlConnToUpperNode net.Conn, NODEID uint32
 }
 
 func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint32) {
-	cmd, stdout, stdin := CreatInteractiveShell()
+	stdout, stdin := CreatInteractiveShell()
 	var neverexit bool = true
 	for {
 		command, err := common.ExtractCommand(controlConnToUpperNode, AESKey)
@@ -363,11 +363,11 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 					logrus.Info("Get command to start shell")
 					if neverexit {
 						go func() {
-							StartShell("", cmd, stdin, stdout, NODEID)
+							StartShell("", stdin, stdout, NODEID)
 						}()
 					} else {
 						go func() {
-							StartShell("\n", cmd, stdin, stdout, NODEID)
+							StartShell("\n", stdin, stdout, NODEID)
 						}()
 					}
 				case "exit\n":
@@ -380,7 +380,7 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 					os.Exit(1)
 				default:
 					go func() {
-						StartShell(command.Info, cmd, stdin, stdout, NODEID)
+						StartShell(command.Info, stdin, stdout, NODEID)
 					}()
 				}
 			case "SOCKS":

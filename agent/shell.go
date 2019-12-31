@@ -8,7 +8,7 @@ import (
 	"runtime"
 )
 
-func CreatInteractiveShell() (*exec.Cmd, io.Reader, io.Writer) {
+func CreatInteractiveShell() (io.Reader, io.Writer) {
 	cmd := exec.Command("/bin/sh", "-i")
 	if runtime.GOARCH == "386" || runtime.GOARCH == "amd64" {
 		cmd = exec.Command("/bin/bash", "-i")
@@ -23,10 +23,10 @@ func CreatInteractiveShell() (*exec.Cmd, io.Reader, io.Writer) {
 	}
 	cmd.Stderr = cmd.Stdout //将stderr连接至stdout
 	cmd.Start()
-	return cmd, stdout, stdin
+	return stdout, stdin
 }
 
-func StartShell(command string, cmd *exec.Cmd, stdin io.Writer, stdout io.Reader, currentid uint32) {
+func StartShell(command string, stdin io.Writer, stdout io.Reader, currentid uint32) {
 	success := "1"
 	dataType := "SHELLRESP"
 

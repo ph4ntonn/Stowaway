@@ -77,6 +77,7 @@ func HandleSSHToNode(startNodeControlConn net.Conn, nodeID uint32) {
 func HandleNodeCommand(startNodeControlConn net.Conn, NodeID string) {
 	nodeid64, _ := strconv.ParseInt(NodeID, 10, 32)
 	nodeID := uint32(nodeid64)
+
 	for {
 		AdminCommand := <-ADMINCOMMANDCHAN
 		switch AdminCommand[0] {
