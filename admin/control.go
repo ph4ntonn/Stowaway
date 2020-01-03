@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
@@ -25,6 +26,8 @@ func MonitorCtrlC(startNodeControlConn net.Conn) {
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	<-signalChan
 	SendOffLineToStartNode(startNodeControlConn)
+	time.Sleep(2 * time.Second)
+	os.Exit(1)
 }
 
 func Banner() {

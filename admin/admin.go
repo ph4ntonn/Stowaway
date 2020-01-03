@@ -150,10 +150,14 @@ func HandleDataConn(startNodeDataConn net.Conn) {
 			ClientSockets.RUnlock()
 		case "FIN":
 			ClientSockets.RLock()
-			ClientSockets.ClientSocketsMap[nodeResp.Clientsocks].Close()
+			if _, ok := ClientSockets.ClientSocketsMap[nodeResp.Clientsocks]; ok {
+				ClientSockets.ClientSocketsMap[nodeResp.Clientsocks].Close()
+			}
 			ClientSockets.RUnlock()
 			ClientSockets.Lock()
-			delete(ClientSockets.ClientSocketsMap, nodeResp.Clientsocks)
+			if _, ok := ClientSockets.ClientSocketsMap[nodeResp.Clientsocks]; ok {
+				delete(ClientSockets.ClientSocketsMap, nodeResp.Clientsocks)
+			}
 			ClientSockets.Unlock()
 			clientnum, _ := strconv.ParseInt(nodeResp.Result, 10, 32)
 			client := uint32(clientnum)

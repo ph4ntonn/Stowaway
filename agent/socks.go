@@ -3,8 +3,10 @@ package agent
 import (
 	"Stowaway/common"
 	"Stowaway/socks"
+	"fmt"
 	"net"
 	"strconv"
+	"time"
 )
 
 func StartSocks(controlConnToAdmin net.Conn) {
@@ -42,9 +44,14 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 					data := <-info
 					_, err := server.Write([]byte(data))
 					if err != nil {
-						// close(info)
-						// delete(SocksDataChanMap.SocksDataChan, checknum)
-						return
+						SocksDataChanMap.RLock()
+						if _, ok := SocksDataChanMap.SocksDataChan[checknum]; ok {
+							SocksDataChanMap.RUnlock()
+							continue
+						} else {
+							SocksDataChanMap.RUnlock()
+							return
+						}
 					}
 				}
 			}()
@@ -59,6 +66,19 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 
 func SendFIN(conn net.Conn, num uint32) {
 	nodeid := strconv.Itoa(int(NODEID))
-	respData, _ := common.ConstructDataResult(0, num, " ", "FIN", nodeid, AESKey, 0)
-	conn.Write(respData)
+	for {
+		SocksDataChanMap.RLock()
+		if _, ok := SocksDataChanMap.SocksDataChan[num]; ok {
+			SocksDataChanMap.RUnlock()
+			fmt.Println("send fin!!! number is ", num)
+			respData, _ := common.ConstructDataResult(0, num, " ", "FIN", nodeid, AESKey, 0)
+			conn.Write(respData)
+		} else {
+			SocksDataChanMap.RUnlock()
+			fmt.Print("out!!!!!,number is ", num)
+			return
+		}
+		time.Sleep(5 * time.Second)
+	}
+
 }
