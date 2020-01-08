@@ -75,6 +75,7 @@ func NewAgent(c *cli.Context) {
 
 // 后续想让startnode与simplenode实现不一样的功能，故将两种node实现代码分开写
 func StartNodeInit(monitor, listenPort string) {
+	var err error
 	NODEID = uint32(1)
 	ControlConnToAdmin, DataConnToAdmin, NODEID, err = node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
 	if err != nil {
@@ -113,6 +114,7 @@ func SimpleNodeInit(monitor, listenPort string) {
 
 //reverse mode下的startnode节点
 func StartNodeReversemodeInit(monitor, listenPort string) {
+	var err error
 	NODEID = uint32(1)
 	ControlConnToAdmin, DataConnToAdmin, NODEID, err = node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
 	if err != nil {
@@ -317,6 +319,7 @@ func HandleControlConnFromLowerNode(controlConnForLowerNode net.Conn, NODEID uin
 	}
 }
 
+// 处理来自于下一级节点的数据信道
 func HandleDataConnFromLowerNode(dataConnForLowerNode net.Conn, NODEID uint32) {
 	for {
 		buffer := make([]byte, 409600)
@@ -331,6 +334,7 @@ func HandleDataConnFromLowerNode(dataConnForLowerNode net.Conn, NODEID uint32) {
 	}
 }
 
+//处理发往下一级节点的数据信道
 func HandleDataConnToLowerNode(dataConnForLowerNode net.Conn, NODEID uint32) {
 	for {
 		proxy_data := <-PROXY_DATA_CHAN
@@ -350,11 +354,13 @@ func HandleSimpleNodeConn(controlConnToUpperNode net.Conn, dataConnToUpperNode n
 	go HandleDataConnToUpperNode(dataConnToUpperNode)
 }
 
+// 处理发往上一级节点的控制信道
 func HandleControlConnToUpperNode(controlConnToUpperNode net.Conn, NODEID uint32) {
 	commandtouppernode := <-CommandToUpperNodeChan
 	controlConnToUpperNode.Write(commandtouppernode)
 }
 
+//处理来自上一级节点的控制信道
 func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint32) {
 	stdout, stdin := CreatInteractiveShell()
 	var neverexit bool = true
@@ -427,6 +433,7 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 	}
 }
 
+//数据
 func HandleDataConnToUpperNode(dataConnToUpperNode net.Conn) {
 	for {
 		proxyCmdResult := <-cmdResult
@@ -438,6 +445,7 @@ func HandleDataConnToUpperNode(dataConnToUpperNode net.Conn) {
 	}
 }
 
+//数据
 func HandleDataConnFromUpperNode(dataConnToUpperNode net.Conn) {
 	for {
 		AdminData, err := common.ExtractDataResult(dataConnToUpperNode, AESKey, NODEID)
@@ -476,6 +484,7 @@ func HandleDataConnFromUpperNode(dataConnToUpperNode net.Conn) {
 	}
 }
 
+//传递下级节点command至上一级节点
 func ProxyLowerNodeCommToUpperNode(upper net.Conn, LowerNodeCommChan chan []byte) {
 	for {
 		LowerNodeComm := <-LowerNodeCommChan

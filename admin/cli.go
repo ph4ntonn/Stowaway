@@ -7,8 +7,10 @@ import (
 	"strings"
 )
 
-var ADMINCOMMANDCHAN = make(chan []string)
-var Nodes = make(map[uint32]string)
+var (
+	ADMINCOMMANDCHAN = make(chan []string)
+	Nodes            = make(map[uint32]string)
+)
 
 func Controlpanel() {
 	inputReader := bufio.NewReader(os.Stdin)

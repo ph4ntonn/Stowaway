@@ -10,11 +10,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var NewNodeMessage []byte
-var PeerNode string
-var ControlConnForLowerNodeChan = make(chan net.Conn, 1)
-var DataConnForLowerNodeChan = make(chan net.Conn, 1)
-var NewNodeMessageChan = make(chan []byte, 1)
+var (
+	NewNodeMessage              []byte
+	PeerNode                    string
+	ControlConnForLowerNodeChan = make(chan net.Conn, 1)
+	DataConnForLowerNodeChan    = make(chan net.Conn, 1)
+	NewNodeMessageChan          = make(chan []byte, 1)
+)
 
 //初始化一个节点连接操作
 func StartNodeConn(monitor string, listenPort string, nodeID uint32, key []byte) (net.Conn, net.Conn, uint32, error) {

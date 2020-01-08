@@ -14,6 +14,7 @@ func StartSocks(controlConnToAdmin net.Conn) {
 	controlConnToAdmin.Write(socksstartmess)
 }
 
+//处理socks请求
 func HanleClientSocksConn(info chan string, socksUsername, socksPass string, checknum uint32, currentid uint32) {
 	var (
 		server       net.Conn
@@ -64,6 +65,7 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 	}
 }
 
+//发送server offline通知
 func SendFIN(conn net.Conn, num uint32) {
 	nodeid := strconv.Itoa(int(NODEID))
 	for {

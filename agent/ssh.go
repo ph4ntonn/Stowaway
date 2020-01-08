@@ -10,9 +10,11 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-var Stdin io.Writer
-var Stdout io.Reader
-var Sshhost *ssh.Session
+var (
+	Stdin   io.Writer
+	Stdout  io.Reader
+	Sshhost *ssh.Session
+)
 
 func StartSSH(controlConnToAdmin net.Conn, info string, nodeid uint32) error {
 	spiltedinfo := strings.Split(info, "::")

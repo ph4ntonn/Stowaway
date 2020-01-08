@@ -8,6 +8,7 @@ import (
 	"runtime"
 )
 
+//创建交互式shell
 func CreatInteractiveShell() (io.Reader, io.Writer) {
 	cmd := exec.Command("/bin/sh", "-i")
 	if runtime.GOARCH == "386" || runtime.GOARCH == "amd64" {
@@ -26,6 +27,7 @@ func CreatInteractiveShell() (io.Reader, io.Writer) {
 	return stdout, stdin
 }
 
+//启动shell
 func StartShell(command string, stdin io.Writer, stdout io.Reader, currentid uint32) {
 	success := "1"
 	dataType := "SHELLRESP"

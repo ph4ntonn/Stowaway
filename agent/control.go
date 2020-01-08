@@ -5,12 +5,14 @@ import (
 	"time"
 )
 
-var Reconnsuccess = make(chan bool, 2)
-var ExitSuccess = make(chan bool)
-var err error
+var (
+	Reconnsuccess = make(chan bool, 2)
+	ExitSuccess   = make(chan bool)
+)
 
 //not in use,add todo
 func TryReconnect() {
+	var err error
 	for {
 		time.Sleep(10 * time.Second)
 
