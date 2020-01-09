@@ -52,7 +52,7 @@ func NewAgent(c *cli.Context) {
 	SocksDataChanMap = newSafeMap()
 	AESKey = []byte(c.String("secret"))
 	listenPort := c.String("listen")
-	//ccPort := c.String("control")
+	//ccPort := c.String("control")  暂时不需要
 	active := c.Bool("reverse")
 	monitor := c.String("monitor")
 	isStartNode := c.Bool("startnode")
@@ -97,8 +97,12 @@ func StartNodeInit(monitor, listenPort string) {
 
 //普通的node节点
 func SimpleNodeInit(monitor, listenPort string) {
+	var err error
 	NODEID = uint32(0)
-	ControlConnToAdmin, DataConnToAdmin, NODEID, _ = node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
+	ControlConnToAdmin, DataConnToAdmin, NODEID, err = node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
+	if err != nil {
+		os.Exit(1)
+	}
 	go HandleSimpleNodeConn(ControlConnToAdmin, DataConnToAdmin, NODEID)
 	go node.StartNodeListen(listenPort, NODEID, AESKey)
 	for {
@@ -195,7 +199,7 @@ func HandleDataConnFromAdmin(dataConnToAdmin net.Conn, NODEID uint32) {
 				}
 			case "FINOK":
 				if _, ok := SocksDataChanMap.SocksDataChan[AdminData.Clientsocks]; ok {
-					SocksDataChanMap.Lock()
+					SocksDataChanMap.Lock() //性能损失？
 					close(SocksDataChanMap.SocksDataChan[AdminData.Clientsocks])
 					delete(SocksDataChanMap.SocksDataChan, AdminData.Clientsocks)
 					SocksDataChanMap.Unlock()
@@ -230,7 +234,7 @@ func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 				switch command.Info {
 				case "":
 					logrus.Info("Get command to start shell")
-					if neverexit {
+					if neverexit { //判断之前是否进入过shell模式
 						go func() {
 							StartShell("", stdin, stdout, NODEID)
 						}()
@@ -452,7 +456,7 @@ func HandleDataConnFromUpperNode(dataConnToUpperNode net.Conn) {
 		if err != nil {
 			return
 		}
-		if AdminData.NodeId == NODEID {
+		if AdminData.NodeId == NODEID { //判断是否是传递给自己的
 			switch AdminData.Datatype {
 			case "SOCKSDATA":
 				SocksDataChanMap.RLock()
