@@ -330,7 +330,7 @@ func HandleDataConnFromLowerNode(dataConnForLowerNode net.Conn, NODEID uint32) {
 		len, err := dataConnForLowerNode.Read(buffer)
 		if err != nil {
 			logrus.Error("Node ", NODEID+1, " seems offline")
-			offlineMess, _ := common.ConstructCommand("AGENTOFFLINE", "", NODEID+1, AESKey)
+			offlineMess, _ := common.ConstructCommand("AGENTOFFLINE", "", NODEID+1, AESKey) //下一级节点掉线，向上级节点传递下级节点掉线的消息
 			LowerNodeCommChan <- offlineMess
 			break
 		}
@@ -463,7 +463,7 @@ func HandleDataConnFromUpperNode(dataConnToUpperNode net.Conn) {
 				if _, ok := SocksDataChanMap.SocksDataChan[AdminData.Clientsocks]; ok {
 					SocksDataChanMap.RUnlock()
 					SocksDataChanMap.SocksDataChan[AdminData.Clientsocks] <- AdminData.Result
-					fmt.Println("get")
+					//fmt.Println("get")
 				} else {
 					//fmt.Println("create new chan", AdminData.Clientsocks)
 					SocksDataChanMap.RUnlock()

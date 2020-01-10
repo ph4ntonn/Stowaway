@@ -3,7 +3,6 @@ package agent
 import (
 	"Stowaway/common"
 	"Stowaway/socks"
-	"fmt"
 	"net"
 	"strconv"
 	"time"
@@ -73,12 +72,12 @@ func SendFIN(conn net.Conn, num uint32) {
 		SocksDataChanMap.RLock()
 		if _, ok := SocksDataChanMap.SocksDataChan[num]; ok {
 			SocksDataChanMap.RUnlock()
-			fmt.Println("send fin!!! number is ", num)
+			//fmt.Println("send fin!!! number is ", num)
 			respData, _ := common.ConstructDataResult(0, num, " ", "FIN", nodeid, AESKey, 0)
 			conn.Write(respData)
 		} else {
 			SocksDataChanMap.RUnlock()
-			fmt.Print("out!!!!!,number is ", num)
+			//fmt.Print("out!!!!!,number is ", num)
 			return
 		}
 		time.Sleep(5 * time.Second)

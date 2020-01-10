@@ -245,7 +245,7 @@ func HandleCommandFromControlConn(startNodeControlConn net.Conn) {
 			logrus.Info("New node join! Node Id is ", command.NodeId)
 			NodesReadyToadd <- map[uint32]string{command.NodeId: command.Info}
 		case "AGENTOFFLINE":
-			logrus.Error("Node ", command.NodeId, " seems offline")
+			logrus.Error("Node ", command.NodeId, " seems offline") //有节点掉线后，将此节点及其之后的节点删除
 			for Nodeid, _ := range Nodes {
 				if Nodeid >= command.NodeId {
 					delete(Nodes, Nodeid)
