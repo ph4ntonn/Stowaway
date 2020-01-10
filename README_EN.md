@@ -22,7 +22,7 @@ PS: The files under demo folder are Stowaway's beta version,it's still functiona
 Stowaway can be excuted as two kinds of mode: admin && agent
 
 
-If you don't want to compile the project by yourself, you can check the release folder to get ONE!
+If you don't want to compile the project by yourself, you can check the release tag to get ONE!
 
 Simple example：
 ```
@@ -80,7 +80,7 @@ First simple Node(setting as reverse mode）：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/node1.png)
 
-Now, use admin and type in "use 1" -> "connect 127.0.0.1:10001" ,then you can add node 1 into the net
+Now, use admin node and type in "use 1" -> "connect 127.0.0.1:10001" ,then you can add node 1 into the net
 
 Second simple Node：
 
