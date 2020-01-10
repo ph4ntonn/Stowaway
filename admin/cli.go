@@ -45,8 +45,8 @@ func ShowChain() {
 
 func AddToChain() {
 	for {
-		newnode := <-NodesReadyToadd
-		for key, value := range newnode {
+		newNode := <-NodesReadyToadd
+		for key, value := range newNode {
 			Nodes[key] = value
 		}
 	}

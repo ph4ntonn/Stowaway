@@ -218,7 +218,7 @@ func ExtractDataResult(conn net.Conn, key []byte, currentid uint32) (*Data, erro
 	if err != nil {
 		return data, err
 	}
-	if len(key) != 0 && data.NodeId == currentid {
+	if len(key) != 0 && data.NodeId == currentid { //判断是否是给自己的包,不是的话就不解密datatype防止性能损失
 		data.Datatype = string(crypto.AESDecrypt(datatypebuffer[:], key))
 	} else {
 		data.Datatype = string(datatypebuffer[:])
@@ -235,7 +235,7 @@ func ExtractDataResult(conn net.Conn, key []byte, currentid uint32) (*Data, erro
 	if err != nil {
 		return data, err
 	}
-	if len(key) != 0 && data.NodeId == currentid {
+	if len(key) != 0 && data.NodeId == currentid { //同datatype
 		data.Result = string(crypto.AESDecrypt(resultbuffer[:], key))
 	} else {
 		data.Result = string(resultbuffer[:])

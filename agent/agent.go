@@ -42,14 +42,14 @@ var (
 	AESKey []byte
 )
 
-func newSafeMap() *SafeMap {
+func NewSafeMap() *SafeMap {
 	sm := new(SafeMap)
 	sm.SocksDataChan = make(map[uint32]chan string, 10)
 	return sm
 }
 
 func NewAgent(c *cli.Context) {
-	SocksDataChanMap = newSafeMap()
+	SocksDataChanMap = NewSafeMap()
 	AESKey = []byte(c.String("secret"))
 	listenPort := c.String("listen")
 	//ccPort := c.String("control")  暂时不需要
@@ -437,7 +437,7 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 	}
 }
 
-//数据
+//处理传递给上一个节点的数据信道
 func HandleDataConnToUpperNode(dataConnToUpperNode net.Conn) {
 	for {
 		proxyCmdResult := <-cmdResult
@@ -449,7 +449,7 @@ func HandleDataConnToUpperNode(dataConnToUpperNode net.Conn) {
 	}
 }
 
-//数据
+//处理由上一个节点传递过来的数据信道
 func HandleDataConnFromUpperNode(dataConnToUpperNode net.Conn) {
 	for {
 		AdminData, err := common.ExtractDataResult(dataConnToUpperNode, AESKey, NODEID)

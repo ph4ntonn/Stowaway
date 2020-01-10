@@ -42,7 +42,7 @@ var (
 
 //启动admin
 func NewAdmin(c *cli.Context) {
-	ClientSockets = newSafeMap()
+	ClientSockets = NewSafeMap()
 	AESKey = []byte(c.String("secret"))
 	listenPort := c.String("listen")
 	//ccPort := c.String("control")
@@ -58,7 +58,7 @@ func NewAdmin(c *cli.Context) {
 	Controlpanel()
 }
 
-func newSafeMap() *SafeMap {
+func NewSafeMap() *SafeMap {
 	sm := new(SafeMap)
 	sm.ClientSocketsMap = make(map[uint32]net.Conn)
 	return sm
@@ -282,14 +282,14 @@ func HandleCommandFromControlConn(startNodeControlConn net.Conn) {
 // 启动socks5 for client
 func StartSocksServiceForClient(command []string, startNodeControlConn net.Conn, nodeID uint32) {
 	var err error
-	socksport := command[1]
-	checkport, _ := strconv.Atoi(socksport)
-	if checkport <= 0 || checkport > 65535 {
+	socksPort := command[1]
+	checkPort, _ := strconv.Atoi(socksPort)
+	if checkPort <= 0 || checkPort > 65535 {
 		logrus.Error("Port Illegal!")
 		return
 	}
 
-	socks5Addr := fmt.Sprintf("0.0.0.0:%s", socksport)
+	socks5Addr := fmt.Sprintf("0.0.0.0:%s", socksPort)
 	SocksListenerForClient, err = net.Listen("tcp", socks5Addr)
 	if err != nil {
 		respCommand, _ := common.ConstructCommand("SOCKSOFF", " ", nodeID, AESKey)
