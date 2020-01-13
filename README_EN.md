@@ -12,6 +12,7 @@ PPS: Thanks for everyone's star, i'm just an amateur, and the code still need be
 ## Features
 
 - obvious node topology
+- can be used on multiple platforms
 - multi-hop socks5 traffic proxy
 - multi-hop ssh traffic proxy
 - remote interactive shell
@@ -137,7 +138,6 @@ For more detail, just type help to get further informations
 - When one of the agents offline, the agent nodes after it will offline
 - Once the admin started, you need to connect at least one agent node to it before you do any operations
 - If you want to compile this project for supporting more platform, you can use ```go build -ldflags="-w -s"``` to do that
-- Temporarily does not support Windows
 
 ### Thanks
 
