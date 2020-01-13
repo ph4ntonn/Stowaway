@@ -513,7 +513,7 @@ func ProxyDataToNextNode(proxyData []byte) {
 //捕捉程序退出信号
 func WaitForExit(NODEID uint32) {
 	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt, os.Kill, syscall.SIGHUP, syscall.SIGUSR2)
+	signal.Notify(signalChan, os.Interrupt, os.Kill, syscall.SIGHUP)
 	<-signalChan
 	offlineMess, _ := common.ConstructCommand("OFFLINE", "", NODEID+1, AESKey)
 	PROXY_COMMAND_CHAN <- offlineMess
