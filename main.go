@@ -10,7 +10,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-const version = "1.1"
+const version = "1.2"
 
 func init() {
 	log.SetFormatter(&log.TextFormatter{
