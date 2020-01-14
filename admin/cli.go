@@ -12,6 +12,7 @@ var (
 	Nodes            = make(map[uint32]string)
 )
 
+// 启动控制台
 func Controlpanel() {
 	inputReader := bufio.NewReader(os.Stdin)
 	for {
@@ -30,6 +31,7 @@ func Controlpanel() {
 	}
 }
 
+// 显示节点拓扑信息
 func ShowChain() {
 	if StartNode != "0.0.0.0" {
 		fmt.Printf("StartNode:[1] %s\n", StartNode)
@@ -43,6 +45,7 @@ func ShowChain() {
 
 }
 
+// 将节点加入拓扑
 func AddToChain() {
 	for {
 		newNode := <-NodesReadyToadd

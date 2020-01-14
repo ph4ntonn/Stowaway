@@ -11,6 +11,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var CurrentNode uint32
+
 func HandleShellToNode(startNodeControlConn net.Conn, nodeID uint32) {
 	inputReader := bufio.NewReader(os.Stdin)
 	for {
@@ -77,6 +79,7 @@ func HandleSSHToNode(startNodeControlConn net.Conn, nodeID uint32) {
 func HandleNodeCommand(startNodeControlConn net.Conn, NodeID string) {
 	nodeid64, _ := strconv.ParseInt(NodeID, 10, 32)
 	nodeID := uint32(nodeid64)
+	CurrentNode = nodeID //把nodeid提取出来，以供上传/下载文件功能使用
 
 	for {
 		AdminCommand := <-ADMINCOMMANDCHAN
@@ -137,6 +140,22 @@ func HandleNodeCommand(startNodeControlConn net.Conn, NodeID string) {
 				startNodeControlConn.Write(respCommand)
 			} else {
 				fmt.Println("Wrong format! Should be connect [ip:port]")
+			}
+			ReadyChange <- true
+			IsShellMode <- true
+		case "upload":
+			if len(AdminCommand) == 2 {
+				go common.UploadFile(AdminCommand[1], startNodeControlConn, DataConn, nodeID, &GetName, AESKey, true)
+			} else {
+				fmt.Println("Bad format! Should be upload [filename]")
+			}
+			ReadyChange <- true
+			IsShellMode <- true
+		case "download":
+			if len(AdminCommand) == 2 {
+				go common.DownloadFile(AdminCommand[1], startNodeControlConn, nodeID, AESKey)
+			} else {
+				fmt.Println("Bad format! Should be download [filename]")
 			}
 			ReadyChange <- true
 			IsShellMode <- true

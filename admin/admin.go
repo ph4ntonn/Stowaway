@@ -27,8 +27,11 @@ var (
 
 	ReadyChange      = make(chan bool)
 	IsShellMode      = make(chan bool)
+	Eof              = make(chan bool)
 	SSHSUCCESS       = make(chan bool, 1)
 	NodeSocksStarted = make(chan bool, 1)
+	GetName          = make(chan bool, 1)
+	FileData         = make(chan string, 10)
 	SocksRespChan    = make(chan string, 1)
 	NodesReadyToadd  = make(chan map[uint32]string)
 	ClientSockets    *SafeMap
@@ -163,6 +166,10 @@ func HandleDataConn(startNodeDataConn net.Conn) {
 			client := uint32(clientnum)
 			respCommand, _ := common.ConstructDataResult(client, nodeResp.Clientsocks, " ", "FINOK", " ", AESKey, 0)
 			startNodeDataConn.Write(respCommand)
+		case "FILEDATA": //接收文件内容
+			FileData <- nodeResp.Result
+		case "EOF": //文件读取结束
+			Eof <- true
 		}
 	}
 }
@@ -271,6 +278,25 @@ func HandleCommandFromControlConn(startNodeControlConn net.Conn) {
 				ReadyChange <- true
 				IsShellMode <- true
 			}
+		case "NAMECONFIRM":
+			GetName <- true
+		case "CREATEFAIL":
+			GetName <- false
+		case "FILENAME":
+			var err error
+			UploadFile, err := os.Create(command.Info)
+			if err != nil {
+				respComm, _ := common.ConstructCommand("CREATEFAIL", "", CurrentNode, AESKey) //从控制信道上返回文件是否能成功创建的响应
+				startNodeControlConn.Write(respComm)
+			} else {
+				respComm, _ := common.ConstructCommand("NAMECONFIRM", "", CurrentNode, AESKey)
+				startNodeControlConn.Write(respComm)
+				go common.ReceiveFile(&Eof, &FileData, UploadFile)
+			}
+		case "FILENOTEXIST":
+			fmt.Printf("File %s not exist!\n", command.Info)
+		case "CANNOTREAD":
+			fmt.Printf("File %s cannot be read!\n", command.Info)
 		default:
 			logrus.Error("Unknown Command")
 			continue

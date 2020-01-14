@@ -8,15 +8,13 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-
-	"github.com/sirupsen/logrus"
 )
 
 func SendOffLineToStartNode(startNodeControlConn net.Conn) {
 	respCommand, _ := common.ConstructCommand("ADMINOFFLINE", "", 1, AESKey)
 	_, err := startNodeControlConn.Write(respCommand)
 	if err != nil {
-		logrus.Error(err)
+		fmt.Println("Startnode seems offline!Message cannot be transmitted")
 		return
 	}
 }
@@ -62,5 +60,7 @@ func ShowNodeHelp() {
 	socks      [lport]                       Start a socks5 server.
 	connect    [ip:port]					 Connect to new node
 	stopsocks                                Shut down corresponding socks service
+	upload     [filename]                    Upload file to current agent node
+	download   [filename]                    Download file from current agent node
   `)
 }

@@ -16,8 +16,9 @@ PPS: Thanks for everyone's star, i'm just an amateur, and the code still need be
 - multi-hop socks5 traffic proxy
 - multi-hop ssh traffic proxy
 - remote interactive shell
+- upload/download functions
 - network traffic encryption with AES-256(CBC mode)
-- support macos and linux
+
 
 ## Usage
 
@@ -118,6 +119,8 @@ Open ssh：
 And it can proxy your ssh traffic to the second simple node and the second simple node will do its work as ssh cilent
 
 PS: In this function,you can type in ```pwd``` to check where you currently are
+
+PPS: If you want to upload/download any files,use upload/download + (filepath) under the node mode(after use command "use xxx")
 
 ```
 For more detail, just type help to get further informations

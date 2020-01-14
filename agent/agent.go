@@ -30,9 +30,12 @@ var (
 
 	CommandToUpperNodeChan = make(chan []byte)
 	cmdResult              = make(chan []byte)
+	Eof                    = make(chan bool)
 	PROXY_COMMAND_CHAN     = make(chan []byte, 1)
 	PROXY_DATA_CHAN        = make(chan []byte, 1)
 	LowerNodeCommChan      = make(chan []byte, 1)
+	FileData               = make(chan string, 10)
+	GetName                = make(chan bool, 1)
 	SocksDataChanMap       *SafeMap
 
 	ControlConnToAdmin net.Conn
@@ -197,6 +200,10 @@ func HandleDataConnFromAdmin(dataConnToAdmin net.Conn, NODEID uint32) {
 					SocksDataChanMap.Unlock()
 					SocksDataChanMap.SocksDataChan[AdminData.Clientsocks] <- AdminData.Result
 				}
+			case "FILEDATA": //接收文件内容
+				FileData <- AdminData.Result
+			case "EOF": //文件读取结束
+				Eof <- true
 			case "FINOK":
 				if _, ok := SocksDataChanMap.SocksDataChan[AdminData.Clientsocks]; ok {
 					SocksDataChanMap.Lock() //性能损失？
@@ -268,6 +275,23 @@ func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 				go WriteCommand(command.Info)
 			case "CONNECT":
 				go node.ConnectNextNode(command.Info, NODEID, AESKey)
+			case "FILENAME":
+				var err error
+				UploadFile, err := os.Create(command.Info)
+				if err != nil {
+					respComm, _ := common.ConstructCommand("CREATEFAIL", "", 0, AESKey) //从控制信道上返回文件是否能成功创建的响应
+					ControlConnToAdmin.Write(respComm)
+				} else {
+					respComm, _ := common.ConstructCommand("NAMECONFIRM", "", 0, AESKey)
+					ControlConnToAdmin.Write(respComm)
+					go common.ReceiveFile(&Eof, &FileData, UploadFile)
+				}
+			case "DOWNLOADFILE":
+				go common.UploadFile(command.Info, controlConnToAdmin, DataConnToAdmin, 0, &GetName, AESKey, false)
+			case "NAMECONFIRM":
+				GetName <- true
+			case "CREATEFAIL":
+				GetName <- false
 			case "ADMINOFFLINE":
 				logrus.Error("Admin seems offline!")
 				offlineCommand, _ := common.ConstructCommand("ADMINOFFLINE", "", 2, AESKey)
@@ -419,6 +443,23 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 				go WriteCommand(command.Info)
 			case "CONNECT":
 				go node.ConnectNextNode(command.Info, NODEID, AESKey)
+			case "FILENAME":
+				var err error
+				UploadFile, err := os.Create(command.Info)
+				if err != nil {
+					respComm, _ := common.ConstructCommand("CREATEFAIL", "", 0, AESKey) //从控制信道上返回文件是否能成功创建的响应
+					ControlConnToAdmin.Write(respComm)
+				} else {
+					respComm, _ := common.ConstructCommand("NAMECONFIRM", "", 0, AESKey)
+					ControlConnToAdmin.Write(respComm)
+					go common.ReceiveFile(&Eof, &FileData, UploadFile)
+				}
+			case "DOWNLOADFILE":
+				go common.UploadFile(command.Info, controlConnToUpperNode, DataConnToAdmin, 0, &GetName, AESKey, false)
+			case "NAMECONFIRM":
+				GetName <- true
+			case "CREATEFAIL":
+				GetName <- false
 			case "ADMINOFFLINE":
 				logrus.Error("Admin seems offline")
 				offlineCommand, _ := common.ConstructCommand("ADMINOFFLINE", "", NODEID+1, AESKey)
@@ -480,6 +521,10 @@ func HandleDataConnFromUpperNode(dataConnToUpperNode net.Conn) {
 				delete(SocksDataChanMap.SocksDataChan, AdminData.Clientsocks)
 				SocksDataChanMap.Unlock()
 				//fmt.Println("close one, still left", len(SocksDataChanMap.SocksDataChan))
+			case "FILEDATA": //接收文件内容
+				FileData <- AdminData.Result
+			case "EOF": //文件读取结束
+				Eof <- true
 			}
 		} else {
 			ProxyData, _ := common.ConstructDataResult(AdminData.NodeId, AdminData.Clientsocks, AdminData.Success, AdminData.Datatype, AdminData.Result, AESKey, NODEID)
