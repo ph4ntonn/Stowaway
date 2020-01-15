@@ -145,7 +145,7 @@ func HandleNodeCommand(startNodeControlConn net.Conn, NodeID string) {
 			IsShellMode <- true
 		case "upload":
 			if len(AdminCommand) == 2 {
-				go common.UploadFile(AdminCommand[1], startNodeControlConn, DataConn, nodeID, &GetName, AESKey, true)
+				go common.UploadFile(AdminCommand[1], startNodeControlConn, DataConn, nodeID, GetName, AESKey, 0, true)
 			} else {
 				fmt.Println("Bad format! Should be upload [filename]")
 			}

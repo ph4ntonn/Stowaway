@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func UploadFile(filename string, ControlConn net.Conn, DataConn net.Conn, nodeid uint32, GetName *chan bool, AESKey []byte, Notagent bool) {
+func UploadFile(filename string, ControlConn net.Conn, DataConn net.Conn, nodeid uint32, GetName chan bool, AESKey []byte, currentid uint32, Notagent bool) {
 	var getresp bool = false
 	go CountDown(&getresp, GetName)
 
@@ -26,7 +26,7 @@ func UploadFile(filename string, ControlConn net.Conn, DataConn net.Conn, nodeid
 
 	respData, _ := ConstructCommand("FILENAME", info.Name(), nodeid, AESKey)
 	_, err = ControlConn.Write(respData)
-	if <-*GetName {
+	if <-GetName {
 		getresp = true
 		buff := make([]byte, 10240)
 		fileHandle, _ := os.Open(filename) //打开文件
@@ -38,20 +38,19 @@ func UploadFile(filename string, ControlConn net.Conn, DataConn net.Conn, nodeid
 					if Notagent {
 						fmt.Printf("\nFile %s transmission complete!\n", info.Name())
 					}
-					respData, _ = ConstructDataResult(nodeid, 0, " ", "EOF", " ", AESKey, 0)
+					respData, _ = ConstructDataResult(nodeid, 0, " ", "EOF", " ", AESKey, currentid)
 					_, err = DataConn.Write(respData)
 					return
 				} else {
 					if Notagent {
 						fmt.Println("Cannot read the file")
-					} else {
-						respData, _ := ConstructCommand("CANNOTREAD", filename, nodeid, AESKey)
-						_, err = ControlConn.Write(respData)
 					}
+					respData, _ := ConstructCommand("CANNOTREAD", filename, nodeid, AESKey)
+					_, err = ControlConn.Write(respData)
 					return
 				}
 			}
-			fileData, _ := ConstructDataResult(nodeid, 0, " ", "FILEDATA", string(buff[:n]), AESKey, 0)
+			fileData, _ := ConstructDataResult(nodeid, 0, " ", "FILEDATA", string(buff[:n]), AESKey, currentid)
 			DataConn.Write(fileData)
 		}
 	} else {
@@ -69,26 +68,27 @@ func DownloadFile(filename string, conn net.Conn, nodeid uint32, AESKey []byte) 
 	}
 }
 
-func ReceiveFile(Eof *chan bool, FileData *chan string, UploadFile *os.File) {
+func ReceiveFile(Eof chan bool, FileData chan string, CannotRead chan bool, UploadFile *os.File) {
 	defer UploadFile.Close()
 	for {
 		select {
-		case <-*Eof:
+		case <-Eof:
 			fmt.Println("Transmission complete")
 			return
-		default:
-			content := <-*FileData
+		case content := <-FileData:
 			_, err := UploadFile.Write([]byte(content))
 			if err != nil {
 				return
 			}
+		case <-CannotRead:
+			return
 		}
 	}
 }
 
-func CountDown(getresp *bool, GetName *chan bool) {
+func CountDown(getresp *bool, GetName chan bool) {
 	time.Sleep(10 * time.Second)
 	if *getresp == false {
-		*GetName <- false
+		GetName <- false
 	}
 }

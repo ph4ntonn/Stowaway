@@ -31,6 +31,7 @@ var (
 	SSHSUCCESS       = make(chan bool, 1)
 	NodeSocksStarted = make(chan bool, 1)
 	GetName          = make(chan bool, 1)
+	CannotRead       = make(chan bool, 1)
 	FileData         = make(chan string, 10)
 	SocksRespChan    = make(chan string, 1)
 	NodesReadyToadd  = make(chan map[uint32]string)
@@ -291,12 +292,13 @@ func HandleCommandFromControlConn(startNodeControlConn net.Conn) {
 			} else {
 				respComm, _ := common.ConstructCommand("NAMECONFIRM", "", CurrentNode, AESKey)
 				startNodeControlConn.Write(respComm)
-				go common.ReceiveFile(&Eof, &FileData, UploadFile)
+				go common.ReceiveFile(Eof, FileData, CannotRead, UploadFile)
 			}
 		case "FILENOTEXIST":
 			fmt.Printf("File %s not exist!\n", command.Info)
 		case "CANNOTREAD":
 			fmt.Printf("File %s cannot be read!\n", command.Info)
+			CannotRead <- true
 		default:
 			logrus.Error("Unknown Command")
 			continue

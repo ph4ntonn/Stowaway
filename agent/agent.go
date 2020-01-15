@@ -31,6 +31,7 @@ var (
 	CommandToUpperNodeChan = make(chan []byte)
 	cmdResult              = make(chan []byte)
 	Eof                    = make(chan bool)
+	CannotRead             = make(chan bool, 1)
 	PROXY_COMMAND_CHAN     = make(chan []byte, 1)
 	PROXY_DATA_CHAN        = make(chan []byte, 1)
 	LowerNodeCommChan      = make(chan []byte, 1)
@@ -284,14 +285,16 @@ func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 				} else {
 					respComm, _ := common.ConstructCommand("NAMECONFIRM", "", 0, AESKey)
 					ControlConnToAdmin.Write(respComm)
-					go common.ReceiveFile(&Eof, &FileData, UploadFile)
+					go common.ReceiveFile(Eof, FileData, CannotRead, UploadFile)
 				}
 			case "DOWNLOADFILE":
-				go common.UploadFile(command.Info, controlConnToAdmin, DataConnToAdmin, 0, &GetName, AESKey, false)
+				go common.UploadFile(command.Info, ControlConnToAdmin, DataConnToAdmin, 0, GetName, AESKey, NODEID, false)
 			case "NAMECONFIRM":
 				GetName <- true
 			case "CREATEFAIL":
 				GetName <- false
+			case "CANNOTREAD":
+				CannotRead <- true
 			case "ADMINOFFLINE":
 				logrus.Error("Admin seems offline!")
 				offlineCommand, _ := common.ConstructCommand("ADMINOFFLINE", "", 2, AESKey)
@@ -452,14 +455,16 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 				} else {
 					respComm, _ := common.ConstructCommand("NAMECONFIRM", "", 0, AESKey)
 					ControlConnToAdmin.Write(respComm)
-					go common.ReceiveFile(&Eof, &FileData, UploadFile)
+					go common.ReceiveFile(Eof, FileData, CannotRead, UploadFile)
 				}
 			case "DOWNLOADFILE":
-				go common.UploadFile(command.Info, controlConnToUpperNode, DataConnToAdmin, 0, &GetName, AESKey, false)
+				go common.UploadFile(command.Info, ControlConnToAdmin, DataConnToAdmin, 0, GetName, AESKey, NODEID, false)
 			case "NAMECONFIRM":
 				GetName <- true
 			case "CREATEFAIL":
 				GetName <- false
+			case "CANNOTREAD":
+				CannotRead <- true
 			case "ADMINOFFLINE":
 				logrus.Error("Admin seems offline")
 				offlineCommand, _ := common.ConstructCommand("ADMINOFFLINE", "", NODEID+1, AESKey)
