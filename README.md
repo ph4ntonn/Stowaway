@@ -115,7 +115,13 @@ Startnode端：
 
 PS: 在ssh模式下，你可以用pwd来判断自己所处的文件夹（好吧，其实就是没法把banner传回来。。）
 
-PPS: 上传下载功能命令为 upload/download 后加文件路径（注意要在节点模式下使用）
+上传/下载文件：
+
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/upload.png)
+
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/download.png)
+
+上传下载功能命令为 upload/download 后加文件路径（注意要在节点模式下使用）,此时就可以上传文件至指定节点/下载指定节点的文件
 
 ```
 具体命令使用可输入help查询
