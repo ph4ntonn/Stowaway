@@ -141,7 +141,7 @@ PS: 在ssh模式下，你可以用pwd来判断自己所处的文件夹（好吧�
 - 当admin端掉线，所有后续连接的agent端都会退出
 - 当多个agent端中有一个掉线，后续的agent端都会掉线
 - 在admin启动后，必须有节点连入才可操作
-- 需要自己编译的童鞋可在根目录利用：```go build -ldflags="-w -s"```自行编译以适配多种平台(注意，默认编译的是agent模式，如需编译admin，请查看main.go文件中的提示，按照提示进行操作！！！！！！！！！！)
+- 如需从源代码编译本项目，请运行build_admin.sh/build_agent.sh文件来编译对应类型的Stowaway(注意！！！！！！默认编译的是agent模式，此时请运行build_agent.sh,如需编译admin，请查看main.go文件中的提示，按照提示进行操作后，运行build_admin.sh文件)
 
 ### 致谢
 
