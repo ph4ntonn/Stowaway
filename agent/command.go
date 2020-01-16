@@ -55,7 +55,7 @@ var Command = &cli.Command{
 			log.Infof("Starting agent node on port %s without cc port\n", c.String("listen"))
 		} else if c.String("control") != "" && c.String("listen") != "" {
 			log.Infof("Starting agent node on port %s and cc port is %s\n", c.String("listen"), c.String("control"))
-		} else if c.String("monitor") == "" || c.String("listen") == "" {
+		} else if (c.String("monitor") == "" || c.String("listen") == "") && c.Bool("reverse") == false {
 			log.Error("Please at least set the -m/--monitor  and -l/--listen option")
 			os.Exit(1)
 		}
