@@ -111,7 +111,7 @@ Startnode端：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/ssh.png)
 
-此时就可以在admin端将ssh流量代理至第二个普通节点，由第二个普通节点来访问指定的ssh服务
+此时第二个普通节点会作为ssh客户端,(此节点)会发起ssh连接来访问指定的ssh服务，并将ssh数据回传至admin端
 
 PS: 在ssh模式下，你可以用pwd来判断自己所处的文件夹（好吧，其实就是没法把banner传回来。。）
 

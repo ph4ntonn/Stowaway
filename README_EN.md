@@ -116,7 +116,7 @@ Open ssh：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/ssh.png)
 
-And it can proxy your ssh traffic to the second simple node and the second simple node will do its work as ssh cilent
+And it can make the second simple node do its work as ssh cilent to start a ssh connection to 127.0.0.1:22(in this example)
 
 PS: In this function,you can type in ```pwd``` to check where you currently are
 
