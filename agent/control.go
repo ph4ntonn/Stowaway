@@ -23,7 +23,7 @@ func TryReconnect() {
 		} else {
 			continue
 		}
-		cmdResult <- []byte("")
+		CmdResult <- []byte("")
 		<-ExitSuccess
 		go HandleStartNodeConn(ControlConnToAdmin, DataConnToAdmin, Monitor, NODEID)
 		go ProxyLowerNodeCommToUpperNode(ControlConnToAdmin, LowerNodeCommChan)

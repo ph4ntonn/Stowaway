@@ -28,14 +28,16 @@ var (
 	ReadyChange      = make(chan bool)
 	IsShellMode      = make(chan bool)
 	Eof              = make(chan bool)
-	SSHSUCCESS       = make(chan bool, 1)
+	SshSuccess       = make(chan bool, 1)
 	NodeSocksStarted = make(chan bool, 1)
 	GetName          = make(chan bool, 1)
 	CannotRead       = make(chan bool, 1)
-	FileData         = make(chan string, 10)
-	SocksRespChan    = make(chan string, 1)
-	NodesReadyToadd  = make(chan map[uint32]string)
-	ClientSockets    *SafeMap
+
+	FileData        = make(chan string, 10)
+	SocksRespChan   = make(chan string, 1)
+	NodesReadyToadd = make(chan map[uint32]string)
+
+	ClientSockets *SafeMap
 
 	ClientNum uint32 = 0
 	AESKey    []byte
@@ -178,7 +180,7 @@ func HandleDataConn(startNodeDataConn net.Conn) {
 // 处理由admin发往startnode的控制信号
 func HandleCommandToControlConn(startNodeControlConn net.Conn) {
 	for {
-		AdminCommand := <-ADMINCOMMANDCHAN
+		AdminCommand := <-AdminCommandChan
 		switch AdminCommand[0] {
 		case "use":
 			if len(AdminCommand) == 2 {
@@ -271,10 +273,10 @@ func HandleCommandFromControlConn(startNodeControlConn net.Conn) {
 		case "SSHRESP":
 			switch command.Info {
 			case "SUCCESS":
-				SSHSUCCESS <- true
+				SshSuccess <- true
 				fmt.Println("[*]Node start ssh successfully!")
 			case "FAILED":
-				SSHSUCCESS <- false
+				SshSuccess <- false
 				fmt.Println("[*]Node start ssh failed!Check if target's ssh service is on or username and pass given are right")
 				ReadyChange <- true
 				IsShellMode <- true

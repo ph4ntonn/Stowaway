@@ -59,6 +59,6 @@ func StartShell(command string, stdin io.Writer, stdout io.Reader, currentid uin
 			return
 		}
 		respShell, err := common.ConstructDataResult(0, 0, success, dataType, string(buf[:count]), AESKey, currentid)
-		cmdResult <- respShell
+		CmdResult <- respShell
 	}
 }

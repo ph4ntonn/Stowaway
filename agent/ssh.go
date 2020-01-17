@@ -72,6 +72,6 @@ func ReadCommand() {
 			break
 		}
 		sshRespMess, _ := common.ConstructDataResult(0, 0, "1", "SSHMESS", string(buffer[:len]), AESKey, NODEID)
-		cmdResult <- sshRespMess
+		CmdResult <- sshRespMess
 	}
 }

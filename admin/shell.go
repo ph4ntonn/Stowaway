@@ -43,7 +43,7 @@ func HandleShellToNode(startNodeControlConn net.Conn, nodeID uint32) {
 func HandleSSHToNode(startNodeControlConn net.Conn, nodeID uint32) {
 	inputReader := bufio.NewReader(os.Stdin)
 	logrus.Info("Waiting for response,please be patient")
-	if conrinueornot := <-SSHSUCCESS; conrinueornot {
+	if conrinueornot := <-SshSuccess; conrinueornot {
 		fmt.Print("(ssh mode)>>>")
 		for {
 			command, err := inputReader.ReadString('\n')
@@ -82,7 +82,7 @@ func HandleNodeCommand(startNodeControlConn net.Conn, NodeID string) {
 	CurrentNode = nodeID //把nodeid提取出来，以供上传/下载文件功能使用
 
 	for {
-		AdminCommand := <-ADMINCOMMANDCHAN
+		AdminCommand := <-AdminCommandChan
 		switch AdminCommand[0] {
 		case "shell":
 			respCommand, err := common.ConstructCommand("SHELL", "", nodeID, AESKey)

@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	ADMINCOMMANDCHAN = make(chan []string)
+	AdminCommandChan = make(chan []string)
 	Nodes            = make(map[uint32]string)
 )
 
@@ -24,7 +24,7 @@ func Controlpanel() {
 		}
 		command := strings.Replace(input, "\n", "", -1)
 		execCommand := strings.Split(command, " ")
-		ADMINCOMMANDCHAN <- execCommand
+		AdminCommandChan <- execCommand
 
 		<-ReadyChange
 		<-IsShellMode
