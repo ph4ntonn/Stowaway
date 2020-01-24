@@ -423,16 +423,15 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 				case "exit\n":
 					neverexit = false
 					continue
-				case "OFFLINE":
-					logrus.Error("Node ", NODEID-1, "seems down")
-					offlineMess, _ := common.ConstructCommand("OFFLINE", "", NODEID+1, AESKey)
-					Proxy_Command_Chan <- offlineMess
-					os.Exit(1)
 				default:
 					go func() {
 						StartShell(command.Info, stdin, stdout, NODEID)
 					}()
 				}
+			case "OFFLINE":
+				logrus.Error("Node ", NODEID-1, " seems down")
+				offlineMess, _ := common.ConstructCommand("OFFLINE", "", NODEID+1, AESKey)
+				Proxy_Command_Chan <- offlineMess
 			case "SOCKS":
 				logrus.Info("Get command to start SOCKS")
 				go StartSocks(controlConnToUpperNode)
