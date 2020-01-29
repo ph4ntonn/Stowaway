@@ -301,6 +301,9 @@ func HandleCommandFromControlConn(startNodeControlConn net.Conn) {
 		case "CANNOTREAD":
 			fmt.Printf("File %s cannot be read!\n", command.Info)
 			CannotRead <- true
+		case "RECONNID":
+			logrus.Info("New node join! Node Id is ", command.NodeId)
+			NodesReadyToadd <- map[uint32]string{command.NodeId: command.Info}
 		default:
 			logrus.Error("Unknown Command")
 			continue

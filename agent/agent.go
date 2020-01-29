@@ -27,6 +27,7 @@ var (
 	ListenPort    string
 	SocksUsername string
 	SocksPass     string
+	Reconn        string
 
 	CommandToUpperNodeChan = make(chan []byte)
 	CmdResult              = make(chan []byte)
@@ -35,7 +36,7 @@ var (
 	CannotRead = make(chan bool, 1)
 	GetName    = make(chan bool, 1)
 
-	Proxy_Command_Chan = make(chan []byte, 1)
+	Proxy_Command_Chan = make(chan []byte, 2)
 	Proxy_Data_Chan    = make(chan []byte, 1)
 	LowerNodeCommChan  = make(chan []byte, 1)
 
@@ -61,6 +62,7 @@ func NewAgent(c *cli.Context) {
 	AESKey = []byte(c.String("secret"))
 	listenPort := c.String("listen")
 	//ccPort := c.String("control")  暂时不需要
+	Reconn = c.String("reconnect")
 	active := c.Bool("reverse")
 	monitor := c.String("monitor")
 	isStartNode := c.Bool("startnode")
@@ -89,7 +91,7 @@ func StartNodeInit(monitor, listenPort string) {
 	if err != nil {
 		os.Exit(1)
 	}
-	go HandleStartNodeConn(ControlConnToAdmin, DataConnToAdmin, monitor, NODEID)
+	go HandleStartNodeConn(&ControlConnToAdmin, &DataConnToAdmin, monitor, NODEID)
 	go node.StartNodeListen(listenPort, NODEID, AESKey)
 	for {
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
@@ -97,7 +99,7 @@ func StartNodeInit(monitor, listenPort string) {
 		NewNodeMessage := <-node.NewNodeMessageChan
 		Proxy_Command_Chan = make(chan []byte)
 		LowerNodeCommChan <- NewNodeMessage
-		go ProxyLowerNodeCommToUpperNode(ControlConnToAdmin, LowerNodeCommChan)
+		go ProxyLowerNodeCommToUpperNode(&ControlConnToAdmin, LowerNodeCommChan)
 		go HandleLowerNodeConn(controlConnForLowerNode, dataConnForLowerNode, NODEID, LowerNodeCommChan)
 	}
 
@@ -111,7 +113,7 @@ func SimpleNodeInit(monitor, listenPort string) {
 	if err != nil {
 		os.Exit(1)
 	}
-	go HandleSimpleNodeConn(ControlConnToAdmin, DataConnToAdmin, NODEID)
+	go HandleSimpleNodeConn(&ControlConnToAdmin, &DataConnToAdmin, NODEID)
 	go node.StartNodeListen(listenPort, NODEID, AESKey)
 	for {
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
@@ -119,7 +121,7 @@ func SimpleNodeInit(monitor, listenPort string) {
 		NewNodeMessage := <-node.NewNodeMessageChan
 		Proxy_Command_Chan = make(chan []byte)
 		LowerNodeCommChan <- NewNodeMessage
-		go ProxyLowerNodeCommToUpperNode(ControlConnToAdmin, LowerNodeCommChan)
+		go ProxyLowerNodeCommToUpperNode(&ControlConnToAdmin, LowerNodeCommChan)
 		go HandleLowerNodeConn(controlConnForLowerNode, dataConnForLowerNode, NODEID, LowerNodeCommChan)
 	}
 }
@@ -132,14 +134,14 @@ func StartNodeReversemodeInit(monitor, listenPort string) {
 	if err != nil {
 		os.Exit(1)
 	}
-	go HandleStartNodeConn(ControlConnToAdmin, DataConnToAdmin, monitor, NODEID)
+	go HandleStartNodeConn(&ControlConnToAdmin, &DataConnToAdmin, monitor, NODEID)
 	for {
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
 		dataConnForLowerNode := <-node.DataConnForLowerNodeChan
 		NewNodeMessage := <-node.NewNodeMessageChan
 		Proxy_Command_Chan = make(chan []byte)
 		LowerNodeCommChan <- NewNodeMessage
-		go ProxyLowerNodeCommToUpperNode(ControlConnToAdmin, LowerNodeCommChan)
+		go ProxyLowerNodeCommToUpperNode(&ControlConnToAdmin, LowerNodeCommChan)
 		go HandleLowerNodeConn(controlConnForLowerNode, dataConnForLowerNode, NODEID, LowerNodeCommChan)
 	}
 }
@@ -148,7 +150,7 @@ func StartNodeReversemodeInit(monitor, listenPort string) {
 func SimpleNodeReversemodeInit(monitor, listenPort string) {
 	NODEID = uint32(0)
 	ControlConnToAdmin, DataConnToAdmin, NODEID = node.AcceptConnFromUpperNode(listenPort, NODEID, AESKey)
-	go HandleSimpleNodeConn(ControlConnToAdmin, DataConnToAdmin, NODEID)
+	go HandleSimpleNodeConn(&ControlConnToAdmin, &DataConnToAdmin, NODEID)
 	go node.StartNodeListen(listenPort, NODEID, AESKey)
 	for {
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
@@ -156,13 +158,13 @@ func SimpleNodeReversemodeInit(monitor, listenPort string) {
 		NewNodeMessage := <-node.NewNodeMessageChan
 		Proxy_Command_Chan = make(chan []byte)
 		LowerNodeCommChan <- NewNodeMessage
-		go ProxyLowerNodeCommToUpperNode(ControlConnToAdmin, LowerNodeCommChan)
+		go ProxyLowerNodeCommToUpperNode(&ControlConnToAdmin, LowerNodeCommChan)
 		go HandleLowerNodeConn(controlConnForLowerNode, dataConnForLowerNode, NODEID, LowerNodeCommChan)
 	}
 }
 
 //启动startnode
-func HandleStartNodeConn(controlConnToAdmin net.Conn, dataConnToAdmin net.Conn, monitor string, NODEID uint32) {
+func HandleStartNodeConn(controlConnToAdmin *net.Conn, dataConnToAdmin *net.Conn, monitor string, NODEID uint32) {
 	go HandleControlConnFromAdmin(controlConnToAdmin, NODEID)
 	go HandleControlConnToAdmin(controlConnToAdmin, NODEID)
 	go HandleDataConnFromAdmin(dataConnToAdmin, NODEID)
@@ -170,10 +172,10 @@ func HandleStartNodeConn(controlConnToAdmin net.Conn, dataConnToAdmin net.Conn, 
 }
 
 //管理startnode发往admin的数据
-func HandleDataConnToAdmin(dataConnToAdmin net.Conn) {
+func HandleDataConnToAdmin(dataConnToAdmin *net.Conn) {
 	for {
 		proxyCmdResult := <-CmdResult
-		_, err := dataConnToAdmin.Write(proxyCmdResult)
+		_, err := (*dataConnToAdmin).Write(proxyCmdResult)
 		if err != nil {
 			//logrus.Errorf("ERROR OCCURED!: %s", err)
 			return
@@ -182,11 +184,11 @@ func HandleDataConnToAdmin(dataConnToAdmin net.Conn) {
 }
 
 //看函数名猜功能.jpg XD
-func HandleDataConnFromAdmin(dataConnToAdmin net.Conn, NODEID uint32) {
+func HandleDataConnFromAdmin(dataConnToAdmin *net.Conn, NODEID uint32) {
 	for {
-		AdminData, err := common.ExtractDataResult(dataConnToAdmin, AESKey, NODEID)
+		AdminData, err := common.ExtractDataResult(*dataConnToAdmin, AESKey, NODEID)
 		if err != nil {
-			return
+			continue
 		}
 		if AdminData.NodeId == NODEID {
 			switch AdminData.Datatype {
@@ -226,19 +228,19 @@ func HandleDataConnFromAdmin(dataConnToAdmin net.Conn, NODEID uint32) {
 }
 
 //同上
-func HandleControlConnToAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
+func HandleControlConnToAdmin(controlConnToAdmin *net.Conn, NODEID uint32) {
 	commandtoadmin := <-CommandToUpperNodeChan
-	controlConnToAdmin.Write(commandtoadmin)
+	(*controlConnToAdmin).Write(commandtoadmin)
 }
 
 //同上
-func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
+func HandleControlConnFromAdmin(controlConnToAdmin *net.Conn, NODEID uint32) {
 	stdout, stdin := CreatInteractiveShell()
 	var neverexit bool = true
 	for {
-		command, err := common.ExtractCommand(controlConnToAdmin, AESKey)
+		command, err := common.ExtractCommand(*controlConnToAdmin, AESKey)
 		if err != nil {
-			return
+			continue
 		}
 		if command.NodeId == NODEID {
 			switch command.Command {
@@ -301,10 +303,16 @@ func HandleControlConnFromAdmin(controlConnToAdmin net.Conn, NODEID uint32) {
 				CannotRead <- true
 			case "ADMINOFFLINE":
 				logrus.Error("Admin seems offline!")
-				offlineCommand, _ := common.ConstructCommand("ADMINOFFLINE", "", 2, AESKey)
-				Proxy_Command_Chan <- offlineCommand
-				time.Sleep(2 * time.Second)
-				os.Exit(1)
+				if Reconn != "" {
+					TryReconnect(Reconn)
+					messCommand, _ := common.ConstructCommand("RECONN", "", 2, AESKey)
+					Proxy_Command_Chan <- messCommand
+				} else {
+					offlineCommand, _ := common.ConstructCommand("ADMINOFFLINE", "", 2, AESKey)
+					Proxy_Command_Chan <- offlineCommand
+					time.Sleep(2 * time.Second)
+					os.Exit(1)
+				}
 			default:
 				logrus.Error("Unknown command")
 				continue
@@ -346,6 +354,11 @@ func HandleControlConnFromLowerNode(controlConnForLowerNode net.Conn, NODEID uin
 			Proxy_Command_Chan <- offlineMess
 			return
 		}
+		if command.Command == "RECONNID" && command.Info == "" {
+			proxyCommand, _ := common.ConstructCommand(command.Command, controlConnForLowerNode.RemoteAddr().String(), command.NodeId, AESKey)
+			LowerNodeCommChan <- proxyCommand
+			continue
+		}
 		if command.NodeId == NODEID { //暂时只有admin需要处理
 		} else {
 			proxyCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId, AESKey)
@@ -382,7 +395,7 @@ func HandleDataConnToLowerNode(dataConnForLowerNode net.Conn, NODEID uint32) {
 }
 
 //启动普通节点
-func HandleSimpleNodeConn(controlConnToUpperNode net.Conn, dataConnToUpperNode net.Conn, NODEID uint32) {
+func HandleSimpleNodeConn(controlConnToUpperNode *net.Conn, dataConnToUpperNode *net.Conn, NODEID uint32) {
 	go HandleControlConnFromUpperNode(controlConnToUpperNode, NODEID)
 	go HandleControlConnToUpperNode(controlConnToUpperNode, NODEID)
 	go HandleDataConnFromUpperNode(dataConnToUpperNode)
@@ -390,17 +403,17 @@ func HandleSimpleNodeConn(controlConnToUpperNode net.Conn, dataConnToUpperNode n
 }
 
 // 处理发往上一级节点的控制信道
-func HandleControlConnToUpperNode(controlConnToUpperNode net.Conn, NODEID uint32) {
+func HandleControlConnToUpperNode(controlConnToUpperNode *net.Conn, NODEID uint32) {
 	commandtouppernode := <-CommandToUpperNodeChan
-	controlConnToUpperNode.Write(commandtouppernode)
+	(*controlConnToUpperNode).Write(commandtouppernode)
 }
 
 //处理来自上一级节点的控制信道
-func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint32) {
+func HandleControlConnFromUpperNode(controlConnToUpperNode *net.Conn, NODEID uint32) {
 	stdout, stdin := CreatInteractiveShell()
 	var neverexit bool = true
 	for {
-		command, err := common.ExtractCommand(controlConnToUpperNode, AESKey)
+		command, err := common.ExtractCommand(*controlConnToUpperNode, AESKey)
 		if err != nil {
 			logrus.Error("upper node offline")
 			os.Exit(1)
@@ -428,10 +441,12 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 						StartShell(command.Info, stdin, stdout, NODEID)
 					}()
 				}
-			case "OFFLINE":
+			case "OFFLINE": //上一级节点下线
 				logrus.Error("Node ", NODEID-1, " seems down")
 				offlineMess, _ := common.ConstructCommand("OFFLINE", "", NODEID+1, AESKey)
 				Proxy_Command_Chan <- offlineMess
+				time.Sleep(2 * time.Second)
+				os.Exit(1)
 			case "SOCKS":
 				logrus.Info("Get command to start SOCKS")
 				go StartSocks(controlConnToUpperNode)
@@ -468,12 +483,17 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 				GetName <- false
 			case "CANNOTREAD":
 				CannotRead <- true
-			case "ADMINOFFLINE":
+			case "ADMINOFFLINE": //startnode不执行重连模式时admin下线后传递的数据
 				logrus.Error("Admin seems offline")
 				offlineCommand, _ := common.ConstructCommand("ADMINOFFLINE", "", NODEID+1, AESKey)
 				Proxy_Command_Chan <- offlineCommand
 				time.Sleep(2 * time.Second)
-				os.Exit(1) //admin下线后可以不断开，这里选择结束程序
+				os.Exit(1)
+			case "RECONN": //startnode执行重连模式时admin下线后传递的数据
+				respCommand, _ := common.ConstructCommand("RECONNID", "", NODEID, AESKey)
+				(*controlConnToUpperNode).Write(respCommand)
+				passCommand, _ := common.ConstructCommand("RECONN", "", NODEID+1, AESKey)
+				Proxy_Command_Chan <- passCommand
 			default:
 				logrus.Error("Unknown command")
 				continue
@@ -487,10 +507,10 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode net.Conn, NODEID uint
 }
 
 //处理传递给上一个节点的数据信道
-func HandleDataConnToUpperNode(dataConnToUpperNode net.Conn) {
+func HandleDataConnToUpperNode(dataConnToUpperNode *net.Conn) {
 	for {
 		proxyCmdResult := <-CmdResult
-		_, err := dataConnToUpperNode.Write(proxyCmdResult)
+		_, err := (*dataConnToUpperNode).Write(proxyCmdResult)
 		if err != nil {
 			//logrus.Errorf("ERROR OCCURED!: %s", err)
 			return
@@ -499,9 +519,9 @@ func HandleDataConnToUpperNode(dataConnToUpperNode net.Conn) {
 }
 
 //处理由上一个节点传递过来的数据信道
-func HandleDataConnFromUpperNode(dataConnToUpperNode net.Conn) {
+func HandleDataConnFromUpperNode(dataConnToUpperNode *net.Conn) {
 	for {
-		AdminData, err := common.ExtractDataResult(dataConnToUpperNode, AESKey, NODEID)
+		AdminData, err := common.ExtractDataResult(*dataConnToUpperNode, AESKey, NODEID)
 		if err != nil {
 			return
 		}
@@ -542,10 +562,10 @@ func HandleDataConnFromUpperNode(dataConnToUpperNode net.Conn) {
 }
 
 //传递下级节点command至上一级节点
-func ProxyLowerNodeCommToUpperNode(upper net.Conn, LowerNodeCommChan chan []byte) {
+func ProxyLowerNodeCommToUpperNode(upper *net.Conn, LowerNodeCommChan chan []byte) {
 	for {
 		LowerNodeComm := <-LowerNodeCommChan
-		_, err := upper.Write(LowerNodeComm)
+		_, err := (*upper).Write(LowerNodeComm)
 		if err != nil {
 			logrus.Error("Command cannot be proxy")
 			return

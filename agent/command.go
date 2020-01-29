@@ -42,6 +42,11 @@ var Command = &cli.Command{
 			Usage:   "connect to others actively",
 		},
 		&cli.StringFlag{
+			Name:    "reconnect",
+			Aliases: []string{"Reconnect"},
+			Usage:   "reconnect to admin node",
+		},
+		&cli.StringFlag{
 			Name:    "monitor",
 			Aliases: []string{"m"},
 			Usage:   "monitor node",

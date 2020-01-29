@@ -16,7 +16,7 @@ var (
 	Sshhost *ssh.Session
 )
 
-func StartSSH(controlConnToAdmin net.Conn, info string, nodeid uint32) error {
+func StartSSH(controlConnToAdmin *net.Conn, info string, nodeid uint32) error {
 	spiltedinfo := strings.Split(info, "::")
 	host := spiltedinfo[0]
 	username := spiltedinfo[1]
@@ -29,14 +29,14 @@ func StartSSH(controlConnToAdmin net.Conn, info string, nodeid uint32) error {
 	})
 	if err != nil {
 		sshMess, _ := common.ConstructCommand("SSHRESP", "FAILED", nodeid, AESKey)
-		controlConnToAdmin.Write(sshMess)
+		(*controlConnToAdmin).Write(sshMess)
 		return err
 	}
 	Sshhost, err = sshdial.NewSession()
 
 	if err != nil {
 		sshMess, _ := common.ConstructCommand("SSHRESP", "FAILED", nodeid, AESKey)
-		controlConnToAdmin.Write(sshMess)
+		(*controlConnToAdmin).Write(sshMess)
 		return err
 	}
 	Stdout, err = Sshhost.StdoutPipe()
@@ -52,7 +52,7 @@ func StartSSH(controlConnToAdmin net.Conn, info string, nodeid uint32) error {
 	Sshhost.Stderr = Sshhost.Stdout
 	Sshhost.Shell()
 	sshMess, _ := common.ConstructCommand("SSHRESP", "SUCCESS", nodeid, AESKey)
-	controlConnToAdmin.Write(sshMess)
+	(*controlConnToAdmin).Write(sshMess)
 	if err != nil {
 		fmt.Println(err)
 		return err

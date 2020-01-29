@@ -9,9 +9,9 @@ import (
 )
 
 //暂时没啥用，仅做回复socks开启命令之用
-func StartSocks(controlConnToAdmin net.Conn) {
+func StartSocks(controlConnToAdmin *net.Conn) {
 	socksstartmess, _ := common.ConstructCommand("SOCKSRESP", "SUCCESS", NODEID, AESKey)
-	controlConnToAdmin.Write(socksstartmess)
+	(*controlConnToAdmin).Write(socksstartmess)
 }
 
 //处理socks请求

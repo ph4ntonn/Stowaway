@@ -2,35 +2,25 @@ package agent
 
 import (
 	"Stowaway/node"
+	"fmt"
+	"strconv"
 	"time"
 )
 
-var (
-	Reconnsuccess = make(chan bool, 2)
-	ExitSuccess   = make(chan bool)
-)
-
 //not in use,add todo
-func TryReconnect() {
-	var err error
+func TryReconnect(gap string) {
 	for {
-		time.Sleep(10 * time.Second)
+		lag, _ := strconv.Atoi(gap)
+		time.Sleep(time.Duration(lag) * time.Second)
 
-		ControlConnToAdmin, DataConnToAdmin, NODEID, err = node.StartNodeConn(Monitor, ListenPort, NODEID, AESKey)
-		if err == nil {
-			Reconnsuccess <- true
-			Reconnsuccess <- true
+		controlConnToAdmin, dataConnToAdmin, _, err := node.StartNodeConn(Monitor, ListenPort, NODEID, AESKey)
+		if err != nil {
+			fmt.Println("[*]Admin seems still down")
 		} else {
-			continue
-		}
-		CmdResult <- []byte("")
-		<-ExitSuccess
-		go HandleStartNodeConn(ControlConnToAdmin, DataConnToAdmin, Monitor, NODEID)
-		go ProxyLowerNodeCommToUpperNode(ControlConnToAdmin, LowerNodeCommChan)
-		select {
-		case <-Reconnsuccess:
+			fmt.Println("[*]Admin up! Reconnect successful!")
+			ControlConnToAdmin = controlConnToAdmin
+			DataConnToAdmin = dataConnToAdmin
 			return
-		default:
 		}
 	}
 }
