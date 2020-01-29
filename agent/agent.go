@@ -192,6 +192,7 @@ func HandleDataConnFromAdmin(dataConnToAdmin *net.Conn, NODEID uint32) {
 	for {
 		AdminData, err := common.ExtractDataResult(*dataConnToAdmin, AESKey, NODEID)
 		if err != nil {
+			time.Sleep(1 * time.Second)
 			continue
 		}
 		if AdminData.NodeId == NODEID {
@@ -244,6 +245,7 @@ func HandleControlConnFromAdmin(controlConnToAdmin *net.Conn, NODEID uint32) {
 	for {
 		command, err := common.ExtractCommand(*controlConnToAdmin, AESKey)
 		if err != nil {
+			time.Sleep(1 * time.Second)
 			continue
 		}
 		if command.NodeId == NODEID {

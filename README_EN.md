@@ -45,7 +45,7 @@ Simple example：
  
 ```
 ```
-  agent mode： ./stowaway agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 -r
+  agent mode： ./stowaway agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 -r --reconnect 5
   
   Meaning：
   
@@ -61,9 +61,12 @@ Simple example：
 
   -r It means you want to start the node in reverse mode(For instance: you can add node 2 into the net via node 1 actively connect to node 2, instead of node 1 just waiting for the connection from node 2 )
 
+  --reconnect It means the startnode will automatically try to reconnect to admin node at 5 second intervals(in this example).PS:
+  if you want to start the reconnect function, just add this option when you start the STARTNODE , there is no need to add this option when you start the other simple nodes.
+
   Be aware! -s option's value must be as same as the agents' 
 
- For now, there are only five options above are supported!
+ For now, there are only six options above are supported!
   
 ```
 
@@ -135,7 +138,7 @@ For more detail, just type help to get further informations
 
 - [x] Network traffic encryption
 - [x] Method to turn off socks5 proxy
-- [ ] Reconnection
+- [x] Reconnection
 - [ ] Clean codes, optimize logic
 - [ ] Add cc function
 - [x] Add reverse connect mode

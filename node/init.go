@@ -56,7 +56,7 @@ func SendHeartBeat(controlConnToUpperNode net.Conn, dataConnToUpperNode net.Conn
 	hbcommpack, _ := common.ConstructCommand("HEARTBEAT", "", nodeid, key)
 	hbdatapack, _ := common.ConstructDataResult(0, 0, "1", "HEARTBEAT", " ", key, nodeid)
 	for {
-		time.Sleep(30 * time.Second)
+		time.Sleep(5 * time.Second)
 		_, err := controlConnToUpperNode.Write(hbcommpack)
 		if err != nil {
 			return
