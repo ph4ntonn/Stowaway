@@ -146,7 +146,7 @@ For more detail, just type help to get further informations
 ### Attention
 
 - This porject is coding just for fun , the logic structure and code structure are not strict enough, please don't be so serious about it
-- When the admin offline, all agent nodes will offline too(maybe it will be changed in future)
+- When the admin offline, all agent nodes will be offline too(only when startnode isn't under reconnect mode)
 - When one of the agents offline, the agent nodes after it will offline
 - Once the admin started, you need to connect at least one agent node to it before you do any operations
 - If you want to compile this project from source code,you can run build_admin.sh/build_agent.sh（Be Mentioned!!!!!!!!!! The default compile result is AGENT mode and please run build_agent.sh. But if you want to compile ADMIN mode,please see the main.go file and FOLLOW THE INSTRUCTION, and next you can run build_admin.sh to get admin mode program.)
