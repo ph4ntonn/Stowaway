@@ -148,10 +148,12 @@ func HandleDataConn(startNodeDataConn net.Conn) {
 		case "SOCKSDATARESP":
 			ClientSockets.RLock()
 			// fmt.Println("get response!", string(nodeResp.Result))
-			_, err := ClientSockets.ClientSocketsMap[nodeResp.Clientsocks].Write([]byte(nodeResp.Result))
-			if err != nil {
-				ClientSockets.RUnlock()
-				continue
+			if _, ok := ClientSockets.ClientSocketsMap[nodeResp.Clientsocks]; ok {
+				_, err := ClientSockets.ClientSocketsMap[nodeResp.Clientsocks].Write([]byte(nodeResp.Result))
+				if err != nil {
+					ClientSockets.RUnlock()
+					continue
+				}
 			}
 			ClientSockets.RUnlock()
 		case "FIN":

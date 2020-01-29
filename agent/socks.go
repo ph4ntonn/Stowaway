@@ -43,6 +43,9 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 			go func() {
 				for {
 					data := <-info
+					if data == "" {
+						return
+					}
 					_, err := server.Write([]byte(data))
 					if err != nil {
 						SocksDataChanMap.RLock()

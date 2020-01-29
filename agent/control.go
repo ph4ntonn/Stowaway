@@ -8,8 +8,8 @@ import (
 )
 
 func TryReconnect(gap string) {
+	lag, _ := strconv.Atoi(gap)
 	for {
-		lag, _ := strconv.Atoi(gap)
 		time.Sleep(time.Duration(lag) * time.Second)
 
 		controlConnToAdmin, dataConnToAdmin, _, err := node.StartNodeConn(Monitor, ListenPort, NODEID, AESKey)

@@ -21,7 +21,8 @@ type SafeMap struct {
 }
 
 var (
-	NODEID uint32 = uint32(1)
+	NODEID     uint32 = uint32(1)
+	NotLastOne bool   = false
 
 	Monitor       string
 	ListenPort    string
@@ -36,7 +37,7 @@ var (
 	CannotRead = make(chan bool, 1)
 	GetName    = make(chan bool, 1)
 
-	Proxy_Command_Chan = make(chan []byte, 2)
+	Proxy_Command_Chan = make(chan []byte, 1)
 	Proxy_Data_Chan    = make(chan []byte, 1)
 	LowerNodeCommChan  = make(chan []byte, 1)
 
@@ -100,6 +101,7 @@ func StartNodeInit(monitor, listenPort string) {
 		NewNodeMessage := <-node.NewNodeMessageChan
 		Proxy_Command_Chan = make(chan []byte)
 		LowerNodeCommChan <- NewNodeMessage
+		NotLastOne = true
 		go ProxyLowerNodeCommToUpperNode(&ControlConnToAdmin, LowerNodeCommChan)
 		go HandleLowerNodeConn(controlConnForLowerNode, dataConnForLowerNode, NODEID, LowerNodeCommChan)
 	}
@@ -123,6 +125,7 @@ func SimpleNodeInit(monitor, listenPort string) {
 		NewNodeMessage := <-node.NewNodeMessageChan
 		Proxy_Command_Chan = make(chan []byte)
 		LowerNodeCommChan <- NewNodeMessage
+		NotLastOne = true
 		go ProxyLowerNodeCommToUpperNode(&ControlConnToAdmin, LowerNodeCommChan)
 		go HandleLowerNodeConn(controlConnForLowerNode, dataConnForLowerNode, NODEID, LowerNodeCommChan)
 	}
@@ -144,6 +147,7 @@ func StartNodeReversemodeInit(monitor, listenPort string) {
 		NewNodeMessage := <-node.NewNodeMessageChan
 		Proxy_Command_Chan = make(chan []byte)
 		LowerNodeCommChan <- NewNodeMessage
+		NotLastOne = true
 		go ProxyLowerNodeCommToUpperNode(&ControlConnToAdmin, LowerNodeCommChan)
 		go HandleLowerNodeConn(controlConnForLowerNode, dataConnForLowerNode, NODEID, LowerNodeCommChan)
 	}
@@ -162,6 +166,7 @@ func SimpleNodeReversemodeInit(monitor, listenPort string) {
 		NewNodeMessage := <-node.NewNodeMessageChan
 		Proxy_Command_Chan = make(chan []byte)
 		LowerNodeCommChan <- NewNodeMessage
+		NotLastOne = true
 		go ProxyLowerNodeCommToUpperNode(&ControlConnToAdmin, LowerNodeCommChan)
 		go HandleLowerNodeConn(controlConnForLowerNode, dataConnForLowerNode, NODEID, LowerNodeCommChan)
 	}
@@ -310,12 +315,21 @@ func HandleControlConnFromAdmin(controlConnToAdmin *net.Conn, NODEID uint32) {
 			case "ADMINOFFLINE":
 				logrus.Error("Admin seems offline!")
 				if Reconn != "" {
+					SocksDataChanMap = NewSafeMap()
+					if NotLastOne {
+						messCommand, _ := common.ConstructCommand("CLEAR", "", 2, AESKey)
+						Proxy_Command_Chan <- messCommand
+					}
 					TryReconnect(Reconn)
-					messCommand, _ := common.ConstructCommand("RECONN", "", 2, AESKey)
-					Proxy_Command_Chan <- messCommand
+					if NotLastOne {
+						messCommand, _ := common.ConstructCommand("RECONN", "", 2, AESKey)
+						Proxy_Command_Chan <- messCommand
+					}
 				} else {
-					offlineCommand, _ := common.ConstructCommand("ADMINOFFLINE", "", 2, AESKey)
-					Proxy_Command_Chan <- offlineCommand
+					if NotLastOne {
+						offlineCommand, _ := common.ConstructCommand("ADMINOFFLINE", "", 2, AESKey)
+						Proxy_Command_Chan <- offlineCommand
+					}
 					time.Sleep(2 * time.Second)
 					os.Exit(1)
 				}
@@ -449,8 +463,10 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode *net.Conn, NODEID uin
 				}
 			case "OFFLINE": //上一级节点下线
 				logrus.Error("Node ", NODEID-1, " seems down")
-				offlineMess, _ := common.ConstructCommand("OFFLINE", "", NODEID+1, AESKey)
-				Proxy_Command_Chan <- offlineMess
+				if NotLastOne {
+					offlineMess, _ := common.ConstructCommand("OFFLINE", "", NODEID+1, AESKey)
+					Proxy_Command_Chan <- offlineMess
+				}
 				time.Sleep(2 * time.Second)
 				os.Exit(1)
 			case "SOCKS":
@@ -491,15 +507,25 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode *net.Conn, NODEID uin
 				CannotRead <- true
 			case "ADMINOFFLINE": //startnode不执行重连模式时admin下线后传递的数据
 				logrus.Error("Admin seems offline")
-				offlineCommand, _ := common.ConstructCommand("ADMINOFFLINE", "", NODEID+1, AESKey)
-				Proxy_Command_Chan <- offlineCommand
+				if NotLastOne {
+					offlineCommand, _ := common.ConstructCommand("ADMINOFFLINE", "", NODEID+1, AESKey)
+					Proxy_Command_Chan <- offlineCommand
+				}
 				time.Sleep(2 * time.Second)
 				os.Exit(1)
 			case "RECONN": //startnode执行重连模式时admin下线后传递的数据
 				respCommand, _ := common.ConstructCommand("RECONNID", "", NODEID, AESKey)
 				(*controlConnToUpperNode).Write(respCommand)
-				passCommand, _ := common.ConstructCommand("RECONN", "", NODEID+1, AESKey)
-				Proxy_Command_Chan <- passCommand
+				if NotLastOne {
+					passCommand, _ := common.ConstructCommand("RECONN", "", NODEID+1, AESKey)
+					Proxy_Command_Chan <- passCommand
+				}
+			case "CLEAR":
+				SocksDataChanMap = NewSafeMap()
+				if NotLastOne {
+					messCommand, _ := common.ConstructCommand("CLEAR", "", NODEID+1, AESKey)
+					Proxy_Command_Chan <- messCommand
+				}
 			default:
 				logrus.Error("Unknown command")
 				continue
@@ -593,8 +619,10 @@ func WaitForExit(NODEID uint32) {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt, os.Kill, syscall.SIGHUP)
 	<-signalChan
-	offlineMess, _ := common.ConstructCommand("OFFLINE", "", NODEID+1, AESKey)
-	Proxy_Command_Chan <- offlineMess
+	if NotLastOne {
+		offlineMess, _ := common.ConstructCommand("OFFLINE", "", NODEID+1, AESKey)
+		Proxy_Command_Chan <- offlineMess
+	}
 	time.Sleep(5 * time.Second)
 	os.Exit(1)
 }
