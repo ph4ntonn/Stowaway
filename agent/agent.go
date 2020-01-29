@@ -88,6 +88,7 @@ func StartNodeInit(monitor, listenPort string) {
 	var err error
 	NODEID = uint32(1)
 	ControlConnToAdmin, DataConnToAdmin, NODEID, err = node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
+	go node.SendHeartBeat(ControlConnToAdmin, DataConnToAdmin, NODEID, AESKey)
 	if err != nil {
 		os.Exit(1)
 	}
@@ -110,6 +111,7 @@ func SimpleNodeInit(monitor, listenPort string) {
 	var err error
 	NODEID = uint32(0)
 	ControlConnToAdmin, DataConnToAdmin, NODEID, err = node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
+	go node.SendHeartBeat(ControlConnToAdmin, DataConnToAdmin, NODEID, AESKey)
 	if err != nil {
 		os.Exit(1)
 	}
@@ -131,6 +133,7 @@ func StartNodeReversemodeInit(monitor, listenPort string) {
 	var err error
 	NODEID = uint32(1)
 	ControlConnToAdmin, DataConnToAdmin, NODEID, err = node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
+	go node.SendHeartBeat(ControlConnToAdmin, DataConnToAdmin, NODEID, AESKey)
 	if err != nil {
 		os.Exit(1)
 	}
@@ -150,6 +153,7 @@ func StartNodeReversemodeInit(monitor, listenPort string) {
 func SimpleNodeReversemodeInit(monitor, listenPort string) {
 	NODEID = uint32(0)
 	ControlConnToAdmin, DataConnToAdmin, NODEID = node.AcceptConnFromUpperNode(listenPort, NODEID, AESKey)
+	go node.SendHeartBeat(ControlConnToAdmin, DataConnToAdmin, NODEID, AESKey)
 	go HandleSimpleNodeConn(&ControlConnToAdmin, &DataConnToAdmin, NODEID)
 	go node.StartNodeListen(listenPort, NODEID, AESKey)
 	for {
@@ -178,7 +182,7 @@ func HandleDataConnToAdmin(dataConnToAdmin *net.Conn) {
 		_, err := (*dataConnToAdmin).Write(proxyCmdResult)
 		if err != nil {
 			//logrus.Errorf("ERROR OCCURED!: %s", err)
-			return
+			continue
 		}
 	}
 }
@@ -513,7 +517,7 @@ func HandleDataConnToUpperNode(dataConnToUpperNode *net.Conn) {
 		_, err := (*dataConnToUpperNode).Write(proxyCmdResult)
 		if err != nil {
 			//logrus.Errorf("ERROR OCCURED!: %s", err)
-			return
+			continue
 		}
 	}
 }
@@ -568,7 +572,6 @@ func ProxyLowerNodeCommToUpperNode(upper *net.Conn, LowerNodeCommChan chan []byt
 		_, err := (*upper).Write(LowerNodeComm)
 		if err != nil {
 			logrus.Error("Command cannot be proxy")
-			return
 		}
 	}
 }

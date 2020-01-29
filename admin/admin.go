@@ -173,6 +173,7 @@ func HandleDataConn(startNodeDataConn net.Conn) {
 			FileData <- nodeResp.Result
 		case "EOF": //文件读取结束
 			Eof <- true
+		case "HEARTBEAT":
 		}
 	}
 }
@@ -304,6 +305,7 @@ func HandleCommandFromControlConn(startNodeControlConn net.Conn) {
 		case "RECONNID":
 			logrus.Info("New node join! Node Id is ", command.NodeId)
 			NodesReadyToadd <- map[uint32]string{command.NodeId: command.Info}
+		case "HEARTBEAT":
 		default:
 			logrus.Error("Unknown Command")
 			continue

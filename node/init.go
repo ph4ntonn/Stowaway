@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
@@ -47,6 +48,22 @@ func StartNodeConn(monitor string, listenPort string, nodeID uint32, key []byte)
 				}
 				return controlConnToUpperNode, dataConnToUpperNode, nodeID, nil
 			}
+		}
+	}
+}
+
+func SendHeartBeat(controlConnToUpperNode net.Conn, dataConnToUpperNode net.Conn, nodeid uint32, key []byte) {
+	hbcommpack, _ := common.ConstructCommand("HEARTBEAT", "", nodeid, key)
+	hbdatapack, _ := common.ConstructDataResult(0, 0, "1", "HEARTBEAT", " ", key, nodeid)
+	for {
+		time.Sleep(30 * time.Second)
+		_, err := controlConnToUpperNode.Write(hbcommpack)
+		if err != nil {
+			return
+		}
+		_, err = dataConnToUpperNode.Write(hbdatapack)
+		if err != nil {
+			return
 		}
 	}
 }

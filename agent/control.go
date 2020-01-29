@@ -7,7 +7,6 @@ import (
 	"time"
 )
 
-//not in use,add todo
 func TryReconnect(gap string) {
 	for {
 		lag, _ := strconv.Atoi(gap)
@@ -20,6 +19,7 @@ func TryReconnect(gap string) {
 			fmt.Println("[*]Admin up! Reconnect successful!")
 			ControlConnToAdmin = controlConnToAdmin
 			DataConnToAdmin = dataConnToAdmin
+			go node.SendHeartBeat(ControlConnToAdmin, DataConnToAdmin, NODEID, AESKey)
 			return
 		}
 	}
