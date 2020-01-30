@@ -3,6 +3,7 @@ package agent
 import (
 	"Stowaway/common"
 	"Stowaway/socks"
+	"fmt"
 	"net"
 	"strconv"
 	"time"
@@ -25,25 +26,42 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 	)
 	for {
 		if isAuthed == false && method == "" {
+			fmt.Println(1)
 			data := <-info
+			if data == "" { //重连后原先引用失效，当chan释放后，若不捕捉，会无限循环
+				fmt.Println("data is666", data, "111")
+				return
+			}
 			method = socks.CheckMethod(DataConnToAdmin, []byte(data), socksUsername, socksPass, checknum, AESKey, NODEID)
 			if method == "NONE" {
 				isAuthed = true
 			}
 		} else if isAuthed == false && method == "PASSWORD" {
+			fmt.Println(2)
 			data := <-info
+			if data == "" {
+				fmt.Println("data is666", data, "111")
+				return
+			}
 			isAuthed = socks.AuthClient(DataConnToAdmin, []byte(data), socksUsername, socksPass, checknum, AESKey, NODEID)
 		} else if isAuthed == true && tcpconnected == false {
+			fmt.Println(3)
 			data := <-info
+			if data == "" {
+				fmt.Println("data is666", data, "111")
+				return
+			}
 			server, tcpconnected, serverflag = socks.ConfirmTarget(DataConnToAdmin, []byte(data), checknum, AESKey, NODEID)
 			if serverflag == false {
 				return
 			}
 		} else if isAuthed == true && tcpconnected == true && serverflag == true {
+			fmt.Println(4)
 			go func() {
 				for {
 					data := <-info
 					if data == "" {
+						fmt.Println("data is666", data, "111")
 						return
 					}
 					_, err := server.Write([]byte(data))

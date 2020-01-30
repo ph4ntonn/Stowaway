@@ -175,7 +175,7 @@ func HandleDataConn(startNodeDataConn net.Conn) {
 			FileData <- nodeResp.Result
 		case "EOF": //文件读取结束
 			Eof <- true
-		case "HEARTBEAT":
+		case "KEEPALIVE":
 		}
 	}
 }
@@ -308,6 +308,8 @@ func HandleCommandFromControlConn(startNodeControlConn net.Conn) {
 			logrus.Info("New node join! Node Id is ", command.NodeId)
 			NodesReadyToadd <- map[uint32]string{command.NodeId: command.Info}
 		case "HEARTBEAT":
+			hbcommpack, _ := common.ConstructCommand("KEEPALIVE", "", 1, AESKey)
+			startNodeControlConn.Write(hbcommpack)
 		default:
 			logrus.Error("Unknown Command")
 			continue

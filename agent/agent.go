@@ -84,12 +84,14 @@ func NewAgent(c *cli.Context) {
 	}
 }
 
+// 初始化代码开始
+
 // 后续想让startnode与simplenode实现不一样的功能，故将两种node实现代码分开写
 func StartNodeInit(monitor, listenPort string) {
 	var err error
 	NODEID = uint32(1)
 	ControlConnToAdmin, DataConnToAdmin, NODEID, err = node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
-	go node.SendHeartBeat(ControlConnToAdmin, DataConnToAdmin, NODEID, AESKey)
+	go SendHeartBeatControl(ControlConnToAdmin, NODEID, AESKey)
 	if err != nil {
 		os.Exit(1)
 	}
@@ -102,6 +104,7 @@ func StartNodeInit(monitor, listenPort string) {
 		Proxy_Command_Chan = make(chan []byte)
 		LowerNodeCommChan <- NewNodeMessage
 		NotLastOne = true
+		go SendHeartBeatData(dataConnForLowerNode, NODEID, AESKey)
 		go ProxyLowerNodeCommToUpperNode(&ControlConnToAdmin, LowerNodeCommChan)
 		go HandleLowerNodeConn(controlConnForLowerNode, dataConnForLowerNode, NODEID, LowerNodeCommChan)
 	}
@@ -113,19 +116,21 @@ func SimpleNodeInit(monitor, listenPort string) {
 	var err error
 	NODEID = uint32(0)
 	ControlConnToAdmin, DataConnToAdmin, NODEID, err = node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
-	go node.SendHeartBeat(ControlConnToAdmin, DataConnToAdmin, NODEID, AESKey)
+	go SendHeartBeatControl(ControlConnToAdmin, NODEID, AESKey)
 	if err != nil {
 		os.Exit(1)
 	}
 	go HandleSimpleNodeConn(&ControlConnToAdmin, &DataConnToAdmin, NODEID)
 	go node.StartNodeListen(listenPort, NODEID, AESKey)
 	for {
+		fmt.Println("00000000000000000000000000000")
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
 		dataConnForLowerNode := <-node.DataConnForLowerNodeChan
 		NewNodeMessage := <-node.NewNodeMessageChan
 		Proxy_Command_Chan = make(chan []byte)
 		LowerNodeCommChan <- NewNodeMessage
 		NotLastOne = true
+		go SendHeartBeatData(dataConnForLowerNode, NODEID, AESKey)
 		go ProxyLowerNodeCommToUpperNode(&ControlConnToAdmin, LowerNodeCommChan)
 		go HandleLowerNodeConn(controlConnForLowerNode, dataConnForLowerNode, NODEID, LowerNodeCommChan)
 	}
@@ -136,7 +141,7 @@ func StartNodeReversemodeInit(monitor, listenPort string) {
 	var err error
 	NODEID = uint32(1)
 	ControlConnToAdmin, DataConnToAdmin, NODEID, err = node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
-	go node.SendHeartBeat(ControlConnToAdmin, DataConnToAdmin, NODEID, AESKey)
+	go SendHeartBeatControl(ControlConnToAdmin, NODEID, AESKey)
 	if err != nil {
 		os.Exit(1)
 	}
@@ -148,6 +153,7 @@ func StartNodeReversemodeInit(monitor, listenPort string) {
 		Proxy_Command_Chan = make(chan []byte)
 		LowerNodeCommChan <- NewNodeMessage
 		NotLastOne = true
+		go SendHeartBeatData(dataConnForLowerNode, NODEID, AESKey)
 		go ProxyLowerNodeCommToUpperNode(&ControlConnToAdmin, LowerNodeCommChan)
 		go HandleLowerNodeConn(controlConnForLowerNode, dataConnForLowerNode, NODEID, LowerNodeCommChan)
 	}
@@ -157,7 +163,7 @@ func StartNodeReversemodeInit(monitor, listenPort string) {
 func SimpleNodeReversemodeInit(monitor, listenPort string) {
 	NODEID = uint32(0)
 	ControlConnToAdmin, DataConnToAdmin, NODEID = node.AcceptConnFromUpperNode(listenPort, NODEID, AESKey)
-	go node.SendHeartBeat(ControlConnToAdmin, DataConnToAdmin, NODEID, AESKey)
+	go SendHeartBeatControl(ControlConnToAdmin, NODEID, AESKey)
 	go HandleSimpleNodeConn(&ControlConnToAdmin, &DataConnToAdmin, NODEID)
 	go node.StartNodeListen(listenPort, NODEID, AESKey)
 	for {
@@ -167,10 +173,15 @@ func SimpleNodeReversemodeInit(monitor, listenPort string) {
 		Proxy_Command_Chan = make(chan []byte)
 		LowerNodeCommChan <- NewNodeMessage
 		NotLastOne = true
+		go SendHeartBeatData(dataConnForLowerNode, NODEID, AESKey)
 		go ProxyLowerNodeCommToUpperNode(&ControlConnToAdmin, LowerNodeCommChan)
 		go HandleLowerNodeConn(controlConnForLowerNode, dataConnForLowerNode, NODEID, LowerNodeCommChan)
 	}
 }
+
+//初始化代码结束
+
+//startnode启动代码开始
 
 //启动startnode
 func HandleStartNodeConn(controlConnToAdmin *net.Conn, dataConnToAdmin *net.Conn, monitor string, NODEID uint32) {
@@ -205,8 +216,8 @@ func HandleDataConnFromAdmin(dataConnToAdmin *net.Conn, NODEID uint32) {
 			case "SOCKSDATA":
 				SocksDataChanMap.RLock()
 				if _, ok := SocksDataChanMap.SocksDataChan[AdminData.Clientsocks]; ok {
-					SocksDataChanMap.RUnlock()
 					SocksDataChanMap.SocksDataChan[AdminData.Clientsocks] <- AdminData.Result
+					SocksDataChanMap.RUnlock()
 				} else {
 					//fmt.Println("create new chan", AdminData.Clientsocks)
 					SocksDataChanMap.RUnlock()
@@ -214,21 +225,26 @@ func HandleDataConnFromAdmin(dataConnToAdmin *net.Conn, NODEID uint32) {
 					SocksDataChanMap.Lock()
 					SocksDataChanMap.SocksDataChan[AdminData.Clientsocks] = tempchan
 					go HanleClientSocksConn(SocksDataChanMap.SocksDataChan[AdminData.Clientsocks], SocksUsername, SocksPass, AdminData.Clientsocks, NODEID)
-					SocksDataChanMap.Unlock()
 					SocksDataChanMap.SocksDataChan[AdminData.Clientsocks] <- AdminData.Result
+					SocksDataChanMap.Unlock()
 				}
 			case "FILEDATA": //接收文件内容
 				FileData <- AdminData.Result
 			case "EOF": //文件读取结束
 				Eof <- true
 			case "FINOK":
+				SocksDataChanMap.Lock() //性能损失？
 				if _, ok := SocksDataChanMap.SocksDataChan[AdminData.Clientsocks]; ok {
-					SocksDataChanMap.Lock() //性能损失？
-					close(SocksDataChanMap.SocksDataChan[AdminData.Clientsocks])
+					if !IsClosed(SocksDataChanMap.SocksDataChan[AdminData.Clientsocks]) {
+						close(SocksDataChanMap.SocksDataChan[AdminData.Clientsocks])
+					}
 					delete(SocksDataChanMap.SocksDataChan, AdminData.Clientsocks)
-					SocksDataChanMap.Unlock()
 					//fmt.Println("close one, still left", len(SocksDataChanMap.SocksDataChan))
 				}
+				SocksDataChanMap.Unlock()
+			case "HEARTBEAT":
+				hbdatapack, _ := common.ConstructDataResult(0, 0, " ", "KEEPALIVE", " ", AESKey, NODEID)
+				(*dataConnToAdmin).Write(hbdatapack)
 			}
 		} else {
 			ProxyData, _ := common.ConstructDataResult(AdminData.NodeId, AdminData.Clientsocks, AdminData.Success, AdminData.Datatype, AdminData.Result, AESKey, NODEID)
@@ -333,6 +349,7 @@ func HandleControlConnFromAdmin(controlConnToAdmin *net.Conn, NODEID uint32) {
 					time.Sleep(2 * time.Second)
 					os.Exit(1)
 				}
+			case "KEEPALIVE":
 			default:
 				logrus.Error("Unknown command")
 				continue
@@ -344,6 +361,10 @@ func HandleControlConnFromAdmin(controlConnToAdmin *net.Conn, NODEID uint32) {
 		}
 	}
 }
+
+//startnode启动代码结束
+
+//管理下行节点代码开始
 
 //管理下级节点
 func HandleLowerNodeConn(controlConnForLowerNode net.Conn, dataConnForLowerNode net.Conn, NODEID uint32, LowerNodeCommChan chan []byte) {
@@ -377,6 +398,11 @@ func HandleControlConnFromLowerNode(controlConnForLowerNode net.Conn, NODEID uin
 		if command.Command == "RECONNID" && command.Info == "" {
 			proxyCommand, _ := common.ConstructCommand(command.Command, controlConnForLowerNode.RemoteAddr().String(), command.NodeId, AESKey)
 			LowerNodeCommChan <- proxyCommand
+			continue
+		}
+		if command.Command == "HEARTBEAT" {
+			hbcommpack, _ := common.ConstructCommand("KEEPALIVE", "", NODEID+1, AESKey)
+			controlConnForLowerNode.Write(hbcommpack)
 			continue
 		}
 		if command.NodeId == NODEID { //暂时只有admin需要处理
@@ -414,6 +440,10 @@ func HandleDataConnToLowerNode(dataConnForLowerNode net.Conn, NODEID uint32) {
 	}
 }
 
+//管理下行节点代码结束
+
+//普通节点启动代码开始
+
 //启动普通节点
 func HandleSimpleNodeConn(controlConnToUpperNode *net.Conn, dataConnToUpperNode *net.Conn, NODEID uint32) {
 	go HandleControlConnFromUpperNode(controlConnToUpperNode, NODEID)
@@ -433,6 +463,7 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode *net.Conn, NODEID uin
 	stdout, stdin := CreatInteractiveShell()
 	var neverexit bool = true
 	for {
+		fmt.Println(7)
 		command, err := common.ExtractCommand(*controlConnToUpperNode, AESKey)
 		if err != nil {
 			logrus.Error("upper node offline")
@@ -526,6 +557,7 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode *net.Conn, NODEID uin
 					messCommand, _ := common.ConstructCommand("CLEAR", "", NODEID+1, AESKey)
 					Proxy_Command_Chan <- messCommand
 				}
+			case "KEEPALIVE":
 			default:
 				logrus.Error("Unknown command")
 				continue
@@ -541,6 +573,7 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode *net.Conn, NODEID uin
 //处理传递给上一个节点的数据信道
 func HandleDataConnToUpperNode(dataConnToUpperNode *net.Conn) {
 	for {
+		fmt.Println(6)
 		proxyCmdResult := <-CmdResult
 		_, err := (*dataConnToUpperNode).Write(proxyCmdResult)
 		if err != nil {
@@ -553,6 +586,7 @@ func HandleDataConnToUpperNode(dataConnToUpperNode *net.Conn) {
 //处理由上一个节点传递过来的数据信道
 func HandleDataConnFromUpperNode(dataConnToUpperNode *net.Conn) {
 	for {
+		fmt.Println(5)
 		AdminData, err := common.ExtractDataResult(*dataConnToUpperNode, AESKey, NODEID)
 		if err != nil {
 			return
@@ -562,8 +596,8 @@ func HandleDataConnFromUpperNode(dataConnToUpperNode *net.Conn) {
 			case "SOCKSDATA":
 				SocksDataChanMap.RLock()
 				if _, ok := SocksDataChanMap.SocksDataChan[AdminData.Clientsocks]; ok {
-					SocksDataChanMap.RUnlock()
 					SocksDataChanMap.SocksDataChan[AdminData.Clientsocks] <- AdminData.Result
+					SocksDataChanMap.RUnlock()
 					//fmt.Println("get")
 				} else {
 					//fmt.Println("create new chan", AdminData.Clientsocks)
@@ -572,19 +606,29 @@ func HandleDataConnFromUpperNode(dataConnToUpperNode *net.Conn) {
 					SocksDataChanMap.Lock()
 					SocksDataChanMap.SocksDataChan[AdminData.Clientsocks] = tempchan
 					go HanleClientSocksConn(SocksDataChanMap.SocksDataChan[AdminData.Clientsocks], SocksUsername, SocksPass, AdminData.Clientsocks, NODEID)
-					SocksDataChanMap.Unlock()
 					SocksDataChanMap.SocksDataChan[AdminData.Clientsocks] <- AdminData.Result
+					SocksDataChanMap.Unlock()
 				}
 			case "FINOK":
 				SocksDataChanMap.Lock()
-				close(SocksDataChanMap.SocksDataChan[AdminData.Clientsocks])
-				delete(SocksDataChanMap.SocksDataChan, AdminData.Clientsocks)
+				if _, ok := SocksDataChanMap.SocksDataChan[AdminData.Clientsocks]; ok {
+					if !IsClosed(SocksDataChanMap.SocksDataChan[AdminData.Clientsocks]) {
+						close(SocksDataChanMap.SocksDataChan[AdminData.Clientsocks])
+					}
+					delete(SocksDataChanMap.SocksDataChan, AdminData.Clientsocks)
+				}
 				SocksDataChanMap.Unlock()
 				//fmt.Println("close one, still left", len(SocksDataChanMap.SocksDataChan))
 			case "FILEDATA": //接收文件内容
 				FileData <- AdminData.Result
 			case "EOF": //文件读取结束
 				Eof <- true
+			case "HEARTBEAT":
+				hbdatapack, _ := common.ConstructDataResult(0, 0, " ", "KEEPALIVE", " ", AESKey, NODEID)
+				(*dataConnToUpperNode).Write(hbdatapack)
+			default:
+				logrus.Error("Unknown data")
+				continue
 			}
 		} else {
 			ProxyData, _ := common.ConstructDataResult(AdminData.NodeId, AdminData.Clientsocks, AdminData.Success, AdminData.Datatype, AdminData.Result, AESKey, NODEID)
@@ -603,6 +647,10 @@ func ProxyLowerNodeCommToUpperNode(upper *net.Conn, LowerNodeCommChan chan []byt
 		}
 	}
 }
+
+//普通节点启动代码结束
+
+//一些功能代码
 
 //将命令传递到下一节点
 func ProxyCommToNextNode(proxyCommand []byte) {
@@ -625,4 +673,14 @@ func WaitForExit(NODEID uint32) {
 	}
 	time.Sleep(5 * time.Second)
 	os.Exit(1)
+}
+
+//判断chan是否已经被释放
+func IsClosed(ch chan string) bool {
+	select {
+	case <-ch:
+		return true
+	default:
+	}
+	return false
 }
