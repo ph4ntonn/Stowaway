@@ -123,7 +123,6 @@ func SimpleNodeInit(monitor, listenPort string) {
 	go HandleSimpleNodeConn(&ControlConnToAdmin, &DataConnToAdmin, NODEID)
 	go node.StartNodeListen(listenPort, NODEID, AESKey)
 	for {
-		fmt.Println("00000000000000000000000000000")
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
 		dataConnForLowerNode := <-node.DataConnForLowerNodeChan
 		NewNodeMessage := <-node.NewNodeMessageChan
@@ -463,7 +462,6 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode *net.Conn, NODEID uin
 	stdout, stdin := CreatInteractiveShell()
 	var neverexit bool = true
 	for {
-		fmt.Println(7)
 		command, err := common.ExtractCommand(*controlConnToUpperNode, AESKey)
 		if err != nil {
 			logrus.Error("upper node offline")
@@ -573,7 +571,6 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode *net.Conn, NODEID uin
 //处理传递给上一个节点的数据信道
 func HandleDataConnToUpperNode(dataConnToUpperNode *net.Conn) {
 	for {
-		fmt.Println(6)
 		proxyCmdResult := <-CmdResult
 		_, err := (*dataConnToUpperNode).Write(proxyCmdResult)
 		if err != nil {
@@ -586,7 +583,6 @@ func HandleDataConnToUpperNode(dataConnToUpperNode *net.Conn) {
 //处理由上一个节点传递过来的数据信道
 func HandleDataConnFromUpperNode(dataConnToUpperNode *net.Conn) {
 	for {
-		fmt.Println(5)
 		AdminData, err := common.ExtractDataResult(*dataConnToUpperNode, AESKey, NODEID)
 		if err != nil {
 			return
@@ -684,3 +680,5 @@ func IsClosed(ch chan string) bool {
 	}
 	return false
 }
+
+//agent主体代码结束
