@@ -27,16 +27,17 @@ var (
 
 	ReadyChange      = make(chan bool)
 	IsShellMode      = make(chan bool)
-	Eof              = make(chan bool)
 	SshSuccess       = make(chan bool, 1)
 	NodeSocksStarted = make(chan bool, 1)
 	GetName          = make(chan bool, 1)
 	CannotRead       = make(chan bool, 1)
 
+	Eof             = make(chan string, 1)
 	FileData        = make(chan string, 10)
 	SocksRespChan   = make(chan string, 1)
 	NodesReadyToadd = make(chan map[uint32]string)
 
+	FileDataMap   *common.SafeFileDataMap
 	ClientSockets *SafeMap
 
 	ClientNum uint32 = 0
@@ -49,6 +50,7 @@ var (
 //启动admin
 func NewAdmin(c *cli.Context) {
 	ClientSockets = NewSafeMap()
+	FileDataMap = NewSafeFileDataMap()
 	AESKey = []byte(c.String("secret"))
 	listenPort := c.String("listen")
 	//ccPort := c.String("control")
@@ -67,6 +69,12 @@ func NewAdmin(c *cli.Context) {
 func NewSafeMap() *SafeMap {
 	sm := new(SafeMap)
 	sm.ClientSocketsMap = make(map[uint32]net.Conn)
+	return sm
+}
+
+func NewSafeFileDataMap() *common.SafeFileDataMap {
+	sm := new(common.SafeFileDataMap)
+	sm.FileDataChan = make(map[int]string)
 	return sm
 }
 
@@ -172,9 +180,10 @@ func HandleDataConn(startNodeDataConn net.Conn) {
 			respCommand, _ := common.ConstructDataResult(client, nodeResp.Clientsocks, " ", "FINOK", " ", AESKey, 0)
 			startNodeDataConn.Write(respCommand)
 		case "FILEDATA": //接收文件内容
-			FileData <- nodeResp.Result
+			slicenum, _ := strconv.Atoi(nodeResp.Success)
+			FileDataMap.FileDataChan[slicenum] = nodeResp.Result
 		case "EOF": //文件读取结束
-			Eof <- true
+			Eof <- nodeResp.Success
 		case "KEEPALIVE":
 		}
 	}
@@ -297,7 +306,7 @@ func HandleCommandFromControlConn(startNodeControlConn net.Conn) {
 			} else {
 				respComm, _ := common.ConstructCommand("NAMECONFIRM", "", CurrentNode, AESKey)
 				startNodeControlConn.Write(respComm)
-				go common.ReceiveFile(Eof, FileData, CannotRead, UploadFile)
+				go common.ReceiveFile(Eof, FileDataMap, CannotRead, UploadFile)
 			}
 		case "FILENOTEXIST":
 			fmt.Printf("File %s not exist!\n", command.Info)

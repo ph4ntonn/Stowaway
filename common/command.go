@@ -29,6 +29,8 @@ type Data struct {
 
 	Clientsocks uint32 //socks标号
 
+	SuccessLength uint32 //保留此字段，为后续功能留用
+
 	Success string //保留此字段，为后续功能留用
 
 	DatatypeLength uint32 //数据类型长度
@@ -137,6 +139,7 @@ func ConstructDataResult(nodeid uint32, clientsocks uint32, success string, data
 	var buffer bytes.Buffer
 	NodeIdLength := make([]byte, 4)
 	ClientsocksLength := make([]byte, 20)
+	SuccessLength := make([]byte, 50)
 	DatatypeLength := make([]byte, 5)
 	ResultLength := make([]byte, 512)
 
@@ -156,11 +159,13 @@ func ConstructDataResult(nodeid uint32, clientsocks uint32, success string, data
 
 	binary.BigEndian.PutUint32(NodeIdLength, nodeid)
 	binary.BigEndian.PutUint32(ClientsocksLength, uint32(clientsocks))
+	binary.BigEndian.PutUint32(SuccessLength, uint32(len(Success)))
 	binary.BigEndian.PutUint32(DatatypeLength, uint32(len(Datatype)))
 	binary.BigEndian.PutUint32(ResultLength, uint32(len(Result)))
 
 	buffer.Write(NodeIdLength)
 	buffer.Write(ClientsocksLength)
+	buffer.Write(SuccessLength)
 	buffer.Write(Success)
 	buffer.Write(DatatypeLength)
 	buffer.Write(Datatype)
@@ -205,7 +210,14 @@ func ExtractDataResult(conn net.Conn, key []byte, currentid uint32) (*Data, erro
 		return data, err
 	}
 
-	data.Success = string(successlen[:])
+	data.SuccessLength = binary.BigEndian.Uint32(successlen)
+
+	successbuffer := make([]byte, data.SuccessLength)
+	_, err = io.ReadFull(conn, successbuffer)
+	if err != nil {
+		return data, err
+	}
+	data.Success = string(successbuffer)
 
 	_, err = io.ReadFull(conn, datatypelen)
 	if err != nil {

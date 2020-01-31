@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -33,7 +34,6 @@ var (
 	CommandToUpperNodeChan = make(chan []byte)
 	CmdResult              = make(chan []byte)
 
-	Eof        = make(chan bool)
 	CannotRead = make(chan bool, 1)
 	GetName    = make(chan bool, 1)
 
@@ -41,8 +41,10 @@ var (
 	Proxy_Data_Chan    = make(chan []byte, 1)
 	LowerNodeCommChan  = make(chan []byte, 1)
 
+	Eof      = make(chan string, 1)
 	FileData = make(chan string, 10)
 
+	FileDataMap      *common.SafeFileDataMap
 	SocksDataChanMap *SafeMap
 
 	ControlConnToAdmin net.Conn
@@ -58,8 +60,15 @@ func NewSafeMap() *SafeMap {
 	return sm
 }
 
+func NewSafeFileDataMap() *common.SafeFileDataMap {
+	sm := new(common.SafeFileDataMap)
+	sm.FileDataChan = make(map[int]string)
+	return sm
+}
+
 func NewAgent(c *cli.Context) {
 	SocksDataChanMap = NewSafeMap()
+	FileDataMap = NewSafeFileDataMap()
 	AESKey = []byte(c.String("secret"))
 	listenPort := c.String("listen")
 	//ccPort := c.String("control")  暂时不需要
@@ -228,9 +237,10 @@ func HandleDataConnFromAdmin(dataConnToAdmin *net.Conn, NODEID uint32) {
 					SocksDataChanMap.Unlock()
 				}
 			case "FILEDATA": //接收文件内容
-				FileData <- AdminData.Result
+				slicenum, _ := strconv.Atoi(AdminData.Success)
+				FileDataMap.FileDataChan[slicenum] = AdminData.Result
 			case "EOF": //文件读取结束
-				Eof <- true
+				Eof <- AdminData.Success
 			case "FINOK":
 				SocksDataChanMap.Lock() //性能损失？
 				if _, ok := SocksDataChanMap.SocksDataChan[AdminData.Clientsocks]; ok {
@@ -317,7 +327,7 @@ func HandleControlConnFromAdmin(controlConnToAdmin *net.Conn, NODEID uint32) {
 				} else {
 					respComm, _ := common.ConstructCommand("NAMECONFIRM", "", 0, AESKey)
 					ControlConnToAdmin.Write(respComm)
-					go common.ReceiveFile(Eof, FileData, CannotRead, UploadFile)
+					go common.ReceiveFile(Eof, FileDataMap, CannotRead, UploadFile)
 				}
 			case "DOWNLOADFILE":
 				go common.UploadFile(command.Info, ControlConnToAdmin, DataConnToAdmin, 0, GetName, AESKey, NODEID, false)
@@ -524,7 +534,7 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode *net.Conn, NODEID uin
 				} else {
 					respComm, _ := common.ConstructCommand("NAMECONFIRM", "", 0, AESKey)
 					ControlConnToAdmin.Write(respComm)
-					go common.ReceiveFile(Eof, FileData, CannotRead, UploadFile)
+					go common.ReceiveFile(Eof, FileDataMap, CannotRead, UploadFile)
 				}
 			case "DOWNLOADFILE":
 				go common.UploadFile(command.Info, ControlConnToAdmin, DataConnToAdmin, 0, GetName, AESKey, NODEID, false)
@@ -616,9 +626,10 @@ func HandleDataConnFromUpperNode(dataConnToUpperNode *net.Conn) {
 				SocksDataChanMap.Unlock()
 				//fmt.Println("close one, still left", len(SocksDataChanMap.SocksDataChan))
 			case "FILEDATA": //接收文件内容
-				FileData <- AdminData.Result
+				slicenum, _ := strconv.Atoi(AdminData.Success)
+				FileDataMap.FileDataChan[slicenum] = AdminData.Result
 			case "EOF": //文件读取结束
-				Eof <- true
+				Eof <- AdminData.Success
 			case "HEARTBEAT":
 				hbdatapack, _ := common.ConstructDataResult(0, 0, " ", "KEEPALIVE", " ", AESKey, NODEID)
 				(*dataConnToUpperNode).Write(hbdatapack)
