@@ -4,9 +4,7 @@ Stowaway is Multi-hop proxy tool for security researchers and pentesters
 
 Users can easily proxy their network traffic to intranet nodes (multi-layer)
 
-PS: The files under demo folder are Stowaway's beta version,it's still functional, you can check the detail by README.md file under the demo folder
-
-PPS: Thanks for everyone's star, i'm just an amateur, and the code still need be optimized,so if you find anything wrong or bugs, feel free to tell me, and i'll fix it :kissing_heart:. 
+PS: Thanks for everyone's star, i'm just an amateur, and the code still need be optimized,so if you find anything wrong or bugs, feel free to tell me, and i'll fix it :kissing_heart:. 
 > This tool is limited to security research and teaching, and the user bears all legal and related responsibilities caused by the use of this tool! The author does not assume any legal and related responsibilities!
 
 ## Features
