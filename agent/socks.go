@@ -73,6 +73,8 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 				go SendFIN(DataConnToAdmin, checknum)
 				return
 			}
+		} else {
+			return
 		}
 	}
 }
