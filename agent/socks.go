@@ -25,8 +25,8 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 	)
 	for {
 		if isAuthed == false && method == "" {
-			data := <-info
-			if data == "" { //重连后原先引用失效，当chan释放后，若不捕捉，会无限循环
+			data, ok := <-info
+			if !ok { //重连后原先引用失效，当chan释放后，若不捕捉，会无限循环
 				return
 			}
 			method = socks.CheckMethod(DataConnToAdmin, []byte(data), socksUsername, socksPass, checknum, AESKey, NODEID)
@@ -34,14 +34,14 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 				isAuthed = true
 			}
 		} else if isAuthed == false && method == "PASSWORD" {
-			data := <-info
-			if data == "" {
+			data, ok := <-info
+			if !ok {
 				return
 			}
 			isAuthed = socks.AuthClient(DataConnToAdmin, []byte(data), socksUsername, socksPass, checknum, AESKey, NODEID)
 		} else if isAuthed == true && tcpconnected == false {
-			data := <-info
-			if data == "" {
+			data, ok := <-info
+			if !ok {
 				return
 			}
 			server, tcpconnected, serverflag = socks.ConfirmTarget(DataConnToAdmin, []byte(data), checknum, AESKey, NODEID)
@@ -51,8 +51,8 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 		} else if isAuthed == true && tcpconnected == true && serverflag == true {
 			go func() {
 				for {
-					data := <-info
-					if data == "" {
+					data, ok := <-info
+					if !ok {
 						return
 					}
 					_, err := server.Write([]byte(data))
