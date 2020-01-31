@@ -39,14 +39,14 @@ func UploadFile(filename string, ControlConn net.Conn, DataConn net.Conn, nodeid
 		buff := make([]byte, 10240)
 		fileHandle, _ := os.Open(filename) //打开文件
 		defer fileHandle.Close()           //关闭文件
+		if Notagent {
+			fmt.Println("\nFile transmitting, please wait...")
+		}
 		for {
 			finalnum := strconv.Itoa(slicenum)
 			n, err := fileHandle.Read(buff) //读取文件内容
 			if err != nil {
 				if err == io.EOF {
-					if Notagent {
-						fmt.Printf("\nFile %s transmission complete!\n", info.Name())
-					}
 					respData, _ = ConstructDataResult(nodeid, 0, finalnum, "EOF", " ", AESKey, currentid)
 					_, err = DataConn.Write(respData)
 					return
@@ -81,8 +81,11 @@ func DownloadFile(filename string, conn net.Conn, nodeid uint32, AESKey []byte) 
 	}
 }
 
-func ReceiveFile(Eof chan string, FileDataMap *SafeFileDataMap, CannotRead chan bool, UploadFile *os.File) {
+func ReceiveFile(controlConnToAdmin *net.Conn, Eof chan string, FileDataMap *SafeFileDataMap, CannotRead chan bool, UploadFile *os.File, AESKey []byte, Notagent bool) {
 	defer UploadFile.Close()
+	if Notagent {
+		fmt.Println("\nDownloading file,please wait......")
+	}
 	for {
 		select {
 		case st := <-Eof:
@@ -99,7 +102,12 @@ func ReceiveFile(Eof chan string, FileDataMap *SafeFileDataMap, CannotRead chan 
 						}
 					}
 					FileDataMap.RUnlock()
-					fmt.Println("Transmission complete")
+					if Notagent {
+						fmt.Println("Transmission complete")
+					} else {
+						respData, _ := ConstructCommand("TRANSSUCCESS", " ", 0, AESKey)
+						(*controlConnToAdmin).Write(respData)
+					}
 					return
 				}
 			}

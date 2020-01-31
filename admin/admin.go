@@ -304,9 +304,10 @@ func HandleCommandFromControlConn(startNodeControlConn net.Conn) {
 				respComm, _ := common.ConstructCommand("CREATEFAIL", "", CurrentNode, AESKey) //从控制信道上返回文件是否能成功创建的响应
 				startNodeControlConn.Write(respComm)
 			} else {
+				var tempchan *net.Conn = &startNodeControlConn
 				respComm, _ := common.ConstructCommand("NAMECONFIRM", "", CurrentNode, AESKey)
 				startNodeControlConn.Write(respComm)
-				go common.ReceiveFile(Eof, FileDataMap, CannotRead, UploadFile)
+				go common.ReceiveFile(tempchan, Eof, FileDataMap, CannotRead, UploadFile, AESKey, true)
 			}
 		case "FILENOTEXIST":
 			fmt.Printf("File %s not exist!\n", command.Info)
@@ -319,6 +320,8 @@ func HandleCommandFromControlConn(startNodeControlConn net.Conn) {
 		case "HEARTBEAT":
 			hbcommpack, _ := common.ConstructCommand("KEEPALIVE", "", 1, AESKey)
 			startNodeControlConn.Write(hbcommpack)
+		case "TRANSSUCCESS":
+			fmt.Println("File transmission complete!")
 		default:
 			logrus.Error("Unknown Command")
 			continue

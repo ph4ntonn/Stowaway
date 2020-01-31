@@ -329,7 +329,7 @@ func HandleControlConnFromAdmin(controlConnToAdmin *net.Conn, NODEID uint32) {
 				} else {
 					respComm, _ := common.ConstructCommand("NAMECONFIRM", "", 0, AESKey)
 					ControlConnToAdmin.Write(respComm)
-					go common.ReceiveFile(Eof, FileDataMap, CannotRead, UploadFile)
+					go common.ReceiveFile(controlConnToAdmin, Eof, FileDataMap, CannotRead, UploadFile, AESKey, false)
 				}
 			case "DOWNLOADFILE":
 				go common.UploadFile(command.Info, ControlConnToAdmin, DataConnToAdmin, 0, GetName, AESKey, NODEID, false)
@@ -536,7 +536,7 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode *net.Conn, NODEID uin
 				} else {
 					respComm, _ := common.ConstructCommand("NAMECONFIRM", "", 0, AESKey)
 					ControlConnToAdmin.Write(respComm)
-					go common.ReceiveFile(Eof, FileDataMap, CannotRead, UploadFile)
+					go common.ReceiveFile(controlConnToUpperNode, Eof, FileDataMap, CannotRead, UploadFile, AESKey, false)
 				}
 			case "DOWNLOADFILE":
 				go common.UploadFile(command.Info, ControlConnToAdmin, DataConnToAdmin, 0, GetName, AESKey, NODEID, false)
