@@ -60,7 +60,7 @@ Simple example：
   -r It means you want to start the node in reverse mode(For instance: you can add node 2 into the net via node 1 actively connect to node 2, instead of node 1 just waiting for the connection from node 2 )
 
   --reconnect It means the startnode will automatically try to reconnect to admin node at 5 second intervals(in this example).PS:
-  if you want to start the reconnect function, just add this option when you start the STARTNODE , there is no need to add this option when you start the other simple nodes.（still have some bugs,be careful when using it)
+  if you want to start the reconnect function, just add this option when you start the STARTNODE , there is no need to add this option when you start the other simple nodes.
 
   Be aware! -s option's value must be as same as the agents' 
 
