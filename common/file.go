@@ -89,6 +89,7 @@ func ReceiveFile(Eof chan string, FileDataMap *SafeFileDataMap, CannotRead chan 
 			slicetotal, _ := strconv.Atoi(st)
 			for {
 				time.Sleep(2 * time.Second)
+				FileDataMap.RLock()
 				if len(FileDataMap.FileDataChan) == slicetotal {
 					for num := 0; num < slicetotal; num++ {
 						content := FileDataMap.FileDataChan[num]
@@ -97,6 +98,7 @@ func ReceiveFile(Eof chan string, FileDataMap *SafeFileDataMap, CannotRead chan 
 							return
 						}
 					}
+					FileDataMap.RUnlock()
 					fmt.Println("Transmission complete")
 					return
 				}

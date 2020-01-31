@@ -29,9 +29,9 @@ type Data struct {
 
 	Clientsocks uint32 //socks标号
 
-	SuccessLength uint32 //保留此字段，为后续功能留用
+	SuccessLength uint32 //Success字段长度
 
-	Success string //保留此字段，为后续功能留用
+	Success string //文件传输分包序号
 
 	DatatypeLength uint32 //数据类型长度
 

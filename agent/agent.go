@@ -238,7 +238,9 @@ func HandleDataConnFromAdmin(dataConnToAdmin *net.Conn, NODEID uint32) {
 				}
 			case "FILEDATA": //接收文件内容
 				slicenum, _ := strconv.Atoi(AdminData.Success)
+				FileDataMap.Lock()
 				FileDataMap.FileDataChan[slicenum] = AdminData.Result
+				FileDataMap.Unlock()
 			case "EOF": //文件读取结束
 				Eof <- AdminData.Success
 			case "FINOK":
