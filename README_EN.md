@@ -140,6 +140,7 @@ For more detail, just type help to get further informations
 - [ ] Clean codes, optimize logic
 - [ ] Add cc function
 - [x] Add reverse connect mode
+- [ ] Support port reuse
 
 ### Attention
 
