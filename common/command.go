@@ -29,9 +29,9 @@ type Data struct {
 
 	Clientsocks uint32 //socks标号
 
-	SuccessLength uint32 //Success字段长度
+	FileSliceNumLength uint32 //Success字段长度
 
-	Success string //文件传输分包序号
+	FileSliceNum string //文件传输分包序号
 
 	DatatypeLength uint32 //数据类型长度
 
@@ -135,7 +135,7 @@ func ConstructCommand(command string, info string, id uint32, key []byte) ([]byt
 
 }
 
-func ConstructDataResult(nodeid uint32, clientsocks uint32, success string, datatype string, result string, key []byte, currentid uint32) ([]byte, error) {
+func ConstructDataResult(nodeid uint32, clientsocks uint32, fileSliceNum string, datatype string, result string, key []byte, currentid uint32) ([]byte, error) {
 	var buffer bytes.Buffer
 	NodeIdLength := make([]byte, 4)
 	ClientsocksLength := make([]byte, 20)
@@ -143,7 +143,7 @@ func ConstructDataResult(nodeid uint32, clientsocks uint32, success string, data
 	DatatypeLength := make([]byte, 5)
 	ResultLength := make([]byte, 512)
 
-	Success := []byte(success)
+	FileSliceNum := []byte(fileSliceNum)
 	Datatype := []byte(datatype)
 	Result := []byte(result)
 
@@ -159,14 +159,14 @@ func ConstructDataResult(nodeid uint32, clientsocks uint32, success string, data
 
 	binary.BigEndian.PutUint32(NodeIdLength, nodeid)
 	binary.BigEndian.PutUint32(ClientsocksLength, uint32(clientsocks))
-	binary.BigEndian.PutUint32(SuccessLength, uint32(len(Success)))
+	binary.BigEndian.PutUint32(SuccessLength, uint32(len(FileSliceNum)))
 	binary.BigEndian.PutUint32(DatatypeLength, uint32(len(Datatype)))
 	binary.BigEndian.PutUint32(ResultLength, uint32(len(Result)))
 
 	buffer.Write(NodeIdLength)
 	buffer.Write(ClientsocksLength)
 	buffer.Write(SuccessLength)
-	buffer.Write(Success)
+	buffer.Write(FileSliceNum)
 	buffer.Write(DatatypeLength)
 	buffer.Write(Datatype)
 	buffer.Write(ResultLength)
@@ -210,14 +210,14 @@ func ExtractDataResult(conn net.Conn, key []byte, currentid uint32) (*Data, erro
 		return data, err
 	}
 
-	data.SuccessLength = binary.BigEndian.Uint32(successlen)
+	data.FileSliceNumLength = binary.BigEndian.Uint32(successlen)
 
-	successbuffer := make([]byte, data.SuccessLength)
+	successbuffer := make([]byte, data.FileSliceNumLength)
 	_, err = io.ReadFull(conn, successbuffer)
 	if err != nil {
 		return data, err
 	}
-	data.Success = string(successbuffer)
+	data.FileSliceNum = string(successbuffer)
 
 	_, err = io.ReadFull(conn, datatypelen)
 	if err != nil {

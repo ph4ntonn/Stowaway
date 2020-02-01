@@ -237,12 +237,12 @@ func HandleDataConnFromAdmin(dataConnToAdmin *net.Conn, NODEID uint32) {
 					SocksDataChanMap.Unlock()
 				}
 			case "FILEDATA": //接收文件内容
-				slicenum, _ := strconv.Atoi(AdminData.Success)
+				slicenum, _ := strconv.Atoi(AdminData.FileSliceNum)
 				FileDataMap.Lock()
 				FileDataMap.FileDataChan[slicenum] = AdminData.Result
 				FileDataMap.Unlock()
 			case "EOF": //文件读取结束
-				Eof <- AdminData.Success
+				Eof <- AdminData.FileSliceNum
 			case "FINOK":
 				SocksDataChanMap.Lock() //性能损失？
 				if _, ok := SocksDataChanMap.SocksDataChan[AdminData.Clientsocks]; ok {
@@ -258,7 +258,7 @@ func HandleDataConnFromAdmin(dataConnToAdmin *net.Conn, NODEID uint32) {
 				(*dataConnToAdmin).Write(hbdatapack)
 			}
 		} else {
-			ProxyData, _ := common.ConstructDataResult(AdminData.NodeId, AdminData.Clientsocks, AdminData.Success, AdminData.Datatype, AdminData.Result, AESKey, NODEID)
+			ProxyData, _ := common.ConstructDataResult(AdminData.NodeId, AdminData.Clientsocks, AdminData.FileSliceNum, AdminData.Datatype, AdminData.Result, AESKey, NODEID)
 			go ProxyDataToNextNode(ProxyData)
 		}
 	}
@@ -628,10 +628,10 @@ func HandleDataConnFromUpperNode(dataConnToUpperNode *net.Conn) {
 				SocksDataChanMap.Unlock()
 				//fmt.Println("close one, still left", len(SocksDataChanMap.SocksDataChan))
 			case "FILEDATA": //接收文件内容
-				slicenum, _ := strconv.Atoi(AdminData.Success)
+				slicenum, _ := strconv.Atoi(AdminData.FileSliceNum)
 				FileDataMap.FileDataChan[slicenum] = AdminData.Result
 			case "EOF": //文件读取结束
-				Eof <- AdminData.Success
+				Eof <- AdminData.FileSliceNum
 			case "HEARTBEAT":
 				hbdatapack, _ := common.ConstructDataResult(0, 0, " ", "KEEPALIVE", " ", AESKey, NODEID)
 				(*dataConnToUpperNode).Write(hbdatapack)
@@ -640,7 +640,7 @@ func HandleDataConnFromUpperNode(dataConnToUpperNode *net.Conn) {
 				continue
 			}
 		} else {
-			ProxyData, _ := common.ConstructDataResult(AdminData.NodeId, AdminData.Clientsocks, AdminData.Success, AdminData.Datatype, AdminData.Result, AESKey, NODEID)
+			ProxyData, _ := common.ConstructDataResult(AdminData.NodeId, AdminData.Clientsocks, AdminData.FileSliceNum, AdminData.Datatype, AdminData.Result, AESKey, NODEID)
 			go ProxyDataToNextNode(ProxyData)
 		}
 	}

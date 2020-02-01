@@ -141,18 +141,10 @@ func HandleDataConn(startNodeDataConn net.Conn) {
 		}
 		switch nodeResp.Datatype {
 		case "SHELLRESP":
-			if nodeResp.Success == "1" {
-				fmt.Print(nodeResp.Result)
-			} else {
-				fmt.Println("Something wrong occured!Try another one")
-			}
+			fmt.Print(nodeResp.Result)
 		case "SSHMESS":
-			if nodeResp.Success == "1" {
-				fmt.Print(nodeResp.Result)
-				fmt.Print("(ssh mode)>>>")
-			} else {
-				fmt.Println("Something wrong occured!Try another one")
-			}
+			fmt.Print(nodeResp.Result)
+			fmt.Print("(ssh mode)>>>")
 		case "SOCKSDATARESP":
 			ClientSockets.RLock()
 			// fmt.Println("get response!", string(nodeResp.Result))
@@ -180,10 +172,10 @@ func HandleDataConn(startNodeDataConn net.Conn) {
 			respCommand, _ := common.ConstructDataResult(client, nodeResp.Clientsocks, " ", "FINOK", " ", AESKey, 0)
 			startNodeDataConn.Write(respCommand)
 		case "FILEDATA": //接收文件内容
-			slicenum, _ := strconv.Atoi(nodeResp.Success)
+			slicenum, _ := strconv.Atoi(nodeResp.FileSliceNum)
 			FileDataMap.FileDataChan[slicenum] = nodeResp.Result
 		case "EOF": //文件读取结束
-			Eof <- nodeResp.Success
+			Eof <- nodeResp.FileSliceNum
 		case "KEEPALIVE":
 		}
 	}

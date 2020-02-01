@@ -47,7 +47,6 @@ func CreatInteractiveShell() (io.Reader, io.Writer) {
 
 //启动shell
 func StartShell(command string, stdin io.Writer, stdout io.Reader, currentid uint32) {
-	success := "1"
 	dataType := "SHELLRESP"
 
 	buf := make([]byte, 1024)
@@ -58,7 +57,7 @@ func StartShell(command string, stdin io.Writer, stdout io.Reader, currentid uin
 			fmt.Println("error: ", err)
 			return
 		}
-		respShell, err := common.ConstructDataResult(0, 0, success, dataType, string(buf[:count]), AESKey, currentid)
+		respShell, err := common.ConstructDataResult(0, 0, " ", dataType, string(buf[:count]), AESKey, currentid)
 		CmdResult <- respShell
 	}
 }
