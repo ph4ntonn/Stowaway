@@ -179,12 +179,12 @@ func ConstructDataResult(nodeid uint32, clientsocks uint32, fileSliceNum string,
 
 func ExtractDataResult(conn net.Conn, key []byte, currentid uint32) (*Data, error) {
 	var (
-		data        = &Data{}
-		nodelen     = make([]byte, config.NODE_LEN)
-		clientlen   = make([]byte, config.CLIENT_LEN)
-		successlen  = make([]byte, config.SUCCESS_LEN)
-		datatypelen = make([]byte, config.DATATYPE_LEN)
-		resultlen   = make([]byte, config.RESULT_LEN)
+		data            = &Data{}
+		nodelen         = make([]byte, config.NODE_LEN)
+		clientlen       = make([]byte, config.CLIENT_LEN)
+		fileslicenumlen = make([]byte, config.FILESLICENUM_LEN)
+		datatypelen     = make([]byte, config.DATATYPE_LEN)
+		resultlen       = make([]byte, config.RESULT_LEN)
 	)
 
 	if len(key) != 0 {
@@ -205,12 +205,12 @@ func ExtractDataResult(conn net.Conn, key []byte, currentid uint32) (*Data, erro
 
 	data.Clientsocks = binary.BigEndian.Uint32(clientlen)
 
-	_, err = io.ReadFull(conn, successlen)
+	_, err = io.ReadFull(conn, fileslicenumlen)
 	if err != nil {
 		return data, err
 	}
 
-	data.FileSliceNumLength = binary.BigEndian.Uint32(successlen)
+	data.FileSliceNumLength = binary.BigEndian.Uint32(fileslicenumlen)
 
 	successbuffer := make([]byte, data.FileSliceNumLength)
 	_, err = io.ReadFull(conn, successbuffer)
