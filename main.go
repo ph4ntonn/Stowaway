@@ -3,6 +3,7 @@ package main
 import (
 	"Stowaway/agent"
 	"os"
+	"runtime"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -25,6 +26,9 @@ func init() {
 //Be Mentioned!If you want to compile the admin mode Stowaway,delete the ‘//’ in front of admin.Command,and add '//' in front of agent.Command.And change the "import Stowaway/agent" to "import Stowaway/admin"
 //Then run go build -ldflags="-w -s" command and get result
 func main() {
+
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
 	app := &cli.App{}
 	cli.AppHelpTemplate = ``
 	app.Commands = []*cli.Command{
