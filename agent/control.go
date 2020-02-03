@@ -25,7 +25,3 @@ func TryReconnect(gap string) {
 		}
 	}
 }
-
-func TryWaitConn() {
-
-}

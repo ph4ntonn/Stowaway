@@ -20,10 +20,9 @@ type SafeMap struct {
 }
 
 var (
-	CliStatus       *string
-	StartNodeStatus string
-	InitStatus      string = "admin"
-	StartNode       string = "0.0.0.0"
+	CliStatus  *string
+	InitStatus string = "admin"
+	StartNode  string = "0.0.0.0"
 
 	ReadyChange      = make(chan bool)
 	IsShellMode      = make(chan bool)
@@ -143,7 +142,6 @@ func HandleInitControlConn(startNodeControlConn net.Conn) {
 		command, err := common.ExtractCommand(startNodeControlConn, AESKey)
 		switch command.Command {
 		case "INIT":
-			StartNodeStatus = command.Info //获取一下agent端监听端口的信息
 			respCommand, err := common.ConstructCommand("ACCEPT", "DATA", 1, AESKey)
 			StartNode = strings.Split(startNodeControlConn.RemoteAddr().String(), ":")[0]
 			_, err = startNodeControlConn.Write(respCommand)
