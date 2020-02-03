@@ -10,6 +10,7 @@ PS: Thanks for everyone's star, i'm just an amateur, and the code still need be 
 ## Features
 
 - obvious node topology
+- active/passive mode
 - can be used on multiple platforms
 - multi-hop socks5 traffic proxy
 - multi-hop ssh traffic proxy
@@ -20,14 +21,14 @@ PS: Thanks for everyone's star, i'm just an amateur, and the code still need be 
 
 ## Usage
 
-Stowaway can be excuted as two kinds of mode: admin && agent
+Stowaway can be excuted as two kinds of mode: admin && agent(including startnode && simple node,startnode means the first node that connecting to admin,it's different from simple nodes)
 
 
 If you don't want to compile the project by yourself, you can check the release tag to get ONE!
 
-Simple example：
+Example 1：
 ```
-  Admin mode：./stowaway admin -l 9999 -s 123
+Admin mode (passive,waiting the connection from startnode)：./stowaway admin -l 9999 -s 123
   
   Meaning：
   
@@ -38,13 +39,9 @@ Simple example：
   -s     It means Stowaway has used 123 as the encrypt key during the communication
   
   Be aware! -s option's value must be as same as the agents' 
-
-  For now, there are only three options above are supported!
  
-```
-```
-  agent mode： ./stowaway agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 -r --reconnect 5
-  
+ startnode： ./stowaway agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 --reconnect 5
+
   Meaning：
   
   agent It means Stowaway is started as agent mode 
@@ -57,15 +54,59 @@ Simple example：
 
   --startnode  It means Stowaway is started as FIRST agent node(if the node is the first one , you MUST add this option!!! And there are two submode of agent mode,if you want to start the second, third one....., just remove this option)
 
-  -r It means you want to start the node in reverse mode(For instance: you can add node 2 into the net via node 1 actively connect to node 2, instead of node 1 just waiting for the connection from node 2 )
-
   --reconnect It means the startnode will automatically try to reconnect to admin node at 5 second intervals(in this example).PS:
   if you want to start the reconnect function, just add this option when you start the STARTNODE , there is no need to add this option when you start the other simple nodes.
 
-  Be aware! -s option's value must be as same as the agents' 
+And now, if you want to start the following simple node passively(means waiting for the connection from upper node instead of connecting to upper node actively)
 
- For now, there are only six options above are supported!
+Then,the command of startnode should be changed to : ./stowaway agent -m 127.0.0.1:9999 --startnode -s 123 --reconnect 5
   
+The following simple node: ./stowaway agent -l 10001 -s 123 -r
+
+  -r It means you want to start the node in passive mode(For instance: you can add node 2 into the net via node 1 actively connect to node 2, instead of node 1 just waiting for the connection from node 2 )
+
+And now, you can use admin,type in 'use 1' ---> 'connect 127.0.0.1:10001' to add this simple node into network
+
+But,if you want to start the following simple node actively(means connecting to upper node actively instead of waiting for the connection from upper node)
+
+Then, the command of startnode should not be changed
+
+The following simple node: ./stowaway agent -m 127.0.0.1:10000 -l 10001 -s 123
+
+And now ,you can add this simple node into network
+```
+
+Example 2：
+```
+Admin node(connecting to startnode actively): ./stowaway admin -s 123 -c 127.0.0.1:9999
+
+  Meaning:
+
+  -c  It means startnode's address
+    
+startnode: ./stowaway agent -l 9999 -s 123 --startnode --reconnect 0 -r --single
+
+  Meaning:
+
+  --reconnect In this example,if you want to start startnode passively, --reconnect should be set, and the value MUST be 0!
+
+  -r   It means startnode is started passively
+
+  --single  If this option is set,it means the whole network including just admin node and startnode(no following simple node),if there are still some simple nodes that need to be added into the network,DO NOT set this option
+
+The following simple node can be started as Example 1's description
+
+And if you do not set the --single option, then you should first start the startnode and admin node successively ,then add the following simple node into the network.when all the things before are done,you can let the admin node offline(or just keep it online, it's totally up to you)
+
+The next time you want to reconnect to the startnode,just start the admin node like : ./stowaway admin -s 123 -c 127.0.0.1:9999
+
+Then, the whole network will be rebuilt.
+
+But, if you set the --single option,it means you only need to start startnode and admin node, So when they are started,you can also choose to keep the admin node online or just let it offline.
+
+The next time you want to reconnect to the startnode,just start the admin node like : ./stowaway admin -s 123 -c 127.0.0.1:9999 
+
+Then, the whole network will be rebuilt,too.
 ```
 
 ## Example
@@ -145,7 +186,7 @@ For more detail, just type help to get further informations
 ### Attention
 
 - This porject is coding just for fun , the logic structure and code structure are not strict enough, please don't be so serious about it
-- When the admin offline, all agent nodes will be offline too(only when startnode isn't under reconnect mode)
+- When the admin offline, all agent nodes will be offline too(only when startnode isn't under reconnect mode(passive or active))
 - When one of the agents offline, the agent nodes after it will offline
 - Once the admin started, you need to connect at least one agent node to it before you do any operations
 - If you want to compile this project from source code,you can run build_admin.sh/build_agent.sh（Be Mentioned!!!!!!!!!! The default compile result is AGENT mode and please run build_agent.sh. But if you want to compile ADMIN mode,please see the main.go file and FOLLOW THE INSTRUCTION, and next you can run build_admin.sh to get admin mode program.)

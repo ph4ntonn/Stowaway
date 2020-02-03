@@ -13,6 +13,7 @@ PS:谢谢大家的star，这个程序还不成熟规范，写来仅为学习，�
 ## 特性
 
 - 一目了然的节点管理
+- 正向/反向连接
 - 多平台适配
 - 多级socks5流量代理转发
 - ssh代理连接
@@ -27,9 +28,10 @@ Stowaway分为admin端和agent端两种形式
 
 不想编译的盆油可以直接用release下编译完成的程序
 
-简单示例：
+第一种情况：
+
 ```
-  Admin端：./stowaway admin -l 9999 -s 123
+  Admin端监听，等待startnode连接：./stowaway admin -l 9999 -s 123
   
   命令解析：
   
@@ -38,12 +40,8 @@ Stowaway分为admin端和agent端两种形式
   -l 参数代表监听端口
 
   -s 参数代表节点通信加密密钥(admin端与agent端必须一致!)
-  
-  暂时就这两个参数！！！！！！
  
-```
-```
-  agent端： ./stowaway agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 -r --reconnect 5
+  startnode端： ./stowaway agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 --reconnect 5
   
   命令解析：
   
@@ -57,12 +55,65 @@ Stowaway分为admin端和agent端两种形式
 
   --startnode 代表此节点是agent端的第一个节点（第一个节点必须加上--startnode选项！若无--startnode表示为普通节点，命令与startnode一致）
 
-  -r 代表以反向模式启动（即下级节点需要本节点主动连接而不是等待下级节点主动连接到本节点，若正向连接可以去除此选项）
-
   --reconnect 代表startnode将在admin下线后主动尝试不断重连（此例子中为每5秒重连一次）注意：若需要重连功能，只需要在startnode使用此参数即可，其后节点无需此参数，正常启动即可
 
-  暂时就这六个参数！！！！！！
+此时若后续的节点希望以passive模式启动（即本节点等待上一级节点的主动连接，而不是主动连接上一节点）
+
+那么，上述命令可改为 ./stowaway agent -m 127.0.0.1:9999 --startnode -s 123 --reconnect 5
+
+后续节点启动命令为：./stowaway agent -l 10001 -s 123 -r
+
+  -r 代表以passive模式启动（即本节点等待上一级节点的主动连接，而不是主动连接上一节点，若正向连接可以去除此选项）
+
+此时在admin端进入startnode(use 1)，使用connect命令（connect 127.0.0.1:10001)即可将后续节点加入网络
+
+若后续节点希望以active模式启动（即本节点主动连接上一级节点）
+
+那么，startnode启动命令可以保持不变
+
+后续节点启动命令为：./stowaway agent -m 127.0.0.1:10000 -l 10001 -s 123
+
+此时即可将后续节点加入网络
+ 
+```
+
+第二种情况：
+
+```
+Admin端主动连接startnode端：./stowaway admin -s 123 -c 127.0.0.1:9999
   
+  命令解析：
+  
+  admin代表以admin模式启动
+  
+  -s 同上
+
+  -c 代表startnode所在的地址
+
+此时startnode端: ./stowaway agent -l 9999 -s 123 --startnode --reconnect 0 -r --single
+
+  命令解析：
+
+  agent代表以agent模式启动
+
+  -l，-s ，--startnode同上
+
+  --reconnect：当statnode端以passive模式启动时，请将此值设置为0（active模式下，此值为每隔x秒尝试重连）
+
+  -r/--reverse：代表以passive模式启动
+
+  --single：当设置此选项时，代表整个网络只有admin和startnode两个节点（即没有后续节点），若不设置此选项，代表后续还有节点
+
+后续节点同第一种情况启动即可
+
+此时，若未设置--single选项，则先后启动startnode端及admin端，将后续节点加入网络后，admin就可以选择下线（或者保持在线）
+
+下一次想要重连时，再次执行./stowaway admin -s 123 -c 127.0.0.1:9999，即可重建网络
+
+若设置了--single选项，则先后启动startnode端及admin端，admin就可以选择下线（或者保持在线）
+
+下一次想要重连时，再次执行./stowaway admin -s 123 -c 127.0.0.1:9999，即可重建网络
+
 ```
 
 ## Example
@@ -139,7 +190,7 @@ PS: 在ssh模式下，你可以用pwd来判断自己所处的文件夹（好吧�
 ### 注意事项
 
 - 此程序仅是闲暇时开发学习，结构及代码结构不够严谨，功能可能存在bug，请多多谅解
-- 当admin端掉线，所有后续连接的agent端都会退出(当startnode未开启重连模式时)
+- 当admin端掉线，所有后续连接的agent端都会退出(当startnode未开启重连模式(主动或者被动)时)
 - 当多个agent端中有一个掉线，后续的agent端都会掉线
 - 在admin启动后，必须有节点连入才可操作
 - 如需从源代码编译本项目，请运行build_admin.sh/build_agent.sh文件来编译对应类型的Stowaway(注意！！！！！！默认编译的是agent模式，此时请运行build_agent.sh,如需编译admin，请查看main.go文件中的提示，按照提示进行操作后，运行build_admin.sh文件)

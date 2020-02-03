@@ -69,11 +69,8 @@ var Command = &cli.Command{
 		} else if c.String("listen") != "" && !c.Bool("reverse") && c.String("monitor") == "" {
 			log.Error("You should set the -m option!")
 			os.Exit(1)
-		} else if c.String("listen") == "" && !c.Bool("reverse") && c.String("monitor") != "" {
-			log.Error("You should set the -l option!")
-			os.Exit(1)
-		} else if c.String("listen") != "" && !c.Bool("reverse") && c.String("monitor") != "" {
-			log.Infof("Starting agent node on port %s \n", c.String("listen"))
+		} else if !c.Bool("reverse") && c.String("monitor") != "" {
+			log.Info("Startnode starting......")
 		} else if c.String("reconnect") != "" && !c.Bool("startnode") {
 			log.Error("Do not set the --reconnect option on simple node")
 			os.Exit(1)

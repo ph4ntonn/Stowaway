@@ -71,7 +71,9 @@ func SendHeartBeat(controlConnToUpperNode net.Conn, dataConnToUpperNode net.Conn
 //初始化节点监听操作
 func StartNodeListen(listenPort string, NodeId uint32, key []byte, reconn bool, single bool) {
 	var nodeconnected string = "0.0.0.0"
-
+	if listenPort == "" {
+		return
+	}
 	if single { //如果passive重连状态下只有startnode一个节点，没有后续节点的话，直接交给AcceptConnFromUpperNode函数
 		for {
 			controlConnToAdmin, dataConnToAdmin, _ := AcceptConnFromUpperNode(listenPort, NodeId, key)
