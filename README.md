@@ -31,7 +31,7 @@ Stowaway分为admin端和agent端两种形式
 第一种情况：
 
 ```
-  Admin端监听，等待startnode连接：./stowaway admin -l 9999 -s 123
+Admin端监听，等待startnode连接：./stowaway admin -l 9999 -s 123
   
   命令解析：
   
@@ -41,7 +41,7 @@ Stowaway分为admin端和agent端两种形式
 
   -s 参数代表节点通信加密密钥(admin端与agent端必须一致!)
  
-  startnode端： ./stowaway agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 --reconnect 5
+startnode端： ./stowaway agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 --reconnect 5
   
   命令解析：
   

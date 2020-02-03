@@ -40,7 +40,7 @@ Admin mode (passive,waiting the connection from startnode)：./stowaway admin -l
   
   Be aware! -s option's value must be as same as the agents' 
  
- startnode： ./stowaway agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 --reconnect 5
+startnode： ./stowaway agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 --reconnect 5
 
   Meaning：
   
