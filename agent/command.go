@@ -51,17 +51,34 @@ var Command = &cli.Command{
 			Aliases: []string{"m"},
 			Usage:   "monitor node",
 		},
+		&cli.BoolFlag{
+			Name:    "single",
+			Aliases: []string{"Single"},
+			Usage:   "If only startnode",
+		},
 	},
 	Action: func(c *cli.Context) error {
 		if c.Bool("debug") {
 			log.SetLevel(log.DebugLevel)
 		}
-		if c.String("control") == "" && c.String("listen") != "" {
-			log.Infof("Starting agent node on port %s without cc port\n", c.String("listen"))
-		} else if c.String("control") != "" && c.String("listen") != "" {
-			log.Infof("Starting agent node on port %s and cc port is %s\n", c.String("listen"), c.String("control"))
-		} else if (c.String("monitor") == "" || c.String("listen") == "") && c.Bool("reverse") == false {
-			log.Error("Please at least set the -m/--monitor  and -l/--listen option")
+		if c.String("listen") != "" && c.Bool("reverse") && c.String("monitor") == "" {
+			log.Infof("Starting agent node on port %s passively\n", c.String("listen"))
+		} else if c.String("listen") != "" && c.Bool("reverse") && c.String("monitor") != "" {
+			log.Error("If you want to start node passively,do not set the -m option")
+			os.Exit(1)
+		} else if c.String("listen") != "" && !c.Bool("reverse") && c.String("monitor") == "" {
+			log.Error("You should set the -m option!")
+			os.Exit(1)
+		} else if c.String("listen") == "" && !c.Bool("reverse") && c.String("monitor") != "" {
+			log.Error("You should set the -l option!")
+			os.Exit(1)
+		} else if c.String("listen") != "" && !c.Bool("reverse") && c.String("monitor") != "" {
+			log.Infof("Starting agent node on port %s \n", c.String("listen"))
+		} else if c.String("reconnect") != "" && !c.Bool("startnode") {
+			log.Error("Do not set the --reconnect option on simple node")
+			os.Exit(1)
+		} else {
+			log.Error("Bad format! See readme!")
 			os.Exit(1)
 		}
 		NewAgent(c)

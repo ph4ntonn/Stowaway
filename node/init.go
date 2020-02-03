@@ -69,17 +69,27 @@ func SendHeartBeat(controlConnToUpperNode net.Conn, dataConnToUpperNode net.Conn
 }
 
 //初始化节点监听操作
-func StartNodeListen(listenPort string, NodeId uint32, key []byte) (net.Conn, net.Conn, []byte, error) {
+func StartNodeListen(listenPort string, NodeId uint32, key []byte, reconn bool, single bool) {
 	var nodeconnected string = "0.0.0.0"
+
+	if single { //如果passive重连状态下只有startnode一个节点，没有后续节点的话，直接交给AcceptConnFromUpperNode函数
+		for {
+			controlConnToAdmin, dataConnToAdmin, _ := AcceptConnFromUpperNode(listenPort, NodeId, key)
+			ControlConnForLowerNodeChan <- controlConnToAdmin
+			DataConnForLowerNodeChan <- dataConnToAdmin
+		}
+	}
+
+	//如果passive重连状态下startnode后有节点连接，先执行后续节点的初始化操作，再交给AcceptConnFromUpperNode函数
 	listenAddr := fmt.Sprintf("0.0.0.0:%s", listenPort)
 	WaitingForLowerNode, err := net.Listen("tcp", listenAddr)
-
 	var result [1]net.Conn
 
 	if err != nil {
 		logrus.Errorf("Cannot listen on port %s", listenPort)
 		os.Exit(1)
 	}
+
 	for {
 		ConnToLowerNode, err := WaitingForLowerNode.Accept() //判断一下是否是合法连接
 		if err != nil {
@@ -138,6 +148,14 @@ func StartNodeListen(listenPort string, NodeId uint32, key []byte) (net.Conn, ne
 			NewNodeMessageChan <- NewNodeMessage
 			PeerNode = strings.Split(dataConToLowerNode.RemoteAddr().String(), ":")[0]
 			nodeconnected = "0.0.0.0" //继续接受连接？
+			if reconn {
+				WaitingForLowerNode.Close()
+				for {
+					controlConnToAdmin, dataConnToAdmin, _ := AcceptConnFromUpperNode(listenPort, NodeId, key)
+					ControlConnForLowerNodeChan <- controlConnToAdmin
+					DataConnForLowerNodeChan <- dataConnToAdmin
+				}
+			}
 		} else {
 			continue
 		}

@@ -53,14 +53,20 @@ func NewAdmin(c *cli.Context) {
 	FileDataMap = NewSafeFileDataMap()
 	AESKey = []byte(c.String("secret"))
 	listenPort := c.String("listen")
-	//ccPort := c.String("control")
+	startnodeaddr := c.String("connect")
+
 	Banner()
+
 	if len(AESKey) != 0 {
 		logrus.Info("Now Connection is encrypting with secret ", c.String("secret"))
 	} else {
 		logrus.Error("Now Connection is maintianed without any encryption!")
 	}
-	go StartListen(listenPort)
+	if startnodeaddr == "" {
+		go StartListen(listenPort)
+	} else {
+		ConnectToStartNode(startnodeaddr)
+	}
 	go AddToChain()
 	CliStatus = &InitStatus
 	Controlpanel()
@@ -78,6 +84,37 @@ func NewSafeFileDataMap() *common.SafeFileDataMap {
 	return sm
 }
 
+func ConnectToStartNode(startnodeaddr string) {
+	controlConnToStartNode, err := net.Dial("tcp", startnodeaddr)
+	if err != nil {
+		logrus.Error("Connection refused!")
+		os.Exit(1)
+	}
+	for {
+		command, _ := common.ExtractCommand(controlConnToStartNode, AESKey)
+		switch command.Command {
+		case "INIT":
+			respCommand, _ := common.ConstructCommand("ID", "", 1, AESKey)
+			controlConnToStartNode.Write(respCommand)
+		case "IDOK":
+			dataConnToStartNode, err := net.Dial("tcp", startnodeaddr)
+			if err != nil {
+				logrus.Error("Connection refused!")
+				os.Exit(1)
+			}
+			DataConn = dataConnToStartNode
+			StartNode = strings.Split(controlConnToStartNode.RemoteAddr().String(), ":")[0]
+			logrus.Printf("Connect to startnode %s successfully!\n", controlConnToStartNode.RemoteAddr().String())
+			go HandleDataConn(dataConnToStartNode)
+			go common.SendHeartBeatData(dataConnToStartNode, 1, AESKey)
+			go HandleCommandFromControlConn(controlConnToStartNode)
+			go HandleCommandToControlConn(controlConnToStartNode)
+			go MonitorCtrlC(controlConnToStartNode)
+			return
+		}
+	}
+}
+
 //启动监听
 func StartListen(listenPort string) {
 	localAddr := fmt.Sprintf("0.0.0.0:%s", listenPort)
@@ -93,6 +130,7 @@ func StartListen(listenPort string) {
 			logrus.Printf("StartNode connected from %s!\n", conn.RemoteAddr().String())
 			DataConn = conn
 			go HandleDataConn(conn)
+			go common.SendHeartBeatData(conn, 1, AESKey)
 		} else if startNodeIP != StartNode && StartNode == "0.0.0.0" {
 			go HandleInitControlConn(conn)
 		}

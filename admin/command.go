@@ -22,6 +22,11 @@ var Command = &cli.Command{
 			Usage:   "secret key",
 		},
 		&cli.StringFlag{
+			Name:    "connect",
+			Aliases: []string{"c"},
+			Usage:   "connect to startnode",
+		},
+		&cli.StringFlag{
 			Name:    "control",
 			Aliases: []string{"cc"},
 			Usage:   "set cc port",
@@ -36,10 +41,13 @@ var Command = &cli.Command{
 		if c.Bool("debug") {
 			log.SetLevel(log.DebugLevel)
 		}
-		if c.String("control") == "" && c.String("listen") != "" {
-			log.Infof("Starting admin node on port %s without cc port\n", c.String("listen"))
-		} else if c.String("control") != "" && c.String("listen") != "" {
-			log.Infof("Starting admin node on port %s and cc port is %s\n", c.String("listen"), c.String("control"))
+		if c.String("listen") != "" && c.String("connect") == "" {
+			log.Infof("Starting admin node on port %s\n", c.String("listen"))
+		} else if c.String("connect") != "" && c.String("listen") != "" {
+			log.Error("If you are using active connect mode, do not set -l option")
+			os.Exit(1)
+		} else if c.String("connect") != "" && c.String("listen") == "" {
+			log.Info("Trying to connect startnode actively...")
 		} else {
 			log.Error("Please at least set the -l/--listen option")
 			os.Exit(1)

@@ -3,6 +3,7 @@ package agent
 import (
 	"Stowaway/common"
 	"Stowaway/socks"
+	"fmt"
 	"net"
 	"strconv"
 	"time"
@@ -74,6 +75,7 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 				return
 			}
 		} else {
+			fmt.Println(method)
 			return
 		}
 	}

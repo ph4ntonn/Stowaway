@@ -24,6 +24,8 @@ type SafeMap struct {
 var (
 	NODEID     uint32 = uint32(1)
 	NotLastOne bool   = false
+	Waiting    bool   = false
+	Passive    bool
 
 	Monitor       string
 	ListenPort    string
@@ -36,6 +38,7 @@ var (
 
 	CannotRead = make(chan bool, 1)
 	GetName    = make(chan bool, 1)
+	ReConnCome = make(chan bool, 1)
 
 	Proxy_Command_Chan = make(chan []byte, 1)
 	Proxy_Data_Chan    = make(chan []byte, 1)
@@ -71,23 +74,24 @@ func NewAgent(c *cli.Context) {
 	FileDataMap = NewSafeFileDataMap()
 	AESKey = []byte(c.String("secret"))
 	listenPort := c.String("listen")
-	//ccPort := c.String("control")  暂时不需要
+	single := c.Bool("single")
 	Reconn = c.String("reconnect")
-	active := c.Bool("reverse")
+	Passive = c.Bool("reverse")
 	monitor := c.String("monitor")
 	isStartNode := c.Bool("startnode")
 	Monitor = monitor
 	ListenPort = listenPort
-	if isStartNode && active == false {
+
+	if isStartNode && Passive == false {
 		go StartNodeInit(monitor, listenPort)
 		WaitForExit(NODEID)
-	} else if active == false {
+	} else if Passive == false {
 		go SimpleNodeInit(monitor, listenPort)
 		WaitForExit(NODEID)
-	} else if isStartNode && active {
-		go StartNodeReversemodeInit(monitor, listenPort)
+	} else if isStartNode && Passive {
+		go StartNodeReversemodeInit(monitor, listenPort, single)
 		WaitForExit(NODEID)
-	} else if active {
+	} else if Passive {
 		go SimpleNodeReversemodeInit(monitor, listenPort)
 		WaitForExit(NODEID)
 	}
@@ -100,12 +104,12 @@ func StartNodeInit(monitor, listenPort string) {
 	var err error
 	NODEID = uint32(1)
 	ControlConnToAdmin, DataConnToAdmin, NODEID, err = node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
-	go SendHeartBeatControl(ControlConnToAdmin, NODEID, AESKey)
+	go common.SendHeartBeatControl(ControlConnToAdmin, NODEID, AESKey)
 	if err != nil {
 		os.Exit(1)
 	}
 	go HandleStartNodeConn(&ControlConnToAdmin, &DataConnToAdmin, monitor, NODEID)
-	go node.StartNodeListen(listenPort, NODEID, AESKey)
+	go node.StartNodeListen(listenPort, NODEID, AESKey, false, false)
 	for {
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
 		dataConnForLowerNode := <-node.DataConnForLowerNodeChan
@@ -113,7 +117,7 @@ func StartNodeInit(monitor, listenPort string) {
 		Proxy_Command_Chan = make(chan []byte)
 		LowerNodeCommChan <- NewNodeMessage
 		NotLastOne = true
-		go SendHeartBeatData(dataConnForLowerNode, NODEID, AESKey)
+		go common.SendHeartBeatData(dataConnForLowerNode, NODEID, AESKey)
 		go ProxyLowerNodeCommToUpperNode(&ControlConnToAdmin, LowerNodeCommChan)
 		go HandleLowerNodeConn(controlConnForLowerNode, dataConnForLowerNode, NODEID, LowerNodeCommChan)
 	}
@@ -125,12 +129,12 @@ func SimpleNodeInit(monitor, listenPort string) {
 	var err error
 	NODEID = uint32(0)
 	ControlConnToAdmin, DataConnToAdmin, NODEID, err = node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
-	go SendHeartBeatControl(ControlConnToAdmin, NODEID, AESKey)
+	go common.SendHeartBeatControl(ControlConnToAdmin, NODEID, AESKey)
 	if err != nil {
 		os.Exit(1)
 	}
 	go HandleSimpleNodeConn(&ControlConnToAdmin, &DataConnToAdmin, NODEID)
-	go node.StartNodeListen(listenPort, NODEID, AESKey)
+	go node.StartNodeListen(listenPort, NODEID, AESKey, false, false)
 	for {
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
 		dataConnForLowerNode := <-node.DataConnForLowerNodeChan
@@ -138,32 +142,40 @@ func SimpleNodeInit(monitor, listenPort string) {
 		Proxy_Command_Chan = make(chan []byte)
 		LowerNodeCommChan <- NewNodeMessage
 		NotLastOne = true
-		go SendHeartBeatData(dataConnForLowerNode, NODEID, AESKey)
+		go common.SendHeartBeatData(dataConnForLowerNode, NODEID, AESKey)
 		go ProxyLowerNodeCommToUpperNode(&ControlConnToAdmin, LowerNodeCommChan)
 		go HandleLowerNodeConn(controlConnForLowerNode, dataConnForLowerNode, NODEID, LowerNodeCommChan)
 	}
 }
 
 //reverse mode下的startnode节点
-func StartNodeReversemodeInit(monitor, listenPort string) {
-	var err error
+func StartNodeReversemodeInit(monitor, listenPort string, single bool) {
 	NODEID = uint32(1)
-	ControlConnToAdmin, DataConnToAdmin, NODEID, err = node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
-	go SendHeartBeatControl(ControlConnToAdmin, NODEID, AESKey)
-	if err != nil {
-		os.Exit(1)
-	}
+	ControlConnToAdmin, DataConnToAdmin, NODEID = node.AcceptConnFromUpperNode(listenPort, NODEID, AESKey)
+	go common.SendHeartBeatControl(ControlConnToAdmin, NODEID, AESKey)
 	go HandleStartNodeConn(&ControlConnToAdmin, &DataConnToAdmin, monitor, NODEID)
+	if Reconn == "0" {
+		go node.StartNodeListen(listenPort, NODEID, AESKey, true, single)
+	} else {
+		go node.StartNodeListen(listenPort, NODEID, AESKey, false, single)
+	}
 	for {
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
 		dataConnForLowerNode := <-node.DataConnForLowerNodeChan
-		NewNodeMessage := <-node.NewNodeMessageChan
-		Proxy_Command_Chan = make(chan []byte)
-		LowerNodeCommChan <- NewNodeMessage
-		NotLastOne = true
-		go SendHeartBeatData(dataConnForLowerNode, NODEID, AESKey)
-		go ProxyLowerNodeCommToUpperNode(&ControlConnToAdmin, LowerNodeCommChan)
-		go HandleLowerNodeConn(controlConnForLowerNode, dataConnForLowerNode, NODEID, LowerNodeCommChan)
+		if !Waiting {
+			NewNodeMessage := <-node.NewNodeMessageChan
+			Proxy_Command_Chan = make(chan []byte)
+			LowerNodeCommChan <- NewNodeMessage
+			NotLastOne = true
+			go common.SendHeartBeatData(dataConnForLowerNode, NODEID, AESKey)
+			go ProxyLowerNodeCommToUpperNode(&ControlConnToAdmin, LowerNodeCommChan)
+			go HandleLowerNodeConn(controlConnForLowerNode, dataConnForLowerNode, NODEID, LowerNodeCommChan)
+		} else { // 需要重连操作的话
+			ReConnCome <- true
+			ControlConnToAdmin = controlConnForLowerNode
+			DataConnToAdmin = dataConnForLowerNode
+			go common.SendHeartBeatControl(ControlConnToAdmin, NODEID, AESKey)
+		}
 	}
 }
 
@@ -171,9 +183,9 @@ func StartNodeReversemodeInit(monitor, listenPort string) {
 func SimpleNodeReversemodeInit(monitor, listenPort string) {
 	NODEID = uint32(0)
 	ControlConnToAdmin, DataConnToAdmin, NODEID = node.AcceptConnFromUpperNode(listenPort, NODEID, AESKey)
-	go SendHeartBeatControl(ControlConnToAdmin, NODEID, AESKey)
+	go common.SendHeartBeatControl(ControlConnToAdmin, NODEID, AESKey)
 	go HandleSimpleNodeConn(&ControlConnToAdmin, &DataConnToAdmin, NODEID)
-	go node.StartNodeListen(listenPort, NODEID, AESKey)
+	go node.StartNodeListen(listenPort, NODEID, AESKey, false, false)
 	for {
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
 		dataConnForLowerNode := <-node.DataConnForLowerNodeChan
@@ -181,7 +193,7 @@ func SimpleNodeReversemodeInit(monitor, listenPort string) {
 		Proxy_Command_Chan = make(chan []byte)
 		LowerNodeCommChan <- NewNodeMessage
 		NotLastOne = true
-		go SendHeartBeatData(dataConnForLowerNode, NODEID, AESKey)
+		go common.SendHeartBeatData(dataConnForLowerNode, NODEID, AESKey)
 		go ProxyLowerNodeCommToUpperNode(&ControlConnToAdmin, LowerNodeCommChan)
 		go HandleLowerNodeConn(controlConnForLowerNode, dataConnForLowerNode, NODEID, LowerNodeCommChan)
 	}
@@ -341,13 +353,25 @@ func HandleControlConnFromAdmin(controlConnToAdmin *net.Conn, NODEID uint32) {
 				CannotRead <- true
 			case "ADMINOFFLINE":
 				logrus.Error("Admin seems offline!")
-				if Reconn != "" {
+				if Reconn != "0" && !Passive {
 					SocksDataChanMap = NewSafeMap()
 					if NotLastOne {
 						messCommand, _ := common.ConstructCommand("CLEAR", "", 2, AESKey)
 						Proxy_Command_Chan <- messCommand
 					}
 					TryReconnect(Reconn)
+					if NotLastOne {
+						messCommand, _ := common.ConstructCommand("RECONN", "", 2, AESKey)
+						Proxy_Command_Chan <- messCommand
+					}
+				} else if Reconn == "0" && Passive {
+					SocksDataChanMap = NewSafeMap()
+					if NotLastOne {
+						messCommand, _ := common.ConstructCommand("CLEAR", "", 2, AESKey)
+						Proxy_Command_Chan <- messCommand
+					}
+					Waiting = true
+					<-ReConnCome
 					if NotLastOne {
 						messCommand, _ := common.ConstructCommand("RECONN", "", 2, AESKey)
 						Proxy_Command_Chan <- messCommand
