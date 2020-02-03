@@ -353,7 +353,7 @@ func HandleControlConnFromAdmin(controlConnToAdmin *net.Conn, NODEID uint32) {
 				CannotRead <- true
 			case "ADMINOFFLINE":
 				logrus.Error("Admin seems offline!")
-				if Reconn != "0" && !Passive {
+				if Reconn != "0" && Reconn != "" && !Passive {
 					SocksDataChanMap = NewSafeMap()
 					if NotLastOne {
 						messCommand, _ := common.ConstructCommand("CLEAR", "", 2, AESKey)
