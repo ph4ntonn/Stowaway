@@ -154,7 +154,7 @@ Now you can use the admin's port 7777 as the socks5 proxy service
 
 And it can proxy your traffic to the second simple node and the second simple node will do its work as socks server（ When you want to shut down this socks5 service, just type in "stopsocks" under this mode to turn off it)
 
-If you want to set username/password for socks5 service(Firefox support this function, Chrome doesn't), For instance, if you want to set the username as ph4ntom and password as 11235,just change the command to : socks 7777 ph4ntom 11235 (Be aware,do not use colon(:) in neither username nor password)
+If you want to set username/password for socks5 service(Firefox support this function, Chrome doesn't), For instance, if you want to set the username as ph4ntom and password as 11235,just change the command to : socks 7777 ph4ntom 11235 (Be aware,do not use colon(:) in either username or password)
 
 Open ssh：
 
