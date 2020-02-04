@@ -57,7 +57,7 @@ func ShowNodeHelp() {
 	exit                                     Exit.
 	ssh        [ip:port] [username] [pass]   Start SSH through selected node.
 	shell                                    Start an interactive shell on selected node.
-	socks      [lport]                       Start a socks5 server.
+	socks      [lport] [username] [pass]     Start a socks5 server.(username and pass are optional)
 	connect    [ip:port]					 Connect to new node
 	stopsocks                                Shut down corresponding socks service
 	upload     [filename]                    Upload file to current agent node

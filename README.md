@@ -156,7 +156,7 @@ Startnode端：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/socks5.png)
 
-此时用户即可以将admin端的7777端口作为socks5代理端口，将流量代理至第二个普通node节点(当想关闭socks服务时，在节点模式下输入stopsocks即可关闭与此节点相关的socks代理服务)
+此时用户即可以将admin端的7777端口作为socks5代理端口，将流量代理至第二个普通node节点(当想关闭socks服务时，在节点模式下输入stopsocks即可关闭与此节点相关的socks代理服务), 如果需要设置socks5用户名密码（Firefox支持，Chrome不支持），例如需要设置用户名为ph4ntom，密码为11235，则可将输入命令改为:socks 7777 ph4ntom 11235 | 注意：切勿在用户名以及密码中使用冒号（:)
 
 打开ssh：
 

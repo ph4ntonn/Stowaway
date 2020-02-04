@@ -10,15 +10,24 @@ import (
 )
 
 func CheckMethod(conntoupper net.Conn, buffer []byte, username string, secret string, clientid uint32, key []byte, currentid uint32) string {
+	//fmt.Println("buufer[0] is ", buffer[0], "buffer[2] is ", buffer[2])
 	if buffer[0] == 0x05 {
-		if buffer[2] == 0x02 {
+		if buffer[2] == 0x02 && (username != "") {
 			respdata, _ := common.ConstructDataResult(0, clientid, " ", "SOCKSDATARESP", string([]byte{0x05, 0x02}), key, currentid)
 			conntoupper.Write(respdata)
 			return "PASSWORD"
-		} else if buffer[2] == 0x00 && (username == "" || secret == "") {
+		} else if buffer[2] == 0x00 && (username == "" && secret == "") {
 			respdata, _ := common.ConstructDataResult(0, clientid, " ", "SOCKSDATARESP", string([]byte{0x05, 0x00}), key, currentid)
 			conntoupper.Write(respdata)
 			return "NONE"
+		} else if buffer[2] == 0x00 && (username != "") {
+			respdata, _ := common.ConstructDataResult(0, clientid, " ", "SOCKSDATARESP", string([]byte{0x05, 0x02}), key, currentid)
+			conntoupper.Write(respdata)
+			return "ILLEGAL"
+		} else if buffer[2] == 0x02 && (username == "") {
+			respdata, _ := common.ConstructDataResult(0, clientid, " ", "SOCKSDATARESP", string([]byte{0x05, 0x00}), key, currentid)
+			conntoupper.Write(respdata)
+			return "ILLEGAL"
 		}
 	}
 	return "RETURN"
@@ -29,7 +38,6 @@ func AuthClient(conntoupper net.Conn, buffer []byte, username string, secret str
 	slen := int(buffer[2+ulen])
 	clientname := string(buffer[2 : 2+ulen])
 	clientpass := string(buffer[3+ulen : 3+ulen+slen])
-
 	if clientname != username || clientpass != secret {
 		logrus.Error("Illegal client!")
 		respdata, _ := common.ConstructDataResult(0, clientid, " ", "SOCKSDATARESP", string([]byte{0x01, 0x01}), key, currentid)

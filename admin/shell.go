@@ -94,14 +94,14 @@ func HandleNodeCommand(startNodeControlConn net.Conn, NodeID string) {
 		case "socks":
 			var socksStartData string
 			if len(AdminCommand) == 2 {
-				socksStartData = fmt.Sprintf("%s:%s:%s", AdminCommand[1], "", "")
+				socksStartData = fmt.Sprintf("%s:::%s:::%s", AdminCommand[1], "", "")
 			} else if len(AdminCommand) == 3 {
 				fmt.Println("Illegal username/password! Try again!")
 				ReadyChange <- true
 				IsShellMode <- true
 				break
 			} else {
-				socksStartData = fmt.Sprintf("%s:%s:%s", AdminCommand[1], AdminCommand[2], AdminCommand[3])
+				socksStartData = fmt.Sprintf("%s:::%s:::%s", AdminCommand[1], AdminCommand[2], AdminCommand[3])
 			}
 			respCommand, err := common.ConstructCommand("SOCKS", socksStartData, nodeID, AESKey)
 			_, err = startNodeControlConn.Write(respCommand)

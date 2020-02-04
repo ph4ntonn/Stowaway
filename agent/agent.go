@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -241,7 +242,7 @@ func HandleDataConnFromAdmin(dataConnToAdmin *net.Conn, NODEID uint32) {
 				} else {
 					//fmt.Println("create new chan", AdminData.Clientsocks)
 					SocksDataChanMap.RUnlock()
-					tempchan := make(chan string, 1)
+					tempchan := make(chan string, 10)
 					SocksDataChanMap.Lock()
 					SocksDataChanMap.SocksDataChan[AdminData.Clientsocks] = tempchan
 					go HanleClientSocksConn(SocksDataChanMap.SocksDataChan[AdminData.Clientsocks], SocksUsername, SocksPass, AdminData.Clientsocks, NODEID)
@@ -317,6 +318,9 @@ func HandleControlConnFromAdmin(controlConnToAdmin *net.Conn, NODEID uint32) {
 				}
 			case "SOCKS":
 				logrus.Info("Get command to start SOCKS")
+				socksinfo := strings.Split(command.Info, ":::")
+				SocksUsername = socksinfo[1]
+				SocksPass = socksinfo[2]
 				go StartSocks(controlConnToAdmin)
 			case "SOCKSOFF":
 				logrus.Info("Get command to stop SOCKS")
@@ -536,6 +540,9 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode *net.Conn, NODEID uin
 				os.Exit(1)
 			case "SOCKS":
 				logrus.Info("Get command to start SOCKS")
+				socksinfo := strings.Split(command.Info, ":::")
+				SocksUsername = socksinfo[1]
+				SocksPass = socksinfo[2]
 				go StartSocks(controlConnToUpperNode)
 			case "SOCKSOFF":
 				logrus.Info("Get command to stop SOCKS")
@@ -634,7 +641,7 @@ func HandleDataConnFromUpperNode(dataConnToUpperNode *net.Conn) {
 				} else {
 					//fmt.Println("create new chan", AdminData.Clientsocks)
 					SocksDataChanMap.RUnlock()
-					tempchan := make(chan string, 1)
+					tempchan := make(chan string, 10)
 					SocksDataChanMap.Lock()
 					SocksDataChanMap.SocksDataChan[AdminData.Clientsocks] = tempchan
 					go HanleClientSocksConn(SocksDataChanMap.SocksDataChan[AdminData.Clientsocks], SocksUsername, SocksPass, AdminData.Clientsocks, NODEID)
