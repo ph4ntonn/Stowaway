@@ -57,6 +57,8 @@ startnode端： ./stowaway agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 -
 
   --reconnect 代表startnode将在admin下线后主动尝试不断重连（此例子中为每5秒重连一次）注意：若需要重连功能，只需要在startnode使用此参数即可，其后节点无需此参数，正常启动即可
 
+
+
 此时若后续的节点希望以passive模式启动（即本节点等待上一级节点的主动连接，而不是主动连接上一节点）
 
 那么，上述命令可改为 ./stowaway agent -m 127.0.0.1:9999 --startnode -s 123 --reconnect 5
@@ -103,6 +105,8 @@ Admin端主动连接startnode端：./stowaway admin -s 123 -c 127.0.0.1:9999
   -r/--reverse：代表以passive模式启动
 
   --single：当设置此选项时，代表整个网络只有admin和startnode两个节点（即没有后续节点），若不设置此选项，代表后续还有节点
+
+
 
 后续节点同第一种情况启动即可
 
@@ -156,7 +160,8 @@ Startnode端：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/socks5.png)
 
-此时用户即可以将admin端的7777端口作为socks5代理端口，将流量代理至第二个普通node节点(当想关闭socks服务时，在节点模式下输入stopsocks即可关闭与此节点相关的socks代理服务), 如果需要设置socks5用户名密码（Firefox支持，Chrome不支持），例如需要设置用户名为ph4ntom，密码为11235，则可将输入命令改为:socks 7777 ph4ntom 11235 | 注意：切勿在用户名以及密码中使用冒号（:)
+此时用户即可以将admin端的7777端口作为socks5代理端口，将流量代理至第二个普通node节点(当想关闭socks服务时，在节点模式下输入stopsocks即可关闭与此节点相关的socks代理服务).
+如果需要设置socks5用户名密码（Firefox支持，Chrome不支持），例如需要设置用户名为ph4ntom，密码为11235，则可将输入命令改为:socks 7777 ph4ntom 11235 | 注意：切勿在用户名以及密码中使用冒号（:)
 
 打开ssh：
 
