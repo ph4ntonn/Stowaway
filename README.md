@@ -2,7 +2,7 @@
 
 [English](README_EN.md)
 
-Stowaway是一个利用go语言编写的多级代理工具(灵感来源于Dliv3师傅的Venom工具，感谢Dliv3师傅)
+Stowaway是一个利用go语言编写的多级代理工具
 
 用户可使用此程序将外部流量通过多个节点代理至内网，并实现管理功能
 
