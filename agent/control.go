@@ -8,12 +8,12 @@ import (
 	"time"
 )
 
-func TryReconnect(gap string) {
+func TryReconnect(gap string, monitor string, listenPort string) {
 	lag, _ := strconv.Atoi(gap)
 	for {
 		time.Sleep(time.Duration(lag) * time.Second)
 
-		controlConnToAdmin, dataConnToAdmin, _, err := node.StartNodeConn(Monitor, ListenPort, NODEID, AESKey)
+		controlConnToAdmin, dataConnToAdmin, _, err := node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
 		if err != nil {
 			fmt.Println("[*]Admin seems still down")
 		} else {

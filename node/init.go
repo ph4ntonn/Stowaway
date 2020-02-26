@@ -12,11 +12,9 @@ import (
 )
 
 var (
-	NewNodeMessage              []byte
-	PeerNode                    string
-	ControlConnForLowerNodeChan = make(chan net.Conn, 1)
-	DataConnForLowerNodeChan    = make(chan net.Conn, 1)
-	NewNodeMessageChan          = make(chan []byte, 1)
+	ControlConnForLowerNodeChan = make(chan net.Conn, 1) //下级节点控制信道
+	DataConnForLowerNodeChan    = make(chan net.Conn, 1) //下级节点数据信道
+	NewNodeMessageChan          = make(chan []byte, 1)   //新节点加入消息
 )
 
 //初始化一个节点连接操作
@@ -71,6 +69,9 @@ func SendHeartBeat(controlConnToUpperNode net.Conn, dataConnToUpperNode net.Conn
 //初始化节点监听操作
 func StartNodeListen(listenPort string, NodeId uint32, key []byte, reconn bool, single bool) {
 	var nodeconnected string = "0.0.0.0"
+	var result [1]net.Conn
+	var NewNodeMessage []byte
+
 	if listenPort == "" {
 		return
 	}
@@ -85,7 +86,6 @@ func StartNodeListen(listenPort string, NodeId uint32, key []byte, reconn bool, 
 	//如果passive重连状态下startnode后有节点连接，先执行后续节点的初始化操作，再交给AcceptConnFromUpperNode函数
 	listenAddr := fmt.Sprintf("0.0.0.0:%s", listenPort)
 	WaitingForLowerNode, err := net.Listen("tcp", listenAddr)
-	var result [1]net.Conn
 
 	if err != nil {
 		logrus.Errorf("Cannot listen on port %s", listenPort)
@@ -148,7 +148,6 @@ func StartNodeListen(listenPort string, NodeId uint32, key []byte, reconn bool, 
 			ControlConnForLowerNodeChan <- result[0]
 			DataConnForLowerNodeChan <- dataConToLowerNode
 			NewNodeMessageChan <- NewNodeMessage
-			PeerNode = strings.Split(dataConToLowerNode.RemoteAddr().String(), ":")[0]
 			nodeconnected = "0.0.0.0" //继续接受连接？
 			if reconn {
 				WaitingForLowerNode.Close()
@@ -165,6 +164,8 @@ func StartNodeListen(listenPort string, NodeId uint32, key []byte, reconn bool, 
 }
 
 func ConnectNextNode(target string, nodeid uint32, key []byte) {
+	var NewNodeMessage []byte
+
 	controlConnToNextNode, err := net.Dial("tcp", target)
 
 	if err != nil {
@@ -205,6 +206,7 @@ func ConnectNextNode(target string, nodeid uint32, key []byte) {
 func AcceptConnFromUpperNode(listenPort string, nodeid uint32, key []byte) (net.Conn, net.Conn, uint32) {
 	listenAddr := fmt.Sprintf("0.0.0.0:%s", listenPort)
 	WaitingForConn, err := net.Listen("tcp", listenAddr)
+
 	var (
 		flag        = false
 		history     string
