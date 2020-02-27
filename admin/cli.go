@@ -1,56 +1,42 @@
 package admin
 
 import (
-	"bufio"
 	"fmt"
-	"os"
-	"strings"
 )
 
-var (
-	AdminCommandChan = make(chan []string)
-	Nodes            = make(map[uint32]string)
-)
+func Banner() {
+	fmt.Print(`
+▄▀▀▀▀▄  ▄▀▀▀█▀▀▄  ▄▀▀▀▀▄   ▄▀▀▄    ▄▀▀▄  ▄▀▀█▄   ▄▀▀▄    ▄▀▀▄  ▄▀▀█▄   ▄▀▀▄ ▀▀▄ 
+█ █   ▐ █    █  ▐ █      █ █   █    ▐  █ ▐ ▄▀ ▀▄ █   █    ▐  █ ▐ ▄▀ ▀▄ █   ▀▄ ▄▀ 
+   ▀▄   ▐   █     █      █ ▐  █        █   █▄▄▄█ ▐  █        █   █▄▄▄█ ▐     █   
+▀▄   █     █      ▀▄    ▄▀   █   ▄    █   ▄▀   █   █   ▄    █   ▄▀   █       █   
+ █▀▀▀    ▄▀         ▀▀▀▀      ▀▄▀ ▀▄ ▄▀  █   ▄▀     ▀▄▀ ▀▄ ▄▀  █   ▄▀      ▄▀    
+ ▐      █                           ▀    ▐   ▐            ▀    ▐   ▐       █     
+		▐                                                                  ▐    
 
-// 启动控制台
-func Controlpanel() {
-	inputReader := bufio.NewReader(os.Stdin)
-	for {
-		fmt.Printf("(%s) >> ", *CliStatus)
-		input, err := inputReader.ReadString('\n')
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-		command := strings.Replace(input, "\n", "", -1)
-		execCommand := strings.Split(command, " ")
-		AdminCommandChan <- execCommand
-
-		<-ReadyChange
-		<-IsShellMode
-	}
+			{ v1.3  Author:ph4ntom }
+`)
 }
 
-// 显示节点拓扑信息
-func ShowChain() {
-	if StartNode != "0.0.0.0" {
-		fmt.Printf("StartNode:[1] %s\n", StartNode)
-		for Nodeid, Nodeaddress := range Nodes {
-			id := fmt.Sprint(Nodeid)
-			fmt.Printf("Nodes [%s]: %s\n", id, Nodeaddress)
-		}
-	} else {
-		fmt.Println("There is no agent connected!")
-	}
-
+func ShowMainHelp() {
+	fmt.Println(`
+	help                                     Show Help information.
+	exit                                     Exit.
+	chain                                    Display connected node information
+	use        [id]                          Select the target node you want to use.
+  `)
 }
 
-// 将节点加入拓扑
-func AddToChain() {
-	for {
-		newNode := <-NodesReadyToadd
-		for key, value := range newNode {
-			Nodes[key] = value
-		}
-	}
+func ShowNodeHelp() {
+	fmt.Println(`
+	help                                     Show Help information.
+	exit                                     Exit.
+	ssh        [ip:port] [username] [pass]   Start SSH through selected node.
+	shell                                    Start an interactive shell on selected node.
+	socks      [lport] [username] [pass]     Start a socks5 server.(username and pass are optional)
+	connect    [ip:port]					 Connect to new node
+	stopsocks                                Shut down corresponding socks service
+	upload     [filename]                    Upload file to current agent node
+	download   [filename]                    Download file from current agent node
+  `)
 }

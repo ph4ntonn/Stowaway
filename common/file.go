@@ -15,6 +15,7 @@ type SafeFileDataMap struct {
 	FileDataChan map[int]string
 }
 
+/*-------------------------上传/下载文件相关代码--------------------------*/
 func UploadFile(filename string, ControlConn net.Conn, DataConn net.Conn, nodeid uint32, GetName chan bool, AESKey []byte, currentid uint32, Notagent bool) {
 	var getresp bool = false
 	var slicenum int = 0

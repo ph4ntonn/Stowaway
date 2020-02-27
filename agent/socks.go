@@ -8,12 +8,6 @@ import (
 	"time"
 )
 
-//暂时没啥用，仅做回复socks开启命令之用
-func StartSocks(controlConnToAdmin *net.Conn) {
-	socksstartmess, _ := common.ConstructCommand("SOCKSRESP", "SUCCESS", NODEID, AESKey)
-	(*controlConnToAdmin).Write(socksstartmess)
-}
-
 //处理socks请求
 func HanleClientSocksConn(info chan string, socksUsername, socksPass string, checknum uint32, currentid uint32) {
 	var (

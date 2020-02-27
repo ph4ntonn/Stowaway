@@ -20,9 +20,8 @@ type SafeMap struct {
 }
 
 var (
-	CliStatus  *string
-	InitStatus string = "admin"
-	StartNode  string = "0.0.0.0"
+	CliStatus *string
+	StartNode string = "0.0.0.0"
 
 	ReadyChange      = make(chan bool)
 	IsShellMode      = make(chan bool)
@@ -32,15 +31,12 @@ var (
 	CannotRead       = make(chan bool, 1)
 
 	Eof             = make(chan string, 1)
-	FileData        = make(chan string, 10)
-	SocksRespChan   = make(chan string, 1)
 	NodesReadyToadd = make(chan map[uint32]string)
 
 	FileDataMap   *common.SafeFileDataMap
 	ClientSockets *SafeMap
 
-	ClientNum uint32 = 0
-	AESKey    []byte
+	AESKey []byte
 
 	DataConn               net.Conn
 	SocksListenerForClient net.Listener
@@ -48,6 +44,8 @@ var (
 
 //启动admin
 func NewAdmin(c *cli.Context) {
+	var InitStatus string = "admin"
+
 	ClientSockets = NewSafeMap()
 	FileDataMap = NewSafeFileDataMap()
 	AESKey = []byte(c.String("secret"))
@@ -217,7 +215,7 @@ func HandleDataConn(startNodeDataConn net.Conn) {
 	}
 }
 
-// 处理由admin发往startnode的控制信号
+// 处理admin模式下用户的输入及由admin发往startnode的控制信号
 func HandleCommandToControlConn(startNodeControlConn net.Conn) {
 	for {
 		AdminCommand := <-AdminCommandChan
@@ -356,62 +354,4 @@ func HandleCommandFromControlConn(startNodeControlConn net.Conn) {
 		}
 
 	}
-}
-
-// 启动socks5 for client
-func StartSocksServiceForClient(command []string, startNodeControlConn net.Conn, nodeID uint32) {
-	var err error
-	socksPort := command[1]
-	checkPort, _ := strconv.Atoi(socksPort)
-	if checkPort <= 0 || checkPort > 65535 {
-		logrus.Error("Port Illegal!")
-		return
-	}
-
-	socks5Addr := fmt.Sprintf("0.0.0.0:%s", socksPort)
-	SocksListenerForClient, err = net.Listen("tcp", socks5Addr)
-	if err != nil {
-		respCommand, _ := common.ConstructCommand("SOCKSOFF", " ", nodeID, AESKey)
-		_, err = startNodeControlConn.Write(respCommand)
-		if err != nil {
-			logrus.Error("Cannot stop agent's socks service,check the connection!")
-		}
-		logrus.Error("Cannot listen this port!")
-		return
-	}
-	for {
-		conn, err := SocksListenerForClient.Accept()
-		if err != nil {
-			logrus.Info("Socks service stoped")
-			return
-		}
-		ClientSockets.Lock()
-		ClientSockets.ClientSocketsMap[ClientNum] = conn
-		ClientSockets.Unlock()
-		ClientSockets.RLock()
-		go HandleNewSocksConn(ClientSockets.ClientSocketsMap[ClientNum], ClientNum, nodeID)
-		ClientSockets.RUnlock()
-		ClientNum++
-	}
-}
-
-func HandleNewSocksConn(clientsocks net.Conn, num uint32, nodeID uint32) {
-	buffer := make([]byte, 204800)
-	for {
-		len, err := clientsocks.Read(buffer)
-		if err != nil {
-			clientsocks.Close()
-			return
-		} else {
-			respData, _ := common.ConstructDataResult(nodeID, num, " ", "SOCKSDATA", string(buffer[:len]), AESKey, 0)
-			DataConn.Write(respData)
-		}
-	}
-}
-
-// 发送ssh开启命令
-func StartSSHService(startNodeControlConn net.Conn, info []string, nodeid uint32) {
-	information := fmt.Sprintf("%s::%s::%s", info[1], info[2], info[3])
-	sshCommand, _ := common.ConstructCommand("SSH", information, nodeid, AESKey)
-	startNodeControlConn.Write(sshCommand)
 }

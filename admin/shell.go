@@ -13,69 +13,8 @@ import (
 
 var CurrentNode uint32
 
-func HandleShellToNode(startNodeControlConn net.Conn, nodeID uint32) {
-	inputReader := bufio.NewReader(os.Stdin)
-	for {
-		command, err := inputReader.ReadString('\n')
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-		switch command {
-		case "exit\n":
-			if nodeID == 1 {
-				*CliStatus = "startnode"
-			} else {
-				*CliStatus = "node " + fmt.Sprint(nodeID)
-			}
-			respCommand, _ := common.ConstructCommand("SHELL", command, nodeID, AESKey)
-			startNodeControlConn.Write(respCommand)
-			ReadyChange <- true
-			IsShellMode <- true
-			return
-		default:
-			respCommand, _ := common.ConstructCommand("SHELL", command, nodeID, AESKey)
-			startNodeControlConn.Write(respCommand)
-		}
-	}
-}
-
-func HandleSSHToNode(startNodeControlConn net.Conn, nodeID uint32) {
-	inputReader := bufio.NewReader(os.Stdin)
-	logrus.Info("Waiting for response,please be patient")
-	if conrinueornot := <-SshSuccess; conrinueornot {
-		fmt.Print("(ssh mode)>>>")
-		for {
-			command, err := inputReader.ReadString('\n')
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
-			}
-			switch command {
-			case "exit\n":
-				if nodeID == 1 {
-					*CliStatus = "startnode"
-				} else {
-					*CliStatus = "node " + fmt.Sprint(nodeID)
-				}
-				respCommand, _ := common.ConstructCommand("SSHCOMMAND", command, nodeID, AESKey)
-				startNodeControlConn.Write(respCommand)
-				ReadyChange <- true
-				IsShellMode <- true
-				return
-			case "\n":
-				fmt.Print("(ssh mode)>>>")
-			default:
-				respCommand, _ := common.ConstructCommand("SSHCOMMAND", command, nodeID, AESKey)
-				startNodeControlConn.Write(respCommand)
-
-			}
-		}
-	} else {
-		return
-	}
-}
-
+/*-------------------------Node模式下相关代码--------------------------*/
+//处理node模式下用户的输入
 func HandleNodeCommand(startNodeControlConn net.Conn, NodeID string) {
 	nodeid64, _ := strconv.ParseInt(NodeID, 10, 32)
 	nodeID := uint32(nodeid64)
@@ -177,5 +116,72 @@ func HandleNodeCommand(startNodeControlConn net.Conn, NodeID string) {
 			ReadyChange <- true
 			IsShellMode <- true
 		}
+	}
+}
+
+/*-------------------------Shell模式下相关代码--------------------------*/
+//处理shell开启时的输入
+func HandleShellToNode(startNodeControlConn net.Conn, nodeID uint32) {
+	inputReader := bufio.NewReader(os.Stdin)
+	for {
+		command, err := inputReader.ReadString('\n')
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		switch command {
+		case "exit\n":
+			if nodeID == 1 {
+				*CliStatus = "startnode"
+			} else {
+				*CliStatus = "node " + fmt.Sprint(nodeID)
+			}
+			respCommand, _ := common.ConstructCommand("SHELL", command, nodeID, AESKey)
+			startNodeControlConn.Write(respCommand)
+			ReadyChange <- true
+			IsShellMode <- true
+			return
+		default:
+			respCommand, _ := common.ConstructCommand("SHELL", command, nodeID, AESKey)
+			startNodeControlConn.Write(respCommand)
+		}
+	}
+}
+
+/*-------------------------Ssh模式下相关代码--------------------------*/
+//处理ssh开启时的输入
+func HandleSSHToNode(startNodeControlConn net.Conn, nodeID uint32) {
+	inputReader := bufio.NewReader(os.Stdin)
+	logrus.Info("Waiting for response,please be patient")
+	if conrinueornot := <-SshSuccess; conrinueornot {
+		fmt.Print("(ssh mode)>>>")
+		for {
+			command, err := inputReader.ReadString('\n')
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+			switch command {
+			case "exit\n":
+				if nodeID == 1 {
+					*CliStatus = "startnode"
+				} else {
+					*CliStatus = "node " + fmt.Sprint(nodeID)
+				}
+				respCommand, _ := common.ConstructCommand("SSHCOMMAND", command, nodeID, AESKey)
+				startNodeControlConn.Write(respCommand)
+				ReadyChange <- true
+				IsShellMode <- true
+				return
+			case "\n":
+				fmt.Print("(ssh mode)>>>")
+			default:
+				respCommand, _ := common.ConstructCommand("SSHCOMMAND", command, nodeID, AESKey)
+				startNodeControlConn.Write(respCommand)
+
+			}
+		}
+	} else {
+		return
 	}
 }

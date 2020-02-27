@@ -6,11 +6,9 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"os/signal"
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -677,40 +675,5 @@ func HandleDataConnFromUpperNode(dataConnToUpperNode *net.Conn) {
 }
 
 //普通节点启动代码结束
-
-//一些功能代码
-
-//将命令传递到下一节点
-func ProxyCommToNextNode(proxyCommand []byte) {
-	Proxy_Command_Chan <- proxyCommand
-}
-
-//将数据传递到下一节点
-func ProxyDataToNextNode(proxyData []byte) {
-	Proxy_Data_Chan <- proxyData
-}
-
-//捕捉程序退出信号
-func WaitForExit(NODEID uint32) {
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt, os.Kill, syscall.SIGHUP)
-	<-signalChan
-	if NotLastOne {
-		offlineMess, _ := common.ConstructCommand("OFFLINE", "", NODEID+1, AESKey)
-		Proxy_Command_Chan <- offlineMess
-	}
-	time.Sleep(5 * time.Second)
-	os.Exit(1)
-}
-
-//判断chan是否已经被释放
-func IsClosed(ch chan string) bool {
-	select {
-	case <-ch:
-		return true
-	default:
-	}
-	return false
-}
 
 //agent主体代码结束

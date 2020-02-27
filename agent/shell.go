@@ -8,17 +8,6 @@ import (
 	"runtime"
 )
 
-func CheckSystem() (sysType uint32) {
-	var os = runtime.GOOS
-	switch os {
-	case "windows":
-		sysType = 0x01
-	default:
-		sysType = 0xff
-	}
-	return
-}
-
 //创建交互式shell
 func CreatInteractiveShell() (io.Reader, io.Writer) {
 	var cmd *exec.Cmd

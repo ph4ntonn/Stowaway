@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+/*-------------------------心跳包相关代码--------------------------*/
 func SendHeartBeatControl(controlConnToUpperNode net.Conn, nodeid uint32, key []byte) {
 	hbcommpack, _ := ConstructCommand("HEARTBEAT", "", nodeid, key)
 	for {
