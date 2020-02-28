@@ -24,7 +24,7 @@ PS: Thanks for everyone's star, i'm just an amateur, and the code still need be 
 Stowaway can be excuted as two kinds of mode: admin && agent(including startnode && simple node,startnode means the first node that connecting to admin,it's different from simple nodes)
 
 
-If you don't want to compile the project by yourself, you can check the release tag to get ONE!
+If you don't want to compile the project by yourself, you can check the [release](https://github.com/ph4ntonn/Stowaway/releases) tag to get ONE!
 
 Example 1：
 ```
