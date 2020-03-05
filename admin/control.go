@@ -104,7 +104,7 @@ func StartSocksServiceForClient(command []string, startNodeControlConn net.Conn,
 }
 
 func HandleNewSocksConn(clientsocks net.Conn, num uint32, nodeID uint32) {
-	buffer := make([]byte, 204800)
+	buffer := make([]byte, 10240)
 	for {
 		len, err := clientsocks.Read(buffer)
 		if err != nil {

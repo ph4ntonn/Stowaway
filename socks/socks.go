@@ -101,7 +101,7 @@ func TcpConnect(conntoupper net.Conn, buffer []byte, len int, checknum uint32, k
 }
 
 func Proxyhttp(conntoupper net.Conn, server net.Conn, checknum uint32, key []byte, currentid uint32) error {
-	serverbuffer := make([]byte, 204800)
+	serverbuffer := make([]byte, 10240)
 	for {
 		len, err := server.Read(serverbuffer)
 		if err != nil {
