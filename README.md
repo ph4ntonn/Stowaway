@@ -26,7 +26,7 @@ PS:谢谢大家的star，这个程序还不成熟规范，写来仅为学习，�
 Stowaway分为admin端和agent端两种形式
 
 
-不想编译的盆油可以直接用[release](https://github.com/ph4ntonn/Stowaway/releases)下编译完成的程序
+不想编译的盆油可以直接用[release](https://github.com/ph4ntonn/Stowaway/releases)下编译完成的程序(同时提供未经压缩版及upx压缩版，可各取所需)
 
 第一种情况：
 
