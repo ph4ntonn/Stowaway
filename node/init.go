@@ -3,11 +3,10 @@ package node
 import (
 	"Stowaway/common"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"strings"
-
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -20,16 +19,16 @@ var (
 func StartNodeConn(monitor string, listenPort string, nodeID uint32, key []byte) (net.Conn, net.Conn, uint32, error) {
 	controlConnToUpperNode, err := net.Dial("tcp", monitor)
 	if err != nil {
-		logrus.Error("Connection refused!")
+		log.Println("[*]Connection refused!")
 		return controlConnToUpperNode, controlConnToUpperNode, 11235, err
 	}
 	respcommand, err := common.ConstructCommand("INIT", listenPort, nodeID, key)
 	if err != nil {
-		logrus.Errorf("Error occured: %s", err)
+		log.Printf("[*]Error occured: %s", err)
 	}
 	_, err = controlConnToUpperNode.Write(respcommand)
 	if err != nil {
-		logrus.Errorf("Error occured: %s", err)
+		log.Printf("[*]Error occured: %s", err)
 	}
 	for {
 		command, _ := common.ExtractCommand(controlConnToUpperNode, key)
@@ -41,7 +40,7 @@ func StartNodeConn(monitor string, listenPort string, nodeID uint32, key []byte)
 			case "DATA":
 				dataConnToUpperNode, err := net.Dial("tcp", monitor)
 				if err != nil {
-					logrus.Errorf("ERROR OCCURED!: %s", err)
+					log.Printf("[*]Error occured: %s", err)
 				}
 				return controlConnToUpperNode, dataConnToUpperNode, nodeID, nil
 			}
@@ -71,20 +70,21 @@ func StartNodeListen(listenPort string, NodeId uint32, key []byte, reconn bool, 
 	WaitingForLowerNode, err := net.Listen("tcp", listenAddr)
 
 	if err != nil {
-		logrus.Errorf("Cannot listen on port %s", listenPort)
+		//logrus.Errorf("[*]Cannot listen on port %s", listenPort)
+		log.Printf("[*]Cannot listen on port %s", listenPort)
 		os.Exit(1)
 	}
 
 	for {
 		ConnToLowerNode, err := WaitingForLowerNode.Accept() //判断一下是否是合法连接
 		if err != nil {
-			logrus.Error(err)
+			log.Println("[*]", err)
 			continue
 		}
 		if nodeconnected == "0.0.0.0" {
 			command, err := common.ExtractCommand(ConnToLowerNode, key)
 			if err != nil {
-				logrus.Error(err)
+				log.Println("[*]", err)
 				continue
 			}
 			if command.Command == "INIT" {
@@ -94,7 +94,7 @@ func StartNodeListen(listenPort string, NodeId uint32, key []byte, reconn bool, 
 					_, err := ConnToLowerNode.Write(respCommand)
 					NewNodeMessage, _ = common.ConstructCommand("NEW", ConnToLowerNode.RemoteAddr().String(), respNodeID, key)
 					if err != nil {
-						logrus.Error(err)
+						log.Println("[*]", err)
 						continue
 					}
 					controlConnToLowerNode := ConnToLowerNode
@@ -103,20 +103,20 @@ func StartNodeListen(listenPort string, NodeId uint32, key []byte, reconn bool, 
 					respCommand, _ = common.ConstructCommand("ACCEPT", "DATA", respNodeID, key)
 					_, err = ConnToLowerNode.Write(respCommand)
 					if err != nil {
-						logrus.Error(err)
+						log.Println("[*]", err)
 						continue
 					}
 				} else {
 					respCommand, _ := common.ConstructCommand("ID", "", command.NodeId, key)
 					_, err := ConnToLowerNode.Write(respCommand)
 					if err != nil {
-						logrus.Error(err)
+						log.Println("[*]", err)
 						continue
 					}
 					respCommand, _ = common.ConstructCommand("ACCEPT", "DATA", command.NodeId, key)
 					_, err = ConnToLowerNode.Write(respCommand)
 					if err != nil {
-						logrus.Error(err)
+						log.Println("[*]", err)
 						continue
 					}
 					controlConnToLowerNode := ConnToLowerNode
@@ -124,7 +124,7 @@ func StartNodeListen(listenPort string, NodeId uint32, key []byte, reconn bool, 
 					nodeconnected = strings.Split(ConnToLowerNode.RemoteAddr().String(), ":")[0]
 				}
 			} else {
-				logrus.Error("Illegal connection!")
+				log.Println("[*]Illegal connection!")
 			}
 		} else if nodeconnected == strings.Split(ConnToLowerNode.RemoteAddr().String(), ":")[0] {
 			dataConToLowerNode := ConnToLowerNode
@@ -152,14 +152,14 @@ func ConnectNextNode(target string, nodeid uint32, key []byte) {
 	controlConnToNextNode, err := net.Dial("tcp", target)
 
 	if err != nil {
-		logrus.Error("Connection refused!")
+		log.Println("[*]Connection refused!")
 		return
 	}
 
 	for {
 		command, err := common.ExtractCommand(controlConnToNextNode, key)
 		if err != nil {
-			logrus.Error(err)
+			log.Println("[*]", err)
 			return
 		}
 		switch command.Command {
@@ -169,13 +169,13 @@ func ConnectNextNode(target string, nodeid uint32, key []byte) {
 			_, err := controlConnToNextNode.Write(respCommand)
 			NewNodeMessage, _ = common.ConstructCommand("NEW", controlConnToNextNode.RemoteAddr().String(), respNodeID, key)
 			if err != nil {
-				logrus.Error(err)
+				log.Println("[*]", err)
 				continue
 			}
 		case "IDOK":
 			dataConnToNextNode, err := net.Dial("tcp", target)
 			if err != nil {
-				logrus.Error("Connection refused!")
+				log.Println("[*]Connection refused!")
 				return
 			}
 			ControlConnForLowerNodeChan <- controlConnToNextNode
@@ -197,14 +197,14 @@ func AcceptConnFromUpperNode(listenPort string, nodeid uint32, key []byte) (net.
 	)
 
 	if err != nil {
-		logrus.Errorf("Cannot listen on port %s", listenPort)
+		log.Printf("[*]Cannot listen on port %s", listenPort)
 		os.Exit(1)
 	}
 
 	for {
 		Comingconn, err := WaitingForConn.Accept()
 		if err != nil {
-			logrus.Error(err)
+			log.Println("[*]", err)
 			continue
 		}
 		if flag == false {

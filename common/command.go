@@ -6,10 +6,8 @@ import (
 	"bytes"
 	"encoding/binary"
 	"io"
+	"log"
 	"net"
-	"os"
-
-	"github.com/sirupsen/logrus"
 )
 
 type Command struct {
@@ -112,8 +110,7 @@ func ConstructCommand(command string, info string, id uint32, key []byte) ([]byt
 	if len(key) != 0 {
 		key, err := crypto.KeyPadding(key)
 		if err != nil {
-			logrus.Error(err)
-			os.Exit(1)
+			log.Fatal(err)
 		}
 		Command = crypto.AESEncrypt(Command, key)
 		Info = crypto.AESEncrypt(Info, key)
@@ -150,8 +147,7 @@ func ConstructDataResult(nodeid uint32, clientsocks uint32, fileSliceNum string,
 	if len(key) != 0 && (nodeid == 0 || currentid == 0) {
 		key, err := crypto.KeyPadding(key)
 		if err != nil {
-			logrus.Error(err)
-			os.Exit(1)
+			log.Fatal(err)
 		}
 		Datatype = crypto.AESEncrypt(Datatype, key)
 		Result = crypto.AESEncrypt(Result, key)

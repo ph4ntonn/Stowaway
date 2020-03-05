@@ -4,6 +4,7 @@ import (
 	"Stowaway/common"
 	"bufio"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"os/signal"
@@ -11,8 +12,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -73,7 +72,7 @@ func StartSocksServiceForClient(command []string, startNodeControlConn net.Conn,
 	socksPort := command[1]
 	checkPort, _ := strconv.Atoi(socksPort)
 	if checkPort <= 0 || checkPort > 65535 {
-		logrus.Error("Port Illegal!")
+		log.Println("[*]Port Illegal!")
 		return
 	}
 
@@ -83,15 +82,15 @@ func StartSocksServiceForClient(command []string, startNodeControlConn net.Conn,
 		respCommand, _ := common.ConstructCommand("SOCKSOFF", " ", nodeID, AESKey)
 		_, err = startNodeControlConn.Write(respCommand)
 		if err != nil {
-			logrus.Error("Cannot stop agent's socks service,check the connection!")
+			log.Println("[*]Cannot stop agent's socks service,check the connection!")
 		}
-		logrus.Error("Cannot listen this port!")
+		log.Println("[*]Cannot listen this port!")
 		return
 	}
 	for {
 		conn, err := SocksListenerForClient.Accept()
 		if err != nil {
-			logrus.Info("Socks service stoped")
+			log.Println("[*]Socks service stoped")
 			return
 		}
 		ClientSockets.Lock()
@@ -132,7 +131,7 @@ func SendOffLineToStartNode(startNodeControlConn net.Conn) {
 	respCommand, _ := common.ConstructCommand("ADMINOFFLINE", "", 1, AESKey)
 	_, err := startNodeControlConn.Write(respCommand)
 	if err != nil {
-		fmt.Println("Startnode seems offline!Message cannot be transmitted")
+		log.Println("[*]Startnode seems offline!Message cannot be transmitted")
 		return
 	}
 }

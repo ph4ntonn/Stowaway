@@ -1,9 +1,9 @@
 package agent
 
 import (
+	"log"
 	"os"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
@@ -11,11 +11,6 @@ import (
 var Command = &cli.Command{
 	Name: "agent",
 	Flags: []cli.Flag{
-		&cli.BoolFlag{
-			Name:    "debug",
-			Aliases: []string{"d"},
-			Usage:   "debug level",
-		},
 		&cli.StringFlag{
 			Name:    "secret",
 			Aliases: []string{"s"},
@@ -58,24 +53,21 @@ var Command = &cli.Command{
 		},
 	},
 	Action: func(c *cli.Context) error {
-		if c.Bool("debug") {
-			log.SetLevel(log.DebugLevel)
-		}
 		if c.String("listen") != "" && c.Bool("reverse") && c.String("monitor") == "" {
-			log.Infof("Starting agent node on port %s passively\n", c.String("listen"))
+			log.Printf("Starting agent node on port %s passively\n", c.String("listen"))
 		} else if c.String("listen") != "" && c.Bool("reverse") && c.String("monitor") != "" {
-			log.Error("If you want to start node passively,do not set the -m option")
+			log.Println("If you want to start node passively,do not set the -m option")
 			os.Exit(1)
 		} else if c.String("listen") != "" && !c.Bool("reverse") && c.String("monitor") == "" {
-			log.Error("You should set the -m option!")
+			log.Println("You should set the -m option!")
 			os.Exit(1)
 		} else if !c.Bool("reverse") && c.String("monitor") != "" {
-			log.Info("Startnode starting......")
+			log.Println("Startnode starting......")
 		} else if c.String("reconnect") != "" && !c.Bool("startnode") {
-			log.Error("Do not set the --reconnect option on simple node")
+			log.Println("Do not set the --reconnect option on simple node")
 			os.Exit(1)
 		} else {
-			log.Error("Bad format! See readme!")
+			log.Println("Bad format! See readme!")
 			os.Exit(1)
 		}
 		NewAgent(c)

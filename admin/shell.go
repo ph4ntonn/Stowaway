@@ -4,11 +4,10 @@ import (
 	"Stowaway/common"
 	"bufio"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"strconv"
-
-	"github.com/sirupsen/logrus"
 )
 
 var CurrentNode uint32
@@ -27,7 +26,7 @@ func HandleNodeCommand(startNodeControlConn net.Conn, NodeID string) {
 			respCommand, err := common.ConstructCommand("SHELL", "", nodeID, AESKey)
 			_, err = startNodeControlConn.Write(respCommand)
 			if err != nil {
-				logrus.Errorf("ERROR OCCURED!: %s", err)
+				log.Printf("[*]ERROR OCCURED!: %s", err)
 			}
 			HandleShellToNode(startNodeControlConn, nodeID)
 		case "socks":
@@ -45,7 +44,7 @@ func HandleNodeCommand(startNodeControlConn net.Conn, NodeID string) {
 			respCommand, err := common.ConstructCommand("SOCKS", socksStartData, nodeID, AESKey)
 			_, err = startNodeControlConn.Write(respCommand)
 			if err != nil {
-				logrus.Error("StartNode seems offline")
+				log.Println("[*]StartNode seems offline")
 			}
 			if <-NodeSocksStarted {
 				go StartSocksServiceForClient(AdminCommand, startNodeControlConn, nodeID)
@@ -55,12 +54,12 @@ func HandleNodeCommand(startNodeControlConn net.Conn, NodeID string) {
 		case "stopsocks":
 			err := SocksListenerForClient.Close()
 			if err != nil {
-				logrus.Error("You have never started socks service!")
+				log.Println("[*]You have never started socks service!")
 			}
 			respCommand, _ := common.ConstructCommand("SOCKSOFF", " ", nodeID, AESKey)
 			_, err = startNodeControlConn.Write(respCommand)
 			if err != nil {
-				logrus.Error("StartNode seems offline")
+				log.Println("[*]StartNode seems offline")
 			}
 			ReadyChange <- true
 			IsShellMode <- true
@@ -152,7 +151,7 @@ func HandleShellToNode(startNodeControlConn net.Conn, nodeID uint32) {
 //处理ssh开启时的输入
 func HandleSSHToNode(startNodeControlConn net.Conn, nodeID uint32) {
 	inputReader := bufio.NewReader(os.Stdin)
-	logrus.Info("Waiting for response,please be patient")
+	log.Println("[*]Waiting for response,please be patient")
 	if conrinueornot := <-SshSuccess; conrinueornot {
 		fmt.Print("(ssh mode)>>>")
 		for {

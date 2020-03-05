@@ -4,6 +4,7 @@ import (
 	"Stowaway/common"
 	"Stowaway/node"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"strconv"
@@ -11,7 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
@@ -264,7 +264,7 @@ func HandleControlConnToAdmin(controlConnToAdmin *net.Conn) {
 		LowerNodeComm := <-LowerNodeCommChan
 		_, err := (*controlConnToAdmin).Write(LowerNodeComm)
 		if err != nil {
-			logrus.Error("Command cannot be proxy")
+			log.Println("[*]Command cannot be proxy")
 		}
 	}
 }
@@ -288,7 +288,7 @@ func HandleControlConnFromAdmin(controlConnToAdmin *net.Conn, monitor, listenPor
 			case "SHELL":
 				switch command.Info {
 				case "":
-					logrus.Info("Get command to start shell")
+					//logrus.Info("Get command to start shell")
 					if neverexit { //判断之前是否进入过shell模式
 						go func() {
 							StartShell("", stdin, stdout, NODEID)
@@ -307,13 +307,13 @@ func HandleControlConnFromAdmin(controlConnToAdmin *net.Conn, monitor, listenPor
 					}()
 				}
 			case "SOCKS":
-				logrus.Info("Get command to start SOCKS")
+				//logrus.Info("Get command to start SOCKS")
 				socksinfo := strings.Split(command.Info, ":::")
 				SocksUsername = socksinfo[1]
 				SocksPass = socksinfo[2]
 				go StartSocks(controlConnToAdmin)
 			case "SOCKSOFF":
-				logrus.Info("Get command to stop SOCKS")
+				//logrus.Info("Get command to stop SOCKS")
 			case "SSH":
 				fmt.Println("Get command to start SSH")
 				err := StartSSH(controlConnToAdmin, command.Info, NODEID)
@@ -346,7 +346,7 @@ func HandleControlConnFromAdmin(controlConnToAdmin *net.Conn, monitor, listenPor
 			case "CANNOTREAD":
 				CannotRead <- true
 			case "ADMINOFFLINE":
-				logrus.Error("Admin seems offline!")
+				log.Println("[*]Admin seems offline!")
 				if reConn != "0" && reConn != "" && !passive {
 					SocksDataChanMap = NewSafeMap()
 					if NotLastOne {
@@ -380,7 +380,7 @@ func HandleControlConnFromAdmin(controlConnToAdmin *net.Conn, monitor, listenPor
 				}
 			case "KEEPALIVE":
 			default:
-				logrus.Error("Unknown command")
+				//logrus.Error("Unknown command")
 				continue
 			}
 		} else {
@@ -448,7 +448,7 @@ func HandleDataConnFromLowerNode(dataConnForLowerNode net.Conn, NODEID uint32) {
 		buffer := make([]byte, 409600)
 		len, err := dataConnForLowerNode.Read(buffer)
 		if err != nil {
-			logrus.Error("Node ", NODEID+1, " seems offline")
+			log.Println("[*]Node ", NODEID+1, " seems offline")
 			offlineMess, _ := common.ConstructCommand("AGENTOFFLINE", "", NODEID+1, AESKey) //下一级节点掉线，向上级节点传递下级节点掉线的消息
 			LowerNodeCommChan <- offlineMess
 			break
@@ -463,7 +463,7 @@ func HandleDataConnToLowerNode(dataConnForLowerNode net.Conn, NODEID uint32) {
 		proxy_data := <-Proxy_Data_Chan
 		_, err := dataConnForLowerNode.Write(proxy_data)
 		if err != nil {
-			logrus.Error(err)
+			log.Println("[*]", err)
 			break
 		}
 	}
@@ -487,7 +487,7 @@ func HandleControlConnToUpperNode(controlConnToUpperNode *net.Conn) {
 		LowerNodeComm := <-LowerNodeCommChan
 		_, err := (*controlConnToUpperNode).Write(LowerNodeComm)
 		if err != nil {
-			logrus.Error("Command cannot be proxy")
+			log.Println("[*]Command cannot be proxy")
 		}
 	}
 }
@@ -503,15 +503,14 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode *net.Conn, NODEID uin
 	for {
 		command, err := common.ExtractCommand(*controlConnToUpperNode, AESKey)
 		if err != nil {
-			logrus.Error("upper node offline")
-			os.Exit(1)
+			log.Fatal("upper node offline")
 		}
 		if command.NodeId == NODEID {
 			switch command.Command {
 			case "SHELL":
 				switch command.Info {
 				case "":
-					logrus.Info("Get command to start shell")
+					//logrus.Info("Get command to start shell")
 					if neverexit {
 						go func() {
 							StartShell("", stdin, stdout, NODEID)
@@ -530,7 +529,7 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode *net.Conn, NODEID uin
 					}()
 				}
 			case "OFFLINE": //上一级节点下线
-				logrus.Error("Node ", NODEID-1, " seems down")
+				fmt.Println("[*]Node ", NODEID-1, " seems down")
 				if NotLastOne {
 					offlineMess, _ := common.ConstructCommand("OFFLINE", "", NODEID+1, AESKey)
 					Proxy_Command_Chan <- offlineMess
@@ -538,15 +537,15 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode *net.Conn, NODEID uin
 				time.Sleep(2 * time.Second)
 				os.Exit(1)
 			case "SOCKS":
-				logrus.Info("Get command to start SOCKS")
+				//logrus.Info("Get command to start SOCKS")
 				socksinfo := strings.Split(command.Info, ":::")
 				SocksUsername = socksinfo[1]
 				SocksPass = socksinfo[2]
 				go StartSocks(controlConnToUpperNode)
 			case "SOCKSOFF":
-				logrus.Info("Get command to stop SOCKS")
+				//logrus.Info("Get command to stop SOCKS")
 			case "SSH":
-				fmt.Println("Get command to start SSH")
+				//fmt.Println("Get command to start SSH")
 				err := StartSSH(controlConnToUpperNode, command.Info, NODEID)
 				if err == nil {
 					go ReadCommand()
@@ -577,7 +576,7 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode *net.Conn, NODEID uin
 			case "CANNOTREAD":
 				CannotRead <- true
 			case "ADMINOFFLINE": //startnode不执行重连模式时admin下线后传递的数据
-				logrus.Error("Admin seems offline")
+				fmt.Println("Admin seems offline")
 				if NotLastOne {
 					offlineCommand, _ := common.ConstructCommand("ADMINOFFLINE", "", NODEID+1, AESKey)
 					Proxy_Command_Chan <- offlineCommand
@@ -599,7 +598,7 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode *net.Conn, NODEID uin
 				}
 			case "KEEPALIVE":
 			default:
-				logrus.Error("Unknown command")
+				//logrus.Error("Unknown command")
 				continue
 			}
 		} else {
@@ -664,7 +663,7 @@ func HandleDataConnFromUpperNode(dataConnToUpperNode *net.Conn) {
 				hbdatapack, _ := common.ConstructDataResult(0, 0, " ", "KEEPALIVE", " ", AESKey, NODEID)
 				(*dataConnToUpperNode).Write(hbdatapack)
 			default:
-				logrus.Error("Unknown data")
+				//logrus.Error("Unknown data")
 				continue
 			}
 		} else {

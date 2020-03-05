@@ -3,10 +3,9 @@ package socks
 import (
 	"Stowaway/common"
 	"fmt"
+	"log"
 	"net"
 	"strconv"
-
-	"github.com/sirupsen/logrus"
 )
 
 func CheckMethod(conntoupper net.Conn, buffer []byte, username string, secret string, clientid uint32, key []byte, currentid uint32) string {
@@ -39,7 +38,7 @@ func AuthClient(conntoupper net.Conn, buffer []byte, username string, secret str
 	clientname := string(buffer[2 : 2+ulen])
 	clientpass := string(buffer[3+ulen : 3+ulen+slen])
 	if clientname != username || clientpass != secret {
-		logrus.Error("Illegal client!")
+		log.Println("Illegal client!")
 		respdata, _ := common.ConstructDataResult(0, clientid, " ", "SOCKSDATARESP", string([]byte{0x01, 0x01}), key, currentid)
 		conntoupper.Write(respdata)
 		return false

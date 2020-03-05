@@ -2,6 +2,7 @@ package admin
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"strconv"
@@ -10,7 +11,6 @@ import (
 
 	"Stowaway/common"
 
-	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
@@ -55,9 +55,9 @@ func NewAdmin(c *cli.Context) {
 	Banner()
 
 	if len(AESKey) != 0 {
-		logrus.Info("Now Connection is encrypting with secret ", c.String("secret"))
+		log.Println("[*]Now Connection is encrypting with secret ", c.String("secret"))
 	} else {
-		logrus.Error("Now Connection is maintianed without any encryption!")
+		log.Println("[*]Now Connection is maintianed without any encryption!")
 	}
 	if startnodeaddr == "" {
 		go StartListen(listenPort)
@@ -84,7 +84,7 @@ func NewSafeFileDataMap() *common.SafeFileDataMap {
 func ConnectToStartNode(startnodeaddr string) {
 	controlConnToStartNode, err := net.Dial("tcp", startnodeaddr)
 	if err != nil {
-		logrus.Error("Connection refused!")
+		log.Println("[*]Connection refused!")
 		os.Exit(1)
 	}
 	for {
@@ -96,12 +96,12 @@ func ConnectToStartNode(startnodeaddr string) {
 		case "IDOK":
 			dataConnToStartNode, err := net.Dial("tcp", startnodeaddr)
 			if err != nil {
-				logrus.Error("Connection refused!")
+				log.Println("[*]Connection refused!")
 				os.Exit(1)
 			}
 			DataConn = dataConnToStartNode
 			StartNode = strings.Split(controlConnToStartNode.RemoteAddr().String(), ":")[0]
-			logrus.Printf("Connect to startnode %s successfully!\n", controlConnToStartNode.RemoteAddr().String())
+			log.Printf("[*]Connect to startnode %s successfully!\n", controlConnToStartNode.RemoteAddr().String())
 			go HandleDataConn(dataConnToStartNode)
 			go common.SendHeartBeatData(dataConnToStartNode, 1, AESKey)
 			go HandleCommandFromControlConn(controlConnToStartNode)
@@ -117,14 +117,14 @@ func StartListen(listenPort string) {
 	localAddr := fmt.Sprintf("0.0.0.0:%s", listenPort)
 	localListener, err := net.Listen("tcp", localAddr)
 	if err != nil {
-		logrus.Errorf("Cannot listen %s", localAddr)
+		log.Printf("[*]Cannot listen %s", localAddr)
 		os.Exit(1)
 	}
 	for {
 		conn, _ := localListener.Accept()                                //一定要有连接进入才可继续操作，故没有连接时，admin端无法操作
 		startNodeIP := strings.Split(conn.RemoteAddr().String(), ":")[0] //记录一下startnode的ip，为数据信道建立作准备
 		if startNodeIP == StartNode && StartNode != "0.0.0.0" {          //两次ip是否相同
-			logrus.Printf("StartNode connected from %s!\n", conn.RemoteAddr().String())
+			log.Printf("[*]StartNode connected from %s!\n", conn.RemoteAddr().String())
 			DataConn = conn
 			go HandleDataConn(conn)
 			go common.SendHeartBeatData(conn, 1, AESKey)
@@ -144,7 +144,7 @@ func HandleInitControlConn(startNodeControlConn net.Conn) {
 			StartNode = strings.Split(startNodeControlConn.RemoteAddr().String(), ":")[0]
 			_, err = startNodeControlConn.Write(respCommand)
 			if err != nil {
-				logrus.Errorf("Startnode seems offline, control channel set up failed.Exiting...")
+				log.Println("[*]Startnode seems offline, control channel set up failed.Exiting...")
 				return
 			}
 			go HandleCommandFromControlConn(startNodeControlConn)
@@ -153,7 +153,7 @@ func HandleInitControlConn(startNodeControlConn net.Conn) {
 			return
 		}
 		if err != nil {
-			logrus.Error(err)
+			log.Println("[*]", err)
 			continue
 		}
 	}
@@ -164,7 +164,7 @@ func HandleDataConn(startNodeDataConn net.Conn) {
 	for {
 		nodeResp, err := common.ExtractDataResult(startNodeDataConn, AESKey, 0)
 		if err != nil {
-			logrus.Error("StartNode seems offline")
+			log.Println("[*]StartNode seems offline")
 			for Nodeid, _ := range Nodes {
 				if Nodeid >= 1 {
 					delete(Nodes, Nodeid)
@@ -268,7 +268,7 @@ func HandleCommandToControlConn(startNodeControlConn net.Conn) {
 			IsShellMode <- true
 			continue
 		case "exit":
-			logrus.Info("BYE!")
+			log.Println("[*]BYE!")
 			SendOffLineToStartNode(startNodeControlConn)
 			os.Exit(0)
 			return
@@ -290,10 +290,10 @@ func HandleCommandFromControlConn(startNodeControlConn net.Conn) {
 		}
 		switch command.Command {
 		case "NEW":
-			logrus.Info("New node join! Node Id is ", command.NodeId)
+			log.Println("[*]New node join! Node Id is ", command.NodeId)
 			NodesReadyToadd <- map[uint32]string{command.NodeId: command.Info}
 		case "AGENTOFFLINE":
-			logrus.Error("Node ", command.NodeId, " seems offline") //有节点掉线后，将此节点及其之后的节点删除
+			log.Println("[*]Node ", command.NodeId, " seems offline") //有节点掉线后，将此节点及其之后的节点删除
 			for Nodeid, _ := range Nodes {
 				if Nodeid >= command.NodeId {
 					delete(Nodes, Nodeid)
@@ -341,7 +341,7 @@ func HandleCommandFromControlConn(startNodeControlConn net.Conn) {
 			fmt.Printf("File %s cannot be read!\n", command.Info)
 			CannotRead <- true
 		case "RECONNID":
-			logrus.Info("New node join! Node Id is ", command.NodeId)
+			log.Println("[*]New node join! Node Id is ", command.NodeId)
 			NodesReadyToadd <- map[uint32]string{command.NodeId: command.Info}
 		case "HEARTBEAT":
 			hbcommpack, _ := common.ConstructCommand("KEEPALIVE", "", 1, AESKey)
@@ -349,7 +349,7 @@ func HandleCommandFromControlConn(startNodeControlConn net.Conn) {
 		case "TRANSSUCCESS":
 			fmt.Println("File transmission complete!")
 		default:
-			logrus.Error("Unknown Command")
+			log.Println("[*]Unknown Command")
 			continue
 		}
 
