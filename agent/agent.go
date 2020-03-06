@@ -9,16 +9,10 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/urfave/cli/v2"
 )
-
-type SafeMap struct {
-	sync.RWMutex
-	SocksDataChan map[uint32]chan string
-}
 
 var (
 	NODEID     uint32 = uint32(1)
@@ -35,8 +29,8 @@ var (
 	LowerNodeCommChan  = make(chan []byte, 1)
 	Eof                = make(chan string, 1)
 
-	FileDataMap      *common.SafeFileDataMap
-	SocksDataChanMap *SafeMap
+	FileDataMap      *common.IntStrMap
+	SocksDataChanMap *common.Uint32StrMap
 
 	ControlConnToAdmin net.Conn
 	DataConnToAdmin    net.Conn
@@ -45,21 +39,9 @@ var (
 	AESKey []byte
 )
 
-func NewSafeMap() *SafeMap {
-	sm := new(SafeMap)
-	sm.SocksDataChan = make(map[uint32]chan string, 10)
-	return sm
-}
-
-func NewSafeFileDataMap() *common.SafeFileDataMap {
-	sm := new(common.SafeFileDataMap)
-	sm.FileDataChan = make(map[int]string)
-	return sm
-}
-
 func NewAgent(c *cli.Context) {
-	SocksDataChanMap = NewSafeMap()
-	FileDataMap = NewSafeFileDataMap()
+	SocksDataChanMap = common.NewUint32StrMap()
+	FileDataMap = common.NewIntStrMap()
 	AESKey = []byte(c.String("secret"))
 	listenPort := c.String("listen")
 	single := c.Bool("single")
@@ -217,36 +199,42 @@ func HandleDataConnFromAdmin(dataConnToAdmin *net.Conn, NODEID uint32) {
 			switch AdminData.Datatype {
 			case "SOCKSDATA":
 				SocksDataChanMap.RLock()
-				if _, ok := SocksDataChanMap.SocksDataChan[AdminData.Clientsocks]; ok {
-					SocksDataChanMap.SocksDataChan[AdminData.Clientsocks] <- AdminData.Result
+				if _, ok := SocksDataChanMap.Payload[AdminData.Clientsocks]; ok {
+					SocksDataChanMap.Payload[AdminData.Clientsocks] <- AdminData.Result
 					SocksDataChanMap.RUnlock()
 				} else {
 					//fmt.Println("create new chan", AdminData.Clientsocks)
 					SocksDataChanMap.RUnlock()
 					tempchan := make(chan string, 10)
 					SocksDataChanMap.Lock()
-					SocksDataChanMap.SocksDataChan[AdminData.Clientsocks] = tempchan
-					go HanleClientSocksConn(SocksDataChanMap.SocksDataChan[AdminData.Clientsocks], SocksUsername, SocksPass, AdminData.Clientsocks, NODEID)
-					SocksDataChanMap.SocksDataChan[AdminData.Clientsocks] <- AdminData.Result
+					SocksDataChanMap.Payload[AdminData.Clientsocks] = tempchan
+					go HanleClientSocksConn(SocksDataChanMap.Payload[AdminData.Clientsocks], SocksUsername, SocksPass, AdminData.Clientsocks, NODEID)
+					SocksDataChanMap.Payload[AdminData.Clientsocks] <- AdminData.Result
 					SocksDataChanMap.Unlock()
 				}
 			case "FILEDATA": //接收文件内容
 				slicenum, _ := strconv.Atoi(AdminData.FileSliceNum)
 				FileDataMap.Lock()
-				FileDataMap.FileDataChan[slicenum] = AdminData.Result
+				FileDataMap.Payload[slicenum] = AdminData.Result
 				FileDataMap.Unlock()
 			case "EOF": //文件读取结束
 				Eof <- AdminData.FileSliceNum
 			case "FINOK":
 				SocksDataChanMap.Lock() //性能损失？
-				if _, ok := SocksDataChanMap.SocksDataChan[AdminData.Clientsocks]; ok {
-					if !IsClosed(SocksDataChanMap.SocksDataChan[AdminData.Clientsocks]) {
-						close(SocksDataChanMap.SocksDataChan[AdminData.Clientsocks])
+				if _, ok := SocksDataChanMap.Payload[AdminData.Clientsocks]; ok {
+					if !IsClosed(SocksDataChanMap.Payload[AdminData.Clientsocks]) {
+						close(SocksDataChanMap.Payload[AdminData.Clientsocks])
 					}
-					delete(SocksDataChanMap.SocksDataChan, AdminData.Clientsocks)
+					delete(SocksDataChanMap.Payload, AdminData.Clientsocks)
 					//fmt.Println("close one, still left", len(SocksDataChanMap.SocksDataChan))
 				}
 				SocksDataChanMap.Unlock()
+			case "FIN":
+				CurrentConn.Lock()
+				if _, ok := CurrentConn.Payload[AdminData.Clientsocks]; ok {
+					CurrentConn.Payload[AdminData.Clientsocks].Close()
+				}
+				CurrentConn.Unlock()
 			case "HEARTBEAT":
 				hbdatapack, _ := common.ConstructDataResult(0, 0, " ", "KEEPALIVE", " ", AESKey, NODEID)
 				(*dataConnToAdmin).Write(hbdatapack)
@@ -348,7 +336,8 @@ func HandleControlConnFromAdmin(controlConnToAdmin *net.Conn, monitor, listenPor
 			case "ADMINOFFLINE":
 				log.Println("[*]Admin seems offline!")
 				if reConn != "0" && reConn != "" && !passive {
-					SocksDataChanMap = NewSafeMap()
+					SocksDataChanMap = common.NewUint32StrMap()
+					ClearAllConn()
 					if NotLastOne {
 						messCommand, _ := common.ConstructCommand("CLEAR", "", 2, AESKey)
 						Proxy_Command_Chan <- messCommand
@@ -359,7 +348,8 @@ func HandleControlConnFromAdmin(controlConnToAdmin *net.Conn, monitor, listenPor
 						Proxy_Command_Chan <- messCommand
 					}
 				} else if reConn == "0" && passive {
-					SocksDataChanMap = NewSafeMap()
+					SocksDataChanMap = common.NewUint32StrMap()
+					ClearAllConn()
 					if NotLastOne {
 						messCommand, _ := common.ConstructCommand("CLEAR", "", 2, AESKey)
 						Proxy_Command_Chan <- messCommand
@@ -591,7 +581,8 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode *net.Conn, NODEID uin
 					Proxy_Command_Chan <- passCommand
 				}
 			case "CLEAR":
-				SocksDataChanMap = NewSafeMap()
+				SocksDataChanMap = common.NewUint32StrMap()
+				ClearAllConn()
 				if NotLastOne {
 					messCommand, _ := common.ConstructCommand("CLEAR", "", NODEID+1, AESKey)
 					Proxy_Command_Chan <- messCommand
@@ -632,33 +623,41 @@ func HandleDataConnFromUpperNode(dataConnToUpperNode *net.Conn) {
 			switch AdminData.Datatype {
 			case "SOCKSDATA":
 				SocksDataChanMap.RLock()
-				if _, ok := SocksDataChanMap.SocksDataChan[AdminData.Clientsocks]; ok {
-					SocksDataChanMap.SocksDataChan[AdminData.Clientsocks] <- AdminData.Result
+				if _, ok := SocksDataChanMap.Payload[AdminData.Clientsocks]; ok {
+					SocksDataChanMap.Payload[AdminData.Clientsocks] <- AdminData.Result
 					SocksDataChanMap.RUnlock()
 				} else {
 					SocksDataChanMap.RUnlock()
 					tempchan := make(chan string, 10)
 					SocksDataChanMap.Lock()
-					SocksDataChanMap.SocksDataChan[AdminData.Clientsocks] = tempchan
-					go HanleClientSocksConn(SocksDataChanMap.SocksDataChan[AdminData.Clientsocks], SocksUsername, SocksPass, AdminData.Clientsocks, NODEID)
-					SocksDataChanMap.SocksDataChan[AdminData.Clientsocks] <- AdminData.Result
+					SocksDataChanMap.Payload[AdminData.Clientsocks] = tempchan
+					go HanleClientSocksConn(SocksDataChanMap.Payload[AdminData.Clientsocks], SocksUsername, SocksPass, AdminData.Clientsocks, NODEID)
+					SocksDataChanMap.Payload[AdminData.Clientsocks] <- AdminData.Result
 					SocksDataChanMap.Unlock()
 				}
 			case "FINOK":
 				SocksDataChanMap.Lock()
-				if _, ok := SocksDataChanMap.SocksDataChan[AdminData.Clientsocks]; ok {
-					if !IsClosed(SocksDataChanMap.SocksDataChan[AdminData.Clientsocks]) {
-						close(SocksDataChanMap.SocksDataChan[AdminData.Clientsocks])
+				if _, ok := SocksDataChanMap.Payload[AdminData.Clientsocks]; ok {
+					if !IsClosed(SocksDataChanMap.Payload[AdminData.Clientsocks]) {
+						close(SocksDataChanMap.Payload[AdminData.Clientsocks])
 					}
-					delete(SocksDataChanMap.SocksDataChan, AdminData.Clientsocks)
+					delete(SocksDataChanMap.Payload, AdminData.Clientsocks)
 				}
 				SocksDataChanMap.Unlock()
 				//fmt.Println("close one, still left", len(SocksDataChanMap.SocksDataChan))
 			case "FILEDATA": //接收文件内容
 				slicenum, _ := strconv.Atoi(AdminData.FileSliceNum)
-				FileDataMap.FileDataChan[slicenum] = AdminData.Result
+				FileDataMap.Payload[slicenum] = AdminData.Result
 			case "EOF": //文件读取结束
 				Eof <- AdminData.FileSliceNum
+			case "FIN":
+				CurrentConn.Lock()
+				if _, ok := CurrentConn.Payload[AdminData.Clientsocks]; ok {
+					err := CurrentConn.Payload[AdminData.Clientsocks].Close()
+					if err != nil {
+					}
+				}
+				CurrentConn.Unlock()
 			case "HEARTBEAT":
 				hbdatapack, _ := common.ConstructDataResult(0, 0, " ", "KEEPALIVE", " ", AESKey, NODEID)
 				(*dataConnToUpperNode).Write(hbdatapack)

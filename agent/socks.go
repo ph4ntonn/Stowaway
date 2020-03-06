@@ -4,9 +4,13 @@ import (
 	"Stowaway/common"
 	"Stowaway/socks"
 	"net"
-	"strconv"
-	"time"
 )
+
+var CurrentConn *common.Uint32ConnMap
+
+func init() {
+	CurrentConn = common.NewUint32ConnMap()
+}
 
 //处理socks请求
 func HanleClientSocksConn(info chan string, socksUsername, socksPass string, checknum uint32, currentid uint32) {
@@ -42,6 +46,9 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 			if serverflag == false {
 				return
 			}
+			CurrentConn.Lock() //这个 “concurrent map writes” 错误调了好久，死活没看出来，控制台日志贼长看不见错哪儿，重定向到文件之后想让他报错又tm不报错了（笑）
+			CurrentConn.Payload[checknum] = server
+			CurrentConn.Unlock()
 		} else if isAuthed == true && tcpconnected == true && serverflag == true {
 			go func() {
 				for {
@@ -52,7 +59,7 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 					_, err := server.Write([]byte(data))
 					if err != nil {
 						SocksDataChanMap.RLock()
-						if _, ok := SocksDataChanMap.SocksDataChan[checknum]; ok {
+						if _, ok := SocksDataChanMap.Payload[checknum]; ok {
 							SocksDataChanMap.RUnlock()
 							continue
 						} else {
@@ -64,31 +71,11 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 			}()
 			err := socks.Proxyhttp(DataConnToAdmin, server, checknum, AESKey, currentid)
 			if err != nil {
-				go SendFIN(DataConnToAdmin, checknum)
+				go SendFin(DataConnToAdmin, checknum)
 				return
 			}
 		} else {
 			return
 		}
 	}
-}
-
-//发送server offline通知
-func SendFIN(conn net.Conn, num uint32) {
-	nodeid := strconv.Itoa(int(NODEID))
-	for {
-		SocksDataChanMap.RLock()
-		if _, ok := SocksDataChanMap.SocksDataChan[num]; ok {
-			SocksDataChanMap.RUnlock()
-			//fmt.Println("send fin!!! number is ", num)
-			respData, _ := common.ConstructDataResult(0, num, " ", "FIN", nodeid, AESKey, 0)
-			conn.Write(respData)
-		} else {
-			SocksDataChanMap.RUnlock()
-			//fmt.Print("out!!!!!,number is ", num)
-			return
-		}
-		time.Sleep(5 * time.Second)
-	}
-
 }

@@ -94,10 +94,10 @@ func StartSocksServiceForClient(command []string, startNodeControlConn net.Conn,
 			return
 		}
 		ClientSockets.Lock()
-		ClientSockets.ClientSocketsMap[ClientNum] = conn
+		ClientSockets.Payload[ClientNum] = conn
 		ClientSockets.Unlock()
 		ClientSockets.RLock()
-		go HandleNewSocksConn(ClientSockets.ClientSocketsMap[ClientNum], ClientNum, nodeID)
+		go HandleNewSocksConn(ClientSockets.Payload[ClientNum], ClientNum, nodeID)
 		ClientSockets.RUnlock()
 		ClientNum++
 	}
@@ -109,6 +109,8 @@ func HandleNewSocksConn(clientsocks net.Conn, num uint32, nodeID uint32) {
 		len, err := clientsocks.Read(buffer)
 		if err != nil {
 			clientsocks.Close()
+			finMessage, _ := common.ConstructDataResult(nodeID, num, " ", "FIN", " ", AESKey, 0)
+			DataConn.Write(finMessage)
 			return
 		} else {
 			respData, _ := common.ConstructDataResult(nodeID, num, " ", "SOCKSDATA", string(buffer[:len]), AESKey, 0)

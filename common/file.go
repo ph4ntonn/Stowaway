@@ -6,14 +6,8 @@ import (
 	"net"
 	"os"
 	"strconv"
-	"sync"
 	"time"
 )
-
-type SafeFileDataMap struct {
-	sync.RWMutex
-	FileDataChan map[int]string
-}
 
 /*-------------------------上传/下载文件相关代码--------------------------*/
 func UploadFile(filename string, ControlConn net.Conn, DataConn net.Conn, nodeid uint32, GetName chan bool, AESKey []byte, currentid uint32, Notagent bool) {
@@ -82,7 +76,7 @@ func DownloadFile(filename string, conn net.Conn, nodeid uint32, AESKey []byte) 
 	}
 }
 
-func ReceiveFile(controlConnToAdmin *net.Conn, Eof chan string, FileDataMap *SafeFileDataMap, CannotRead chan bool, UploadFile *os.File, AESKey []byte, Notagent bool) {
+func ReceiveFile(controlConnToAdmin *net.Conn, Eof chan string, FileDataMap *IntStrMap, CannotRead chan bool, UploadFile *os.File, AESKey []byte, Notagent bool) {
 	defer UploadFile.Close()
 	if Notagent {
 		fmt.Println("\nDownloading file,please wait......")
@@ -94,9 +88,9 @@ func ReceiveFile(controlConnToAdmin *net.Conn, Eof chan string, FileDataMap *Saf
 			for {
 				time.Sleep(2 * time.Second)
 				FileDataMap.RLock()
-				if len(FileDataMap.FileDataChan) == slicetotal {
+				if len(FileDataMap.Payload) == slicetotal {
 					for num := 0; num < slicetotal; num++ {
-						content := FileDataMap.FileDataChan[num]
+						content := FileDataMap.Payload[num]
 						_, err := UploadFile.Write([]byte(content))
 						if err != nil {
 							return

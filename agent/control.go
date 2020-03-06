@@ -86,3 +86,34 @@ func StartSocks(controlConnToAdmin *net.Conn) {
 	socksstartmess, _ := common.ConstructCommand("SOCKSRESP", "SUCCESS", NODEID, AESKey)
 	(*controlConnToAdmin).Write(socksstartmess)
 }
+
+/*-------------------------清除现存连接及发送FIN信号相关代码--------------------------*/
+//当admin下线后，清除并关闭所有现存的socket
+func ClearAllConn() {
+	for key, conn := range CurrentConn.Payload {
+		err := conn.Close()
+		if err != nil {
+		}
+		delete(CurrentConn.Payload, key)
+	}
+}
+
+//发送server offline通知
+func SendFin(conn net.Conn, num uint32) {
+	nodeid := strconv.Itoa(int(NODEID))
+	for {
+		SocksDataChanMap.RLock()
+		if _, ok := SocksDataChanMap.Payload[num]; ok {
+			SocksDataChanMap.RUnlock()
+			//fmt.Println("send fin!!! number is ", num)
+			respData, _ := common.ConstructDataResult(0, num, " ", "FIN", nodeid, AESKey, 0)
+			conn.Write(respData)
+		} else {
+			SocksDataChanMap.RUnlock()
+			//fmt.Print("out!!!!!,number is ", num)
+			return
+		}
+		time.Sleep(5 * time.Second)
+	}
+
+}

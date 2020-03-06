@@ -7,17 +7,11 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 
 	"Stowaway/common"
 
 	"github.com/urfave/cli/v2"
 )
-
-type SafeMap struct {
-	sync.RWMutex
-	ClientSocketsMap map[uint32]net.Conn
-}
 
 var (
 	CliStatus *string
@@ -33,8 +27,8 @@ var (
 	Eof             = make(chan string, 1)
 	NodesReadyToadd = make(chan map[uint32]string)
 
-	FileDataMap   *common.SafeFileDataMap
-	ClientSockets *SafeMap
+	FileDataMap   *common.IntStrMap
+	ClientSockets *common.Uint32ConnMap
 
 	AESKey []byte
 
@@ -46,8 +40,8 @@ var (
 func NewAdmin(c *cli.Context) {
 	var InitStatus string = "admin"
 
-	ClientSockets = NewSafeMap()
-	FileDataMap = NewSafeFileDataMap()
+	ClientSockets = common.NewUint32ConnMap()
+	FileDataMap = common.NewIntStrMap()
 	AESKey = []byte(c.String("secret"))
 	listenPort := c.String("listen")
 	startnodeaddr := c.String("connect")
@@ -67,18 +61,6 @@ func NewAdmin(c *cli.Context) {
 	go AddToChain()
 	CliStatus = &InitStatus
 	Controlpanel()
-}
-
-func NewSafeMap() *SafeMap {
-	sm := new(SafeMap)
-	sm.ClientSocketsMap = make(map[uint32]net.Conn)
-	return sm
-}
-
-func NewSafeFileDataMap() *common.SafeFileDataMap {
-	sm := new(common.SafeFileDataMap)
-	sm.FileDataChan = make(map[int]string)
-	return sm
 }
 
 func ConnectToStartNode(startnodeaddr string) {
@@ -182,8 +164,8 @@ func HandleDataConn(startNodeDataConn net.Conn) {
 		case "SOCKSDATARESP":
 			ClientSockets.RLock()
 			// fmt.Println("get response!", string(nodeResp.Result))
-			if _, ok := ClientSockets.ClientSocketsMap[nodeResp.Clientsocks]; ok {
-				_, err := ClientSockets.ClientSocketsMap[nodeResp.Clientsocks].Write([]byte(nodeResp.Result))
+			if _, ok := ClientSockets.Payload[nodeResp.Clientsocks]; ok {
+				_, err := ClientSockets.Payload[nodeResp.Clientsocks].Write([]byte(nodeResp.Result))
 				if err != nil {
 					ClientSockets.RUnlock()
 					continue
@@ -192,13 +174,13 @@ func HandleDataConn(startNodeDataConn net.Conn) {
 			ClientSockets.RUnlock()
 		case "FIN":
 			ClientSockets.RLock()
-			if _, ok := ClientSockets.ClientSocketsMap[nodeResp.Clientsocks]; ok {
-				ClientSockets.ClientSocketsMap[nodeResp.Clientsocks].Close()
+			if _, ok := ClientSockets.Payload[nodeResp.Clientsocks]; ok {
+				ClientSockets.Payload[nodeResp.Clientsocks].Close()
 			}
 			ClientSockets.RUnlock()
 			ClientSockets.Lock()
-			if _, ok := ClientSockets.ClientSocketsMap[nodeResp.Clientsocks]; ok {
-				delete(ClientSockets.ClientSocketsMap, nodeResp.Clientsocks)
+			if _, ok := ClientSockets.Payload[nodeResp.Clientsocks]; ok {
+				delete(ClientSockets.Payload, nodeResp.Clientsocks)
 			}
 			ClientSockets.Unlock()
 			clientnum, _ := strconv.ParseInt(nodeResp.Result, 10, 32)
@@ -207,7 +189,7 @@ func HandleDataConn(startNodeDataConn net.Conn) {
 			startNodeDataConn.Write(respCommand)
 		case "FILEDATA": //接收文件内容
 			slicenum, _ := strconv.Atoi(nodeResp.FileSliceNum)
-			FileDataMap.FileDataChan[slicenum] = nodeResp.Result
+			FileDataMap.Payload[slicenum] = nodeResp.Result
 		case "EOF": //文件读取结束
 			Eof <- nodeResp.FileSliceNum
 		case "KEEPALIVE":
