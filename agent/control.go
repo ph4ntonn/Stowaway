@@ -96,24 +96,29 @@ func ClearAllConn() {
 		}
 		delete(CurrentConn.Payload, key)
 	}
+	SocksDataChanMap.Lock()
+	for key, _ := range SocksDataChanMap.Payload {
+		if !IsClosed(SocksDataChanMap.Payload[key]) {
+			close(SocksDataChanMap.Payload[key])
+		}
+		delete(SocksDataChanMap.Payload, key)
+	}
+	SocksDataChanMap.Unlock()
 }
 
 //发送server offline通知
 func SendFin(conn net.Conn, num uint32) {
 	nodeid := strconv.Itoa(int(NODEID))
-	for {
-		SocksDataChanMap.RLock()
-		if _, ok := SocksDataChanMap.Payload[num]; ok {
-			SocksDataChanMap.RUnlock()
-			//fmt.Println("send fin!!! number is ", num)
-			respData, _ := common.ConstructDataResult(0, num, " ", "FIN", nodeid, AESKey, 0)
-			conn.Write(respData)
-		} else {
-			SocksDataChanMap.RUnlock()
-			//fmt.Print("out!!!!!,number is ", num)
-			return
-		}
-		time.Sleep(5 * time.Second)
+	SocksDataChanMap.RLock()
+	if _, ok := SocksDataChanMap.Payload[num]; ok {
+		SocksDataChanMap.RUnlock()
+		//fmt.Println("send fin!!! number is ", num)
+		respData, _ := common.ConstructDataResult(0, num, " ", "FIN", nodeid, AESKey, 0)
+		conn.Write(respData)
+		return
+	} else {
+		SocksDataChanMap.RUnlock()
+		//fmt.Print("out!!!!!,number is ", num)
+		return
 	}
-
 }

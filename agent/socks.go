@@ -54,6 +54,7 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 				for {
 					data, ok := <-info
 					if !ok {
+						//	fmt.Println(checknum, "chan out")
 						return
 					}
 					_, err := server.Write([]byte(data))
@@ -71,6 +72,7 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 			}()
 			err := socks.Proxyhttp(DataConnToAdmin, server, checknum, AESKey, currentid)
 			if err != nil {
+				//	fmt.Println(checknum, "proxy out")
 				go SendFin(DataConnToAdmin, checknum)
 				return
 			}

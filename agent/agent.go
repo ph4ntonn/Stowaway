@@ -208,6 +208,7 @@ func HandleDataConnFromAdmin(dataConnToAdmin *net.Conn, NODEID uint32) {
 					tempchan := make(chan string, 10)
 					SocksDataChanMap.Lock()
 					SocksDataChanMap.Payload[AdminData.Clientsocks] = tempchan
+					//fmt.Println(AdminData.Clientsocks, " created")
 					go HanleClientSocksConn(SocksDataChanMap.Payload[AdminData.Clientsocks], SocksUsername, SocksPass, AdminData.Clientsocks, NODEID)
 					SocksDataChanMap.Payload[AdminData.Clientsocks] <- AdminData.Result
 					SocksDataChanMap.Unlock()
@@ -235,6 +236,14 @@ func HandleDataConnFromAdmin(dataConnToAdmin *net.Conn, NODEID uint32) {
 					CurrentConn.Payload[AdminData.Clientsocks].Close()
 				}
 				CurrentConn.Unlock()
+				SocksDataChanMap.Lock()
+				if _, ok := SocksDataChanMap.Payload[AdminData.Clientsocks]; ok {
+					if !IsClosed(SocksDataChanMap.Payload[AdminData.Clientsocks]) {
+						close(SocksDataChanMap.Payload[AdminData.Clientsocks])
+					}
+					delete(SocksDataChanMap.Payload, AdminData.Clientsocks)
+				}
+				SocksDataChanMap.Unlock()
 			case "HEARTBEAT":
 				hbdatapack, _ := common.ConstructDataResult(0, 0, " ", "KEEPALIVE", " ", AESKey, NODEID)
 				(*dataConnToAdmin).Write(hbdatapack)
@@ -336,8 +345,9 @@ func HandleControlConnFromAdmin(controlConnToAdmin *net.Conn, monitor, listenPor
 			case "ADMINOFFLINE":
 				log.Println("[*]Admin seems offline!")
 				if reConn != "0" && reConn != "" && !passive {
-					SocksDataChanMap = common.NewUint32StrMap()
 					ClearAllConn()
+					time.Sleep(1 * time.Second)
+					SocksDataChanMap = common.NewUint32StrMap()
 					if NotLastOne {
 						messCommand, _ := common.ConstructCommand("CLEAR", "", 2, AESKey)
 						Proxy_Command_Chan <- messCommand
@@ -348,8 +358,9 @@ func HandleControlConnFromAdmin(controlConnToAdmin *net.Conn, monitor, listenPor
 						Proxy_Command_Chan <- messCommand
 					}
 				} else if reConn == "0" && passive {
-					SocksDataChanMap = common.NewUint32StrMap()
 					ClearAllConn()
+					time.Sleep(1 * time.Second)
+					SocksDataChanMap = common.NewUint32StrMap()
 					if NotLastOne {
 						messCommand, _ := common.ConstructCommand("CLEAR", "", 2, AESKey)
 						Proxy_Command_Chan <- messCommand
@@ -581,8 +592,9 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode *net.Conn, NODEID uin
 					Proxy_Command_Chan <- passCommand
 				}
 			case "CLEAR":
-				SocksDataChanMap = common.NewUint32StrMap()
 				ClearAllConn()
+				time.Sleep(1 * time.Second)
+				SocksDataChanMap = common.NewUint32StrMap()
 				if NotLastOne {
 					messCommand, _ := common.ConstructCommand("CLEAR", "", NODEID+1, AESKey)
 					Proxy_Command_Chan <- messCommand
@@ -658,6 +670,14 @@ func HandleDataConnFromUpperNode(dataConnToUpperNode *net.Conn) {
 					}
 				}
 				CurrentConn.Unlock()
+				SocksDataChanMap.Lock()
+				if _, ok := SocksDataChanMap.Payload[AdminData.Clientsocks]; ok {
+					if !IsClosed(SocksDataChanMap.Payload[AdminData.Clientsocks]) {
+						close(SocksDataChanMap.Payload[AdminData.Clientsocks])
+					}
+					delete(SocksDataChanMap.Payload, AdminData.Clientsocks)
+				}
+				SocksDataChanMap.Unlock()
 			case "HEARTBEAT":
 				hbdatapack, _ := common.ConstructDataResult(0, 0, " ", "KEEPALIVE", " ", AESKey, NODEID)
 				(*dataConnToUpperNode).Write(hbdatapack)
