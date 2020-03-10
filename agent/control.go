@@ -80,22 +80,18 @@ func CheckSystem() (sysType uint32) {
 	return
 }
 
-/*-------------------------Socks启动相关代码--------------------------*/
-//暂时没啥用，仅做回复socks开启命令之用
-func StartSocks(controlConnToAdmin *net.Conn) {
-	socksstartmess, _ := common.ConstructCommand("SOCKSRESP", "SUCCESS", NODEID, AESKey)
-	(*controlConnToAdmin).Write(socksstartmess)
-}
-
 /*-------------------------清除现存连接及发送FIN信号相关代码--------------------------*/
 //当admin下线后，清除并关闭所有现存的socket
 func ClearAllConn() {
+	CurrentConn.Lock()
 	for key, conn := range CurrentConn.Payload {
 		err := conn.Close()
 		if err != nil {
 		}
 		delete(CurrentConn.Payload, key)
 	}
+	CurrentConn.Unlock()
+
 	SocksDataChanMap.Lock()
 	for key, _ := range SocksDataChanMap.Payload {
 		if !IsClosed(SocksDataChanMap.Payload[key]) {
@@ -104,6 +100,25 @@ func ClearAllConn() {
 		delete(SocksDataChanMap.Payload, key)
 	}
 	SocksDataChanMap.Unlock()
+
+	PortFowardMap.Lock()
+	for key, _ := range PortFowardMap.Payload {
+		if !IsClosed(PortFowardMap.Payload[key]) {
+			close(PortFowardMap.Payload[key])
+		}
+		delete(PortFowardMap.Payload, key)
+	}
+	PortFowardMap.Unlock()
+
+	ForwardConnMap.Lock()
+	for key, conn := range ForwardConnMap.Payload {
+		err := conn.Close()
+		if err != nil {
+		}
+		delete(ForwardConnMap.Payload, key)
+	}
+	ForwardConnMap.Unlock()
+
 }
 
 //发送server offline通知

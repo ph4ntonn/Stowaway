@@ -9,14 +9,15 @@ PS: Thanks for everyone's star, i'm just an amateur, and the code still need be 
 
 ## Features
 
-- obvious node topology
-- active/passive mode
-- can be used on multiple platforms
-- multi-hop socks5 traffic proxy
-- multi-hop ssh traffic proxy
-- remote interactive shell
-- upload/download functions
-- network traffic encryption with AES-256(CBC mode)
+- Obvious node topology
+- Active/passive mode
+- Can be used on multiple platforms
+- Multi-hop socks5 traffic proxy
+- Multi-hop ssh traffic proxy
+- Remote interactive shell
+- Upload/download functions
+- Port Mapping(local to remote)
+- Network traffic encryption with AES-256(CBC mode)
 
 
 ## Usage
@@ -172,6 +173,13 @@ Upload/Download file:
 
 If you want to upload/download any files,use upload/download + (filepath) under the node mode(after using command "use xxx"),and then you can upload specific file to selected agent/download specific file from selected agent XD
 
+Port mapping：
+
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/portforward.png)
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/connect.png)
+
+Now you can connect to 127.0.0.1:8888 like really connecting to 127.0.0.1:22
+
 ```
 For more detail, just type help to get further informations
 ```
@@ -180,10 +188,11 @@ For more detail, just type help to get further informations
 - [x] Network traffic encryption
 - [x] Method to turn off socks5 proxy
 - [x] Reconnection
+- [x] Port mapping
 - [ ] Clean codes, optimize logic
 - [ ] Add cc function
 - [x] Add reverse connect mode
-- [ ] Support port reuse
+- [ ] Support port reuse(seems not very essential,so maybe add it later)
 
 ### Attention
 

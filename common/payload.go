@@ -25,7 +25,7 @@ type Command struct {
 type Data struct {
 	NodeId uint32 //节点序号
 
-	Clientsocks uint32 //socks标号
+	Clientid uint32 //socks标号
 
 	FileSliceNumLength uint32 //Success字段长度
 
@@ -199,7 +199,7 @@ func ExtractDataResult(conn net.Conn, key []byte, currentid uint32) (*Data, erro
 		return data, err
 	}
 
-	data.Clientsocks = binary.BigEndian.Uint32(clientlen)
+	data.Clientid = binary.BigEndian.Uint32(clientlen)
 
 	_, err = io.ReadFull(conn, fileslicenumlen)
 	if err != nil {

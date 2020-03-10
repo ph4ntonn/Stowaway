@@ -97,6 +97,18 @@ func HandleNodeCommand(startNodeControlConn net.Conn, NodeID string) {
 			}
 			ReadyChange <- true
 			IsShellMode <- true
+		case "forward":
+			if len(AdminCommand) == 3 {
+				go StartPortForwardForClient(AdminCommand, DataConn, startNodeControlConn, nodeID, AESKey)
+			} else {
+				fmt.Println("Bad format! Should be forward [localport] [rhostip]:[rhostport]")
+			}
+			ReadyChange <- true
+			IsShellMode <- true
+		case "stopforward":
+			go StopForward()
+			ReadyChange <- true
+			IsShellMode <- true
 		case "help":
 			ShowNodeHelp()
 			ReadyChange <- true

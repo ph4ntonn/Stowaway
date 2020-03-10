@@ -12,6 +12,13 @@ func init() {
 	CurrentConn = common.NewUint32ConnMap()
 }
 
+/*-------------------------Socks启动相关代码--------------------------*/
+//暂时没啥用，仅做回复socks开启命令之用
+func StartSocks(controlConnToAdmin *net.Conn) {
+	socksstartmess, _ := common.ConstructCommand("SOCKSRESP", "SUCCESS", NODEID, AESKey)
+	(*controlConnToAdmin).Write(socksstartmess)
+}
+
 //处理socks请求
 func HanleClientSocksConn(info chan string, socksUsername, socksPass string, checknum uint32, currentid uint32) {
 	var (
@@ -54,7 +61,7 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 				for {
 					data, ok := <-info
 					if !ok {
-						//	fmt.Println(checknum, "chan out")
+						//fmt.Println(checknum, "chan out")
 						return
 					}
 					_, err := server.Write([]byte(data))
@@ -72,7 +79,7 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 			}()
 			err := socks.Proxyhttp(DataConnToAdmin, server, checknum, AESKey, currentid)
 			if err != nil {
-				//	fmt.Println(checknum, "proxy out")
+				//fmt.Println(checknum, "proxy out")
 				go SendFin(DataConnToAdmin, checknum)
 				return
 			}

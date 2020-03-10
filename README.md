@@ -19,6 +19,7 @@ PS:谢谢大家的star，这个程序还不成熟规范，写来仅为学习，�
 - ssh代理连接
 - 远程交互式shell
 - 上传及下载文件
+- 端口远程映射
 - 节点间流量以AES-256(CBC模式)进行加密
 
 ## Usage
@@ -179,6 +180,13 @@ PS: 在ssh模式下，你可以用pwd来判断自己所处的文件夹（好吧�
 
 上传下载功能命令为 upload/download 后加文件路径（注意要在节点模式下使用）,此时就可以上传文件至指定节点/下载指定节点的文件
 
+端口映射：
+
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/portforward.png)
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/connect.png)
+
+此时连接127.0.0.1的8888端口，就相当于连接至127.0.0.1的22端口
+
 ```
 具体命令使用可输入help查询
 ```
@@ -190,7 +198,8 @@ PS: 在ssh模式下，你可以用pwd来判断自己所处的文件夹（好吧�
 - [ ] 清理代码，优化逻辑
 - [ ] 增加cc功能
 - [x] 节点反向连接
-- [ ] 支持端口复用
+- [x] 端口映射
+- [ ] 支持端口复用(试验后觉得比较鸡肋，暂时先不加进去)
 
 ### 注意事项
 

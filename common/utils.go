@@ -6,7 +6,7 @@ import (
 )
 
 /*-------------------------加锁map相关代码--------------------------*/
-type Uint32StrMap struct {
+type Uint32ChanStrMap struct {
 	sync.RWMutex
 	Payload map[uint32]chan string
 }
@@ -22,8 +22,8 @@ type Uint32ConnMap struct {
 }
 
 /*-------------------------初始化各类map相关代码--------------------------*/
-func NewUint32StrMap() *Uint32StrMap {
-	sm := new(Uint32StrMap)
+func NewUint32ChanStrMap() *Uint32ChanStrMap {
+	sm := new(Uint32ChanStrMap)
 	sm.Payload = make(map[uint32]chan string, 10)
 	return sm
 }

@@ -15,9 +15,17 @@ import (
 )
 
 var (
-	AdminCommandChan = make(chan []string)
 	Nodes            = make(map[uint32]string)
+	AdminCommandChan = make(chan []string)
+	ForwardIsValid   = make(chan bool, 1)
+
+	ForwardNum                 uint32         //Forward socket编号，必须全局，不然stopforward后，无法获得最新的编号
+	CurrentPortForwardListener []net.Listener //记录一下当前开启的port-forward listener，以供关闭
 )
+
+func init() {
+	ForwardNum = 0
+}
 
 /*-------------------------控制台相关代码--------------------------*/
 // 启动控制台
@@ -125,6 +133,76 @@ func StartSSHService(startNodeControlConn net.Conn, info []string, nodeid uint32
 	information := fmt.Sprintf("%s::%s::%s", info[1], info[2], info[3])
 	sshCommand, _ := common.ConstructCommand("SSH", information, nodeid, AESKey)
 	startNodeControlConn.Write(sshCommand)
+}
+
+/*-------------------------Port Forward功能启动相关代码--------------------------*/
+// 发送forward开启命令
+func HandleForwardPort(forwardconn net.Conn, target string, dataconn net.Conn, num uint32, nodeid uint32) {
+	forwardCommand, _ := common.ConstructDataResult(nodeid, num, " ", "FORWARD", target, AESKey, 0)
+	dataconn.Write(forwardCommand)
+
+	buffer := make([]byte, 10240)
+	for {
+		len, err := forwardconn.Read(buffer)
+		if err != nil {
+			forwardconn.Close()
+			finMessage, _ := common.ConstructDataResult(nodeid, num, " ", "FORWARDFIN", " ", AESKey, 0)
+			dataconn.Write(finMessage)
+			PortForWardMap.Lock()
+			if _, ok := PortForWardMap.Payload[num]; ok {
+				delete(PortForWardMap.Payload, num)
+			}
+			PortForWardMap.Unlock()
+			return
+		} else {
+			respData, _ := common.ConstructDataResult(nodeid, num, " ", "FORWARDDATA", string(buffer[:len]), AESKey, 0)
+			dataconn.Write(respData)
+		}
+	}
+}
+
+func StartPortForwardForClient(info []string, dataconn net.Conn, controlconn net.Conn, nodeid uint32, AESKey []byte) {
+	TestIfValid(controlconn, info[2], nodeid)
+	if <-ForwardIsValid {
+	} else {
+		return
+	}
+
+	localPort := info[1]
+	forwardAddr := fmt.Sprintf("0.0.0.0:%s", localPort)
+	forwardListenerForClient, err := net.Listen("tcp", forwardAddr)
+	if err != nil {
+		log.Println("[*]Cannot forward this local port!")
+		return
+	}
+
+	CurrentPortForwardListener = append(CurrentPortForwardListener, forwardListenerForClient)
+
+	for {
+		conn, err := forwardListenerForClient.Accept()
+		if err != nil {
+			log.Println("[*]PortForward service stoped")
+			return
+		}
+		PortForWardMap.Lock()
+		PortForWardMap.Payload[ForwardNum] = conn
+		PortForWardMap.Unlock()
+		PortForWardMap.RLock()
+		go HandleForwardPort(PortForWardMap.Payload[ForwardNum], info[2], dataconn, ForwardNum, nodeid)
+		PortForWardMap.RUnlock()
+		ForwardNum++
+	}
+}
+
+func TestIfValid(controlconn net.Conn, target string, nodeid uint32) {
+	command, _ := common.ConstructCommand("FORWARDTEST", target, nodeid, AESKey)
+	controlconn.Write(command)
+}
+
+func StopForward() {
+	for _, listener := range CurrentPortForwardListener {
+		listener.Close()
+	}
 }
 
 /*-------------------------功能控制相关代码--------------------------*/

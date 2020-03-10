@@ -17,18 +17,18 @@ var (
 	CliStatus *string
 	StartNode string = "0.0.0.0"
 
-	ReadyChange      = make(chan bool)
-	IsShellMode      = make(chan bool)
+	ReadyChange      = make(chan bool, 1)
+	IsShellMode      = make(chan bool, 1)
 	SshSuccess       = make(chan bool, 1)
 	NodeSocksStarted = make(chan bool, 1)
 	GetName          = make(chan bool, 1)
 	CannotRead       = make(chan bool, 1)
+	Eof              = make(chan string, 1)
+	NodesReadyToadd  = make(chan map[uint32]string)
 
-	Eof             = make(chan string, 1)
-	NodesReadyToadd = make(chan map[uint32]string)
-
-	FileDataMap   *common.IntStrMap
-	ClientSockets *common.Uint32ConnMap
+	FileDataMap    *common.IntStrMap
+	ClientSockets  *common.Uint32ConnMap
+	PortForWardMap *common.Uint32ConnMap
 
 	AESKey []byte
 
@@ -42,6 +42,7 @@ func NewAdmin(c *cli.Context) {
 
 	ClientSockets = common.NewUint32ConnMap()
 	FileDataMap = common.NewIntStrMap()
+	PortForWardMap = common.NewUint32ConnMap()
 	AESKey = []byte(c.String("secret"))
 	listenPort := c.String("listen")
 	startnodeaddr := c.String("connect")
@@ -164,8 +165,8 @@ func HandleDataConn(startNodeDataConn net.Conn) {
 		case "SOCKSDATARESP":
 			ClientSockets.RLock()
 			// fmt.Println("get response!", string(nodeResp.Result))
-			if _, ok := ClientSockets.Payload[nodeResp.Clientsocks]; ok {
-				_, err := ClientSockets.Payload[nodeResp.Clientsocks].Write([]byte(nodeResp.Result))
+			if _, ok := ClientSockets.Payload[nodeResp.Clientid]; ok {
+				_, err := ClientSockets.Payload[nodeResp.Clientid].Write([]byte(nodeResp.Result))
 				if err != nil {
 					ClientSockets.RUnlock()
 					continue
@@ -174,24 +175,33 @@ func HandleDataConn(startNodeDataConn net.Conn) {
 			ClientSockets.RUnlock()
 		case "FIN":
 			ClientSockets.RLock()
-			if _, ok := ClientSockets.Payload[nodeResp.Clientsocks]; ok {
-				ClientSockets.Payload[nodeResp.Clientsocks].Close()
+			if _, ok := ClientSockets.Payload[nodeResp.Clientid]; ok {
+				ClientSockets.Payload[nodeResp.Clientid].Close()
 			}
 			ClientSockets.RUnlock()
 			ClientSockets.Lock()
-			if _, ok := ClientSockets.Payload[nodeResp.Clientsocks]; ok {
-				delete(ClientSockets.Payload, nodeResp.Clientsocks)
+			if _, ok := ClientSockets.Payload[nodeResp.Clientid]; ok {
+				delete(ClientSockets.Payload, nodeResp.Clientid)
 			}
 			ClientSockets.Unlock()
 			clientnum, _ := strconv.ParseInt(nodeResp.Result, 10, 32)
 			client := uint32(clientnum)
-			respCommand, _ := common.ConstructDataResult(client, nodeResp.Clientsocks, " ", "FINOK", " ", AESKey, 0)
+			respCommand, _ := common.ConstructDataResult(client, nodeResp.Clientid, " ", "FINOK", " ", AESKey, 0)
 			startNodeDataConn.Write(respCommand)
 		case "FILEDATA": //接收文件内容
 			slicenum, _ := strconv.Atoi(nodeResp.FileSliceNum)
 			FileDataMap.Payload[slicenum] = nodeResp.Result
 		case "EOF": //文件读取结束
 			Eof <- nodeResp.FileSliceNum
+		case "FORWARDDATARESP":
+			PortForWardMap.Payload[nodeResp.Clientid].Write([]byte(nodeResp.Result))
+		case "FORWARDOFFLINE":
+			PortForWardMap.Lock()
+			if _, ok := PortForWardMap.Payload[nodeResp.Clientid]; ok {
+				PortForWardMap.Payload[nodeResp.Clientid].Close()
+				delete(PortForWardMap.Payload, nodeResp.Clientid)
+			}
+			PortForWardMap.Unlock()
 		case "KEEPALIVE":
 		}
 	}
@@ -330,6 +340,12 @@ func HandleCommandFromControlConn(startNodeControlConn net.Conn) {
 			startNodeControlConn.Write(hbcommpack)
 		case "TRANSSUCCESS":
 			fmt.Println("File transmission complete!")
+		case "FORWARDFAIL":
+			fmt.Println("[*]Remote port seems down,port forward failed!")
+			ForwardIsValid <- false
+		case "FORWARDOK":
+			fmt.Println("[*]Port forward successfully started!")
+			ForwardIsValid <- true
 		default:
 			log.Println("[*]Unknown Command")
 			continue

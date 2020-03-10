@@ -30,7 +30,7 @@ var (
 	Eof                = make(chan string, 1)
 
 	FileDataMap      *common.IntStrMap
-	SocksDataChanMap *common.Uint32StrMap
+	SocksDataChanMap *common.Uint32ChanStrMap
 
 	ControlConnToAdmin net.Conn
 	DataConnToAdmin    net.Conn
@@ -40,7 +40,7 @@ var (
 )
 
 func NewAgent(c *cli.Context) {
-	SocksDataChanMap = common.NewUint32StrMap()
+	SocksDataChanMap = common.NewUint32ChanStrMap()
 	FileDataMap = common.NewIntStrMap()
 	AESKey = []byte(c.String("secret"))
 	listenPort := c.String("listen")
@@ -199,18 +199,18 @@ func HandleDataConnFromAdmin(dataConnToAdmin *net.Conn, NODEID uint32) {
 			switch AdminData.Datatype {
 			case "SOCKSDATA":
 				SocksDataChanMap.RLock()
-				if _, ok := SocksDataChanMap.Payload[AdminData.Clientsocks]; ok {
-					SocksDataChanMap.Payload[AdminData.Clientsocks] <- AdminData.Result
+				if _, ok := SocksDataChanMap.Payload[AdminData.Clientid]; ok {
+					SocksDataChanMap.Payload[AdminData.Clientid] <- AdminData.Result
 					SocksDataChanMap.RUnlock()
 				} else {
 					//fmt.Println("create new chan", AdminData.Clientsocks)
 					SocksDataChanMap.RUnlock()
 					tempchan := make(chan string, 10)
 					SocksDataChanMap.Lock()
-					SocksDataChanMap.Payload[AdminData.Clientsocks] = tempchan
+					SocksDataChanMap.Payload[AdminData.Clientid] = tempchan
 					//fmt.Println(AdminData.Clientsocks, " created")
-					go HanleClientSocksConn(SocksDataChanMap.Payload[AdminData.Clientsocks], SocksUsername, SocksPass, AdminData.Clientsocks, NODEID)
-					SocksDataChanMap.Payload[AdminData.Clientsocks] <- AdminData.Result
+					go HanleClientSocksConn(SocksDataChanMap.Payload[AdminData.Clientid], SocksUsername, SocksPass, AdminData.Clientid, NODEID)
+					SocksDataChanMap.Payload[AdminData.Clientid] <- AdminData.Result
 					SocksDataChanMap.Unlock()
 				}
 			case "FILEDATA": //接收文件内容
@@ -218,30 +218,64 @@ func HandleDataConnFromAdmin(dataConnToAdmin *net.Conn, NODEID uint32) {
 				FileDataMap.Lock()
 				FileDataMap.Payload[slicenum] = AdminData.Result
 				FileDataMap.Unlock()
+			case "FORWARD":
+				TryForward(dataConnToAdmin, AdminData.Result, AdminData.Clientid)
+			case "FORWARDDATA":
+				ForwardConnMap.RLock()
+				if _, ok := ForwardConnMap.Payload[AdminData.Clientid]; ok {
+					PortFowardMap.Lock()
+					if _, ok := PortFowardMap.Payload[AdminData.Clientid]; ok {
+						PortFowardMap.Payload[AdminData.Clientid] <- AdminData.Result
+					} else {
+						tempchan := make(chan string, 10)
+						PortFowardMap.Payload[AdminData.Clientid] = tempchan
+						//fmt.Println("make new ", AdminData.Clientid)
+						go HandleForward(dataConnToAdmin, PortFowardMap.Payload[AdminData.Clientid], AdminData.Clientid)
+						PortFowardMap.Payload[AdminData.Clientid] <- AdminData.Result
+					}
+					PortFowardMap.Unlock()
+				}
+				ForwardConnMap.RUnlock()
+			case "FORWARDFIN":
+				ForwardConnMap.Lock()
+				if _, ok := ForwardConnMap.Payload[AdminData.Clientid]; ok {
+					ForwardConnMap.Payload[AdminData.Clientid].Close()
+					delete(ForwardConnMap.Payload, AdminData.Clientid)
+				}
+				ForwardConnMap.Unlock()
+				PortFowardMap.Lock()
+				if _, ok := PortFowardMap.Payload[AdminData.Clientid]; ok {
+					if !IsClosed(PortFowardMap.Payload[AdminData.Clientid]) {
+						close(PortFowardMap.Payload[AdminData.Clientid])
+					}
+				}
+				PortFowardMap.Unlock()
 			case "EOF": //文件读取结束
 				Eof <- AdminData.FileSliceNum
 			case "FINOK":
+				//fmt.Println("get finok")
 				SocksDataChanMap.Lock() //性能损失？
-				if _, ok := SocksDataChanMap.Payload[AdminData.Clientsocks]; ok {
-					if !IsClosed(SocksDataChanMap.Payload[AdminData.Clientsocks]) {
-						close(SocksDataChanMap.Payload[AdminData.Clientsocks])
+				if _, ok := SocksDataChanMap.Payload[AdminData.Clientid]; ok {
+					if !IsClosed(SocksDataChanMap.Payload[AdminData.Clientid]) {
+						close(SocksDataChanMap.Payload[AdminData.Clientid])
 					}
-					delete(SocksDataChanMap.Payload, AdminData.Clientsocks)
+					delete(SocksDataChanMap.Payload, AdminData.Clientid)
 					//fmt.Println("close one, still left", len(SocksDataChanMap.SocksDataChan))
 				}
 				SocksDataChanMap.Unlock()
 			case "FIN":
+				//fmt.Println("get admin's order ", AdminData.Clientsocks)
 				CurrentConn.Lock()
-				if _, ok := CurrentConn.Payload[AdminData.Clientsocks]; ok {
-					CurrentConn.Payload[AdminData.Clientsocks].Close()
+				if _, ok := CurrentConn.Payload[AdminData.Clientid]; ok {
+					CurrentConn.Payload[AdminData.Clientid].Close()
 				}
 				CurrentConn.Unlock()
 				SocksDataChanMap.Lock()
-				if _, ok := SocksDataChanMap.Payload[AdminData.Clientsocks]; ok {
-					if !IsClosed(SocksDataChanMap.Payload[AdminData.Clientsocks]) {
-						close(SocksDataChanMap.Payload[AdminData.Clientsocks])
+				if _, ok := SocksDataChanMap.Payload[AdminData.Clientid]; ok {
+					if !IsClosed(SocksDataChanMap.Payload[AdminData.Clientid]) {
+						close(SocksDataChanMap.Payload[AdminData.Clientid])
 					}
-					delete(SocksDataChanMap.Payload, AdminData.Clientsocks)
+					delete(SocksDataChanMap.Payload, AdminData.Clientid)
 				}
 				SocksDataChanMap.Unlock()
 			case "HEARTBEAT":
@@ -249,7 +283,7 @@ func HandleDataConnFromAdmin(dataConnToAdmin *net.Conn, NODEID uint32) {
 				(*dataConnToAdmin).Write(hbdatapack)
 			}
 		} else {
-			ProxyData, _ := common.ConstructDataResult(AdminData.NodeId, AdminData.Clientsocks, AdminData.FileSliceNum, AdminData.Datatype, AdminData.Result, AESKey, NODEID)
+			ProxyData, _ := common.ConstructDataResult(AdminData.NodeId, AdminData.Clientid, AdminData.FileSliceNum, AdminData.Datatype, AdminData.Result, AESKey, NODEID)
 			go ProxyDataToNextNode(ProxyData)
 		}
 	}
@@ -342,12 +376,14 @@ func HandleControlConnFromAdmin(controlConnToAdmin *net.Conn, monitor, listenPor
 				GetName <- false
 			case "CANNOTREAD":
 				CannotRead <- true
+			case "FORWARDTEST":
+				go TestForward(command.Info, controlConnToAdmin)
 			case "ADMINOFFLINE":
 				log.Println("[*]Admin seems offline!")
 				if reConn != "0" && reConn != "" && !passive {
 					ClearAllConn()
 					time.Sleep(1 * time.Second)
-					SocksDataChanMap = common.NewUint32StrMap()
+					SocksDataChanMap = common.NewUint32ChanStrMap()
 					if NotLastOne {
 						messCommand, _ := common.ConstructCommand("CLEAR", "", 2, AESKey)
 						Proxy_Command_Chan <- messCommand
@@ -360,7 +396,7 @@ func HandleControlConnFromAdmin(controlConnToAdmin *net.Conn, monitor, listenPor
 				} else if reConn == "0" && passive {
 					ClearAllConn()
 					time.Sleep(1 * time.Second)
-					SocksDataChanMap = common.NewUint32StrMap()
+					SocksDataChanMap = common.NewUint32ChanStrMap()
 					if NotLastOne {
 						messCommand, _ := common.ConstructCommand("CLEAR", "", 2, AESKey)
 						Proxy_Command_Chan <- messCommand
@@ -576,6 +612,8 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode *net.Conn, NODEID uin
 				GetName <- false
 			case "CANNOTREAD":
 				CannotRead <- true
+			case "FORWARDTEST":
+				go TestForward(command.Info, controlConnToUpperNode)
 			case "ADMINOFFLINE": //startnode不执行重连模式时admin下线后传递的数据
 				fmt.Println("Admin seems offline")
 				if NotLastOne {
@@ -594,7 +632,7 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode *net.Conn, NODEID uin
 			case "CLEAR":
 				ClearAllConn()
 				time.Sleep(1 * time.Second)
-				SocksDataChanMap = common.NewUint32StrMap()
+				SocksDataChanMap = common.NewUint32ChanStrMap()
 				if NotLastOne {
 					messCommand, _ := common.ConstructCommand("CLEAR", "", NODEID+1, AESKey)
 					Proxy_Command_Chan <- messCommand
@@ -635,25 +673,25 @@ func HandleDataConnFromUpperNode(dataConnToUpperNode *net.Conn) {
 			switch AdminData.Datatype {
 			case "SOCKSDATA":
 				SocksDataChanMap.RLock()
-				if _, ok := SocksDataChanMap.Payload[AdminData.Clientsocks]; ok {
-					SocksDataChanMap.Payload[AdminData.Clientsocks] <- AdminData.Result
+				if _, ok := SocksDataChanMap.Payload[AdminData.Clientid]; ok {
+					SocksDataChanMap.Payload[AdminData.Clientid] <- AdminData.Result
 					SocksDataChanMap.RUnlock()
 				} else {
 					SocksDataChanMap.RUnlock()
 					tempchan := make(chan string, 10)
 					SocksDataChanMap.Lock()
-					SocksDataChanMap.Payload[AdminData.Clientsocks] = tempchan
-					go HanleClientSocksConn(SocksDataChanMap.Payload[AdminData.Clientsocks], SocksUsername, SocksPass, AdminData.Clientsocks, NODEID)
-					SocksDataChanMap.Payload[AdminData.Clientsocks] <- AdminData.Result
+					SocksDataChanMap.Payload[AdminData.Clientid] = tempchan
+					go HanleClientSocksConn(SocksDataChanMap.Payload[AdminData.Clientid], SocksUsername, SocksPass, AdminData.Clientid, NODEID)
+					SocksDataChanMap.Payload[AdminData.Clientid] <- AdminData.Result
 					SocksDataChanMap.Unlock()
 				}
 			case "FINOK":
 				SocksDataChanMap.Lock()
-				if _, ok := SocksDataChanMap.Payload[AdminData.Clientsocks]; ok {
-					if !IsClosed(SocksDataChanMap.Payload[AdminData.Clientsocks]) {
-						close(SocksDataChanMap.Payload[AdminData.Clientsocks])
+				if _, ok := SocksDataChanMap.Payload[AdminData.Clientid]; ok {
+					if !IsClosed(SocksDataChanMap.Payload[AdminData.Clientid]) {
+						close(SocksDataChanMap.Payload[AdminData.Clientid])
 					}
-					delete(SocksDataChanMap.Payload, AdminData.Clientsocks)
+					delete(SocksDataChanMap.Payload, AdminData.Clientid)
 				}
 				SocksDataChanMap.Unlock()
 				//fmt.Println("close one, still left", len(SocksDataChanMap.SocksDataChan))
@@ -664,20 +702,52 @@ func HandleDataConnFromUpperNode(dataConnToUpperNode *net.Conn) {
 				Eof <- AdminData.FileSliceNum
 			case "FIN":
 				CurrentConn.Lock()
-				if _, ok := CurrentConn.Payload[AdminData.Clientsocks]; ok {
-					err := CurrentConn.Payload[AdminData.Clientsocks].Close()
+				if _, ok := CurrentConn.Payload[AdminData.Clientid]; ok {
+					err := CurrentConn.Payload[AdminData.Clientid].Close()
 					if err != nil {
 					}
 				}
 				CurrentConn.Unlock()
 				SocksDataChanMap.Lock()
-				if _, ok := SocksDataChanMap.Payload[AdminData.Clientsocks]; ok {
-					if !IsClosed(SocksDataChanMap.Payload[AdminData.Clientsocks]) {
-						close(SocksDataChanMap.Payload[AdminData.Clientsocks])
+				if _, ok := SocksDataChanMap.Payload[AdminData.Clientid]; ok {
+					if !IsClosed(SocksDataChanMap.Payload[AdminData.Clientid]) {
+						close(SocksDataChanMap.Payload[AdminData.Clientid])
 					}
-					delete(SocksDataChanMap.Payload, AdminData.Clientsocks)
+					delete(SocksDataChanMap.Payload, AdminData.Clientid)
 				}
 				SocksDataChanMap.Unlock()
+			case "FORWARD": //连接指定需要映射的端口
+				TryForward(dataConnToUpperNode, AdminData.Result, AdminData.Clientid)
+			case "FORWARDDATA":
+				ForwardConnMap.RLock()
+				if _, ok := ForwardConnMap.Payload[AdminData.Clientid]; ok {
+					PortFowardMap.Lock()
+					if _, ok := PortFowardMap.Payload[AdminData.Clientid]; ok {
+						PortFowardMap.Payload[AdminData.Clientid] <- AdminData.Result
+					} else {
+						tempchan := make(chan string, 10)
+						PortFowardMap.Payload[AdminData.Clientid] = tempchan
+						//fmt.Println("make new ", AdminData.Clientid)
+						go HandleForward(dataConnToUpperNode, PortFowardMap.Payload[AdminData.Clientid], AdminData.Clientid)
+						PortFowardMap.Payload[AdminData.Clientid] <- AdminData.Result
+					}
+					PortFowardMap.Unlock()
+				}
+				ForwardConnMap.RUnlock()
+			case "FORWARDFIN":
+				ForwardConnMap.Lock()
+				if _, ok := ForwardConnMap.Payload[AdminData.Clientid]; ok {
+					ForwardConnMap.Payload[AdminData.Clientid].Close()
+					delete(ForwardConnMap.Payload, AdminData.Clientid)
+				}
+				ForwardConnMap.Unlock()
+				PortFowardMap.Lock()
+				if _, ok := PortFowardMap.Payload[AdminData.Clientid]; ok {
+					if !IsClosed(PortFowardMap.Payload[AdminData.Clientid]) {
+						close(PortFowardMap.Payload[AdminData.Clientid])
+					}
+				}
+				PortFowardMap.Unlock()
 			case "HEARTBEAT":
 				hbdatapack, _ := common.ConstructDataResult(0, 0, " ", "KEEPALIVE", " ", AESKey, NODEID)
 				(*dataConnToUpperNode).Write(hbdatapack)
@@ -686,7 +756,7 @@ func HandleDataConnFromUpperNode(dataConnToUpperNode *net.Conn) {
 				continue
 			}
 		} else {
-			ProxyData, _ := common.ConstructDataResult(AdminData.NodeId, AdminData.Clientsocks, AdminData.FileSliceNum, AdminData.Datatype, AdminData.Result, AESKey, NODEID)
+			ProxyData, _ := common.ConstructDataResult(AdminData.NodeId, AdminData.Clientid, AdminData.FileSliceNum, AdminData.Datatype, AdminData.Result, AESKey, NODEID)
 			go ProxyDataToNextNode(ProxyData)
 		}
 	}
