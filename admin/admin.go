@@ -39,7 +39,6 @@ var (
 //启动admin
 func NewAdmin(c *cli.Context) {
 	var InitStatus string = "admin"
-
 	ClientSockets = common.NewUint32ConnMap()
 	FileDataMap = common.NewIntStrMap()
 	PortForWardMap = common.NewUint32ConnMap()

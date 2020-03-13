@@ -7,7 +7,9 @@ import (
 	"log"
 	"net"
 	"os"
+	"runtime"
 	"strconv"
+	"strings"
 )
 
 var CurrentNode uint32
@@ -136,6 +138,9 @@ func HandleShellToNode(startNodeControlConn net.Conn, nodeID uint32) {
 	inputReader := bufio.NewReader(os.Stdin)
 	for {
 		command, err := inputReader.ReadString('\n')
+		if runtime.GOOS == "windows" {
+			command = strings.Replace(command, "\r", "", -1)
+		}
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)

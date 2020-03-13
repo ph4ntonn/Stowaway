@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -31,6 +32,7 @@ func init() {
 // 启动控制台
 func Controlpanel() {
 	inputReader := bufio.NewReader(os.Stdin)
+	var command string
 	for {
 		fmt.Printf("(%s) >> ", *CliStatus)
 		input, err := inputReader.ReadString('\n')
@@ -38,7 +40,11 @@ func Controlpanel() {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		command := strings.Replace(input, "\n", "", -1)
+		if runtime.GOOS == "windows" {
+			command = strings.Replace(input, "\r\n", "", -1)
+		} else {
+			command = strings.Replace(input, "\n", "", -1)
+		}
 		execCommand := strings.Split(command, " ")
 		AdminCommandChan <- execCommand
 
