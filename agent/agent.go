@@ -4,6 +4,7 @@ import (
 	"Stowaway/common"
 	"Stowaway/node"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -302,12 +303,12 @@ func HandleControlConnToAdmin(controlConnToAdmin *net.Conn) {
 
 //同上
 func HandleControlConnFromAdmin(controlConnToAdmin *net.Conn, monitor, listenPort, reConn string, passive bool, NODEID uint32) {
-	var neverexit bool = true
-	var CannotRead = make(chan bool, 1)
-	var GetName = make(chan bool, 1)
-
-	stdout, stdin := CreatInteractiveShell()
-
+	var (
+		CannotRead = make(chan bool, 1)
+		GetName    = make(chan bool, 1)
+		stdin      io.Writer
+		stdout     io.Reader
+	)
 	for {
 		command, err := common.ExtractCommand(*controlConnToAdmin, AESKey)
 		if err != nil {
@@ -319,19 +320,13 @@ func HandleControlConnFromAdmin(controlConnToAdmin *net.Conn, monitor, listenPor
 			case "SHELL":
 				switch command.Info {
 				case "":
+					stdout, stdin = CreatInteractiveShell()
 					//logrus.Info("Get command to start shell")
-					if neverexit { //判断之前是否进入过shell模式
-						go func() {
-							StartShell("", stdin, stdout, NODEID)
-						}()
-					} else {
-						go func() {
-							StartShell("\n", stdin, stdout, NODEID)
-						}()
-					}
+					go func() {
+						StartShell("", stdin, stdout, NODEID)
+					}()
 				case "exit\n":
-					neverexit = false
-					continue
+					fallthrough
 				default:
 					go func() {
 						StartShell(command.Info, stdin, stdout, NODEID)

@@ -43,7 +43,7 @@ func StartShell(command string, stdin io.Writer, stdout io.Reader, currentid uin
 	for {
 		count, err := stdout.Read(buf)
 		if err != nil {
-			fmt.Println("error: ", err)
+			//fmt.Println("error: ", err)
 			return
 		}
 		respShell, err := common.ConstructDataResult(0, 0, " ", dataType, string(buf[:count]), AESKey, currentid)
