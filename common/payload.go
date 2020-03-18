@@ -25,9 +25,9 @@ type Command struct {
 type Data struct {
 	NodeId uint32 //节点序号
 
-	Clientid uint32 //socks标号
+	Clientid uint32 //socks以及forward功能中用来标识当前需要操作的connection
 
-	FileSliceNumLength uint32 //Success字段长度
+	FileSliceNumLength uint32 //文件传输分包序号字段长度
 
 	FileSliceNum string //文件传输分包序号
 
