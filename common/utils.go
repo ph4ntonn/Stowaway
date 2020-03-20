@@ -2,6 +2,7 @@ package common
 
 import (
 	"net"
+	"runtime"
 	"sync"
 )
 
@@ -38,4 +39,27 @@ func NewUint32ConnMap() *Uint32ConnMap {
 	sm := new(Uint32ConnMap)
 	sm.Payload = make(map[uint32]net.Conn)
 	return sm
+}
+
+/*-------------------------chan状态判断相关代码--------------------------*/
+//判断chan是否已经被释放
+func IsClosed(ch chan string) bool {
+	select {
+	case <-ch:
+		return true
+	default:
+	}
+	return false
+}
+
+/*-------------------------操作系统判断相关代码--------------------------*/
+func CheckSystem() (sysType uint32) {
+	var os = runtime.GOOS
+	switch os {
+	case "windows":
+		sysType = 0x01
+	default:
+		sysType = 0xff
+	}
+	return
 }

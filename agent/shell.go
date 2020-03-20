@@ -11,7 +11,7 @@ import (
 //创建交互式shell
 func CreatInteractiveShell() (io.Reader, io.Writer) {
 	var cmd *exec.Cmd
-	sys := CheckSystem()
+	sys := common.CheckSystem()
 	switch sys {
 	case 0x01:
 		cmd = exec.Command("c:\\windows\\system32\\cmd.exe")

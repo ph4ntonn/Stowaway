@@ -194,6 +194,8 @@ func HandleDataConn(startNodeDataConn net.Conn) {
 			Eof <- nodeResp.FileSliceNum
 		case "FORWARDDATARESP":
 			PortForWardMap.Payload[nodeResp.Clientid].Write([]byte(nodeResp.Result))
+		case "REFLECTTIMEOUT":
+			fallthrough
 		case "FORWARDOFFLINE":
 			PortForWardMap.Lock()
 			if _, ok := PortForWardMap.Payload[nodeResp.Clientid]; ok {
@@ -201,6 +203,37 @@ func HandleDataConn(startNodeDataConn net.Conn) {
 				delete(PortForWardMap.Payload, nodeResp.Clientid)
 			}
 			PortForWardMap.Unlock()
+		case "REFLECT":
+			TryReflect(DataConn, nodeResp.CurrentId, nodeResp.Clientid, nodeResp.Result)
+		case "REFLECTFIN":
+			ReflectConnMap.Lock()
+			if _, ok := ReflectConnMap.Payload[nodeResp.Clientid]; ok {
+				ReflectConnMap.Payload[nodeResp.Clientid].Close()
+				delete(ReflectConnMap.Payload, nodeResp.Clientid)
+			}
+			ReflectConnMap.Unlock()
+			PortReflectMap.Lock()
+			if _, ok := PortReflectMap.Payload[nodeResp.Clientid]; ok {
+				if !common.IsClosed(PortReflectMap.Payload[nodeResp.Clientid]) {
+					close(PortReflectMap.Payload[nodeResp.Clientid])
+				}
+			}
+			PortReflectMap.Unlock()
+		case "REFLECTDATA":
+			ReflectConnMap.RLock()
+			if _, ok := ReflectConnMap.Payload[nodeResp.Clientid]; ok {
+				PortReflectMap.Lock()
+				if _, ok := PortReflectMap.Payload[nodeResp.Clientid]; ok {
+					PortReflectMap.Payload[nodeResp.Clientid] <- nodeResp.Result
+				} else {
+					tempchan := make(chan string, 10)
+					PortReflectMap.Payload[nodeResp.Clientid] = tempchan
+					go HandleReflect(DataConn, PortReflectMap.Payload[nodeResp.Clientid], nodeResp.Clientid, nodeResp.CurrentId)
+					PortReflectMap.Payload[nodeResp.Clientid] <- nodeResp.Result
+				}
+				PortReflectMap.Unlock()
+			}
+			ReflectConnMap.RUnlock()
 		case "KEEPALIVE":
 		}
 	}
@@ -345,6 +378,10 @@ func HandleCommandFromControlConn(startNodeControlConn net.Conn) {
 		case "FORWARDOK":
 			fmt.Println("[*]Port forward successfully started!")
 			ForwardIsValid <- true
+		case "REFLECTFAIL":
+			fmt.Println("[*]Agent seems cannot listen this port,port reflect failed!")
+		case "REFLECTOK":
+			fmt.Println("[*]Port reflect successfully started!")
 		default:
 			log.Println("[*]Unknown Command")
 			continue

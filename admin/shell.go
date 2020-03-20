@@ -111,6 +111,18 @@ func HandleNodeCommand(startNodeControlConn net.Conn, NodeID string) {
 			go StopForward()
 			ReadyChange <- true
 			IsShellMode <- true
+		case "reflect":
+			if len(AdminCommand) == 3 {
+				go StartReflectForClient(AdminCommand, DataConn, startNodeControlConn, nodeID, AESKey)
+			} else {
+				fmt.Println("Bad format! Should be reflect [rhostport] [localport]")
+			}
+			ReadyChange <- true
+			IsShellMode <- true
+		case "stopreflect":
+			go StopReflect(startNodeControlConn, nodeID)
+			ReadyChange <- true
+			IsShellMode <- true
 		case "help":
 			ShowNodeHelp()
 			ReadyChange <- true

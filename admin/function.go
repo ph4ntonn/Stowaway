@@ -22,10 +22,15 @@ var (
 
 	ForwardNum                 uint32         //Forward socket编号，必须全局，不然stopforward后，无法获得最新的编号
 	CurrentPortForwardListener []net.Listener //记录一下当前开启的port-forward listener，以供关闭
+
+	ReflectConnMap *common.Uint32ConnMap
+	PortReflectMap *common.Uint32ChanStrMap
 )
 
 func init() {
 	ForwardNum = 0
+	ReflectConnMap = common.NewUint32ConnMap()
+	PortReflectMap = common.NewUint32ChanStrMap()
 }
 
 /*-------------------------控制台相关代码--------------------------*/
@@ -168,7 +173,7 @@ func HandleForwardPort(forwardconn net.Conn, target string, dataconn net.Conn, n
 }
 
 func StartPortForwardForClient(info []string, dataconn net.Conn, controlconn net.Conn, nodeid uint32, AESKey []byte) {
-	TestIfValid(controlconn, info[2], nodeid)
+	TestIfValid("FORWARDTEST", controlconn, info[2], nodeid)
 	if <-ForwardIsValid {
 	} else {
 		return
@@ -200,15 +205,89 @@ func StartPortForwardForClient(info []string, dataconn net.Conn, controlconn net
 	}
 }
 
-func TestIfValid(controlconn net.Conn, target string, nodeid uint32) {
-	command, _ := common.ConstructCommand("FORWARDTEST", target, nodeid, AESKey)
-	controlconn.Write(command)
-}
-
 func StopForward() {
 	for _, listener := range CurrentPortForwardListener {
 		listener.Close()
 	}
+}
+
+/*-------------------------Reflect Port相关代码--------------------------*/
+//测试agent是否能够监听
+func StartReflectForClient(info []string, dataconn net.Conn, controlconn net.Conn, nodeid uint32, AESKey []byte) {
+	tempInfo := fmt.Sprintf("%s:%s", info[1], info[2])
+	TestIfValid("REFLECTTEST", controlconn, tempInfo, nodeid)
+}
+
+func TryReflect(dataconn net.Conn, nodeid uint32, id uint32, port string) {
+	target := fmt.Sprintf("0.0.0.0:%s", port)
+	reflectConn, err := net.Dial("tcp", target)
+	if err == nil {
+		ReflectConnMap.Lock()
+		ReflectConnMap.Payload[id] = reflectConn
+		ReflectConnMap.Unlock()
+	} else {
+		respdata, _ := common.ConstructDataResult(nodeid, id, " ", "REFLECTTIMEOUT", " ", AESKey, 0)
+		dataconn.Write(respdata)
+		return
+	}
+}
+
+func HandleReflect(dataConn net.Conn, reflectDataChan chan string, num uint32, nodeid uint32) {
+	ReflectConnMap.RLock()
+	reflectConn := ReflectConnMap.Payload[num]
+	ReflectConnMap.RUnlock()
+
+	go func() {
+		for {
+			reflectData, ok := <-reflectDataChan
+			if ok {
+				reflectConn.Write([]byte(reflectData))
+			} else {
+				return
+			}
+		}
+	}()
+
+	go func() {
+		serverbuffer := make([]byte, 10240)
+		for {
+			len, err := reflectConn.Read(serverbuffer)
+			if err != nil {
+				reflectConn.Close()
+				respdata, _ := common.ConstructDataResult(nodeid, num, " ", "REFLECTOFFLINE", " ", AESKey, 0)
+				dataConn.Write(respdata)
+				ReflectConnMap.Lock()
+				if _, ok := ReflectConnMap.Payload[num]; ok {
+					ReflectConnMap.Payload[num].Close()
+					delete(ReflectConnMap.Payload, num)
+				}
+				ReflectConnMap.Unlock()
+				PortReflectMap.Lock()
+				if _, ok := PortReflectMap.Payload[num]; ok {
+					if !common.IsClosed(PortReflectMap.Payload[num]) {
+						close(PortReflectMap.Payload[num])
+					}
+				}
+				PortReflectMap.Unlock()
+				return
+			}
+			respdata, _ := common.ConstructDataResult(nodeid, num, " ", "REFLECTDATARESP", string(serverbuffer[:len]), AESKey, 0)
+			dataConn.Write(respdata)
+		}
+	}()
+}
+
+func StopReflect(controlConn net.Conn, nodeId uint32) {
+	fmt.Println("[*]Stop command has been sent")
+	command, _ := common.ConstructCommand("STOPREFLECT", " ", nodeId, AESKey)
+	controlConn.Write(command)
+}
+
+/*-------------------------测试相关代码--------------------------*/
+//测试是否端口可用
+func TestIfValid(commandtype string, controlconn net.Conn, target string, nodeid uint32) {
+	command, _ := common.ConstructCommand(commandtype, target, nodeid, AESKey)
+	controlconn.Write(command)
 }
 
 /*-------------------------功能控制相关代码--------------------------*/

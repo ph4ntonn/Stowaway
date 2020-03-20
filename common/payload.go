@@ -38,6 +38,8 @@ type Data struct {
 	ResultLength uint32 //具体载荷长度
 
 	Result string //具体载荷
+
+	CurrentId uint32
 }
 
 func ExtractCommand(conn net.Conn, key []byte) (*Command, error) {
@@ -139,6 +141,7 @@ func ConstructDataResult(nodeid uint32, clientsocks uint32, fileSliceNum string,
 	FilesliceLength := make([]byte, config.FILESLICENUM_LEN)
 	DatatypeLength := make([]byte, config.DATATYPE_LEN)
 	ResultLength := make([]byte, config.RESULT_LEN)
+	CurrentIdLength := make([]byte, config.NODE_LEN)
 
 	FileSliceNum := []byte(fileSliceNum)
 	Datatype := []byte(datatype)
@@ -158,6 +161,7 @@ func ConstructDataResult(nodeid uint32, clientsocks uint32, fileSliceNum string,
 	binary.BigEndian.PutUint32(FilesliceLength, uint32(len(FileSliceNum)))
 	binary.BigEndian.PutUint32(DatatypeLength, uint32(len(Datatype)))
 	binary.BigEndian.PutUint32(ResultLength, uint32(len(Result)))
+	binary.BigEndian.PutUint32(CurrentIdLength, currentid)
 
 	buffer.Write(NodeIdLength)
 	buffer.Write(ClientsocksLength)
@@ -167,6 +171,7 @@ func ConstructDataResult(nodeid uint32, clientsocks uint32, fileSliceNum string,
 	buffer.Write(Datatype)
 	buffer.Write(ResultLength)
 	buffer.Write(Result)
+	buffer.Write(CurrentIdLength)
 
 	final := buffer.Bytes()
 
@@ -181,6 +186,7 @@ func ExtractDataResult(conn net.Conn, key []byte, currentid uint32) (*Data, erro
 		fileslicenumlen = make([]byte, config.FILESLICENUM_LEN)
 		datatypelen     = make([]byte, config.DATATYPE_LEN)
 		resultlen       = make([]byte, config.RESULT_LEN)
+		currentidlen    = make([]byte, config.NODE_LEN)
 	)
 
 	if len(key) != 0 {
@@ -193,7 +199,6 @@ func ExtractDataResult(conn net.Conn, key []byte, currentid uint32) (*Data, erro
 	}
 
 	data.NodeId = binary.BigEndian.Uint32(nodelen)
-
 	_, err = io.ReadFull(conn, clientlen)
 	if err != nil {
 		return data, err
@@ -248,6 +253,13 @@ func ExtractDataResult(conn net.Conn, key []byte, currentid uint32) (*Data, erro
 	} else {
 		data.Result = string(resultbuffer[:])
 	}
+
+	_, err = io.ReadFull(conn, currentidlen)
+	if err != nil {
+		return data, err
+	}
+
+	data.CurrentId = binary.BigEndian.Uint32(currentidlen)
 
 	return data, nil
 }

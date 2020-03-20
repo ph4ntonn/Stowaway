@@ -246,18 +246,31 @@ func HandleDataConnFromAdmin(dataConnToAdmin *net.Conn, NODEID uint32) {
 				ForwardConnMap.Unlock()
 				PortFowardMap.Lock()
 				if _, ok := PortFowardMap.Payload[AdminData.Clientid]; ok {
-					if !IsClosed(PortFowardMap.Payload[AdminData.Clientid]) {
+					if !common.IsClosed(PortFowardMap.Payload[AdminData.Clientid]) {
 						close(PortFowardMap.Payload[AdminData.Clientid])
 					}
 				}
 				PortFowardMap.Unlock()
+			case "REFLECTDATARESP":
+				ReflectConnMap.Lock()
+				ReflectConnMap.Payload[AdminData.Clientid].Write([]byte(AdminData.Result))
+				ReflectConnMap.Unlock()
+			case "REFLECTTIMEOUT":
+				fallthrough
+			case "REFLECTOFFLINE":
+				ReflectConnMap.Lock()
+				if _, ok := ReflectConnMap.Payload[AdminData.Clientid]; ok {
+					ReflectConnMap.Payload[AdminData.Clientid].Close()
+					delete(ReflectConnMap.Payload, AdminData.Clientid)
+				}
+				ReflectConnMap.Unlock()
 			case "EOF": //文件读取结束
 				Eof <- AdminData.FileSliceNum
 			case "FINOK":
 				//fmt.Println("get finok")
 				SocksDataChanMap.Lock() //性能损失？
 				if _, ok := SocksDataChanMap.Payload[AdminData.Clientid]; ok {
-					if !IsClosed(SocksDataChanMap.Payload[AdminData.Clientid]) {
+					if !common.IsClosed(SocksDataChanMap.Payload[AdminData.Clientid]) {
 						close(SocksDataChanMap.Payload[AdminData.Clientid])
 					}
 					delete(SocksDataChanMap.Payload, AdminData.Clientid)
@@ -273,7 +286,7 @@ func HandleDataConnFromAdmin(dataConnToAdmin *net.Conn, NODEID uint32) {
 				CurrentConn.Unlock()
 				SocksDataChanMap.Lock()
 				if _, ok := SocksDataChanMap.Payload[AdminData.Clientid]; ok {
-					if !IsClosed(SocksDataChanMap.Payload[AdminData.Clientid]) {
+					if !common.IsClosed(SocksDataChanMap.Payload[AdminData.Clientid]) {
 						close(SocksDataChanMap.Payload[AdminData.Clientid])
 					}
 					delete(SocksDataChanMap.Payload, AdminData.Clientid)
@@ -372,7 +385,22 @@ func HandleControlConnFromAdmin(controlConnToAdmin *net.Conn, monitor, listenPor
 			case "CANNOTREAD":
 				CannotRead <- true
 			case "FORWARDTEST":
-				go TestForward(command.Info, controlConnToAdmin)
+				go TestForward(command.Info)
+			case "REFLECTTEST":
+				go TestReflect(command.Info)
+			case "STOPREFLECT":
+				ReflectConnMap.Lock()
+				for key, conn := range ReflectConnMap.Payload {
+					err := conn.Close()
+					if err != nil {
+					}
+					delete(ForwardConnMap.Payload, key)
+				}
+				ReflectConnMap.Unlock()
+
+				for _, listener := range CurrentPortReflectListener {
+					listener.Close()
+				}
 			case "ADMINOFFLINE":
 				log.Println("[*]Admin seems offline!")
 				if reConn != "0" && reConn != "" && !passive {
@@ -602,7 +630,22 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode *net.Conn, NODEID uin
 			case "CANNOTREAD":
 				CannotRead <- true
 			case "FORWARDTEST":
-				go TestForward(command.Info, controlConnToUpperNode)
+				go TestForward(command.Info)
+			case "REFLECTTEST":
+				go TestReflect(command.Info)
+			case "STOPREFLECT":
+				ReflectConnMap.Lock()
+				for key, conn := range ReflectConnMap.Payload {
+					err := conn.Close()
+					if err != nil {
+					}
+					delete(ForwardConnMap.Payload, key)
+				}
+				ReflectConnMap.Unlock()
+
+				for _, listener := range CurrentPortReflectListener {
+					listener.Close()
+				}
 			case "ADMINOFFLINE": //startnode不执行重连模式时admin下线后传递的数据
 				fmt.Println("Admin seems offline")
 				if NotLastOne {
@@ -677,7 +720,7 @@ func HandleDataConnFromUpperNode(dataConnToUpperNode *net.Conn) {
 			case "FINOK":
 				SocksDataChanMap.Lock()
 				if _, ok := SocksDataChanMap.Payload[AdminData.Clientid]; ok {
-					if !IsClosed(SocksDataChanMap.Payload[AdminData.Clientid]) {
+					if !common.IsClosed(SocksDataChanMap.Payload[AdminData.Clientid]) {
 						close(SocksDataChanMap.Payload[AdminData.Clientid])
 					}
 					delete(SocksDataChanMap.Payload, AdminData.Clientid)
@@ -699,7 +742,7 @@ func HandleDataConnFromUpperNode(dataConnToUpperNode *net.Conn) {
 				CurrentConn.Unlock()
 				SocksDataChanMap.Lock()
 				if _, ok := SocksDataChanMap.Payload[AdminData.Clientid]; ok {
-					if !IsClosed(SocksDataChanMap.Payload[AdminData.Clientid]) {
+					if !common.IsClosed(SocksDataChanMap.Payload[AdminData.Clientid]) {
 						close(SocksDataChanMap.Payload[AdminData.Clientid])
 					}
 					delete(SocksDataChanMap.Payload, AdminData.Clientid)
@@ -732,11 +775,24 @@ func HandleDataConnFromUpperNode(dataConnToUpperNode *net.Conn) {
 				ForwardConnMap.Unlock()
 				PortFowardMap.Lock()
 				if _, ok := PortFowardMap.Payload[AdminData.Clientid]; ok {
-					if !IsClosed(PortFowardMap.Payload[AdminData.Clientid]) {
+					if !common.IsClosed(PortFowardMap.Payload[AdminData.Clientid]) {
 						close(PortFowardMap.Payload[AdminData.Clientid])
 					}
 				}
 				PortFowardMap.Unlock()
+			case "REFLECTDATARESP":
+				ReflectConnMap.Lock()
+				ReflectConnMap.Payload[AdminData.Clientid].Write([]byte(AdminData.Result))
+				ReflectConnMap.Unlock()
+			case "REFLECTTIMEOUT":
+				fallthrough
+			case "REFLECTOFFLINE":
+				ReflectConnMap.Lock()
+				if _, ok := ReflectConnMap.Payload[AdminData.Clientid]; ok {
+					ReflectConnMap.Payload[AdminData.Clientid].Close()
+					delete(ReflectConnMap.Payload, AdminData.Clientid)
+				}
+				ReflectConnMap.Unlock()
 			case "HEARTBEAT":
 				hbdatapack, _ := common.ConstructDataResult(0, 0, " ", "KEEPALIVE", " ", AESKey, NODEID)
 				(*dataConnToUpperNode).Write(hbdatapack)

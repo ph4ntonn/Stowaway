@@ -7,7 +7,6 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"runtime"
 	"strconv"
 	"syscall"
 	"time"
@@ -57,29 +56,6 @@ func WaitForExit(NODEID uint32) {
 	os.Exit(1)
 }
 
-/*-------------------------chan状态判断相关代码--------------------------*/
-//判断chan是否已经被释放
-func IsClosed(ch chan string) bool {
-	select {
-	case <-ch:
-		return true
-	default:
-	}
-	return false
-}
-
-/*-------------------------操作系统判断相关代码--------------------------*/
-func CheckSystem() (sysType uint32) {
-	var os = runtime.GOOS
-	switch os {
-	case "windows":
-		sysType = 0x01
-	default:
-		sysType = 0xff
-	}
-	return
-}
-
 /*-------------------------清除现存连接及发送FIN信号相关代码--------------------------*/
 //当admin下线后，清除并关闭所有现存的socket
 func ClearAllConn() {
@@ -94,7 +70,7 @@ func ClearAllConn() {
 
 	SocksDataChanMap.Lock()
 	for key, _ := range SocksDataChanMap.Payload {
-		if !IsClosed(SocksDataChanMap.Payload[key]) {
+		if !common.IsClosed(SocksDataChanMap.Payload[key]) {
 			close(SocksDataChanMap.Payload[key])
 		}
 		delete(SocksDataChanMap.Payload, key)
@@ -103,7 +79,7 @@ func ClearAllConn() {
 
 	PortFowardMap.Lock()
 	for key, _ := range PortFowardMap.Payload {
-		if !IsClosed(PortFowardMap.Payload[key]) {
+		if !common.IsClosed(PortFowardMap.Payload[key]) {
 			close(PortFowardMap.Payload[key])
 		}
 		delete(PortFowardMap.Payload, key)
@@ -118,6 +94,19 @@ func ClearAllConn() {
 		delete(ForwardConnMap.Payload, key)
 	}
 	ForwardConnMap.Unlock()
+
+	ReflectConnMap.Lock()
+	for key, conn := range ReflectConnMap.Payload {
+		err := conn.Close()
+		if err != nil {
+		}
+		delete(ForwardConnMap.Payload, key)
+	}
+	ReflectConnMap.Unlock()
+
+	for _, listener := range CurrentPortReflectListener {
+		listener.Close()
+	}
 
 }
 

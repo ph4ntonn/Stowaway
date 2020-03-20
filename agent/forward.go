@@ -17,27 +17,29 @@ func init() {
 
 /*-------------------------Port-forward启动相关代码--------------------------*/
 //检查需要映射的端口是否listen
-func TestForward(target string, controlconn *net.Conn) {
+func TestForward(target string) {
 	forwardConn, err := net.Dial("tcp", target)
 	if err != nil {
 		respCommand, _ := common.ConstructCommand("FORWARDFAIL", " ", 0, AESKey)
-		(*controlconn).Write(respCommand)
+		LowerNodeCommChan <- respCommand
 	} else {
 		defer forwardConn.Close()
 		respCommand, _ := common.ConstructCommand("FORWARDOK", " ", 0, AESKey)
-		(*controlconn).Write(respCommand)
+		LowerNodeCommChan <- respCommand
 	}
 
 }
 
 //连接指定端口
-func TryForward(controlconn *net.Conn, target string, num uint32) {
+func TryForward(dataconn *net.Conn, target string, num uint32) {
 	forwardConn, err := net.Dial("tcp", target)
 	if err == nil {
 		ForwardConnMap.Lock()
 		ForwardConnMap.Payload[num] = forwardConn
 		ForwardConnMap.Unlock()
 	} else {
+		respdata, _ := common.ConstructDataResult(0, num, " ", "REFLECTTIMEOUT", " ", AESKey, NODEID)
+		(*dataconn).Write(respdata)
 		return
 	}
 }
@@ -75,7 +77,7 @@ func HandleForward(dataConn *net.Conn, forwardDataChan chan string, num uint32) 
 				ForwardConnMap.Unlock()
 				PortFowardMap.Lock()
 				if _, ok := PortFowardMap.Payload[num]; ok {
-					if !IsClosed(PortFowardMap.Payload[num]) {
+					if !common.IsClosed(PortFowardMap.Payload[num]) {
 						close(PortFowardMap.Payload[num])
 					}
 				}

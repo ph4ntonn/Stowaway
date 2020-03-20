@@ -16,7 +16,7 @@ PS: Thanks for everyone's star, i'm just an amateur, and the code still need be 
 - Multi-hop ssh traffic proxy
 - Remote interactive shell
 - Upload/download functions
-- Port Mapping(local to remote)
+- Port Mapping(local to remote/remote to local)
 - Network traffic encryption with AES-256(CBC mode)
 
 
@@ -178,7 +178,12 @@ Port mapping：
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/portforward.png)
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/connect.png)
 
-Now you can connect to 127.0.0.1:8888 like really connecting to 127.0.0.1:22
+Now you can connect to 127.0.0.1:8888 like really connecting to 127.0.0.1:22(forward local port to remote port)
+
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/portreflect.png)
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/connectreflect.png)
+
+Now anyone who connect to 127.0.0.1:80 will connect to 127.0.0.1:22 in fact(forward remote port to local port)
 
 ```
 For more detail, just type help to get further informations

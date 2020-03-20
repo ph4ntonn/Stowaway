@@ -62,7 +62,7 @@ var Command = &cli.Command{
 			log.Println("You should set the -m option!")
 			os.Exit(1)
 		} else if !c.Bool("reverse") && c.String("monitor") != "" {
-			log.Println("Startnode starting......")
+			log.Println("Node starting......")
 		} else if c.String("reconnect") != "" && !c.Bool("startnode") {
 			log.Println("Do not set the --reconnect option on simple node")
 			os.Exit(1)
