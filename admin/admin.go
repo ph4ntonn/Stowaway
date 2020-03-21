@@ -85,7 +85,7 @@ func ConnectToStartNode(startnodeaddr string) {
 			StartNode = strings.Split(controlConnToStartNode.RemoteAddr().String(), ":")[0]
 			log.Printf("[*]Connect to startnode %s successfully!\n", controlConnToStartNode.RemoteAddr().String())
 			go HandleDataConn(dataConnToStartNode)
-			go common.SendHeartBeatData(dataConnToStartNode, 1, AESKey)
+			go common.SendHeartBeatData(dataConnToStartNode, 0, AESKey)
 			go HandleCommandFromControlConn(controlConnToStartNode)
 			go HandleCommandToControlConn(controlConnToStartNode)
 			go MonitorCtrlC(controlConnToStartNode)
@@ -109,7 +109,7 @@ func StartListen(listenPort string) {
 			log.Printf("[*]StartNode connected from %s!\n", conn.RemoteAddr().String())
 			DataConn = conn
 			go HandleDataConn(conn)
-			go common.SendHeartBeatData(conn, 1, AESKey)
+			go common.SendHeartBeatData(conn, 0, AESKey)
 		} else if startNodeIP != StartNode && StartNode == "0.0.0.0" {
 			go HandleInitControlConn(conn)
 		}

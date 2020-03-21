@@ -53,17 +53,14 @@ func NewAgent(c *cli.Context) {
 
 	if isStartNode && passive == false {
 		go StartNodeInit(monitor, listenPort, reconn, passive)
-		WaitForExit(NODEID)
 	} else if passive == false {
 		go SimpleNodeInit(monitor, listenPort)
-		WaitForExit(NODEID)
 	} else if isStartNode && passive {
 		go StartNodeReversemodeInit(monitor, listenPort, reconn, single, passive)
-		WaitForExit(NODEID)
 	} else if passive {
 		go SimpleNodeReversemodeInit(monitor, listenPort)
-		WaitForExit(NODEID)
 	}
+	WaitForExit(NODEID)
 }
 
 // 初始化代码开始
