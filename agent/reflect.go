@@ -60,14 +60,8 @@ func HandleReflectPort(reflectconn net.Conn, num uint32, nodeid uint32) {
 	for {
 		len, err := reflectconn.Read(buffer)
 		if err != nil {
-			reflectconn.Close()
 			finMessage, _ := common.ConstructDataResult(0, num, " ", "REFLECTFIN", " ", AESKey, nodeid)
 			CmdResult <- finMessage
-			ReflectConnMap.Lock()
-			if _, ok := ReflectConnMap.Payload[num]; ok {
-				delete(ReflectConnMap.Payload, num)
-			}
-			ReflectConnMap.Unlock()
 			return
 		} else {
 			respData, _ := common.ConstructDataResult(0, num, " ", "REFLECTDATA", string(buffer[:len]), AESKey, nodeid)

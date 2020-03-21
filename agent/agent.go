@@ -235,6 +235,7 @@ func HandleDataConnFromAdmin(dataConnToAdmin *net.Conn, NODEID uint32) {
 				}
 				ForwardConnMap.RUnlock()
 			case "FORWARDFIN":
+				//fmt.Println("get forward fin")
 				ForwardConnMap.Lock()
 				if _, ok := ForwardConnMap.Payload[AdminData.Clientid]; ok {
 					ForwardConnMap.Payload[AdminData.Clientid].Close()
@@ -255,6 +256,7 @@ func HandleDataConnFromAdmin(dataConnToAdmin *net.Conn, NODEID uint32) {
 			case "REFLECTTIMEOUT":
 				fallthrough
 			case "REFLECTOFFLINE":
+				//fmt.Println("get reflect offline")
 				ReflectConnMap.Lock()
 				if _, ok := ReflectConnMap.Payload[AdminData.Clientid]; ok {
 					ReflectConnMap.Payload[AdminData.Clientid].Close()

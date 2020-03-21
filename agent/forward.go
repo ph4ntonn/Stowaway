@@ -66,22 +66,8 @@ func HandleForward(dataConn *net.Conn, forwardDataChan chan string, num uint32) 
 		for {
 			len, err := forwardConn.Read(serverbuffer)
 			if err != nil {
-				forwardConn.Close()
 				respdata, _ := common.ConstructDataResult(0, num, " ", "FORWARDOFFLINE", " ", AESKey, NODEID)
 				(*dataConn).Write(respdata)
-				ForwardConnMap.Lock()
-				if _, ok := ForwardConnMap.Payload[num]; ok {
-					ForwardConnMap.Payload[num].Close()
-					delete(ForwardConnMap.Payload, num)
-				}
-				ForwardConnMap.Unlock()
-				PortFowardMap.Lock()
-				if _, ok := PortFowardMap.Payload[num]; ok {
-					if !common.IsClosed(PortFowardMap.Payload[num]) {
-						close(PortFowardMap.Payload[num])
-					}
-				}
-				PortFowardMap.Unlock()
 				return
 			}
 			respdata, _ := common.ConstructDataResult(0, num, " ", "FORWARDDATARESP", string(serverbuffer[:len]), AESKey, NODEID)

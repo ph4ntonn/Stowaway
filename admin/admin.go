@@ -197,6 +197,7 @@ func HandleDataConn(startNodeDataConn net.Conn) {
 		case "REFLECTTIMEOUT":
 			fallthrough
 		case "FORWARDOFFLINE":
+			//fmt.Println("get forward offline")
 			PortForWardMap.Lock()
 			if _, ok := PortForWardMap.Payload[nodeResp.Clientid]; ok {
 				PortForWardMap.Payload[nodeResp.Clientid].Close()
@@ -206,6 +207,7 @@ func HandleDataConn(startNodeDataConn net.Conn) {
 		case "REFLECT":
 			TryReflect(DataConn, nodeResp.CurrentId, nodeResp.Clientid, nodeResp.Result)
 		case "REFLECTFIN":
+			//fmt.Println("get reflect fin")
 			ReflectConnMap.Lock()
 			if _, ok := ReflectConnMap.Payload[nodeResp.Clientid]; ok {
 				ReflectConnMap.Payload[nodeResp.Clientid].Close()

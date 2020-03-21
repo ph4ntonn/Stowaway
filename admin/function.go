@@ -156,14 +156,8 @@ func HandleForwardPort(forwardconn net.Conn, target string, dataconn net.Conn, n
 	for {
 		len, err := forwardconn.Read(buffer)
 		if err != nil {
-			forwardconn.Close()
 			finMessage, _ := common.ConstructDataResult(nodeid, num, " ", "FORWARDFIN", " ", AESKey, 0)
 			dataconn.Write(finMessage)
-			PortForWardMap.Lock()
-			if _, ok := PortForWardMap.Payload[num]; ok {
-				delete(PortForWardMap.Payload, num)
-			}
-			PortForWardMap.Unlock()
 			return
 		} else {
 			respData, _ := common.ConstructDataResult(nodeid, num, " ", "FORWARDDATA", string(buffer[:len]), AESKey, 0)
@@ -253,22 +247,8 @@ func HandleReflect(dataConn net.Conn, reflectDataChan chan string, num uint32, n
 		for {
 			len, err := reflectConn.Read(serverbuffer)
 			if err != nil {
-				reflectConn.Close()
 				respdata, _ := common.ConstructDataResult(nodeid, num, " ", "REFLECTOFFLINE", " ", AESKey, 0)
 				dataConn.Write(respdata)
-				ReflectConnMap.Lock()
-				if _, ok := ReflectConnMap.Payload[num]; ok {
-					ReflectConnMap.Payload[num].Close()
-					delete(ReflectConnMap.Payload, num)
-				}
-				ReflectConnMap.Unlock()
-				PortReflectMap.Lock()
-				if _, ok := PortReflectMap.Payload[num]; ok {
-					if !common.IsClosed(PortReflectMap.Payload[num]) {
-						close(PortReflectMap.Payload[num])
-					}
-				}
-				PortReflectMap.Unlock()
 				return
 			}
 			respdata, _ := common.ConstructDataResult(nodeid, num, " ", "REFLECTDATARESP", string(serverbuffer[:len]), AESKey, 0)
