@@ -300,7 +300,7 @@ func HandleDataConnFromAdmin(dataConnToAdmin *net.Conn, NODEID uint32) {
 	}
 }
 
-// //处理发往上级的
+//处理发往上级的控制信息
 func HandleControlConnToAdmin(controlConnToAdmin *net.Conn) {
 	for {
 		LowerNodeComm := <-LowerNodeCommChan
@@ -311,7 +311,7 @@ func HandleControlConnToAdmin(controlConnToAdmin *net.Conn) {
 	}
 }
 
-//同上
+//处理来自上级的控制信息
 func HandleControlConnFromAdmin(controlConnToAdmin *net.Conn, monitor, listenPort, reConn string, passive bool, NODEID uint32) {
 	var (
 		CannotRead = make(chan bool, 1)

@@ -23,7 +23,7 @@ type Command struct {
 }
 
 type Data struct {
-	NodeId uint32 //节点序号
+	NodeId uint32 //目标节点序号
 
 	Clientid uint32 //socks以及forward功能中用来标识当前需要操作的connection
 
@@ -39,7 +39,7 @@ type Data struct {
 
 	Result string //具体载荷
 
-	CurrentId uint32
+	CurrentId uint32 //当前节点序号
 }
 
 func ExtractCommand(conn net.Conn, key []byte) (*Command, error) {
