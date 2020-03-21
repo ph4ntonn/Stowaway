@@ -178,7 +178,7 @@ PS: 在ssh模式下，你可以用pwd来判断自己所处的文件夹（好吧�
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/download.png)
 
-上传下载功能命令为 upload/download 后加文件路径（注意要在节点模式下使用）,此时就可以上传文件至指定节点/下载指定节点的文件
+上传下载功能命令为 upload/download 后加文件路径（注意要在节点模式下使用）,此时就可以上传文件至指定节点/下载指定节点的文件(注意，同时只能传输一个文件，请务必等之前一个传输完成再进行下一步操作)
 
 端口本地/远程映射：
 

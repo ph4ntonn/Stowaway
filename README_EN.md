@@ -171,7 +171,7 @@ Upload/Download file:
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/download.png)
 
-If you want to upload/download any files,use upload/download + (filepath) under the node mode(after using command "use xxx"),and then you can upload specific file to selected agent/download specific file from selected agent XD
+If you want to upload/download any files,use upload/download + (filepath) under the node mode(after using command "use xxx"),and then you can upload specific file to selected agent/download specific file from selected agent XD (Be aware! You can just transfer only ONE file at the same time,if you want to transfer more,please wait for the previous one complete.)
 
 Port mapping：
 
