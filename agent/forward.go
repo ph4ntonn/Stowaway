@@ -38,7 +38,7 @@ func TryForward(dataconn *net.Conn, target string, num uint32) {
 		ForwardConnMap.Payload[num] = forwardConn
 		ForwardConnMap.Unlock()
 	} else {
-		respdata, _ := common.ConstructDataResult(0, num, " ", "REFLECTTIMEOUT", " ", AESKey, NODEID)
+		respdata, _ := common.ConstructDataResult(0, num, " ", "FORWARDTIMEOUT", " ", AESKey, NODEID)
 		(*dataconn).Write(respdata)
 		return
 	}

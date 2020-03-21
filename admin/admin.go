@@ -194,7 +194,7 @@ func HandleDataConn(startNodeDataConn net.Conn) {
 			Eof <- nodeResp.FileSliceNum
 		case "FORWARDDATARESP":
 			PortForWardMap.Payload[nodeResp.Clientid].Write([]byte(nodeResp.Result))
-		case "REFLECTTIMEOUT":
+		case "FORWARDTIMEOUT":
 			fallthrough
 		case "FORWARDOFFLINE":
 			//fmt.Println("get forward offline")
