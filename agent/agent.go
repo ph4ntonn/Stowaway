@@ -475,7 +475,7 @@ func HandleConnFromLowerNode(connForLowerNode net.Conn, NODEID uint32) {
 		}
 		switch command.Type {
 		case "COMMAND":
-			if command.Command == "RECONNID" && command.Info == "" {
+			if command.Command == "RECONNID" && command.CurrentId == NODEID+1 {
 				proxyCommand, _ := common.ConstructPayload(0, "COMMAND", command.Command, " ", connForLowerNode.RemoteAddr().String(), 0, command.CurrentId, AESKey, false)
 				ProxyChanToUpperNode <- proxyCommand
 				continue
