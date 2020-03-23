@@ -22,6 +22,11 @@ type Uint32ConnMap struct {
 	Payload map[uint32]net.Conn
 }
 
+type Uint32StrMap struct {
+	sync.RWMutex
+	Payload map[uint32]string
+}
+
 /*-------------------------初始化各类map相关代码--------------------------*/
 func NewUint32ChanStrMap() *Uint32ChanStrMap {
 	sm := new(Uint32ChanStrMap)
@@ -38,6 +43,12 @@ func NewIntStrMap() *IntStrMap {
 func NewUint32ConnMap() *Uint32ConnMap {
 	sm := new(Uint32ConnMap)
 	sm.Payload = make(map[uint32]net.Conn)
+	return sm
+}
+
+func NewUint32StrMap() *Uint32StrMap {
+	sm := new(Uint32StrMap)
+	sm.Payload = make(map[uint32]string)
 	return sm
 }
 

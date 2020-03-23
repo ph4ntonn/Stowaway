@@ -26,12 +26,12 @@ func TestReflect(portCombine string) {
 	reflectListenerForClient, err := net.Listen("tcp", reflectAddr)
 	if err != nil {
 		defer reflectListenerForClient.Close()
-		respCommand, _ := common.ConstructCommand("REFLECTFAIL", " ", 0, AESKey)
-		LowerNodeCommChan <- respCommand
+		respCommand, _ := common.ConstructPayload(0, "COMMAND", "REFLECTFAIL", " ", " ", 0, NODEID, AESKey, false)
+		ProxyChanToUpperNode <- respCommand
 		return
 	} else {
-		respCommand, _ := common.ConstructCommand("REFLECTOK", " ", 0, AESKey)
-		LowerNodeCommChan <- respCommand
+		respCommand, _ := common.ConstructPayload(0, "COMMAND", "REFLECTOK", " ", " ", 0, NODEID, AESKey, false)
+		ProxyChanToUpperNode <- respCommand
 	}
 
 	CurrentPortReflectListener = append(CurrentPortReflectListener, reflectListenerForClient)
@@ -41,8 +41,8 @@ func TestReflect(portCombine string) {
 		if err != nil {
 			return
 		} else {
-			respCommand, _ := common.ConstructDataResult(0, ReflectNum, " ", "REFLECT", ports[0], AESKey, NODEID)
-			CmdResult <- respCommand
+			respCommand, _ := common.ConstructPayload(0, "DATA", "REFLECT", " ", ports[0], ReflectNum, NODEID, AESKey, false)
+			ProxyChanToUpperNode <- respCommand
 		}
 		ReflectConnMap.Lock()
 		ReflectConnMap.Payload[ReflectNum] = conn
@@ -60,12 +60,12 @@ func HandleReflectPort(reflectconn net.Conn, num uint32, nodeid uint32) {
 	for {
 		len, err := reflectconn.Read(buffer)
 		if err != nil {
-			finMessage, _ := common.ConstructDataResult(0, num, " ", "REFLECTFIN", " ", AESKey, nodeid)
-			CmdResult <- finMessage
+			finMessage, _ := common.ConstructPayload(0, "DATA", "REFLECT", " ", " ", num, NODEID, AESKey, false)
+			ProxyChanToUpperNode <- finMessage
 			return
 		} else {
-			respData, _ := common.ConstructDataResult(0, num, " ", "REFLECTDATA", string(buffer[:len]), AESKey, nodeid)
-			CmdResult <- respData
+			respData, _ := common.ConstructPayload(0, "DATA", "REFLECTDATA", " ", string(buffer[:len]), num, NODEID, AESKey, false)
+			ProxyChanToUpperNode <- respData
 		}
 	}
 }

@@ -6,24 +6,13 @@ import (
 )
 
 /*-------------------------心跳包相关代码--------------------------*/
-func SendHeartBeatControl(controlConnToUpperNode net.Conn, nodeid uint32, key []byte) {
-	hbcommpack, _ := ConstructCommand("HEARTBEAT", "", nodeid, key)
+func SendHeartBeatControl(controlConnToUpperNode *net.Conn, nodeid uint32, key []byte) {
+	hbcommpack, _ := ConstructPayload(nodeid-1, "COMMAND", "HEARTBEAT", " ", " ", 0, nodeid, key, false)
 	for {
 		time.Sleep(30 * time.Second)
-		_, err := controlConnToUpperNode.Write(hbcommpack)
+		_, err := (*controlConnToUpperNode).Write(hbcommpack)
 		if err != nil {
-			return
-		}
-	}
-}
-
-func SendHeartBeatData(dataConnForLowerNode net.Conn, nodeid uint32, key []byte) {
-	hbdatapack, _ := ConstructDataResult(nodeid+1, 0, " ", "HEARTBEAT", " ", key, 0)
-	for {
-		time.Sleep(30 * time.Second)
-		_, err := dataConnForLowerNode.Write(hbdatapack)
-		if err != nil {
-			return
+			continue
 		}
 	}
 }

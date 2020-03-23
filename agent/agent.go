@@ -16,33 +16,44 @@ import (
 )
 
 var (
-	NODEID     uint32 = uint32(1)
-	NotLastOne bool   = false
-	Waiting    bool   = false
+	NODEID     uint32
+	NotLastOne bool
+	Waiting    bool
 
 	SocksUsername string
 	SocksPass     string
 
-	CmdResult          = make(chan []byte, 1)
-	ReConnCome         = make(chan bool, 1)
-	Proxy_Command_Chan = make(chan []byte, 1)
-	Proxy_Data_Chan    = make(chan []byte, 1)
-	LowerNodeCommChan  = make(chan []byte, 1)
-	Eof                = make(chan string, 1)
+	ReConnCome           chan bool
+	NewLowerNodeSignal   chan bool
+	ProxyChanToLowerNode chan []byte
+	ProxyChanToUpperNode chan []byte
+	Eof                  chan string
 
 	FileDataMap      *common.IntStrMap
 	SocksDataChanMap *common.Uint32ChanStrMap
+	AlreadyDownNode  *common.Uint32StrMap
 
-	ControlConnToAdmin net.Conn
-	DataConnToAdmin    net.Conn
-	SocksServer        net.Listener
+	ConnToAdmin net.Conn
+	SocksServer net.Listener
 
 	AESKey []byte
 )
 
+func init() {
+	NODEID = uint32(1)
+	NotLastOne = false
+	Waiting = false
+	ReConnCome = make(chan bool, 1)
+	NewLowerNodeSignal = make(chan bool, 1)
+	ProxyChanToLowerNode = make(chan []byte, 1)
+	ProxyChanToUpperNode = make(chan []byte, 1)
+	Eof = make(chan string, 1)
+}
+
 func NewAgent(c *cli.Context) {
 	SocksDataChanMap = common.NewUint32ChanStrMap()
 	FileDataMap = common.NewIntStrMap()
+	AlreadyDownNode = common.NewUint32StrMap()
 	AESKey = []byte(c.String("secret"))
 	listenPort := c.String("listen")
 	single := c.Bool("single")
@@ -50,13 +61,14 @@ func NewAgent(c *cli.Context) {
 	passive := c.Bool("reverse")
 	monitor := c.String("monitor")
 	isStartNode := c.Bool("startnode")
+	firstNodeStatus := c.Bool("activeconnect")
 
 	if isStartNode && passive == false {
 		go StartNodeInit(monitor, listenPort, reconn, passive)
 	} else if passive == false {
 		go SimpleNodeInit(monitor, listenPort)
 	} else if isStartNode && passive {
-		go StartNodeReversemodeInit(monitor, listenPort, reconn, single, passive)
+		go StartNodeReversemodeInit(monitor, listenPort, reconn, single, passive, firstNodeStatus)
 	} else if passive {
 		go SimpleNodeReversemodeInit(monitor, listenPort)
 	}
@@ -69,75 +81,73 @@ func NewAgent(c *cli.Context) {
 func StartNodeInit(monitor, listenPort, reConn string, passive bool) {
 	var err error
 	NODEID = uint32(1)
-	ControlConnToAdmin, DataConnToAdmin, NODEID, err = node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
-	go common.SendHeartBeatControl(ControlConnToAdmin, NODEID, AESKey)
+	ConnToAdmin, NODEID, err = node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
 	if err != nil {
 		os.Exit(1)
 	}
-	go HandleStartNodeConn(&ControlConnToAdmin, &DataConnToAdmin, monitor, listenPort, reConn, passive, NODEID)
-	go node.StartNodeListen(listenPort, NODEID, AESKey, false, false)
+	go common.SendHeartBeatControl(&ConnToAdmin, NODEID, AESKey)
+	go HandleStartNodeConn(&ConnToAdmin, monitor, listenPort, reConn, passive, NODEID)
+	go node.StartNodeListen(listenPort, NODEID, AESKey, false, false, false)
 	for {
+		adminoragent := <-node.AdminOrAgent
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
-		dataConnForLowerNode := <-node.DataConnForLowerNodeChan
-		NewNodeMessage := <-node.NewNodeMessageChan
-		Proxy_Command_Chan = make(chan []byte)
-		LowerNodeCommChan <- NewNodeMessage
-		NotLastOne = true
-		go common.SendHeartBeatData(dataConnForLowerNode, NODEID, AESKey)
-		go HandleLowerNodeConn(controlConnForLowerNode, dataConnForLowerNode, NODEID)
+		if adminoragent == "agent" {
+			NewNodeMessage := <-node.NewNodeMessageChan
+			ProxyChanToLowerNode = make(chan []byte)
+			ProxyChanToUpperNode <- NewNodeMessage
+			NotLastOne = true
+			go HandleLowerNodeConn(controlConnForLowerNode, NODEID)
+		}
 	}
-
 }
 
 //普通的node节点
 func SimpleNodeInit(monitor, listenPort string) {
 	var err error
 	NODEID = uint32(0)
-	ControlConnToAdmin, DataConnToAdmin, NODEID, err = node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
-	go common.SendHeartBeatControl(ControlConnToAdmin, NODEID, AESKey)
+	ConnToAdmin, NODEID, err = node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
 	if err != nil {
 		os.Exit(1)
 	}
-	go HandleSimpleNodeConn(&ControlConnToAdmin, &DataConnToAdmin, NODEID)
-	go node.StartNodeListen(listenPort, NODEID, AESKey, false, false)
+	go common.SendHeartBeatControl(&ConnToAdmin, NODEID, AESKey)
+	go HandleSimpleNodeConn(&ConnToAdmin, NODEID)
+	go node.StartNodeListen(listenPort, NODEID, AESKey, false, false, false)
 	for {
+		adminoragent := <-node.AdminOrAgent
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
-		dataConnForLowerNode := <-node.DataConnForLowerNodeChan
-		NewNodeMessage := <-node.NewNodeMessageChan
-		Proxy_Command_Chan = make(chan []byte)
-		LowerNodeCommChan <- NewNodeMessage
-		NotLastOne = true
-		go common.SendHeartBeatData(dataConnForLowerNode, NODEID, AESKey)
-		go HandleLowerNodeConn(controlConnForLowerNode, dataConnForLowerNode, NODEID)
+		if adminoragent == "agent" {
+			NewNodeMessage := <-node.NewNodeMessageChan
+			ProxyChanToLowerNode = make(chan []byte)
+			ProxyChanToUpperNode <- NewNodeMessage
+			NotLastOne = true
+			go HandleLowerNodeConn(controlConnForLowerNode, NODEID)
+		}
 	}
 }
 
 //reverse mode下的startnode节点
-func StartNodeReversemodeInit(monitor, listenPort, reConn string, single, passive bool) {
+func StartNodeReversemodeInit(monitor, listenPort, reConn string, single, passive bool, firstNodeStatus bool) {
 	NODEID = uint32(1)
-	ControlConnToAdmin, DataConnToAdmin, NODEID = node.AcceptConnFromUpperNode(listenPort, NODEID, AESKey)
-	go common.SendHeartBeatControl(ControlConnToAdmin, NODEID, AESKey)
-	go HandleStartNodeConn(&ControlConnToAdmin, &DataConnToAdmin, monitor, listenPort, reConn, passive, NODEID)
+	ConnToAdmin, NODEID = node.AcceptConnFromUpperNode(listenPort, NODEID, AESKey)
+	go common.SendHeartBeatControl(&ConnToAdmin, NODEID, AESKey)
+	go HandleStartNodeConn(&ConnToAdmin, monitor, listenPort, reConn, passive, NODEID)
 	if reConn == "0" {
-		go node.StartNodeListen(listenPort, NODEID, AESKey, true, single)
+		go node.StartNodeListen(listenPort, NODEID, AESKey, true, single, firstNodeStatus)
 	} else {
-		go node.StartNodeListen(listenPort, NODEID, AESKey, false, single)
+		go node.StartNodeListen(listenPort, NODEID, AESKey, false, single, firstNodeStatus)
 	}
 	for {
+		adminoragent := <-node.AdminOrAgent
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
-		dataConnForLowerNode := <-node.DataConnForLowerNodeChan
-		if !Waiting {
+		if !Waiting || adminoragent == "agent" {
 			NewNodeMessage := <-node.NewNodeMessageChan
-			Proxy_Command_Chan = make(chan []byte)
-			LowerNodeCommChan <- NewNodeMessage
+			ProxyChanToLowerNode = make(chan []byte)
+			ProxyChanToUpperNode <- NewNodeMessage
 			NotLastOne = true
-			go common.SendHeartBeatData(dataConnForLowerNode, NODEID, AESKey)
-			go HandleLowerNodeConn(controlConnForLowerNode, dataConnForLowerNode, NODEID)
-		} else { // 需要重连操作的话
+			go HandleLowerNodeConn(controlConnForLowerNode, NODEID)
+		} else if adminoragent == "admin" { // 需要重连操作的话
 			ReConnCome <- true
-			ControlConnToAdmin = controlConnForLowerNode
-			DataConnToAdmin = dataConnForLowerNode
-			go common.SendHeartBeatControl(ControlConnToAdmin, NODEID, AESKey)
+			ConnToAdmin = controlConnForLowerNode
 		}
 	}
 }
@@ -145,19 +155,20 @@ func StartNodeReversemodeInit(monitor, listenPort, reConn string, single, passiv
 //reverse mode下的普通节点
 func SimpleNodeReversemodeInit(monitor, listenPort string) {
 	NODEID = uint32(0)
-	ControlConnToAdmin, DataConnToAdmin, NODEID = node.AcceptConnFromUpperNode(listenPort, NODEID, AESKey)
-	go common.SendHeartBeatControl(ControlConnToAdmin, NODEID, AESKey)
-	go HandleSimpleNodeConn(&ControlConnToAdmin, &DataConnToAdmin, NODEID)
-	go node.StartNodeListen(listenPort, NODEID, AESKey, false, false)
+	ConnToAdmin, NODEID = node.AcceptConnFromUpperNode(listenPort, NODEID, AESKey)
+	go common.SendHeartBeatControl(&ConnToAdmin, NODEID, AESKey)
+	go HandleSimpleNodeConn(&ConnToAdmin, NODEID)
+	go node.StartNodeListen(listenPort, NODEID, AESKey, false, false, false)
 	for {
+		adminoragent := <-node.AdminOrAgent
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
-		dataConnForLowerNode := <-node.DataConnForLowerNodeChan
-		NewNodeMessage := <-node.NewNodeMessageChan
-		Proxy_Command_Chan = make(chan []byte)
-		LowerNodeCommChan <- NewNodeMessage
-		NotLastOne = true
-		go common.SendHeartBeatData(dataConnForLowerNode, NODEID, AESKey)
-		go HandleLowerNodeConn(controlConnForLowerNode, dataConnForLowerNode, NODEID)
+		if adminoragent == "agent" {
+			NewNodeMessage := <-node.NewNodeMessageChan
+			ProxyChanToLowerNode = make(chan []byte)
+			ProxyChanToUpperNode <- NewNodeMessage
+			NotLastOne = true
+			go HandleLowerNodeConn(controlConnForLowerNode, NODEID)
+		}
 	}
 }
 
@@ -166,155 +177,24 @@ func SimpleNodeReversemodeInit(monitor, listenPort string) {
 //startnode启动代码开始
 
 //启动startnode
-func HandleStartNodeConn(controlConnToAdmin *net.Conn, dataConnToAdmin *net.Conn, monitor, listenPort, reConn string, passive bool, NODEID uint32) {
-	go HandleControlConnFromAdmin(controlConnToAdmin, monitor, listenPort, reConn, passive, NODEID)
-	go HandleControlConnToAdmin(controlConnToAdmin)
-	go HandleDataConnFromAdmin(dataConnToAdmin, NODEID)
-	go HandleDataConnToAdmin(dataConnToAdmin)
+func HandleStartNodeConn(connToAdmin *net.Conn, monitor, listenPort, reConn string, passive bool, NODEID uint32) {
+	go HandleConnFromAdmin(connToAdmin, monitor, listenPort, reConn, passive, NODEID)
+	go HandleConnToAdmin(connToAdmin)
 }
 
 //管理startnode发往admin的数据
-func HandleDataConnToAdmin(dataConnToAdmin *net.Conn) {
+func HandleConnToAdmin(connToAdmin *net.Conn) {
 	for {
-		proxyCmdResult := <-CmdResult
-		_, err := (*dataConnToAdmin).Write(proxyCmdResult)
+		proxyData := <-ProxyChanToUpperNode
+		_, err := (*connToAdmin).Write(proxyData)
 		if err != nil {
-			//logrus.Errorf("ERROR OCCURED!: %s", err)
 			continue
 		}
 	}
 }
 
 //看函数名猜功能.jpg XD
-func HandleDataConnFromAdmin(dataConnToAdmin *net.Conn, NODEID uint32) {
-	for {
-		AdminData, err := common.ExtractDataResult(*dataConnToAdmin, AESKey, NODEID)
-		if err != nil {
-			time.Sleep(1 * time.Second)
-			continue
-		}
-		if AdminData.NodeId == NODEID {
-			switch AdminData.Datatype {
-			case "SOCKSDATA":
-				SocksDataChanMap.RLock()
-				if _, ok := SocksDataChanMap.Payload[AdminData.Clientid]; ok {
-					SocksDataChanMap.Payload[AdminData.Clientid] <- AdminData.Result
-					SocksDataChanMap.RUnlock()
-				} else {
-					//fmt.Println("create new chan", AdminData.Clientsocks)
-					SocksDataChanMap.RUnlock()
-					tempchan := make(chan string, 10)
-					SocksDataChanMap.Lock()
-					SocksDataChanMap.Payload[AdminData.Clientid] = tempchan
-					//fmt.Println(AdminData.Clientsocks, " created")
-					go HanleClientSocksConn(SocksDataChanMap.Payload[AdminData.Clientid], SocksUsername, SocksPass, AdminData.Clientid, NODEID)
-					SocksDataChanMap.Payload[AdminData.Clientid] <- AdminData.Result
-					SocksDataChanMap.Unlock()
-				}
-			case "FILEDATA": //接收文件内容
-				slicenum, _ := strconv.Atoi(AdminData.FileSliceNum)
-				FileDataMap.Lock()
-				FileDataMap.Payload[slicenum] = AdminData.Result
-				FileDataMap.Unlock()
-			case "FORWARD":
-				TryForward(dataConnToAdmin, AdminData.Result, AdminData.Clientid)
-			case "FORWARDDATA":
-				ForwardConnMap.RLock()
-				if _, ok := ForwardConnMap.Payload[AdminData.Clientid]; ok {
-					PortFowardMap.Lock()
-					if _, ok := PortFowardMap.Payload[AdminData.Clientid]; ok {
-						PortFowardMap.Payload[AdminData.Clientid] <- AdminData.Result
-					} else {
-						tempchan := make(chan string, 10)
-						PortFowardMap.Payload[AdminData.Clientid] = tempchan
-						//fmt.Println("make new ", AdminData.Clientid)
-						go HandleForward(dataConnToAdmin, PortFowardMap.Payload[AdminData.Clientid], AdminData.Clientid)
-						PortFowardMap.Payload[AdminData.Clientid] <- AdminData.Result
-					}
-					PortFowardMap.Unlock()
-				}
-				ForwardConnMap.RUnlock()
-			case "FORWARDFIN":
-				//fmt.Println("get forward fin")
-				ForwardConnMap.Lock()
-				if _, ok := ForwardConnMap.Payload[AdminData.Clientid]; ok {
-					ForwardConnMap.Payload[AdminData.Clientid].Close()
-					delete(ForwardConnMap.Payload, AdminData.Clientid)
-				}
-				ForwardConnMap.Unlock()
-				PortFowardMap.Lock()
-				if _, ok := PortFowardMap.Payload[AdminData.Clientid]; ok {
-					if !common.IsClosed(PortFowardMap.Payload[AdminData.Clientid]) {
-						close(PortFowardMap.Payload[AdminData.Clientid])
-					}
-				}
-				PortFowardMap.Unlock()
-			case "REFLECTDATARESP":
-				ReflectConnMap.Lock()
-				ReflectConnMap.Payload[AdminData.Clientid].Write([]byte(AdminData.Result))
-				ReflectConnMap.Unlock()
-			case "REFLECTTIMEOUT":
-				fallthrough
-			case "REFLECTOFFLINE":
-				//fmt.Println("get reflect offline")
-				ReflectConnMap.Lock()
-				if _, ok := ReflectConnMap.Payload[AdminData.Clientid]; ok {
-					ReflectConnMap.Payload[AdminData.Clientid].Close()
-					delete(ReflectConnMap.Payload, AdminData.Clientid)
-				}
-				ReflectConnMap.Unlock()
-			case "EOF": //文件读取结束
-				Eof <- AdminData.FileSliceNum
-			case "FINOK":
-				//fmt.Println("get finok")
-				SocksDataChanMap.Lock() //性能损失？
-				if _, ok := SocksDataChanMap.Payload[AdminData.Clientid]; ok {
-					if !common.IsClosed(SocksDataChanMap.Payload[AdminData.Clientid]) {
-						close(SocksDataChanMap.Payload[AdminData.Clientid])
-					}
-					delete(SocksDataChanMap.Payload, AdminData.Clientid)
-					//fmt.Println("close one, still left", len(SocksDataChanMap.SocksDataChan))
-				}
-				SocksDataChanMap.Unlock()
-			case "FIN":
-				//fmt.Println("get admin's order ", AdminData.Clientsocks)
-				CurrentConn.Lock()
-				if _, ok := CurrentConn.Payload[AdminData.Clientid]; ok {
-					CurrentConn.Payload[AdminData.Clientid].Close()
-				}
-				CurrentConn.Unlock()
-				SocksDataChanMap.Lock()
-				if _, ok := SocksDataChanMap.Payload[AdminData.Clientid]; ok {
-					if !common.IsClosed(SocksDataChanMap.Payload[AdminData.Clientid]) {
-						close(SocksDataChanMap.Payload[AdminData.Clientid])
-					}
-					delete(SocksDataChanMap.Payload, AdminData.Clientid)
-				}
-				SocksDataChanMap.Unlock()
-			case "HEARTBEAT":
-				hbdatapack, _ := common.ConstructDataResult(0, 0, " ", "KEEPALIVE", " ", AESKey, NODEID)
-				(*dataConnToAdmin).Write(hbdatapack)
-			}
-		} else {
-			ProxyData, _ := common.ConstructDataResult(AdminData.NodeId, AdminData.Clientid, AdminData.FileSliceNum, AdminData.Datatype, AdminData.Result, AESKey, NODEID)
-			go ProxyDataToNextNode(ProxyData)
-		}
-	}
-}
-
-//处理发往上级的控制信息
-func HandleControlConnToAdmin(controlConnToAdmin *net.Conn) {
-	for {
-		LowerNodeComm := <-LowerNodeCommChan
-		_, err := (*controlConnToAdmin).Write(LowerNodeComm)
-		if err != nil {
-			log.Println("[*]Command cannot be proxy")
-		}
-	}
-}
-
-//处理来自上级的控制信息
-func HandleControlConnFromAdmin(controlConnToAdmin *net.Conn, monitor, listenPort, reConn string, passive bool, NODEID uint32) {
+func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn string, passive bool, NODEID uint32) {
 	var (
 		CannotRead = make(chan bool, 1)
 		GetName    = make(chan bool, 1)
@@ -322,130 +202,239 @@ func HandleControlConnFromAdmin(controlConnToAdmin *net.Conn, monitor, listenPor
 		stdout     io.Reader
 	)
 	for {
-		command, err := common.ExtractCommand(*controlConnToAdmin, AESKey)
+		AdminData, err := common.ExtractPayload(*connToAdmin, AESKey, NODEID, false)
 		if err != nil {
 			time.Sleep(1 * time.Second)
 			continue
 		}
-		if command.NodeId == NODEID {
-			switch command.Command {
-			case "SHELL":
-				switch command.Info {
-				case "":
-					stdout, stdin = CreatInteractiveShell()
-					//logrus.Info("Get command to start shell")
-					go func() {
-						StartShell("", stdin, stdout, NODEID)
-					}()
-				case "exit\n":
+		if AdminData.NodeId == NODEID {
+			switch AdminData.Type {
+			case "DATA":
+				switch AdminData.Command {
+				case "SOCKSDATA":
+					SocksDataChanMap.RLock()
+					if _, ok := SocksDataChanMap.Payload[AdminData.Clientid]; ok {
+						SocksDataChanMap.Payload[AdminData.Clientid] <- AdminData.Info
+						SocksDataChanMap.RUnlock()
+					} else {
+						SocksDataChanMap.RUnlock()
+						tempchan := make(chan string, 10)
+						SocksDataChanMap.Lock()
+						SocksDataChanMap.Payload[AdminData.Clientid] = tempchan
+						go HanleClientSocksConn(SocksDataChanMap.Payload[AdminData.Clientid], SocksUsername, SocksPass, AdminData.Clientid, NODEID)
+						SocksDataChanMap.Payload[AdminData.Clientid] <- AdminData.Info
+						SocksDataChanMap.Unlock()
+					}
+				case "FILEDATA": //接收文件内容
+					slicenum, _ := strconv.Atoi(AdminData.FileSliceNum)
+					FileDataMap.Lock()
+					FileDataMap.Payload[slicenum] = AdminData.Info
+					FileDataMap.Unlock()
+				case "FORWARD":
+					TryForward(AdminData.Info, AdminData.Clientid)
+				case "FORWARDDATA":
+					ForwardConnMap.RLock()
+					if _, ok := ForwardConnMap.Payload[AdminData.Clientid]; ok {
+						PortFowardMap.Lock()
+						if _, ok := PortFowardMap.Payload[AdminData.Clientid]; ok {
+							PortFowardMap.Payload[AdminData.Clientid] <- AdminData.Info
+						} else {
+							tempchan := make(chan string, 10)
+							PortFowardMap.Payload[AdminData.Clientid] = tempchan
+							go HandleForward(PortFowardMap.Payload[AdminData.Clientid], AdminData.Clientid)
+							PortFowardMap.Payload[AdminData.Clientid] <- AdminData.Info
+						}
+						PortFowardMap.Unlock()
+					}
+					ForwardConnMap.RUnlock()
+				case "FORWARDFIN":
+					ForwardConnMap.Lock()
+					if _, ok := ForwardConnMap.Payload[AdminData.Clientid]; ok {
+						ForwardConnMap.Payload[AdminData.Clientid].Close()
+						delete(ForwardConnMap.Payload, AdminData.Clientid)
+					}
+					ForwardConnMap.Unlock()
+					PortFowardMap.Lock()
+					if _, ok := PortFowardMap.Payload[AdminData.Clientid]; ok {
+						if !common.IsClosed(PortFowardMap.Payload[AdminData.Clientid]) {
+							close(PortFowardMap.Payload[AdminData.Clientid])
+						}
+					}
+					PortFowardMap.Unlock()
+				case "REFLECTDATARESP":
+					ReflectConnMap.Lock()
+					ReflectConnMap.Payload[AdminData.Clientid].Write([]byte(AdminData.Info))
+					ReflectConnMap.Unlock()
+				case "REFLECTTIMEOUT":
 					fallthrough
-				default:
-					go func() {
-						StartShell(command.Info, stdin, stdout, NODEID)
-					}()
+				case "REFLECTOFFLINE":
+					ReflectConnMap.Lock()
+					if _, ok := ReflectConnMap.Payload[AdminData.Clientid]; ok {
+						ReflectConnMap.Payload[AdminData.Clientid].Close()
+						delete(ReflectConnMap.Payload, AdminData.Clientid)
+					}
+					ReflectConnMap.Unlock()
+				case "EOF": //文件读取结束
+					Eof <- AdminData.FileSliceNum
+				case "FINOK":
+					SocksDataChanMap.Lock() //性能损失？
+					if _, ok := SocksDataChanMap.Payload[AdminData.Clientid]; ok {
+						if !common.IsClosed(SocksDataChanMap.Payload[AdminData.Clientid]) {
+							close(SocksDataChanMap.Payload[AdminData.Clientid])
+						}
+						delete(SocksDataChanMap.Payload, AdminData.Clientid)
+					}
+					SocksDataChanMap.Unlock()
+				case "FIN":
+					CurrentConn.Lock()
+					if _, ok := CurrentConn.Payload[AdminData.Clientid]; ok {
+						CurrentConn.Payload[AdminData.Clientid].Close()
+					}
+					CurrentConn.Unlock()
+					SocksDataChanMap.Lock()
+					if _, ok := SocksDataChanMap.Payload[AdminData.Clientid]; ok {
+						if !common.IsClosed(SocksDataChanMap.Payload[AdminData.Clientid]) {
+							close(SocksDataChanMap.Payload[AdminData.Clientid])
+						}
+						delete(SocksDataChanMap.Payload, AdminData.Clientid)
+					}
+					SocksDataChanMap.Unlock()
+				case "HEARTBEAT":
+					hbdatapack, _ := common.ConstructPayload(0, "COMMAND", "KEEPALIVE", " ", " ", 0, NODEID, AESKey, false)
+					ProxyChanToUpperNode <- hbdatapack
 				}
-			case "SOCKS":
-				//logrus.Info("Get command to start SOCKS")
-				socksinfo := strings.Split(command.Info, ":::")
-				SocksUsername = socksinfo[1]
-				SocksPass = socksinfo[2]
-				go StartSocks(controlConnToAdmin)
-			case "SOCKSOFF":
-				//logrus.Info("Get command to stop SOCKS")
-			case "SSH":
-				fmt.Println("Get command to start SSH")
-				err := StartSSH(controlConnToAdmin, command.Info, NODEID)
-				if err == nil {
-					go ReadCommand()
-				} else {
-					break
-				}
-			case "SSHCOMMAND":
-				go WriteCommand(command.Info)
-			case "CONNECT":
-				go node.ConnectNextNode(command.Info, NODEID, AESKey)
-			case "FILENAME":
-				var err error
-				UploadFile, err := os.Create(command.Info)
-				if err != nil {
-					respComm, _ := common.ConstructCommand("CREATEFAIL", "", 0, AESKey) //从控制信道上返回文件是否能成功创建的响应
-					ControlConnToAdmin.Write(respComm)
-				} else {
-					respComm, _ := common.ConstructCommand("NAMECONFIRM", "", 0, AESKey)
-					ControlConnToAdmin.Write(respComm)
-					go common.ReceiveFile(controlConnToAdmin, Eof, FileDataMap, CannotRead, UploadFile, AESKey, false)
-				}
-			case "DOWNLOADFILE":
-				go common.UploadFile(command.Info, ControlConnToAdmin, DataConnToAdmin, 0, GetName, AESKey, NODEID, false)
-			case "NAMECONFIRM":
-				GetName <- true
-			case "CREATEFAIL":
-				GetName <- false
-			case "CANNOTREAD":
-				CannotRead <- true
-			case "FORWARDTEST":
-				go TestForward(command.Info)
-			case "REFLECTTEST":
-				go TestReflect(command.Info)
-			case "STOPREFLECT":
-				ReflectConnMap.Lock()
-				for key, conn := range ReflectConnMap.Payload {
-					err := conn.Close()
+			case "COMMAND":
+				switch AdminData.Command {
+				case "SHELL":
+					switch AdminData.Info {
+					case "":
+						stdout, stdin = CreatInteractiveShell()
+						go func() {
+							StartShell("", stdin, stdout, NODEID)
+						}()
+					case "exit\n":
+						fallthrough
+					default:
+						go func() {
+							StartShell(AdminData.Info, stdin, stdout, NODEID)
+						}()
+					}
+				case "SOCKS":
+					socksinfo := strings.Split(AdminData.Info, ":::")
+					SocksUsername = socksinfo[1]
+					SocksPass = socksinfo[2]
+					StartSocks()
+				case "SOCKSOFF":
+				case "SSH":
+					fmt.Println("Get command to start SSH")
+					err := StartSSH(AdminData.Info, NODEID)
+					if err == nil {
+						go ReadCommand()
+					} else {
+						break
+					}
+				case "SSHCOMMAND":
+					go WriteCommand(AdminData.Info)
+				case "CONNECT":
+					status := node.ConnectNextNode(AdminData.Info, NODEID, AESKey)
+					if !status {
+						message, _ := common.ConstructPayload(0, "COMMAND", "NODECONNECTFAIL", " ", "", 0, NODEID, AESKey, false)
+						ProxyChanToUpperNode <- message
+					}
+				case "FILENAME":
+					var err error
+					UploadFile, err := os.Create(AdminData.Info)
 					if err != nil {
+						respComm, _ := common.ConstructPayload(0, "COMMAND", "CREATEFAIL", " ", " ", 0, NODEID, AESKey, false)
+						ProxyChanToUpperNode <- respComm
+					} else {
+						respComm, _ := common.ConstructPayload(0, "COMMAND", "NAMECONFIRM", " ", " ", 0, NODEID, AESKey, false)
+						ProxyChanToUpperNode <- respComm
+						go common.ReceiveFile(connToAdmin, Eof, FileDataMap, CannotRead, UploadFile, AESKey, false, NODEID)
 					}
-					delete(ForwardConnMap.Payload, key)
-				}
-				ReflectConnMap.Unlock()
+				case "DOWNLOADFILE":
+					go common.UploadFile(AdminData.Info, connToAdmin, 0, GetName, AESKey, NODEID, false)
+				case "NAMECONFIRM":
+					GetName <- true
+				case "CREATEFAIL":
+					GetName <- false
+				case "CANNOTREAD":
+					CannotRead <- true
+				case "FORWARDTEST":
+					go TestForward(AdminData.Info)
+				case "REFLECTTEST":
+					fmt.Println("test")
+					go TestReflect(AdminData.Info)
+				case "STOPREFLECT":
+					fmt.Println("reflect stop")
+					ReflectConnMap.Lock()
+					for key, conn := range ReflectConnMap.Payload {
+						err := conn.Close()
+						if err != nil {
+						}
+						delete(ForwardConnMap.Payload, key)
+					}
+					ReflectConnMap.Unlock()
 
-				for _, listener := range CurrentPortReflectListener {
-					listener.Close()
+					for _, listener := range CurrentPortReflectListener {
+						listener.Close()
+					}
+				case "ADMINOFFLINE":
+					log.Println("[*]Admin seems offline!")
+					if reConn != "0" && reConn != "" && !passive {
+						ClearAllConn()
+						time.Sleep(1 * time.Second)
+						SocksDataChanMap = common.NewUint32ChanStrMap()
+						if NotLastOne {
+							messCommand, _ := common.ConstructPayload(2, "COMMAND", "CLEAR", " ", " ", 0, NODEID, AESKey, false)
+							ProxyChanToLowerNode <- messCommand
+						}
+						TryReconnect(reConn, monitor, listenPort)
+						if NotLastOne {
+							messCommand, _ := common.ConstructPayload(2, "COMMAND", "RECONN", " ", " ", 0, NODEID, AESKey, false)
+							ProxyChanToLowerNode <- messCommand
+						}
+					} else if reConn == "0" && passive {
+						ClearAllConn()
+						time.Sleep(1 * time.Second)
+						SocksDataChanMap = common.NewUint32ChanStrMap()
+						if NotLastOne {
+							messCommand, _ := common.ConstructPayload(2, "COMMAND", "CLEAR", " ", " ", 0, NODEID, AESKey, false)
+							ProxyChanToLowerNode <- messCommand
+						}
+						Waiting = true
+						<-ReConnCome
+						if NotLastOne {
+							messCommand, _ := common.ConstructPayload(2, "COMMAND", "RECONN", " ", " ", 0, NODEID, AESKey, false)
+							ProxyChanToLowerNode <- messCommand
+						}
+					} else {
+						if NotLastOne {
+							messCommand, _ := common.ConstructPayload(2, "COMMAND", "ADMINOFFLINE", " ", " ", 0, NODEID, AESKey, false)
+							ProxyChanToLowerNode <- messCommand
+						}
+						time.Sleep(2 * time.Second)
+						os.Exit(1)
+					}
+				case "RECOVER":
+					AlreadyDownNode.Lock()
+					if _, ok := AlreadyDownNode.Payload[AdminData.NodeId+1]; ok {
+						delete(AlreadyDownNode.Payload, AdminData.NodeId+1)
+					}
+					AlreadyDownNode.Unlock()
+				case "KEEPALIVE":
+				default:
+					continue
 				}
-			case "ADMINOFFLINE":
-				log.Println("[*]Admin seems offline!")
-				if reConn != "0" && reConn != "" && !passive {
-					ClearAllConn()
-					time.Sleep(1 * time.Second)
-					SocksDataChanMap = common.NewUint32ChanStrMap()
-					if NotLastOne {
-						messCommand, _ := common.ConstructCommand("CLEAR", "", 2, AESKey)
-						Proxy_Command_Chan <- messCommand
-					}
-					TryReconnect(reConn, monitor, listenPort)
-					if NotLastOne {
-						messCommand, _ := common.ConstructCommand("RECONN", "", 2, AESKey)
-						Proxy_Command_Chan <- messCommand
-					}
-				} else if reConn == "0" && passive {
-					ClearAllConn()
-					time.Sleep(1 * time.Second)
-					SocksDataChanMap = common.NewUint32ChanStrMap()
-					if NotLastOne {
-						messCommand, _ := common.ConstructCommand("CLEAR", "", 2, AESKey)
-						Proxy_Command_Chan <- messCommand
-					}
-					Waiting = true
-					<-ReConnCome
-					if NotLastOne {
-						messCommand, _ := common.ConstructCommand("RECONN", "", 2, AESKey)
-						Proxy_Command_Chan <- messCommand
-					}
-				} else {
-					if NotLastOne {
-						offlineCommand, _ := common.ConstructCommand("ADMINOFFLINE", "", 2, AESKey)
-						Proxy_Command_Chan <- offlineCommand
-					}
-					time.Sleep(2 * time.Second)
-					os.Exit(1)
-				}
-			case "KEEPALIVE":
-			default:
-				//logrus.Error("Unknown command")
-				continue
 			}
 		} else {
-			passthroughCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId, AESKey)
-			go ProxyCommToNextNode(passthroughCommand)
-			//go StartSocksProxy(command.Info)
+			AlreadyDownNode.RLock()
+			if _, ok := AlreadyDownNode.Payload[AdminData.NodeId]; ok {
+			} else {
+				proxyData, _ := common.ConstructPayload(AdminData.NodeId, AdminData.Type, AdminData.Command, AdminData.FileSliceNum, AdminData.Info, AdminData.Clientid, AdminData.CurrentId, AESKey, true)
+				ProxyChanToLowerNode <- proxyData
+			}
+			AlreadyDownNode.RUnlock()
 		}
 	}
 }
@@ -455,75 +444,55 @@ func HandleControlConnFromAdmin(controlConnToAdmin *net.Conn, monitor, listenPor
 //管理下行节点代码开始
 
 //管理下级节点
-func HandleLowerNodeConn(controlConnForLowerNode net.Conn, dataConnForLowerNode net.Conn, NODEID uint32) {
-	go HandleControlConnToLowerNode(controlConnForLowerNode)
-	go HandleControlConnFromLowerNode(controlConnForLowerNode, NODEID)
-	go HandleDataConnFromLowerNode(dataConnForLowerNode, NODEID)
-	go HandleDataConnToLowerNode(dataConnForLowerNode, NODEID)
+func HandleLowerNodeConn(connForLowerNode net.Conn, NODEID uint32) {
+	go HandleConnToLowerNode(connForLowerNode)
+	go HandleConnFromLowerNode(connForLowerNode, NODEID)
 }
 
-//管理发往下级节点的控制信道
-func HandleControlConnToLowerNode(controlConnForLowerNode net.Conn) {
+//管理发往下级节点的信道
+func HandleConnToLowerNode(connForLowerNode net.Conn) {
 	for {
-		proxy_command := <-Proxy_Command_Chan
-		_, err := controlConnForLowerNode.Write(proxy_command)
+		proxyData := <-ProxyChanToLowerNode
+		_, err := connForLowerNode.Write(proxyData)
 		if err != nil {
-			//logrus.Error(err)
-			return
+			break
 		}
 	}
 }
 
 //看到那个from了么
-func HandleControlConnFromLowerNode(controlConnForLowerNode net.Conn, NODEID uint32) {
+func HandleConnFromLowerNode(connForLowerNode net.Conn, NODEID uint32) {
 	for {
-		command, err := common.ExtractCommand(controlConnForLowerNode, AESKey)
-		if err != nil {
-			offlineMess, _ := common.ConstructCommand("OFFLINE", "", NODEID+1, AESKey)
-			Proxy_Command_Chan <- offlineMess
-			return
-		}
-		if command.Command == "RECONNID" && command.Info == "" {
-			proxyCommand, _ := common.ConstructCommand(command.Command, controlConnForLowerNode.RemoteAddr().String(), command.NodeId, AESKey)
-			LowerNodeCommChan <- proxyCommand
-			continue
-		}
-		if command.Command == "HEARTBEAT" {
-			hbcommpack, _ := common.ConstructCommand("KEEPALIVE", "", NODEID+1, AESKey)
-			controlConnForLowerNode.Write(hbcommpack)
-			continue
-		}
-		if command.NodeId == NODEID { //暂时只有admin需要处理
-		} else {
-			proxyCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId, AESKey)
-			LowerNodeCommChan <- proxyCommand
-		}
-	}
-}
-
-// 处理来自于下一级节点的数据信道
-func HandleDataConnFromLowerNode(dataConnForLowerNode net.Conn, NODEID uint32) {
-	for {
-		buffer := make([]byte, 409600)
-		len, err := dataConnForLowerNode.Read(buffer)
+		command, err := common.ExtractPayload(connForLowerNode, AESKey, NODEID, false)
 		if err != nil {
 			log.Println("[*]Node ", NODEID+1, " seems offline")
-			offlineMess, _ := common.ConstructCommand("AGENTOFFLINE", "", NODEID+1, AESKey) //下一级节点掉线，向上级节点传递下级节点掉线的消息
-			LowerNodeCommChan <- offlineMess
-			break
+			offlineMess, _ := common.ConstructPayload(0, "COMMAND", "AGENTOFFLINE", " ", " ", 0, NODEID, AESKey, false)
+			ProxyChanToUpperNode <- offlineMess
+			AlreadyDownNode.Lock()
+			AlreadyDownNode.Payload[NODEID+1] = ""
+			AlreadyDownNode.Unlock()
+			return
 		}
-		CmdResult <- buffer[:len]
-	}
-}
-
-//处理发往下一级节点的数据信道
-func HandleDataConnToLowerNode(dataConnForLowerNode net.Conn, NODEID uint32) {
-	for {
-		proxy_data := <-Proxy_Data_Chan
-		_, err := dataConnForLowerNode.Write(proxy_data)
-		if err != nil {
-			log.Println("[*]", err)
-			break
+		switch command.Type {
+		case "COMMAND":
+			if command.Command == "RECONNID" && command.Info == "" {
+				proxyCommand, _ := common.ConstructPayload(0, "COMMAND", command.Command, " ", connForLowerNode.RemoteAddr().String(), 0, command.CurrentId, AESKey, false)
+				ProxyChanToUpperNode <- proxyCommand
+				continue
+			}
+			if command.Command == "HEARTBEAT" {
+				hbcommpack, _ := common.ConstructPayload(NODEID+1, "COMMAND", "KEEPALIVE", " ", " ", 0, NODEID, AESKey, false)
+				ProxyChanToLowerNode <- hbcommpack
+				continue
+			}
+			if command.NodeId == NODEID { //暂时只有admin需要处理
+			} else {
+				proxyData, _ := common.ConstructPayload(command.NodeId, command.Type, command.Command, command.FileSliceNum, command.Info, command.Clientid, command.CurrentId, AESKey, true)
+				ProxyChanToUpperNode <- proxyData
+			}
+		case "DATA":
+			proxyData, _ := common.ConstructPayload(command.NodeId, command.Type, command.Command, command.FileSliceNum, command.Info, command.Clientid, command.CurrentId, AESKey, true)
+			ProxyChanToUpperNode <- proxyData
 		}
 	}
 }
@@ -533,26 +502,25 @@ func HandleDataConnToLowerNode(dataConnForLowerNode net.Conn, NODEID uint32) {
 //普通节点启动代码开始
 
 //启动普通节点
-func HandleSimpleNodeConn(controlConnToUpperNode *net.Conn, dataConnToUpperNode *net.Conn, NODEID uint32) {
-	go HandleControlConnFromUpperNode(controlConnToUpperNode, NODEID)
-	go HandleControlConnToUpperNode(controlConnToUpperNode)
-	go HandleDataConnFromUpperNode(dataConnToUpperNode)
-	go HandleDataConnToUpperNode(dataConnToUpperNode)
+func HandleSimpleNodeConn(connToUpperNode *net.Conn, NODEID uint32) {
+	go HandleConnFromUpperNode(connToUpperNode, NODEID)
+	go HandleConnToUpperNode(connToUpperNode)
 }
 
 // 处理发往上一级节点的控制信道
-func HandleControlConnToUpperNode(controlConnToUpperNode *net.Conn) {
+func HandleConnToUpperNode(connToUpperNode *net.Conn) {
 	for {
-		LowerNodeComm := <-LowerNodeCommChan
-		_, err := (*controlConnToUpperNode).Write(LowerNodeComm)
+		proxyData := <-ProxyChanToUpperNode
+		_, err := (*connToUpperNode).Write(proxyData)
 		if err != nil {
 			log.Println("[*]Command cannot be proxy")
+			continue
 		}
 	}
 }
 
 //处理来自上一级节点的控制信道
-func HandleControlConnFromUpperNode(controlConnToUpperNode *net.Conn, NODEID uint32) {
+func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID uint32) {
 	var (
 		CannotRead = make(chan bool, 1)
 		GetName    = make(chan bool, 1)
@@ -560,249 +528,233 @@ func HandleControlConnFromUpperNode(controlConnToUpperNode *net.Conn, NODEID uin
 		stdout     io.Reader
 	)
 	for {
-		command, err := common.ExtractCommand(*controlConnToUpperNode, AESKey)
+		command, err := common.ExtractPayload(*connToUpperNode, AESKey, NODEID, false)
 		if err != nil {
-			log.Fatal("upper node offline")
+			fmt.Println("[*]Node ", NODEID-1, " seems down")
+			offlineMess, _ := common.ConstructPayload(NODEID+1, "COMMAND", "OFFLINE", " ", " ", 0, NODEID, AESKey, false)
+			ProxyChanToLowerNode <- offlineMess
+			time.Sleep(2 * time.Second)
+			os.Exit(1)
 		}
 		if command.NodeId == NODEID {
-			switch command.Command {
-			case "SHELL":
-				switch command.Info {
-				case "":
-					stdout, stdin = CreatInteractiveShell()
-					//logrus.Info("Get command to start shell")
-					go func() {
-						StartShell("", stdin, stdout, NODEID)
-					}()
-				case "exit\n":
-					fallthrough
-				default:
-					go func() {
-						StartShell(command.Info, stdin, stdout, NODEID)
-					}()
-				}
-			case "OFFLINE": //上一级节点下线
-				fmt.Println("[*]Node ", NODEID-1, " seems down")
-				if NotLastOne {
-					offlineMess, _ := common.ConstructCommand("OFFLINE", "", NODEID+1, AESKey)
-					Proxy_Command_Chan <- offlineMess
-				}
-				time.Sleep(2 * time.Second)
-				os.Exit(1)
-			case "SOCKS":
-				//logrus.Info("Get command to start SOCKS")
-				socksinfo := strings.Split(command.Info, ":::")
-				SocksUsername = socksinfo[1]
-				SocksPass = socksinfo[2]
-				go StartSocks(controlConnToUpperNode)
-			case "SOCKSOFF":
-				//logrus.Info("Get command to stop SOCKS")
-			case "SSH":
-				//fmt.Println("Get command to start SSH")
-				err := StartSSH(controlConnToUpperNode, command.Info, NODEID)
-				if err == nil {
-					go ReadCommand()
-				} else {
-					break
-				}
-			case "SSHCOMMAND":
-				go WriteCommand(command.Info)
-			case "CONNECT":
-				go node.ConnectNextNode(command.Info, NODEID, AESKey)
-			case "FILENAME":
-				var err error
-				UploadFile, err := os.Create(command.Info)
-				if err != nil {
-					respComm, _ := common.ConstructCommand("CREATEFAIL", "", 0, AESKey) //从控制信道上返回文件是否能成功创建的响应
-					ControlConnToAdmin.Write(respComm)
-				} else {
-					respComm, _ := common.ConstructCommand("NAMECONFIRM", "", 0, AESKey)
-					ControlConnToAdmin.Write(respComm)
-					go common.ReceiveFile(controlConnToUpperNode, Eof, FileDataMap, CannotRead, UploadFile, AESKey, false)
-				}
-			case "DOWNLOADFILE":
-				go common.UploadFile(command.Info, ControlConnToAdmin, DataConnToAdmin, 0, GetName, AESKey, NODEID, false)
-			case "NAMECONFIRM":
-				GetName <- true
-			case "CREATEFAIL":
-				GetName <- false
-			case "CANNOTREAD":
-				CannotRead <- true
-			case "FORWARDTEST":
-				go TestForward(command.Info)
-			case "REFLECTTEST":
-				go TestReflect(command.Info)
-			case "STOPREFLECT":
-				ReflectConnMap.Lock()
-				for key, conn := range ReflectConnMap.Payload {
-					err := conn.Close()
-					if err != nil {
+			switch command.Type {
+			case "COMMAND":
+				switch command.Command {
+				case "SHELL":
+					switch command.Info {
+					case "":
+						stdout, stdin = CreatInteractiveShell()
+						go func() {
+							StartShell("", stdin, stdout, NODEID)
+						}()
+					case "exit\n":
+						fallthrough
+					default:
+						go func() {
+							StartShell(command.Info, stdin, stdout, NODEID)
+						}()
 					}
-					delete(ForwardConnMap.Payload, key)
-				}
-				ReflectConnMap.Unlock()
-
-				for _, listener := range CurrentPortReflectListener {
-					listener.Close()
-				}
-			case "ADMINOFFLINE": //startnode不执行重连模式时admin下线后传递的数据
-				fmt.Println("Admin seems offline")
-				if NotLastOne {
-					offlineCommand, _ := common.ConstructCommand("ADMINOFFLINE", "", NODEID+1, AESKey)
-					Proxy_Command_Chan <- offlineCommand
-				}
-				time.Sleep(2 * time.Second)
-				os.Exit(1)
-			case "RECONN": //startnode执行重连模式时admin下线后传递的数据
-				respCommand, _ := common.ConstructCommand("RECONNID", "", NODEID, AESKey)
-				(*controlConnToUpperNode).Write(respCommand)
-				if NotLastOne {
-					passCommand, _ := common.ConstructCommand("RECONN", "", NODEID+1, AESKey)
-					Proxy_Command_Chan <- passCommand
-				}
-			case "CLEAR":
-				ClearAllConn()
-				time.Sleep(1 * time.Second)
-				SocksDataChanMap = common.NewUint32ChanStrMap()
-				if NotLastOne {
-					messCommand, _ := common.ConstructCommand("CLEAR", "", NODEID+1, AESKey)
-					Proxy_Command_Chan <- messCommand
-				}
-			case "KEEPALIVE":
-			default:
-				//logrus.Error("Unknown command")
-				continue
-			}
-		} else {
-			passthroughCommand, _ := common.ConstructCommand(command.Command, command.Info, command.NodeId, AESKey)
-			go ProxyCommToNextNode(passthroughCommand)
-			//go StartSocksProxy(command.Info)
-		}
-	}
-}
-
-//处理传递给上一个节点的数据信道
-func HandleDataConnToUpperNode(dataConnToUpperNode *net.Conn) {
-	for {
-		proxyCmdResult := <-CmdResult
-		_, err := (*dataConnToUpperNode).Write(proxyCmdResult)
-		if err != nil {
-			//logrus.Errorf("ERROR OCCURED!: %s", err)
-			continue
-		}
-	}
-}
-
-//处理由上一个节点传递过来的数据信道
-func HandleDataConnFromUpperNode(dataConnToUpperNode *net.Conn) {
-	for {
-		AdminData, err := common.ExtractDataResult(*dataConnToUpperNode, AESKey, NODEID)
-		if err != nil {
-			return
-		}
-		if AdminData.NodeId == NODEID { //判断是否是传递给自己的
-			switch AdminData.Datatype {
-			case "SOCKSDATA":
-				SocksDataChanMap.RLock()
-				if _, ok := SocksDataChanMap.Payload[AdminData.Clientid]; ok {
-					SocksDataChanMap.Payload[AdminData.Clientid] <- AdminData.Result
-					SocksDataChanMap.RUnlock()
-				} else {
-					SocksDataChanMap.RUnlock()
-					tempchan := make(chan string, 10)
-					SocksDataChanMap.Lock()
-					SocksDataChanMap.Payload[AdminData.Clientid] = tempchan
-					go HanleClientSocksConn(SocksDataChanMap.Payload[AdminData.Clientid], SocksUsername, SocksPass, AdminData.Clientid, NODEID)
-					SocksDataChanMap.Payload[AdminData.Clientid] <- AdminData.Result
-					SocksDataChanMap.Unlock()
-				}
-			case "FINOK":
-				SocksDataChanMap.Lock()
-				if _, ok := SocksDataChanMap.Payload[AdminData.Clientid]; ok {
-					if !common.IsClosed(SocksDataChanMap.Payload[AdminData.Clientid]) {
-						close(SocksDataChanMap.Payload[AdminData.Clientid])
+				case "OFFLINE": //上一级节点下线
+					fmt.Println("[*]Node ", NODEID-1, " seems down")
+					if NotLastOne {
+						offlineMess, _ := common.ConstructPayload(NODEID+1, "COMMAND", "OFFLINE", " ", " ", 0, NODEID, AESKey, false)
+						ProxyChanToLowerNode <- offlineMess
 					}
-					delete(SocksDataChanMap.Payload, AdminData.Clientid)
-				}
-				SocksDataChanMap.Unlock()
-				//fmt.Println("close one, still left", len(SocksDataChanMap.SocksDataChan))
-			case "FILEDATA": //接收文件内容
-				slicenum, _ := strconv.Atoi(AdminData.FileSliceNum)
-				FileDataMap.Payload[slicenum] = AdminData.Result
-			case "EOF": //文件读取结束
-				Eof <- AdminData.FileSliceNum
-			case "FIN":
-				CurrentConn.Lock()
-				if _, ok := CurrentConn.Payload[AdminData.Clientid]; ok {
-					err := CurrentConn.Payload[AdminData.Clientid].Close()
-					if err != nil {
-					}
-				}
-				CurrentConn.Unlock()
-				SocksDataChanMap.Lock()
-				if _, ok := SocksDataChanMap.Payload[AdminData.Clientid]; ok {
-					if !common.IsClosed(SocksDataChanMap.Payload[AdminData.Clientid]) {
-						close(SocksDataChanMap.Payload[AdminData.Clientid])
-					}
-					delete(SocksDataChanMap.Payload, AdminData.Clientid)
-				}
-				SocksDataChanMap.Unlock()
-			case "FORWARD": //连接指定需要映射的端口
-				TryForward(dataConnToUpperNode, AdminData.Result, AdminData.Clientid)
-			case "FORWARDDATA":
-				ForwardConnMap.RLock()
-				if _, ok := ForwardConnMap.Payload[AdminData.Clientid]; ok {
-					PortFowardMap.Lock()
-					if _, ok := PortFowardMap.Payload[AdminData.Clientid]; ok {
-						PortFowardMap.Payload[AdminData.Clientid] <- AdminData.Result
+					time.Sleep(2 * time.Second)
+					os.Exit(1)
+				case "SOCKS":
+					socksinfo := strings.Split(command.Info, ":::")
+					SocksUsername = socksinfo[1]
+					SocksPass = socksinfo[2]
+					StartSocks()
+				case "SOCKSOFF":
+				case "SSH":
+					err := StartSSH(command.Info, NODEID)
+					if err == nil {
+						go ReadCommand()
 					} else {
+						break
+					}
+				case "SSHCOMMAND":
+					go WriteCommand(command.Info)
+				case "CONNECT":
+					status := node.ConnectNextNode(command.Info, NODEID, AESKey)
+					if !status {
+						message, _ := common.ConstructPayload(0, "COMMAND", "NODECONNECTFAIL", " ", "", 0, NODEID, AESKey, false)
+						ProxyChanToUpperNode <- message
+					}
+				case "FILENAME":
+					var err error
+					UploadFile, err := os.Create(command.Info)
+					if err != nil {
+						respComm, _ := common.ConstructPayload(0, "COMMAND", "CREATEFAIL", " ", " ", 0, NODEID, AESKey, false)
+						ProxyChanToUpperNode <- respComm
+					} else {
+						respComm, _ := common.ConstructPayload(0, "COMMAND", "NAMECONFIRM", " ", " ", 0, NODEID, AESKey, false)
+						ProxyChanToUpperNode <- respComm
+						go common.ReceiveFile(connToUpperNode, Eof, FileDataMap, CannotRead, UploadFile, AESKey, false, NODEID)
+					}
+				case "DOWNLOADFILE":
+					go common.UploadFile(command.Info, connToUpperNode, 0, GetName, AESKey, NODEID, false)
+				case "NAMECONFIRM":
+					GetName <- true
+				case "CREATEFAIL":
+					GetName <- false
+				case "CANNOTREAD":
+					CannotRead <- true
+				case "FORWARDTEST":
+					go TestForward(command.Info)
+				case "REFLECTTEST":
+					go TestReflect(command.Info)
+				case "STOPREFLECT":
+					ReflectConnMap.Lock()
+					for key, conn := range ReflectConnMap.Payload {
+						err := conn.Close()
+						if err != nil {
+						}
+						delete(ForwardConnMap.Payload, key)
+					}
+					ReflectConnMap.Unlock()
+
+					for _, listener := range CurrentPortReflectListener {
+						listener.Close()
+					}
+				case "ADMINOFFLINE": //startnode不执行重连模式时admin下线后传递的数据
+					fmt.Println("Admin seems offline")
+					if NotLastOne {
+						offlineCommand, _ := common.ConstructPayload(NODEID+1, "COMMAND", "ADMINOFFLINE", " ", "", 0, NODEID, AESKey, false)
+						ProxyChanToLowerNode <- offlineCommand
+					}
+					time.Sleep(2 * time.Second)
+					os.Exit(1)
+				case "RECONN": //startnode执行重连模式时admin下线后传递的数据
+					respCommand, _ := common.ConstructPayload(0, "COMMAND", "RECONNID", " ", "", 0, NODEID, AESKey, false)
+					ProxyChanToUpperNode <- respCommand
+					if NotLastOne {
+						passCommand, _ := common.ConstructPayload(NODEID+1, "COMMAND", "RECONN", " ", "", 0, NODEID, AESKey, false)
+						ProxyChanToLowerNode <- passCommand
+					}
+				case "CLEAR":
+					ClearAllConn()
+					SocksDataChanMap = common.NewUint32ChanStrMap()
+					if NotLastOne {
+						messCommand, _ := common.ConstructPayload(NODEID+1, "COMMAND", "CLEAR", " ", "", 0, NODEID, AESKey, false)
+						ProxyChanToLowerNode <- messCommand
+					}
+				case "RECOVER":
+					AlreadyDownNode.Lock()
+					if _, ok := AlreadyDownNode.Payload[command.NodeId+1]; ok {
+						delete(AlreadyDownNode.Payload, command.NodeId+1)
+					}
+					AlreadyDownNode.Unlock()
+				case "KEEPALIVE":
+				default:
+					continue
+				}
+			case "DATA":
+				switch command.Command {
+				case "SOCKSDATA":
+					SocksDataChanMap.RLock()
+					if _, ok := SocksDataChanMap.Payload[command.Clientid]; ok {
+						SocksDataChanMap.Payload[command.Clientid] <- command.Info
+						SocksDataChanMap.RUnlock()
+					} else {
+						SocksDataChanMap.RUnlock()
 						tempchan := make(chan string, 10)
-						PortFowardMap.Payload[AdminData.Clientid] = tempchan
-						//fmt.Println("make new ", AdminData.Clientid)
-						go HandleForward(dataConnToUpperNode, PortFowardMap.Payload[AdminData.Clientid], AdminData.Clientid)
-						PortFowardMap.Payload[AdminData.Clientid] <- AdminData.Result
+						SocksDataChanMap.Lock()
+						SocksDataChanMap.Payload[command.Clientid] = tempchan
+						go HanleClientSocksConn(SocksDataChanMap.Payload[command.Clientid], SocksUsername, SocksPass, command.Clientid, NODEID)
+						SocksDataChanMap.Payload[command.Clientid] <- command.Info
+						SocksDataChanMap.Unlock()
+					}
+				case "FINOK":
+					SocksDataChanMap.Lock()
+					if _, ok := SocksDataChanMap.Payload[command.Clientid]; ok {
+						if !common.IsClosed(SocksDataChanMap.Payload[command.Clientid]) {
+							close(SocksDataChanMap.Payload[command.Clientid])
+						}
+						delete(SocksDataChanMap.Payload, command.Clientid)
+					}
+					SocksDataChanMap.Unlock()
+				case "FILEDATA": //接收文件内容
+					slicenum, _ := strconv.Atoi(command.FileSliceNum)
+					FileDataMap.Payload[slicenum] = command.Info
+				case "EOF": //文件读取结束
+					Eof <- command.FileSliceNum
+				case "FIN":
+					CurrentConn.Lock()
+					if _, ok := CurrentConn.Payload[command.Clientid]; ok {
+						err := CurrentConn.Payload[command.Clientid].Close()
+						if err != nil {
+						}
+					}
+					CurrentConn.Unlock()
+					SocksDataChanMap.Lock()
+					if _, ok := SocksDataChanMap.Payload[command.Clientid]; ok {
+						if !common.IsClosed(SocksDataChanMap.Payload[command.Clientid]) {
+							close(SocksDataChanMap.Payload[command.Clientid])
+						}
+						delete(SocksDataChanMap.Payload, command.Clientid)
+					}
+					SocksDataChanMap.Unlock()
+				case "FORWARD": //连接指定需要映射的端口
+					TryForward(command.Info, command.Clientid)
+				case "FORWARDDATA":
+					ForwardConnMap.RLock()
+					if _, ok := ForwardConnMap.Payload[command.Clientid]; ok {
+						PortFowardMap.Lock()
+						if _, ok := PortFowardMap.Payload[command.Clientid]; ok {
+							PortFowardMap.Payload[command.Clientid] <- command.Info
+						} else {
+							tempchan := make(chan string, 10)
+							PortFowardMap.Payload[command.Clientid] = tempchan
+							go HandleForward(PortFowardMap.Payload[command.Clientid], command.Clientid)
+							PortFowardMap.Payload[command.Clientid] <- command.Info
+						}
+						PortFowardMap.Unlock()
+					}
+					ForwardConnMap.RUnlock()
+				case "FORWARDFIN":
+					ForwardConnMap.Lock()
+					if _, ok := ForwardConnMap.Payload[command.Clientid]; ok {
+						ForwardConnMap.Payload[command.Clientid].Close()
+						delete(ForwardConnMap.Payload, command.Clientid)
+					}
+					ForwardConnMap.Unlock()
+					PortFowardMap.Lock()
+					if _, ok := PortFowardMap.Payload[command.Clientid]; ok {
+						if !common.IsClosed(PortFowardMap.Payload[command.Clientid]) {
+							close(PortFowardMap.Payload[command.Clientid])
+						}
 					}
 					PortFowardMap.Unlock()
-				}
-				ForwardConnMap.RUnlock()
-			case "FORWARDFIN":
-				ForwardConnMap.Lock()
-				if _, ok := ForwardConnMap.Payload[AdminData.Clientid]; ok {
-					ForwardConnMap.Payload[AdminData.Clientid].Close()
-					delete(ForwardConnMap.Payload, AdminData.Clientid)
-				}
-				ForwardConnMap.Unlock()
-				PortFowardMap.Lock()
-				if _, ok := PortFowardMap.Payload[AdminData.Clientid]; ok {
-					if !common.IsClosed(PortFowardMap.Payload[AdminData.Clientid]) {
-						close(PortFowardMap.Payload[AdminData.Clientid])
+				case "REFLECTDATARESP":
+					ReflectConnMap.Lock()
+					ReflectConnMap.Payload[command.Clientid].Write([]byte(command.Info))
+					ReflectConnMap.Unlock()
+				case "REFLECTTIMEOUT":
+					fallthrough
+				case "REFLECTOFFLINE":
+					ReflectConnMap.Lock()
+					if _, ok := ReflectConnMap.Payload[command.Clientid]; ok {
+						ReflectConnMap.Payload[command.Clientid].Close()
+						delete(ReflectConnMap.Payload, command.Clientid)
 					}
+					ReflectConnMap.Unlock()
+				default:
+					continue
 				}
-				PortFowardMap.Unlock()
-			case "REFLECTDATARESP":
-				ReflectConnMap.Lock()
-				ReflectConnMap.Payload[AdminData.Clientid].Write([]byte(AdminData.Result))
-				ReflectConnMap.Unlock()
-			case "REFLECTTIMEOUT":
-				fallthrough
-			case "REFLECTOFFLINE":
-				ReflectConnMap.Lock()
-				if _, ok := ReflectConnMap.Payload[AdminData.Clientid]; ok {
-					ReflectConnMap.Payload[AdminData.Clientid].Close()
-					delete(ReflectConnMap.Payload, AdminData.Clientid)
-				}
-				ReflectConnMap.Unlock()
-			case "HEARTBEAT":
-				hbdatapack, _ := common.ConstructDataResult(0, 0, " ", "KEEPALIVE", " ", AESKey, NODEID)
-				(*dataConnToUpperNode).Write(hbdatapack)
-			default:
-				//logrus.Error("Unknown data")
-				continue
 			}
 		} else {
-			ProxyData, _ := common.ConstructDataResult(AdminData.NodeId, AdminData.Clientid, AdminData.FileSliceNum, AdminData.Datatype, AdminData.Result, AESKey, NODEID)
-			go ProxyDataToNextNode(ProxyData)
+			AlreadyDownNode.RLock()
+			if _, ok := AlreadyDownNode.Payload[command.NodeId]; ok {
+			} else {
+				proxyData, _ := common.ConstructPayload(command.NodeId, command.Type, command.Command, command.FileSliceNum, command.Info, command.Clientid, command.CurrentId, AESKey, true)
+				ProxyChanToLowerNode <- proxyData
+			}
+			AlreadyDownNode.RUnlock()
 		}
+
 	}
 }
 

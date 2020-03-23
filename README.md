@@ -93,7 +93,7 @@ Admin端主动连接startnode端：./stowaway admin -s 123 -c 127.0.0.1:9999
 
   -c 代表startnode所在的地址
 
-此时startnode端: ./stowaway agent -l 9999 -s 123 --startnode --reconnect 0 -r --single
+此时startnode端: ./stowaway agent -l 9999 -s 123 --startnode --reconnect 0 -r --single --activeconnect
 
   命令解析：
 
@@ -101,17 +101,19 @@ Admin端主动连接startnode端：./stowaway admin -s 123 -c 127.0.0.1:9999
 
   -l，-s ，--startnode同上
 
-  --reconnect：当statnode端以passive模式启动时，请将此值设置为0（active模式下，此值为每隔x秒尝试重连）
+  --reconnect：当statnode端以passive模式启动时，如果需要保留admin重连的功能，请将此值设置为0，如果不需要后续的重连，则删除此选项
 
-  -r/--reverse：代表以passive模式启动
+  -r/--reverse：代表此节点以passive模式启动
 
   --single：当设置此选项时，代表整个网络只有admin和startnode两个节点（即没有后续节点），若不设置此选项，代表后续还有节点
+
+  --activeconnect: 当设置此选项时，代表第二个节点（即第一个普通节点）是passive模式启动的（即被动等待startnode连接），如果不是passive模式启动，那么请删除此选项
 
 
 
 后续节点同第一种情况启动即可
 
-此时，若未设置--single选项，则先后启动startnode端及admin端，将后续节点加入网络后，admin就可以选择下线（或者保持在线）
+此时，若未设置--single选项，则必须先后启动startnode端及admin端（注意顺序，先startnode，后admin，之后再是后续节点，顺序不要搞错），之后当后续节点全部加入网络后，admin就可以选择下线（或者保持在线）
 
 下一次想要重连时，再次执行./stowaway admin -s 123 -c 127.0.0.1:9999，即可重建网络
 
@@ -120,6 +122,14 @@ Admin端主动连接startnode端：./stowaway admin -s 123 -c 127.0.0.1:9999
 下一次想要重连时，再次执行./stowaway admin -s 123 -c 127.0.0.1:9999，即可重建网络
 
 ```
+
+**几个注意点：**
+
+**1.每个节点（不管是startnode还是普通node）被下一个节点以主动模式连接过一次后，则无法再被主动连接，即如果下一个节点掉线后想要重连，是无法以主动模式重连上一个的，只能等待上一个节点以connect命令来连接或者重建整个网络。**
+
+**2.当有节点掉线时（假设a节点后的节点b掉线了），那么此时所有的socks，reflect，forward服务都会被强制停止（不管这个服务是否属于b节点），需要重新手动启用**
+
+**3.当有节点掉线时（假设a节点后的节点b掉线了),那么在b节点重连至a节点之后，请先使用use命令进入到a节点，输入命令：recover ，以此来重置a节点，之后再对b节点进行操作**
 
 ## Example
 

@@ -36,17 +36,14 @@ func CreatInteractiveShell() (io.Reader, io.Writer) {
 
 //启动shell
 func StartShell(command string, stdin io.Writer, stdout io.Reader, currentid uint32) {
-	dataType := "SHELLRESP"
-
 	buf := make([]byte, 1024)
 	stdin.Write([]byte(command))
 	for {
 		count, err := stdout.Read(buf)
 		if err != nil {
-			//fmt.Println("error: ", err)
 			return
 		}
-		respShell, err := common.ConstructDataResult(0, 0, " ", dataType, string(buf[:count]), AESKey, currentid)
-		CmdResult <- respShell
+		respShell, _ := common.ConstructPayload(0, "DATA", "SHELLRESP", " ", string(buf[:count]), 0, currentid, AESKey, false)
+		ProxyChanToUpperNode <- respShell
 	}
 }

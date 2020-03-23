@@ -10,182 +10,99 @@ import (
 	"net"
 )
 
-type Command struct {
-	NodeId uint32 //节点序号
+type Payload struct {
+	NodeId uint32 //接收节点序号
+
+	TypeLength uint32 //标识符长度
+
+	Type string //标示是data还是command
 
 	CommandLength uint32 //命令长度
 
 	Command string //命令类型
 
-	InfoLength uint32 //载荷长度
-
-	Info string //具体载荷
-}
-
-type Data struct {
-	NodeId uint32 //目标节点序号
-
-	Clientid uint32 //socks以及forward功能中用来标识当前需要操作的connection
-
 	FileSliceNumLength uint32 //文件传输分包序号字段长度
 
 	FileSliceNum string //文件传输分包序号
 
-	DatatypeLength uint32 //数据类型长度
+	InfoLength uint32 //载荷长度
 
-	Datatype string //数据类型
+	Info string //具体载荷
 
-	ResultLength uint32 //具体载荷长度
-
-	Result string //具体载荷
+	Clientid uint32 //socks以及forward功能中用来标识当前需要操作的connection
 
 	CurrentId uint32 //当前节点序号
 }
 
-func ExtractCommand(conn net.Conn, key []byte) (*Command, error) {
-	var (
-		command    = &Command{}
-		idlen      = make([]byte, config.ID_LEN)
-		commandlen = make([]byte, config.HEADER_LEN)
-	)
-	if len(key) != 0 {
-		key, _ = crypto.KeyPadding(key)
-	}
-
-	_, err := io.ReadFull(conn, idlen)
-	if err != nil {
-		return command, err
-	}
-
-	command.NodeId = binary.BigEndian.Uint32(idlen)
-
-	_, err = io.ReadFull(conn, commandlen)
-	if err != nil {
-		return command, err
-	}
-
-	command.CommandLength = binary.BigEndian.Uint32(commandlen)
-
-	commandbuffer := make([]byte, command.CommandLength)
-	_, err = io.ReadFull(conn, commandbuffer)
-	if err != nil {
-		return command, err
-	}
-	if len(key) != 0 {
-		command.Command = string(crypto.AESDecrypt(commandbuffer[:], key))
-	} else {
-		command.Command = string(commandbuffer[:])
-	}
-
-	infolen := make([]byte, config.INFO_LEN)
-	_, err = io.ReadFull(conn, infolen)
-	if err != nil {
-		return command, err
-	}
-	command.InfoLength = binary.BigEndian.Uint32(infolen)
-
-	infobuffer := make([]byte, command.InfoLength)
-	_, err = io.ReadFull(conn, infobuffer)
-	if err != nil {
-		return command, err
-	}
-	if len(key) != 0 {
-		command.Info = string(crypto.AESDecrypt(infobuffer[:], key))
-	} else {
-		command.Info = string(infobuffer[:])
-	}
-
-	return command, nil
-
-}
-
-func ConstructCommand(command string, info string, id uint32, key []byte) ([]byte, error) {
+func ConstructPayload(nodeid uint32, ptype string, command string, fileSliceNum string, info string, clientid uint32, currentid uint32, key []byte, pass bool) ([]byte, error) {
 	var buffer bytes.Buffer
 
-	InfoLength := make([]byte, 5)
-	CommandLength := make([]byte, 4)
-	Nodeid := make([]byte, 4)
+	Nodeid := make([]byte, config.NODE_LEN)
+	TypeLength := make([]byte, config.TYPE_LEN)
+	CommandLength := make([]byte, config.COMMAND_LEN)
+	FilesliceLength := make([]byte, config.FILESLICENUM_LEN)
+	InfoLength := make([]byte, config.INFO_LEN)
+	Clientid := make([]byte, config.CLIENT_LEN)
+	Currentid := make([]byte, config.NODE_LEN)
 
+	PtypeData := []byte(ptype)
 	Command := []byte(command)
+	FileSliceNumData := []byte(fileSliceNum)
 	Info := []byte(info)
 
-	if len(key) != 0 {
+	if len(key) != 0 && !pass {
 		key, err := crypto.KeyPadding(key)
 		if err != nil {
 			log.Fatal(err)
 		}
+		PtypeData = crypto.AESEncrypt(PtypeData, key)
 		Command = crypto.AESEncrypt(Command, key)
 		Info = crypto.AESEncrypt(Info, key)
 	}
 
-	binary.BigEndian.PutUint32(Nodeid, id)
-	binary.BigEndian.PutUint32(CommandLength, uint32(len(Command)))
-	binary.BigEndian.PutUint32(InfoLength, uint32(len(Info)))
-
-	buffer.Write(Nodeid)
-	buffer.Write(CommandLength)
-	buffer.Write(Command)
-	buffer.Write(InfoLength)
-	buffer.Write(Info)
-
-	final := buffer.Bytes()
-
-	return final, nil
-
-}
-
-func ConstructDataResult(nodeid uint32, clientsocks uint32, fileSliceNum string, datatype string, result string, key []byte, currentid uint32) ([]byte, error) {
-	var buffer bytes.Buffer
-	NodeIdLength := make([]byte, config.NODE_LEN)
-	ClientsocksLength := make([]byte, config.CLIENT_LEN)
-	FilesliceLength := make([]byte, config.FILESLICENUM_LEN)
-	DatatypeLength := make([]byte, config.DATATYPE_LEN)
-	ResultLength := make([]byte, config.RESULT_LEN)
-	CurrentIdLength := make([]byte, config.NODE_LEN)
-
-	FileSliceNum := []byte(fileSliceNum)
-	Datatype := []byte(datatype)
-	Result := []byte(result)
-
-	if len(key) != 0 && (nodeid == 0 || currentid == 0) {
+	if pass {
 		key, err := crypto.KeyPadding(key)
 		if err != nil {
 			log.Fatal(err)
 		}
-		Datatype = crypto.AESEncrypt(Datatype, key)
-		Result = crypto.AESEncrypt(Result, key)
+		PtypeData = crypto.AESEncrypt(PtypeData, key)
+		Command = crypto.AESEncrypt(Command, key)
 	}
 
-	binary.BigEndian.PutUint32(NodeIdLength, nodeid)
-	binary.BigEndian.PutUint32(ClientsocksLength, uint32(clientsocks))
-	binary.BigEndian.PutUint32(FilesliceLength, uint32(len(FileSliceNum)))
-	binary.BigEndian.PutUint32(DatatypeLength, uint32(len(Datatype)))
-	binary.BigEndian.PutUint32(ResultLength, uint32(len(Result)))
-	binary.BigEndian.PutUint32(CurrentIdLength, currentid)
+	binary.BigEndian.PutUint32(Nodeid, nodeid)
+	binary.BigEndian.PutUint32(TypeLength, uint32(len(PtypeData)))
+	binary.BigEndian.PutUint32(CommandLength, uint32(len(Command)))
+	binary.BigEndian.PutUint32(FilesliceLength, uint32(len(FileSliceNumData)))
+	binary.BigEndian.PutUint32(InfoLength, uint32(len(Info)))
+	binary.BigEndian.PutUint32(Clientid, clientid)
+	binary.BigEndian.PutUint32(Currentid, currentid)
 
-	buffer.Write(NodeIdLength)
-	buffer.Write(ClientsocksLength)
+	buffer.Write(Nodeid)
+	buffer.Write(TypeLength)
+	buffer.Write(PtypeData)
+	buffer.Write(CommandLength)
+	buffer.Write(Command)
 	buffer.Write(FilesliceLength)
-	buffer.Write(FileSliceNum)
-	buffer.Write(DatatypeLength)
-	buffer.Write(Datatype)
-	buffer.Write(ResultLength)
-	buffer.Write(Result)
-	buffer.Write(CurrentIdLength)
+	buffer.Write(FileSliceNumData)
+	buffer.Write(InfoLength)
+	buffer.Write(Info)
+	buffer.Write(Clientid)
+	buffer.Write(Currentid)
 
-	final := buffer.Bytes()
+	payload := buffer.Bytes()
 
-	return final, nil
+	return payload, nil
 }
 
-func ExtractDataResult(conn net.Conn, key []byte, currentid uint32) (*Data, error) {
+func ExtractPayload(conn net.Conn, key []byte, currentid uint32, isinit bool) (*Payload, error) {
 	var (
-		data            = &Data{}
+		payload         = &Payload{}
 		nodelen         = make([]byte, config.NODE_LEN)
-		clientlen       = make([]byte, config.CLIENT_LEN)
+		typelen         = make([]byte, config.TYPE_LEN)
+		commandlen      = make([]byte, config.COMMAND_LEN)
 		fileslicenumlen = make([]byte, config.FILESLICENUM_LEN)
-		datatypelen     = make([]byte, config.DATATYPE_LEN)
-		resultlen       = make([]byte, config.RESULT_LEN)
+		infolen         = make([]byte, config.INFO_LEN)
+		clientidlen     = make([]byte, config.CLIENT_LEN)
 		currentidlen    = make([]byte, config.NODE_LEN)
 	)
 
@@ -195,71 +112,85 @@ func ExtractDataResult(conn net.Conn, key []byte, currentid uint32) (*Data, erro
 
 	_, err := io.ReadFull(conn, nodelen)
 	if err != nil {
-		return data, err
+		return payload, err
 	}
+	payload.NodeId = binary.BigEndian.Uint32(nodelen)
 
-	data.NodeId = binary.BigEndian.Uint32(nodelen)
-	_, err = io.ReadFull(conn, clientlen)
+	_, err = io.ReadFull(conn, typelen)
 	if err != nil {
-		return data, err
+		return payload, err
+	}
+	payload.TypeLength = binary.BigEndian.Uint32(typelen)
+
+	typebuffer := make([]byte, payload.TypeLength)
+	_, err = io.ReadFull(conn, typebuffer)
+	if err != nil {
+		return payload, err
+	}
+	if len(key) != 0 {
+		payload.Type = string(crypto.AESDecrypt(typebuffer[:], key))
+	} else {
+		payload.Type = string(typebuffer[:])
 	}
 
-	data.Clientid = binary.BigEndian.Uint32(clientlen)
+	_, err = io.ReadFull(conn, commandlen)
+	if err != nil {
+		return payload, err
+	}
+	payload.CommandLength = binary.BigEndian.Uint32(commandlen)
+
+	commandbuffer := make([]byte, payload.CommandLength)
+	_, err = io.ReadFull(conn, commandbuffer)
+	if err != nil {
+		return payload, err
+	}
+	if len(key) != 0 {
+		payload.Command = string(crypto.AESDecrypt(commandbuffer[:], key))
+	} else {
+		payload.Command = string(commandbuffer[:])
+	}
 
 	_, err = io.ReadFull(conn, fileslicenumlen)
 	if err != nil {
-		return data, err
+		return payload, err
 	}
+	payload.FileSliceNumLength = binary.BigEndian.Uint32(fileslicenumlen)
 
-	data.FileSliceNumLength = binary.BigEndian.Uint32(fileslicenumlen)
-
-	successbuffer := make([]byte, data.FileSliceNumLength)
-	_, err = io.ReadFull(conn, successbuffer)
+	fileslicenumbuffer := make([]byte, payload.FileSliceNumLength)
+	_, err = io.ReadFull(conn, fileslicenumbuffer)
 	if err != nil {
-		return data, err
+		return payload, err
 	}
-	data.FileSliceNum = string(successbuffer)
+	payload.FileSliceNum = string(fileslicenumbuffer)
 
-	_, err = io.ReadFull(conn, datatypelen)
+	_, err = io.ReadFull(conn, infolen)
 	if err != nil {
-		return data, err
+		return payload, err
 	}
-	data.DatatypeLength = binary.BigEndian.Uint32(datatypelen)
+	payload.InfoLength = binary.BigEndian.Uint32(infolen)
 
-	datatypebuffer := make([]byte, data.DatatypeLength)
-	_, err = io.ReadFull(conn, datatypebuffer)
+	infobuffer := make([]byte, payload.InfoLength)
+	_, err = io.ReadFull(conn, infobuffer)
 	if err != nil {
-		return data, err
+		return payload, err
 	}
-	if len(key) != 0 && data.NodeId == currentid { //判断是否是给自己的包,不是的话就不解密datatype防止性能损失
-		data.Datatype = string(crypto.AESDecrypt(datatypebuffer[:], key))
+	if len(key) != 0 && (payload.NodeId == currentid || isinit) {
+		payload.Info = string(crypto.AESDecrypt(infobuffer[:], key))
 	} else {
-		data.Datatype = string(datatypebuffer[:])
+		payload.Info = string(infobuffer[:])
 	}
 
-	_, err = io.ReadFull(conn, resultlen)
+	_, err = io.ReadFull(conn, clientidlen)
 	if err != nil {
-		return data, err
+		return payload, err
 	}
-	data.ResultLength = binary.BigEndian.Uint32(resultlen)
-
-	resultbuffer := make([]byte, data.ResultLength)
-	_, err = io.ReadFull(conn, resultbuffer)
-	if err != nil {
-		return data, err
-	}
-	if len(key) != 0 && data.NodeId == currentid { //同datatype
-		data.Result = string(crypto.AESDecrypt(resultbuffer[:], key))
-	} else {
-		data.Result = string(resultbuffer[:])
-	}
+	payload.Clientid = binary.BigEndian.Uint32(clientidlen)
 
 	_, err = io.ReadFull(conn, currentidlen)
 	if err != nil {
-		return data, err
+		return payload, err
 	}
+	payload.CurrentId = binary.BigEndian.Uint32(currentidlen)
 
-	data.CurrentId = binary.BigEndian.Uint32(currentidlen)
-
-	return data, nil
+	return payload, nil
 }

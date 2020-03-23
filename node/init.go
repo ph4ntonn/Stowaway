@@ -6,23 +6,23 @@ import (
 	"log"
 	"net"
 	"os"
-	"strings"
 )
 
 var (
 	ControlConnForLowerNodeChan = make(chan net.Conn, 1) //下级节点控制信道
-	DataConnForLowerNodeChan    = make(chan net.Conn, 1) //下级节点数据信道
 	NewNodeMessageChan          = make(chan []byte, 1)   //新节点加入消息
+	ConnectStatusChan           = make(chan []byte, 1)
+	AdminOrAgent                = make(chan string, 1)
 )
 
 //初始化一个节点连接操作
-func StartNodeConn(monitor string, listenPort string, nodeID uint32, key []byte) (net.Conn, net.Conn, uint32, error) {
+func StartNodeConn(monitor string, listenPort string, nodeID uint32, key []byte) (net.Conn, uint32, error) {
 	controlConnToUpperNode, err := net.Dial("tcp", monitor)
 	if err != nil {
 		log.Println("[*]Connection refused!")
-		return controlConnToUpperNode, controlConnToUpperNode, 11235, err
+		return controlConnToUpperNode, 11235, err
 	}
-	respcommand, err := common.ConstructCommand("INIT", listenPort, nodeID, key)
+	respcommand, err := common.ConstructPayload(nodeID, "COMMAND", "INIT", " ", listenPort, 0, 0, key, false)
 	if err != nil {
 		log.Printf("[*]Error occured: %s", err)
 	}
@@ -31,27 +31,17 @@ func StartNodeConn(monitor string, listenPort string, nodeID uint32, key []byte)
 		log.Printf("[*]Error occured: %s", err)
 	}
 	for {
-		command, _ := common.ExtractCommand(controlConnToUpperNode, key)
+		command, _ := common.ExtractPayload(controlConnToUpperNode, key, 0, true)
 		switch command.Command {
 		case "ID":
 			nodeID = command.NodeId
-		case "ACCEPT":
-			switch command.Info {
-			case "DATA":
-				dataConnToUpperNode, err := net.Dial("tcp", monitor)
-				if err != nil {
-					log.Printf("[*]Error occured: %s", err)
-				}
-				return controlConnToUpperNode, dataConnToUpperNode, nodeID, nil
-			}
+			return controlConnToUpperNode, nodeID, nil
 		}
 	}
 }
 
 //初始化节点监听操作
-func StartNodeListen(listenPort string, NodeId uint32, key []byte, reconn bool, single bool) {
-	var nodeconnected string = "0.0.0.0"
-	var result [1]net.Conn
+func StartNodeListen(listenPort string, NodeId uint32, key []byte, reconn bool, single bool, firstNodeStatus bool) {
 	var NewNodeMessage []byte
 
 	if listenPort == "" {
@@ -59,9 +49,9 @@ func StartNodeListen(listenPort string, NodeId uint32, key []byte, reconn bool, 
 	}
 	if single { //如果passive重连状态下只有startnode一个节点，没有后续节点的话，直接交给AcceptConnFromUpperNode函数
 		for {
-			controlConnToAdmin, dataConnToAdmin, _ := AcceptConnFromUpperNode(listenPort, NodeId, key)
+			controlConnToAdmin, _ := AcceptConnFromUpperNode(listenPort, NodeId, key)
+			AdminOrAgent <- "admin"
 			ControlConnForLowerNodeChan <- controlConnToAdmin
-			DataConnForLowerNodeChan <- dataConnToAdmin
 		}
 	}
 
@@ -70,162 +60,109 @@ func StartNodeListen(listenPort string, NodeId uint32, key []byte, reconn bool, 
 	WaitingForLowerNode, err := net.Listen("tcp", listenAddr)
 
 	if err != nil {
-		//logrus.Errorf("[*]Cannot listen on port %s", listenPort)
 		log.Printf("[*]Cannot listen on port %s", listenPort)
 		os.Exit(1)
 	}
 
-	for {
+	for !firstNodeStatus {
 		ConnToLowerNode, err := WaitingForLowerNode.Accept() //判断一下是否是合法连接
 		if err != nil {
 			log.Println("[*]", err)
-			continue
+			return
 		}
-		if nodeconnected == "0.0.0.0" {
-			command, err := common.ExtractCommand(ConnToLowerNode, key)
+		command, err := common.ExtractPayload(ConnToLowerNode, key, 0, true)
+		if err != nil {
+			log.Println("[*]", err)
+			return
+		}
+		if command.Command == "INIT" {
+			respNodeID := NodeId + 1
+			respCommand, _ := common.ConstructPayload(respNodeID, "COMMAND", "ID", " ", " ", 0, 0, key, false)
+			_, err := ConnToLowerNode.Write(respCommand)
+			NewNodeMessage, _ = common.ConstructPayload(0, "COMMAND", "NEW", " ", ConnToLowerNode.RemoteAddr().String(), 0, NodeId, key, false)
 			if err != nil {
 				log.Println("[*]", err)
-				continue
-			}
-			if command.Command == "INIT" {
-				if command.NodeId == 0 {
-					respNodeID := NodeId + 1
-					respCommand, _ := common.ConstructCommand("ID", "", respNodeID, key)
-					_, err := ConnToLowerNode.Write(respCommand)
-					NewNodeMessage, _ = common.ConstructCommand("NEW", ConnToLowerNode.RemoteAddr().String(), respNodeID, key)
-					if err != nil {
-						log.Println("[*]", err)
-						continue
-					}
-					controlConnToLowerNode := ConnToLowerNode
-					result[0] = controlConnToLowerNode
-					nodeconnected = strings.Split(ConnToLowerNode.RemoteAddr().String(), ":")[0]
-					respCommand, _ = common.ConstructCommand("ACCEPT", "DATA", respNodeID, key)
-					_, err = ConnToLowerNode.Write(respCommand)
-					if err != nil {
-						log.Println("[*]", err)
-						continue
-					}
-				} else {
-					respCommand, _ := common.ConstructCommand("ID", "", command.NodeId, key)
-					_, err := ConnToLowerNode.Write(respCommand)
-					if err != nil {
-						log.Println("[*]", err)
-						continue
-					}
-					respCommand, _ = common.ConstructCommand("ACCEPT", "DATA", command.NodeId, key)
-					_, err = ConnToLowerNode.Write(respCommand)
-					if err != nil {
-						log.Println("[*]", err)
-						continue
-					}
-					controlConnToLowerNode := ConnToLowerNode
-					result[0] = controlConnToLowerNode
-					nodeconnected = strings.Split(ConnToLowerNode.RemoteAddr().String(), ":")[0]
-				}
-			} else {
-				log.Println("[*]Illegal connection!")
-			}
-		} else if nodeconnected == strings.Split(ConnToLowerNode.RemoteAddr().String(), ":")[0] {
-			dataConToLowerNode := ConnToLowerNode
-			ControlConnForLowerNodeChan <- result[0]
-			DataConnForLowerNodeChan <- dataConToLowerNode
-			NewNodeMessageChan <- NewNodeMessage
-			nodeconnected = "0.0.0.0" //继续接受连接？
-			if reconn {
-				WaitingForLowerNode.Close()
-				for {
-					controlConnToAdmin, dataConnToAdmin, _ := AcceptConnFromUpperNode(listenPort, NodeId, key)
-					ControlConnForLowerNodeChan <- controlConnToAdmin
-					DataConnForLowerNodeChan <- dataConnToAdmin
-				}
+				return
 			}
 		} else {
-			continue
+			respCommand, _ := common.ConstructPayload(command.NodeId, "COMMAND", "ID", " ", " ", 0, 0, key, false)
+			_, err := ConnToLowerNode.Write(respCommand)
+			if err != nil {
+				log.Println("[*]", err)
+				return
+			}
+		}
+		AdminOrAgent <- "agent"
+		ControlConnForLowerNodeChan <- ConnToLowerNode
+		NewNodeMessageChan <- NewNodeMessage
+		break
+	}
+	WaitingForLowerNode.Close()
+	if reconn {
+		for {
+			controlConnToAdmin, _ := AcceptConnFromUpperNode(listenPort, NodeId, key)
+			AdminOrAgent <- "admin"
+			ControlConnForLowerNodeChan <- controlConnToAdmin
 		}
 	}
 }
 
-func ConnectNextNode(target string, nodeid uint32, key []byte) {
+func ConnectNextNode(target string, nodeid uint32, key []byte) bool {
 	var NewNodeMessage []byte
 
 	controlConnToNextNode, err := net.Dial("tcp", target)
 
 	if err != nil {
-		log.Println("[*]Connection refused!")
-		return
+		return false
 	}
 
 	for {
-		command, err := common.ExtractCommand(controlConnToNextNode, key)
+		command, err := common.ExtractPayload(controlConnToNextNode, key, 0, true)
 		if err != nil {
 			log.Println("[*]", err)
-			return
+			return false
 		}
 		switch command.Command {
 		case "INIT":
 			respNodeID := nodeid + 1
-			respCommand, _ := common.ConstructCommand("ID", "", respNodeID, key)
+			respCommand, _ := common.ConstructPayload(respNodeID, "COMMAND", "ID", " ", " ", 0, 0, key, false)
 			_, err := controlConnToNextNode.Write(respCommand)
-			NewNodeMessage, _ = common.ConstructCommand("NEW", controlConnToNextNode.RemoteAddr().String(), respNodeID, key)
 			if err != nil {
 				log.Println("[*]", err)
-				continue
+				return false
 			}
-		case "IDOK":
-			dataConnToNextNode, err := net.Dial("tcp", target)
-			if err != nil {
-				log.Println("[*]Connection refused!")
-				return
-			}
+			NewNodeMessage, _ = common.ConstructPayload(0, "COMMAND", "NEW", " ", controlConnToNextNode.RemoteAddr().String(), 0, nodeid, key, false)
+			AdminOrAgent <- "agent"
 			ControlConnForLowerNodeChan <- controlConnToNextNode
-			DataConnForLowerNodeChan <- dataConnToNextNode
 			NewNodeMessageChan <- NewNodeMessage
-			return
+			return true
 		}
 	}
 }
 
-func AcceptConnFromUpperNode(listenPort string, nodeid uint32, key []byte) (net.Conn, net.Conn, uint32) {
+func AcceptConnFromUpperNode(listenPort string, nodeid uint32, key []byte) (net.Conn, uint32) {
 	listenAddr := fmt.Sprintf("0.0.0.0:%s", listenPort)
 	WaitingForConn, err := net.Listen("tcp", listenAddr)
-
-	var (
-		flag        = false
-		history     string
-		controlconn [1]net.Conn
-	)
 
 	if err != nil {
 		log.Printf("[*]Cannot listen on port %s", listenPort)
 		os.Exit(1)
 	}
-
 	for {
 		Comingconn, err := WaitingForConn.Accept()
 		if err != nil {
 			log.Println("[*]", err)
 			continue
 		}
-		if flag == false {
-			respcommand, _ := common.ConstructCommand("INIT", listenPort, nodeid, key)
-			Comingconn.Write(respcommand)
-			command, _ := common.ExtractCommand(Comingconn, key)
-			if command.Command == "ID" {
-				nodeid = command.NodeId
-				respcommand, _ = common.ConstructCommand("IDOK", "", nodeid, key)
-				Comingconn.Write(respcommand)
-				flag = true
-				history = strings.Split(Comingconn.RemoteAddr().String(), ":")[0]
-				controlconn[0] = Comingconn
-			} else {
-				continue
-			}
-		} else if history == strings.Split(Comingconn.RemoteAddr().String(), ":")[0] {
+
+		respcommand, _ := common.ConstructPayload(nodeid, "COMMAND", "INIT", " ", listenPort, 0, 0, key, false)
+		Comingconn.Write(respcommand)
+		command, _ := common.ExtractPayload(Comingconn, key, 0, true)
+		if command.Command == "ID" {
+			nodeid = command.NodeId
 			WaitingForConn.Close()
-			return controlconn[0], Comingconn, nodeid
-		} else {
-			continue
+			return Comingconn, nodeid
 		}
 	}
+
 }

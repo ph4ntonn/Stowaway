@@ -4,7 +4,6 @@ import (
 	"Stowaway/common"
 	"Stowaway/node"
 	"fmt"
-	"net"
 	"os"
 	"os/signal"
 	"strconv"
@@ -18,28 +17,15 @@ func TryReconnect(gap string, monitor string, listenPort string) {
 	for {
 		time.Sleep(time.Duration(lag) * time.Second)
 
-		controlConnToAdmin, dataConnToAdmin, _, err := node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
+		controlConnToAdmin, _, err := node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
 		if err != nil {
 			fmt.Println("[*]Admin seems still down")
 		} else {
 			fmt.Println("[*]Admin up! Reconnect successful!")
-			ControlConnToAdmin = controlConnToAdmin
-			DataConnToAdmin = dataConnToAdmin
-			go common.SendHeartBeatControl(ControlConnToAdmin, NODEID, AESKey)
+			ConnToAdmin = controlConnToAdmin
 			return
 		}
 	}
-}
-
-/*-------------------------命令传递相关代码--------------------------*/
-//将命令传递到下一节点
-func ProxyCommToNextNode(proxyCommand []byte) {
-	Proxy_Command_Chan <- proxyCommand
-}
-
-//将数据传递到下一节点
-func ProxyDataToNextNode(proxyData []byte) {
-	Proxy_Data_Chan <- proxyData
 }
 
 /*-------------------------程序控制相关代码--------------------------*/
@@ -49,8 +35,8 @@ func WaitForExit(NODEID uint32) {
 	signal.Notify(signalChan, os.Interrupt, os.Kill, syscall.SIGHUP)
 	<-signalChan
 	if NotLastOne {
-		offlineMess, _ := common.ConstructCommand("OFFLINE", "", NODEID+1, AESKey)
-		Proxy_Command_Chan <- offlineMess
+		offlineMess, _ := common.ConstructPayload(NODEID+1, "COMMAND", "OFFLINE", " ", " ", 0, NODEID, AESKey, false)
+		ProxyChanToLowerNode <- offlineMess
 	}
 	time.Sleep(5 * time.Second)
 	os.Exit(1)
@@ -108,21 +94,4 @@ func ClearAllConn() {
 		listener.Close()
 	}
 
-}
-
-//发送server offline通知
-func SendFin(conn net.Conn, num uint32) {
-	nodeid := strconv.Itoa(int(NODEID))
-	SocksDataChanMap.RLock()
-	if _, ok := SocksDataChanMap.Payload[num]; ok {
-		SocksDataChanMap.RUnlock()
-		//fmt.Println("send fin!!! number is ", num)
-		respData, _ := common.ConstructDataResult(0, num, " ", "FIN", nodeid, AESKey, 0)
-		conn.Write(respData)
-		return
-	} else {
-		SocksDataChanMap.RUnlock()
-		//fmt.Print("out!!!!!,number is ", num)
-		return
-	}
 }

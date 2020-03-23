@@ -85,19 +85,21 @@ Admin node(connecting to startnode actively): ./stowaway admin -s 123 -c 127.0.0
 
   -c  It means startnode's address
     
-startnode: ./stowaway agent -l 9999 -s 123 --startnode --reconnect 0 -r --single
+startnode: ./stowaway agent -l 9999 -s 123 --startnode --reconnect 0 -r --single --activeconnect
 
   Meaning:
 
-  --reconnect In this example,if you want to start startnode passively, --reconnect should be set, and the value MUST be 0!
+  --reconnect In this example,if you want to start startnode passively and also sustain the reconnect function of admin node, then this option must be set, and the value MUST be 0! Otherwise,this option must be deleted.
 
   -r   It means startnode is started passively
 
   --single  If this option is set,it means the whole network including just admin node and startnode(no following simple node),if there are still some simple nodes that need to be added into the network,DO NOT set this option
 
+  ----activeconnect If this option is set,it means the second node(aka the FIRST SIMPLE node) will be started in passive mode,otherwise,this option must be deleted
+
 The following simple node can be started as Example 1's description
 
-And if you do not set the --single option, then you should first start the startnode and admin node successively ,then add the following simple node into the network.when all the things before are done,you can let the admin node offline(or just keep it online, it's totally up to you)
+And if you do not set the --single option, then you should start the startnode first and admin node successively (mention the sequence! startnode -> admin -> other nodes),then add the following simple nodes into the network.when all the things before are done,you can let the admin node offline(or just keep it online, it's totally up to you)
 
 The next time you want to reconnect to the startnode,just start the admin node like : ./stowaway admin -s 123 -c 127.0.0.1:9999
 
@@ -109,6 +111,15 @@ The next time you want to reconnect to the startnode,just start the admin node l
 
 Then, the whole network will be rebuilt,too.
 ```
+
+**Some points you should know:**
+
+**1.Every node(including startnode and simple nodes), cannot be actively connected by the following node if it was connected before,so if the following node is down and still want to reconnect, what you can do is starting the following node passively and waiting the previous node connect to it actively or just rebuild the whole network**
+
+**2.When a node offline(for instance,A's following node B offline),it will force all the socks,reflect,forward services down,even the services are not associate to node B,so if you still want to use some of these services,you should restart them manually**
+
+**3.When a node offline(for instance,A's following node B offline),then if you reconnect the node B,before you manipulate node B,you should enter the node A,and type in the command: recover ,this command will help you to recover the node A for the reconnection of node B. After you do that,you can manipulate node B instantly**
+
 
 ## Example
 

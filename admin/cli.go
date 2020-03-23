@@ -38,5 +38,8 @@ func ShowNodeHelp() {
 	stopsocks                                Shut down corresponding socks service
 	upload     [filename]                    Upload file to current agent node
 	download   [filename]                    Download file from current agent node
+	forward    [lport] [ip:port]             Forward local port to remote (eg:forward 8888 192.168.0.100:22)
+	reflect    [rport] [lport]               Reflect remote port to local port (eg:reflect 22 80)
+	recover                                  Recover the node when the following node reconnect
   `)
 }

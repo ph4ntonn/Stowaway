@@ -51,6 +51,11 @@ var Command = &cli.Command{
 			Aliases: []string{"Single"},
 			Usage:   "If only startnode",
 		},
+		&cli.BoolFlag{
+			Name:    "activeconnect",
+			Aliases: []string{"Activeconnect"},
+			Usage:   "Only when the startnode is in passive mode,and if the following node(only the first one) is passive mode too,set this option.",
+		},
 	},
 	Action: func(c *cli.Context) error {
 		if c.String("listen") != "" && c.Bool("reverse") && c.String("monitor") == "" {
