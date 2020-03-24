@@ -128,7 +128,7 @@ func ExtractPayload(conn net.Conn, key []byte, currentid uint32, isinit bool) (*
 		return payload, err
 	}
 	if len(key) != 0 {
-		payload.Type = string(crypto.AESDecrypt(typebuffer[:], key))
+		payload.Type = string(crypto.AESDecrypt(typebuffer[:], key)) //处理lowernodeconn的时候解密type，但是不解密info，防止性能损失
 	} else {
 		payload.Type = string(typebuffer[:])
 	}

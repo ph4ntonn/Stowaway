@@ -531,8 +531,10 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID uint32) {
 		command, err := common.ExtractPayload(*connToUpperNode, AESKey, NODEID, false)
 		if err != nil {
 			fmt.Println("[*]Node ", NODEID-1, " seems down")
-			offlineMess, _ := common.ConstructPayload(NODEID+1, "COMMAND", "OFFLINE", " ", " ", 0, NODEID, AESKey, false)
-			ProxyChanToLowerNode <- offlineMess
+			if NotLastOne {
+				offlineMess, _ := common.ConstructPayload(NODEID+1, "COMMAND", "OFFLINE", " ", " ", 0, NODEID, AESKey, false)
+				ProxyChanToLowerNode <- offlineMess
+			}
 			time.Sleep(2 * time.Second)
 			os.Exit(1)
 		}
@@ -754,7 +756,6 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID uint32) {
 			}
 			AlreadyDownNode.RUnlock()
 		}
-
 	}
 }
 

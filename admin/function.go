@@ -90,6 +90,7 @@ func AddToChain() {
 	}
 }
 
+//为node添加note
 func AddNote(data []string, nodeid uint32) bool {
 	info := ""
 	data = data[1:len(data)]
@@ -103,6 +104,7 @@ func AddNote(data []string, nodeid uint32) bool {
 	return false
 }
 
+//为node删除note
 func DelNote(nodeid uint32) bool {
 	if _, ok := Nodenote[nodeid]; ok {
 		Nodenote[nodeid] = ""
@@ -148,6 +150,7 @@ func StartSocksServiceForClient(command []string, startNodeConn net.Conn, nodeID
 	}
 }
 
+//处理每一个单个的socks socket
 func HandleNewSocksConn(startNodeConn net.Conn, clientsocks net.Conn, num uint32, nodeID uint32) {
 	buffer := make([]byte, 10240)
 	for {
@@ -313,10 +316,11 @@ func MonitorCtrlC(startNodeConn net.Conn) {
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	<-signalChan
 	SendOffLineToStartNode(startNodeConn)
-	time.Sleep(2 * time.Second)
+	time.Sleep(3 * time.Second)
 	os.Exit(1)
 }
 
+//当有一个节点下线，强制关闭所有的服务
 func CloseAll() {
 	ClientSockets.Lock()
 	for key, conn := range ClientSockets.Payload {

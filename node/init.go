@@ -95,7 +95,10 @@ func StartNodeListen(listenPort string, NodeId uint32, key []byte, reconn bool, 
 		AdminOrAgent <- "agent"
 		ControlConnForLowerNodeChan <- ConnToLowerNode
 		NewNodeMessageChan <- NewNodeMessage
-		break
+		if reconn {
+			break
+		} else {
+		}
 	}
 	WaitingForLowerNode.Close()
 	if reconn {
@@ -107,6 +110,7 @@ func StartNodeListen(listenPort string, NodeId uint32, key []byte, reconn bool, 
 	}
 }
 
+//connect命令代码
 func ConnectNextNode(target string, nodeid uint32, key []byte) bool {
 	var NewNodeMessage []byte
 
@@ -140,6 +144,7 @@ func ConnectNextNode(target string, nodeid uint32, key []byte) bool {
 	}
 }
 
+//被动模式下startnode接收admin重连 && 普通节点被动启动等待上级节点主动连接
 func AcceptConnFromUpperNode(listenPort string, nodeid uint32, key []byte) (net.Conn, uint32) {
 	listenAddr := fmt.Sprintf("0.0.0.0:%s", listenPort)
 	WaitingForConn, err := net.Listen("tcp", listenAddr)

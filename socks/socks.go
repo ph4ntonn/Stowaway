@@ -46,12 +46,6 @@ func AuthClient(conntoupper net.Conn, buffer []byte, username string, secret str
 		conntoupper.Write(respdata)
 		return true
 	}
-	// } else if buffer[2] == 0x00 && (username == "" || secret == "") {
-	// 	fmt.Println("i am here")
-	// 	conn.Write([]byte{0x05, 0x00})
-	// 	go Proxyhttp(conn)
-	// 	return
-	// }
 }
 
 func ConfirmTarget(conntoupper net.Conn, buffer []byte, checknum uint32, key []byte, currentid uint32) (net.Conn, bool, bool) {

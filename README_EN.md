@@ -116,7 +116,7 @@ Then, the whole network will be rebuilt,too.
 
 **Some points you should know:**
 
-**1.Every node(including startnode and simple nodes), cannot be actively connected by the following node if it was connected before,so if the following node initially connected to upper node actively,once it down and still want to reconnect, what you only can do is starting the following node passively and waiting the previous node connect to it actively or just rebuild the whole network**
+**1.when startnode started as passive mode and admin already connected,then if the following node first actively connect to startnode and sometime disconnect, the following node cannot reconnect to startnode actively again.**
 
 **2.When a node offline(for instance,A's following node B offline),it will force all the socks,reflect,forward services down,even the services are not associate to node B,so if you still want to use some of these services,you should restart them manually**
 
