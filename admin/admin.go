@@ -88,6 +88,7 @@ func ConnectToStartNode(startnodeaddr string) {
 			startNodeConn.Write(respCommand)
 			StartNode = strings.Split(startNodeConn.RemoteAddr().String(), ":")[0]
 			log.Printf("[*]Connect to startnode %s successfully!\n", startNodeConn.RemoteAddr().String())
+			Nodenote[1] = ""
 			go HandleStartConn(startNodeConn)
 			go HandleCommandToControlConn(startNodeConn)
 			go MonitorCtrlC(startNodeConn)
@@ -125,6 +126,7 @@ func HandleInitControlConn(startNodeConn net.Conn) {
 		case "INIT":
 			respCommand, _ := common.ConstructPayload(1, "COMMAND", "ID", " ", " ", 0, 0, AESKey, false)
 			startNodeConn.Write(respCommand)
+			Nodenote[1] = ""
 			go HandleStartConn(startNodeConn)
 			go HandleCommandToControlConn(startNodeConn)
 			go MonitorCtrlC(startNodeConn)
@@ -235,6 +237,7 @@ func HandleStartConn(startNodeConn net.Conn) {
 			case "NEW":
 				log.Println("[*]New node join! Node Id is ", nodeResp.CurrentId+1)
 				NodesReadyToadd <- map[uint32]string{nodeResp.CurrentId + 1: nodeResp.Info}
+				Nodenote[nodeResp.CurrentId+1] = ""
 			case "AGENTOFFLINE":
 				log.Println("[*]Node ", nodeResp.CurrentId+1, " seems offline") //有节点掉线后，将此节点及其之后的节点删除
 				for Nodeid, _ := range Nodes {

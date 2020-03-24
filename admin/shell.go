@@ -131,6 +131,24 @@ func HandleNodeCommand(startNodeConn net.Conn, NodeID string) {
 			startNodeConn.Write(respCommand)
 			ReadyChange <- true
 			IsShellMode <- true
+		case "addnote":
+			ok := AddNote(AdminCommand, nodeID)
+			if ok {
+				log.Println("[*]Description added successfully!")
+			} else {
+				log.Println("[*]Cannot find node ", nodeID)
+			}
+			ReadyChange <- true
+			IsShellMode <- true
+		case "delnote":
+			ok := DelNote(nodeID)
+			if ok {
+				log.Println("[*]Description deleted successfully!")
+			} else {
+				log.Println("[*]Cannot find node ", nodeID)
+			}
+			ReadyChange <- true
+			IsShellMode <- true
 		case "help":
 			ShowNodeHelp()
 			ReadyChange <- true

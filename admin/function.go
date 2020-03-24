@@ -16,9 +16,10 @@ import (
 )
 
 var (
-	Nodes            = make(map[uint32]string)
-	AdminCommandChan = make(chan []string)
-	ForwardIsValid   = make(chan bool, 1)
+	Nodes            map[uint32]string
+	Nodenote         map[uint32]string
+	AdminCommandChan chan []string
+	ForwardIsValid   chan bool
 
 	ForwardNum                 uint32 //Forward socket编号，必须全局，不然stopforward后，无法获得最新的编号
 	ClientNum                  uint32
@@ -31,6 +32,10 @@ var (
 func init() {
 	ForwardNum = 0
 	ClientNum = 0
+	Nodes = make(map[uint32]string)
+	Nodenote = make(map[uint32]string)
+	AdminCommandChan = make(chan []string)
+	ForwardIsValid = make(chan bool, 1)
 	ReflectConnMap = common.NewUint32ConnMap()
 	PortReflectMap = common.NewUint32ChanStrMap()
 }
@@ -64,10 +69,10 @@ func Controlpanel() {
 // 显示节点拓扑信息
 func ShowChain() {
 	if StartNode != "0.0.0.0" {
-		fmt.Printf("StartNode:[1] %s\n", StartNode)
+		fmt.Printf("StartNode:[1] %s   note:%s\n", StartNode, Nodenote[1])
 		for Nodeid, Nodeaddress := range Nodes {
 			id := fmt.Sprint(Nodeid)
-			fmt.Printf("Nodes [%s]: %s\n", id, Nodeaddress)
+			fmt.Printf("Nodes [%s]: %s   note:%s\n", id, Nodeaddress, Nodenote[Nodeid])
 		}
 	} else {
 		fmt.Println("There is no agent connected!")
@@ -83,6 +88,27 @@ func AddToChain() {
 			Nodes[key] = value
 		}
 	}
+}
+
+func AddNote(data []string, nodeid uint32) bool {
+	info := ""
+	data = data[1:len(data)]
+	for _, i := range data {
+		info = info + " " + i
+	}
+	if _, ok := Nodenote[nodeid]; ok {
+		Nodenote[nodeid] = info
+		return true
+	}
+	return false
+}
+
+func DelNote(nodeid uint32) bool {
+	if _, ok := Nodenote[nodeid]; ok {
+		Nodenote[nodeid] = ""
+		return true
+	}
+	return false
 }
 
 /*-------------------------Socks5功能相关代码--------------------------*/
