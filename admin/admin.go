@@ -247,6 +247,7 @@ func HandleStartConn(startNodeConn net.Conn) {
 				}
 				log.Println("[*]All agents' socks,reflect,forward service down! Please restart these services manually")
 				CloseAll()
+				log.Println("[*]If this node reconnect sometime. DON'T forget to use command(recover) in its upper node first before use the reconnected node!")
 			case "SOCKSRESP":
 				switch nodeResp.Info {
 				case "SUCCESS":
