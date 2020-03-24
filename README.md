@@ -62,7 +62,7 @@ startnode端： ./stowaway agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 -
 
 此时若后续的节点希望以passive模式启动（即本节点等待上一级节点的主动连接，而不是主动连接上一节点）
 
-那么，上述命令可改为 ./stowaway agent -m 127.0.0.1:9999 --startnode -s 123 --reconnect 5
+那么，上述startnode命令可改为 ./stowaway agent -m 127.0.0.1:9999 --startnode -s 123 --reconnect 5
 
 后续节点启动命令为：./stowaway agent -l 10001 -s 123 -r
 
