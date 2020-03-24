@@ -149,6 +149,14 @@ When all agent nodes connected，check the topology in admin：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/chain.png)
 
+Set note for this node：
+
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/addnote.png)
+
+Delete note of this node：
+
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/delnote.png)
+
 Now we manipulate the second simple node through admin：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/manipulate.png)

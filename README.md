@@ -157,6 +157,14 @@ Startnode端：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/chain.png)
 
+为此节点设置备忘：
+
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/addnote.png)
+
+为此节点删除备忘：
+
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/delnote.png)
+
 此时在admin端操控第二个普通node节点：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/manipulate.png)
