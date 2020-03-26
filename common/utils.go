@@ -6,6 +6,119 @@ import (
 	"sync"
 )
 
+/*-------------------------Admin相关状态变量代码--------------------------*/
+type AdminStatus struct {
+	ReadyChange      chan bool
+	IsShellMode      chan bool
+	SshSuccess       chan bool
+	NodeSocksStarted chan bool
+	GetName          chan bool
+	CannotRead       chan bool
+	EOF              chan string
+	NodesReadyToadd  chan map[uint32]string
+	AESKey           []byte
+}
+
+func NewAdminStatus() *AdminStatus {
+	nas := new(AdminStatus)
+	nas.ReadyChange = make(chan bool, 1)
+	nas.IsShellMode = make(chan bool, 1)
+	nas.SshSuccess = make(chan bool, 1)
+	nas.NodeSocksStarted = make(chan bool, 1)
+	nas.GetName = make(chan bool, 1)
+	nas.CannotRead = make(chan bool, 1)
+	nas.EOF = make(chan string, 1)
+	nas.NodesReadyToadd = make(chan map[uint32]string)
+	return nas
+}
+
+/*-------------------------Admin零散变量代码--------------------------*/
+type AdminStuff struct {
+	StartNode              string
+	AdminCommandChan       chan []string
+	SocksNum               uint32
+	SocksListenerForClient []net.Listener
+}
+
+func NewAdminStuff() *AdminStuff {
+	nas := new(AdminStuff)
+	nas.StartNode = "0.0.0.0"
+	nas.SocksNum = 0
+	nas.AdminCommandChan = make(chan []string)
+	return nas
+}
+
+/*-------------------------Agent相关状态变量代码--------------------------*/
+type AgentStatus struct {
+	NODEID     uint32
+	NotLastOne bool
+	Waiting    bool
+	ReConnCome chan bool
+	EOF        chan string
+	AESKey     []byte
+}
+
+func NewAgentStatus() *AgentStatus {
+	nas := new(AgentStatus)
+	nas.NODEID = uint32(1)
+	nas.NotLastOne = false
+	nas.Waiting = false
+	nas.ReConnCome = make(chan bool, 1)
+	nas.EOF = make(chan string, 1)
+	return nas
+}
+
+/*-------------------------Node信息代码--------------------------*/
+type NodeStatus struct {
+	Nodes    map[uint32]string
+	Nodenote map[uint32]string
+}
+
+func NewNodeStatus() *NodeStatus {
+	nns := new(NodeStatus)
+	nns.Nodes = make(map[uint32]string)
+	nns.Nodenote = make(map[uint32]string)
+	return nns
+}
+
+/*-------------------------Forward配置相关代码--------------------------*/
+type ForwardStatus struct {
+	ForwardIsValid             chan bool
+	ForwardNum                 uint32
+	CurrentPortForwardListener []net.Listener
+}
+
+func NewForwardStatus() *ForwardStatus {
+	nfs := new(ForwardStatus)
+	nfs.ForwardNum = 0
+	nfs.ForwardIsValid = make(chan bool, 1)
+	return nfs
+}
+
+/*-------------------------Socks5配置相关代码--------------------------*/
+type SocksSetting struct {
+	SocksUsername string
+	SocksPass     string
+}
+
+func NewSocksSetting() *SocksSetting {
+	nss := new(SocksSetting)
+	return nss
+}
+
+/*-------------------------ProxyChan相关代码--------------------------*/
+type ProxyChan struct {
+	ProxyChanToLowerNode chan []byte
+	ProxyChanToUpperNode chan []byte
+}
+
+func NewProxyChan() *ProxyChan {
+	npc := new(ProxyChan)
+	npc.ProxyChanToLowerNode = make(chan []byte, 1)
+	npc.ProxyChanToUpperNode = make(chan []byte, 1)
+	return npc
+}
+
 /*-------------------------加锁map相关代码--------------------------*/
 type Uint32ChanStrMap struct {
 	sync.RWMutex

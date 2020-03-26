@@ -20,12 +20,12 @@ func init() {
 func TestForward(target string) {
 	forwardConn, err := net.Dial("tcp", target)
 	if err != nil {
-		respCommand, _ := common.ConstructPayload(0, "COMMAND", "FORWARDFAIL", " ", " ", 0, NODEID, AESKey, false)
-		ProxyChanToUpperNode <- respCommand
+		respCommand, _ := common.ConstructPayload(0, "COMMAND", "FORWARDFAIL", " ", " ", 0, AgentStatus.NODEID, AgentStatus.AESKey, false)
+		ProxyChan.ProxyChanToUpperNode <- respCommand
 	} else {
 		defer forwardConn.Close()
-		respCommand, _ := common.ConstructPayload(0, "COMMAND", "FORWARDOK", " ", " ", 0, NODEID, AESKey, false)
-		ProxyChanToUpperNode <- respCommand
+		respCommand, _ := common.ConstructPayload(0, "COMMAND", "FORWARDOK", " ", " ", 0, AgentStatus.NODEID, AgentStatus.AESKey, false)
+		ProxyChan.ProxyChanToUpperNode <- respCommand
 	}
 
 }
@@ -38,8 +38,8 @@ func TryForward(target string, num uint32) {
 		ForwardConnMap.Payload[num] = forwardConn
 		ForwardConnMap.Unlock()
 	} else {
-		respdata, _ := common.ConstructPayload(0, "DATA", "FORWARDTIMEOUT", " ", " ", num, NODEID, AESKey, false)
-		ProxyChanToUpperNode <- respdata
+		respdata, _ := common.ConstructPayload(0, "DATA", "FORWARDTIMEOUT", " ", " ", num, AgentStatus.NODEID, AgentStatus.AESKey, false)
+		ProxyChan.ProxyChanToUpperNode <- respdata
 		return
 	}
 }
@@ -66,12 +66,12 @@ func HandleForward(forwardDataChan chan string, forwardNum uint32) {
 		for {
 			len, err := forwardConn.Read(serverbuffer)
 			if err != nil {
-				respdata, _ := common.ConstructPayload(0, "DATA", "FORWARDOFFLINE", " ", " ", forwardNum, NODEID, AESKey, false)
-				ProxyChanToUpperNode <- respdata
+				respdata, _ := common.ConstructPayload(0, "DATA", "FORWARDOFFLINE", " ", " ", forwardNum, AgentStatus.NODEID, AgentStatus.AESKey, false)
+				ProxyChan.ProxyChanToUpperNode <- respdata
 				return
 			}
-			respdata, _ := common.ConstructPayload(0, "DATA", "FORWARDDATARESP", " ", string(serverbuffer[:len]), forwardNum, NODEID, AESKey, false)
-			ProxyChanToUpperNode <- respdata
+			respdata, _ := common.ConstructPayload(0, "DATA", "FORWARDDATARESP", " ", string(serverbuffer[:len]), forwardNum, AgentStatus.NODEID, AgentStatus.AESKey, false)
+			ProxyChan.ProxyChanToUpperNode <- respdata
 		}
 	}()
 }

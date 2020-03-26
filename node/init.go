@@ -9,11 +9,16 @@ import (
 )
 
 var (
-	ControlConnForLowerNodeChan = make(chan net.Conn, 1) //下级节点控制信道
-	NewNodeMessageChan          = make(chan []byte, 1)   //新节点加入消息
-	ConnectStatusChan           = make(chan []byte, 1)
-	AdminOrAgent                = make(chan string, 1)
+	ControlConnForLowerNodeChan chan net.Conn //下级节点控制信道
+	NewNodeMessageChan          chan []byte   //新节点加入消息
+	AdminOrAgent                chan string   //判断是admin连接还是agent连接
 )
+
+func init() {
+	ControlConnForLowerNodeChan = make(chan net.Conn, 1)
+	NewNodeMessageChan = make(chan []byte, 1)
+	AdminOrAgent = make(chan string, 1)
+}
 
 //初始化一个节点连接操作
 func StartNodeConn(monitor string, listenPort string, nodeID uint32, key []byte) (net.Conn, uint32, error) {

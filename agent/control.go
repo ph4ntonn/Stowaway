@@ -17,7 +17,7 @@ func TryReconnect(gap string, monitor string, listenPort string) {
 	for {
 		time.Sleep(time.Duration(lag) * time.Second)
 
-		controlConnToAdmin, _, err := node.StartNodeConn(monitor, listenPort, NODEID, AESKey)
+		controlConnToAdmin, _, err := node.StartNodeConn(monitor, listenPort, AgentStatus.NODEID, AgentStatus.AESKey)
 		if err != nil {
 			fmt.Println("[*]Admin seems still down")
 		} else {
@@ -34,9 +34,9 @@ func WaitForExit(NODEID uint32) {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt, os.Kill, syscall.SIGHUP)
 	<-signalChan
-	if NotLastOne {
-		offlineMess, _ := common.ConstructPayload(NODEID+1, "COMMAND", "OFFLINE", " ", " ", 0, NODEID, AESKey, false)
-		ProxyChanToLowerNode <- offlineMess
+	if AgentStatus.NotLastOne {
+		offlineMess, _ := common.ConstructPayload(NODEID+1, "COMMAND", "OFFLINE", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
+		ProxyChan.ProxyChanToLowerNode <- offlineMess
 	}
 	time.Sleep(5 * time.Second)
 	os.Exit(1)

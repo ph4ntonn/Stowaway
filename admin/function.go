@@ -16,28 +16,19 @@ import (
 )
 
 var (
-	Nodes            map[uint32]string
-	Nodenote         map[uint32]string
-	AdminCommandChan chan []string
-	ForwardIsValid   chan bool
-
-	ForwardNum                 uint32 //Forward socket编号，必须全局，不然stopforward后，无法获得最新的编号
-	ClientNum                  uint32
-	CurrentPortForwardListener []net.Listener //记录一下当前开启的port-forward listener，以供关闭
-
+	AdminStuff     *common.AdminStuff
+	NodeStatus     *common.NodeStatus
+	ForwardStatus  *common.ForwardStatus
 	ReflectConnMap *common.Uint32ConnMap
 	PortReflectMap *common.Uint32ChanStrMap
 )
 
 func init() {
-	ForwardNum = 0
-	ClientNum = 0
-	Nodes = make(map[uint32]string)
-	Nodenote = make(map[uint32]string)
-	AdminCommandChan = make(chan []string)
-	ForwardIsValid = make(chan bool, 1)
 	ReflectConnMap = common.NewUint32ConnMap()
 	PortReflectMap = common.NewUint32ChanStrMap()
+	NodeStatus = common.NewNodeStatus()
+	ForwardStatus = common.NewForwardStatus()
+	AdminStuff = common.NewAdminStuff()
 }
 
 /*-------------------------控制台相关代码--------------------------*/
@@ -58,21 +49,21 @@ func Controlpanel() {
 			command = strings.Replace(input, "\n", "", -1)
 		}
 		execCommand := strings.Split(command, " ")
-		AdminCommandChan <- execCommand
+		AdminStuff.AdminCommandChan <- execCommand
 
-		<-ReadyChange
-		<-IsShellMode
+		<-AdminStatus.ReadyChange
+		<-AdminStatus.IsShellMode
 	}
 }
 
 /*-------------------------节点拓扑相关代码--------------------------*/
 // 显示节点拓扑信息
 func ShowChain() {
-	if StartNode != "0.0.0.0" {
-		fmt.Printf("StartNode:[1] %s   note:%s\n", StartNode, Nodenote[1])
-		for Nodeid, Nodeaddress := range Nodes {
+	if AdminStuff.StartNode != "0.0.0.0" {
+		fmt.Printf("StartNode:[1] %s   note:%s\n", AdminStuff.StartNode, NodeStatus.Nodenote[1])
+		for Nodeid, Nodeaddress := range NodeStatus.Nodes {
 			id := fmt.Sprint(Nodeid)
-			fmt.Printf("Nodes [%s]: %s   note:%s\n", id, Nodeaddress, Nodenote[Nodeid])
+			fmt.Printf("Nodes [%s]: %s   note:%s\n", id, Nodeaddress, NodeStatus.Nodenote[Nodeid])
 		}
 	} else {
 		fmt.Println("There is no agent connected!")
@@ -83,9 +74,9 @@ func ShowChain() {
 // 将节点加入拓扑
 func AddToChain() {
 	for {
-		newNode := <-NodesReadyToadd
+		newNode := <-AdminStatus.NodesReadyToadd
 		for key, value := range newNode {
-			Nodes[key] = value
+			NodeStatus.Nodes[key] = value
 		}
 	}
 }
@@ -97,8 +88,8 @@ func AddNote(data []string, nodeid uint32) bool {
 	for _, i := range data {
 		info = info + " " + i
 	}
-	if _, ok := Nodenote[nodeid]; ok {
-		Nodenote[nodeid] = info
+	if _, ok := NodeStatus.Nodenote[nodeid]; ok {
+		NodeStatus.Nodenote[nodeid] = info
 		return true
 	}
 	return false
@@ -106,8 +97,8 @@ func AddNote(data []string, nodeid uint32) bool {
 
 //为node删除note
 func DelNote(nodeid uint32) bool {
-	if _, ok := Nodenote[nodeid]; ok {
-		Nodenote[nodeid] = ""
+	if _, ok := NodeStatus.Nodenote[nodeid]; ok {
+		NodeStatus.Nodenote[nodeid] = ""
 		return true
 	}
 	return false
@@ -127,7 +118,7 @@ func StartSocksServiceForClient(command []string, startNodeConn net.Conn, nodeID
 	socks5Addr := fmt.Sprintf("0.0.0.0:%s", socksPort)
 	socksListenerForClient, err := net.Listen("tcp", socks5Addr)
 	if err != nil {
-		respCommand, _ := common.ConstructPayload(nodeID, "COMMAND", "SOCKSOFF", " ", " ", 0, 0, AESKey, false)
+		respCommand, _ := common.ConstructPayload(nodeID, "COMMAND", "SOCKSOFF", " ", " ", 0, 0, AdminStatus.AESKey, false)
 		_, err = startNodeConn.Write(respCommand)
 		if err != nil {
 			log.Println("[*]Cannot stop agent's socks service,check the connection!")
@@ -135,7 +126,7 @@ func StartSocksServiceForClient(command []string, startNodeConn net.Conn, nodeID
 		log.Println("[*]Cannot listen this port!")
 		return
 	}
-	SocksListenerForClient = append(SocksListenerForClient, socksListenerForClient)
+	AdminStuff.SocksListenerForClient = append(AdminStuff.SocksListenerForClient, socksListenerForClient)
 	for {
 		conn, err := socksListenerForClient.Accept()
 		if err != nil {
@@ -143,9 +134,9 @@ func StartSocksServiceForClient(command []string, startNodeConn net.Conn, nodeID
 			return
 		}
 		ClientSockets.Lock()
-		ClientSockets.Payload[ClientNum] = conn
-		go HandleNewSocksConn(startNodeConn, ClientSockets.Payload[ClientNum], ClientNum, nodeID)
-		ClientNum++
+		ClientSockets.Payload[AdminStuff.SocksNum] = conn
+		go HandleNewSocksConn(startNodeConn, ClientSockets.Payload[AdminStuff.SocksNum], AdminStuff.SocksNum, nodeID)
+		AdminStuff.SocksNum++
 		ClientSockets.Unlock()
 	}
 }
@@ -157,11 +148,11 @@ func HandleNewSocksConn(startNodeConn net.Conn, clientsocks net.Conn, num uint32
 		len, err := clientsocks.Read(buffer)
 		if err != nil {
 			clientsocks.Close()
-			finMessage, _ := common.ConstructPayload(nodeID, "DATA", "FIN", " ", " ", num, 0, AESKey, false)
+			finMessage, _ := common.ConstructPayload(nodeID, "DATA", "FIN", " ", " ", num, 0, AdminStatus.AESKey, false)
 			startNodeConn.Write(finMessage)
 			return
 		} else {
-			respData, _ := common.ConstructPayload(nodeID, "DATA", "SOCKSDATA", " ", string(buffer[:len]), num, 0, AESKey, false)
+			respData, _ := common.ConstructPayload(nodeID, "DATA", "SOCKSDATA", " ", string(buffer[:len]), num, 0, AdminStatus.AESKey, false)
 			startNodeConn.Write(respData)
 		}
 	}
@@ -171,25 +162,25 @@ func HandleNewSocksConn(startNodeConn net.Conn, clientsocks net.Conn, num uint32
 // 发送ssh开启命令
 func StartSSHService(startNodeConn net.Conn, info []string, nodeid uint32) {
 	information := fmt.Sprintf("%s::%s::%s", info[1], info[2], info[3])
-	sshCommand, _ := common.ConstructPayload(nodeid, "COMMAND", "SSH", " ", information, 0, 0, AESKey, false)
+	sshCommand, _ := common.ConstructPayload(nodeid, "COMMAND", "SSH", " ", information, 0, 0, AdminStatus.AESKey, false)
 	startNodeConn.Write(sshCommand)
 }
 
 /*-------------------------Port Forward功能启动相关代码--------------------------*/
 // 发送forward开启命令
 func HandleForwardPort(forwardconn net.Conn, target string, startNodeConn net.Conn, num uint32, nodeid uint32) {
-	forwardCommand, _ := common.ConstructPayload(nodeid, "DATA", "FORWARD", " ", target, num, 0, AESKey, false)
+	forwardCommand, _ := common.ConstructPayload(nodeid, "DATA", "FORWARD", " ", target, num, 0, AdminStatus.AESKey, false)
 	startNodeConn.Write(forwardCommand)
 
 	buffer := make([]byte, 10240)
 	for {
 		len, err := forwardconn.Read(buffer)
 		if err != nil {
-			finMessage, _ := common.ConstructPayload(nodeid, "DATA", "FORWARDFIN", " ", " ", num, 0, AESKey, false)
+			finMessage, _ := common.ConstructPayload(nodeid, "DATA", "FORWARDFIN", " ", " ", num, 0, AdminStatus.AESKey, false)
 			startNodeConn.Write(finMessage)
 			return
 		} else {
-			respData, _ := common.ConstructPayload(nodeid, "DATA", "FORWARDDATA", " ", string(buffer[:len]), num, 0, AESKey, false)
+			respData, _ := common.ConstructPayload(nodeid, "DATA", "FORWARDDATA", " ", string(buffer[:len]), num, 0, AdminStatus.AESKey, false)
 			startNodeConn.Write(respData)
 		}
 	}
@@ -197,7 +188,7 @@ func HandleForwardPort(forwardconn net.Conn, target string, startNodeConn net.Co
 
 func StartPortForwardForClient(info []string, startNodeConn net.Conn, nodeid uint32, AESKey []byte) {
 	TestIfValid("FORWARDTEST", startNodeConn, info[2], nodeid)
-	if <-ForwardIsValid {
+	if <-ForwardStatus.ForwardIsValid {
 	} else {
 		return
 	}
@@ -210,7 +201,7 @@ func StartPortForwardForClient(info []string, startNodeConn net.Conn, nodeid uin
 		return
 	}
 
-	CurrentPortForwardListener = append(CurrentPortForwardListener, forwardListenerForClient)
+	ForwardStatus.CurrentPortForwardListener = append(ForwardStatus.CurrentPortForwardListener, forwardListenerForClient)
 
 	for {
 		conn, err := forwardListenerForClient.Accept()
@@ -219,17 +210,17 @@ func StartPortForwardForClient(info []string, startNodeConn net.Conn, nodeid uin
 			return
 		}
 		PortForWardMap.Lock()
-		PortForWardMap.Payload[ForwardNum] = conn
+		PortForWardMap.Payload[ForwardStatus.ForwardNum] = conn
 		PortForWardMap.Unlock()
 		PortForWardMap.RLock()
-		go HandleForwardPort(PortForWardMap.Payload[ForwardNum], info[2], startNodeConn, ForwardNum, nodeid)
+		go HandleForwardPort(PortForWardMap.Payload[ForwardStatus.ForwardNum], info[2], startNodeConn, ForwardStatus.ForwardNum, nodeid)
 		PortForWardMap.RUnlock()
-		ForwardNum++
+		ForwardStatus.ForwardNum++
 	}
 }
 
 func StopForward() {
-	for _, listener := range CurrentPortForwardListener {
+	for _, listener := range ForwardStatus.CurrentPortForwardListener {
 		listener.Close()
 	}
 }
@@ -249,7 +240,7 @@ func TryReflect(startNodeConn net.Conn, nodeid uint32, id uint32, port string) {
 		ReflectConnMap.Payload[id] = reflectConn
 		ReflectConnMap.Unlock()
 	} else {
-		respdata, _ := common.ConstructPayload(nodeid, "DATA", "REFLECTTIMEOUT", " ", " ", id, 0, AESKey, false)
+		respdata, _ := common.ConstructPayload(nodeid, "DATA", "REFLECTTIMEOUT", " ", " ", id, 0, AdminStatus.AESKey, false)
 		startNodeConn.Write(respdata)
 		return
 	}
@@ -276,11 +267,11 @@ func HandleReflect(startNodeConn net.Conn, reflectDataChan chan string, num uint
 		for {
 			len, err := reflectConn.Read(serverbuffer)
 			if err != nil {
-				respdata, _ := common.ConstructPayload(nodeid, "DATA", "REFLECTOFFLINE", " ", " ", num, 0, AESKey, false)
+				respdata, _ := common.ConstructPayload(nodeid, "DATA", "REFLECTOFFLINE", " ", " ", num, 0, AdminStatus.AESKey, false)
 				startNodeConn.Write(respdata)
 				return
 			}
-			respdata, _ := common.ConstructPayload(nodeid, "DATA", "REFLECTDATARESP", " ", string(serverbuffer[:len]), num, 0, AESKey, false)
+			respdata, _ := common.ConstructPayload(nodeid, "DATA", "REFLECTDATARESP", " ", string(serverbuffer[:len]), num, 0, AdminStatus.AESKey, false)
 			startNodeConn.Write(respdata)
 		}
 	}()
@@ -288,21 +279,21 @@ func HandleReflect(startNodeConn net.Conn, reflectDataChan chan string, num uint
 
 func StopReflect(startNodeConn net.Conn, nodeId uint32) {
 	fmt.Println("[*]Stop command has been sent")
-	command, _ := common.ConstructPayload(nodeId, "COMMAND", "STOPREFLECT", " ", " ", 0, 0, AESKey, false)
+	command, _ := common.ConstructPayload(nodeId, "COMMAND", "STOPREFLECT", " ", " ", 0, 0, AdminStatus.AESKey, false)
 	startNodeConn.Write(command)
 }
 
 /*-------------------------测试相关代码--------------------------*/
 //测试是否端口可用
 func TestIfValid(commandtype string, startNodeConn net.Conn, target string, nodeid uint32) {
-	command, _ := common.ConstructPayload(nodeid, "COMMAND", commandtype, " ", target, 0, 0, AESKey, false)
+	command, _ := common.ConstructPayload(nodeid, "COMMAND", commandtype, " ", target, 0, 0, AdminStatus.AESKey, false)
 	startNodeConn.Write(command)
 }
 
 /*-------------------------功能控制相关代码--------------------------*/
 //发送下线消息
 func SendOffLineToStartNode(startNodeConn net.Conn) {
-	respCommand, _ := common.ConstructPayload(1, "COMMAND", "ADMINOFFLINE", " ", " ", 0, 0, AESKey, false)
+	respCommand, _ := common.ConstructPayload(1, "COMMAND", "ADMINOFFLINE", " ", " ", 0, 0, AdminStatus.AESKey, false)
 	_, err := startNodeConn.Write(respCommand)
 	if err != nil {
 		log.Println("[*]Startnode seems offline!Message cannot be transmitted")
@@ -328,7 +319,7 @@ func CloseAll() {
 		delete(ClientSockets.Payload, key)
 	}
 	ClientSockets.Unlock()
-	for _, listener := range SocksListenerForClient {
+	for _, listener := range AdminStuff.SocksListenerForClient {
 		err := listener.Close()
 		if err != nil {
 		}

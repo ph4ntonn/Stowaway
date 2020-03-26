@@ -22,10 +22,10 @@ func HandleNodeCommand(startNodeConn net.Conn, NodeID string) {
 	CurrentNode = nodeID //把nodeid提取出来，以供上传/下载文件功能使用
 
 	for {
-		AdminCommand := <-AdminCommandChan
+		AdminCommand := <-AdminStuff.AdminCommandChan
 		switch AdminCommand[0] {
 		case "shell":
-			respCommand, err := common.ConstructPayload(nodeID, "COMMAND", "SHELL", " ", "", 0, 0, AESKey, false)
+			respCommand, err := common.ConstructPayload(nodeID, "COMMAND", "SHELL", " ", "", 0, 0, AdminStatus.AESKey, false)
 			_, err = startNodeConn.Write(respCommand)
 			if err != nil {
 				log.Printf("[*]ERROR OCCURED!: %s", err)
@@ -37,27 +37,27 @@ func HandleNodeCommand(startNodeConn net.Conn, NodeID string) {
 				socksStartData = fmt.Sprintf("%s:::%s:::%s", AdminCommand[1], "", "")
 			} else if len(AdminCommand) == 3 {
 				fmt.Println("Illegal username/password! Try again!")
-				ReadyChange <- true
-				IsShellMode <- true
+				AdminStatus.ReadyChange <- true
+				AdminStatus.IsShellMode <- true
 				break
 			} else {
 				socksStartData = fmt.Sprintf("%s:::%s:::%s", AdminCommand[1], AdminCommand[2], AdminCommand[3])
 			}
-			respCommand, err := common.ConstructPayload(nodeID, "COMMAND", "SOCKS", " ", socksStartData, 0, 0, AESKey, false)
+			respCommand, err := common.ConstructPayload(nodeID, "COMMAND", "SOCKS", " ", socksStartData, 0, 0, AdminStatus.AESKey, false)
 			_, err = startNodeConn.Write(respCommand)
 			if err != nil {
 				log.Println("[*]StartNode seems offline")
 			}
-			if <-NodeSocksStarted {
+			if <-AdminStatus.NodeSocksStarted {
 				go StartSocksServiceForClient(AdminCommand, startNodeConn, nodeID)
 			}
-			ReadyChange <- true
-			IsShellMode <- true
+			AdminStatus.ReadyChange <- true
+			AdminStatus.IsShellMode <- true
 		case "stopsocks":
-			if len(SocksListenerForClient) == 0 {
+			if len(AdminStuff.SocksListenerForClient) == 0 {
 				log.Println("[*]You have never started socks service!")
 			} else {
-				for _, listener := range SocksListenerForClient {
+				for _, listener := range AdminStuff.SocksListenerForClient {
 					err := listener.Close()
 					if err != nil {
 						log.Println("[*]One socks listener seems already closed.Won't close it again...")
@@ -65,72 +65,72 @@ func HandleNodeCommand(startNodeConn net.Conn, NodeID string) {
 				}
 				log.Println("[*]All socks listeners are closed successfully!")
 			}
-			ReadyChange <- true
-			IsShellMode <- true
+			AdminStatus.ReadyChange <- true
+			AdminStatus.IsShellMode <- true
 		case "ssh":
 			if len(AdminCommand) == 4 {
 				go StartSSHService(startNodeConn, AdminCommand, nodeID)
 				HandleSSHToNode(startNodeConn, nodeID)
 			} else {
 				fmt.Println("Wrong format! Should be ssh [ip:port] [name] [pass]")
-				ReadyChange <- true
-				IsShellMode <- true
+				AdminStatus.ReadyChange <- true
+				AdminStatus.IsShellMode <- true
 			}
 		case "connect":
 			if len(AdminCommand) == 2 {
-				respCommand, _ := common.ConstructPayload(nodeID, "COMMAND", "CONNECT", " ", AdminCommand[1], 0, 0, AESKey, false)
+				respCommand, _ := common.ConstructPayload(nodeID, "COMMAND", "CONNECT", " ", AdminCommand[1], 0, 0, AdminStatus.AESKey, false)
 				startNodeConn.Write(respCommand)
 			} else {
 				fmt.Println("Wrong format! Should be connect [ip:port]")
 			}
-			ReadyChange <- true
-			IsShellMode <- true
+			AdminStatus.ReadyChange <- true
+			AdminStatus.IsShellMode <- true
 		case "upload":
 			if len(AdminCommand) == 2 {
-				go common.UploadFile(AdminCommand[1], &startNodeConn, nodeID, GetName, AESKey, 0, true)
+				go common.UploadFile(AdminCommand[1], &startNodeConn, nodeID, AdminStatus.GetName, AdminStatus.AESKey, 0, true)
 			} else {
 				fmt.Println("Bad format! Should be upload [filename]")
 			}
-			ReadyChange <- true
-			IsShellMode <- true
+			AdminStatus.ReadyChange <- true
+			AdminStatus.IsShellMode <- true
 		case "download":
 			if len(AdminCommand) == 2 {
-				go common.DownloadFile(AdminCommand[1], startNodeConn, nodeID, 0, AESKey)
+				go common.DownloadFile(AdminCommand[1], startNodeConn, nodeID, 0, AdminStatus.AESKey)
 			} else {
 				fmt.Println("Bad format! Should be download [filename]")
 			}
-			ReadyChange <- true
-			IsShellMode <- true
+			AdminStatus.ReadyChange <- true
+			AdminStatus.IsShellMode <- true
 		case "forward":
 			if len(AdminCommand) == 3 {
-				go StartPortForwardForClient(AdminCommand, startNodeConn, nodeID, AESKey)
+				go StartPortForwardForClient(AdminCommand, startNodeConn, nodeID, AdminStatus.AESKey)
 			} else {
 				fmt.Println("Bad format! Should be forward [localport] [rhostip]:[rhostport]")
 			}
-			ReadyChange <- true
-			IsShellMode <- true
+			AdminStatus.ReadyChange <- true
+			AdminStatus.IsShellMode <- true
 		case "stopforward":
 			go StopForward()
-			ReadyChange <- true
-			IsShellMode <- true
+			AdminStatus.ReadyChange <- true
+			AdminStatus.IsShellMode <- true
 		case "reflect":
 			if len(AdminCommand) == 3 {
-				go StartReflectForClient(AdminCommand, startNodeConn, nodeID, AESKey)
+				go StartReflectForClient(AdminCommand, startNodeConn, nodeID, AdminStatus.AESKey)
 			} else {
 				fmt.Println("Bad format! Should be reflect [rhostport] [localport]")
 			}
-			ReadyChange <- true
-			IsShellMode <- true
+			AdminStatus.ReadyChange <- true
+			AdminStatus.IsShellMode <- true
 		case "stopreflect":
 			go StopReflect(startNodeConn, nodeID)
-			ReadyChange <- true
-			IsShellMode <- true
+			AdminStatus.ReadyChange <- true
+			AdminStatus.IsShellMode <- true
 		case "recover":
 			log.Println("[*]Recover message sent! Now you can manipulate node ", nodeID+1)
-			respCommand, _ := common.ConstructPayload(nodeID, "COMMAND", "RECOVER", " ", " ", 0, 0, AESKey, false)
+			respCommand, _ := common.ConstructPayload(nodeID, "COMMAND", "RECOVER", " ", " ", 0, 0, AdminStatus.AESKey, false)
 			startNodeConn.Write(respCommand)
-			ReadyChange <- true
-			IsShellMode <- true
+			AdminStatus.ReadyChange <- true
+			AdminStatus.IsShellMode <- true
 		case "addnote":
 			ok := AddNote(AdminCommand, nodeID)
 			if ok {
@@ -138,8 +138,8 @@ func HandleNodeCommand(startNodeConn net.Conn, NodeID string) {
 			} else {
 				log.Println("[*]Cannot find node ", nodeID)
 			}
-			ReadyChange <- true
-			IsShellMode <- true
+			AdminStatus.ReadyChange <- true
+			AdminStatus.IsShellMode <- true
 		case "delnote":
 			ok := DelNote(nodeID)
 			if ok {
@@ -147,25 +147,25 @@ func HandleNodeCommand(startNodeConn net.Conn, NodeID string) {
 			} else {
 				log.Println("[*]Cannot find node ", nodeID)
 			}
-			ReadyChange <- true
-			IsShellMode <- true
+			AdminStatus.ReadyChange <- true
+			AdminStatus.IsShellMode <- true
 		case "help":
 			ShowNodeHelp()
-			ReadyChange <- true
-			IsShellMode <- true
+			AdminStatus.ReadyChange <- true
+			AdminStatus.IsShellMode <- true
 		case "":
-			ReadyChange <- true
-			IsShellMode <- true
+			AdminStatus.ReadyChange <- true
+			AdminStatus.IsShellMode <- true
 			continue
 		case "exit":
 			*CliStatus = "admin"
-			ReadyChange <- true
-			IsShellMode <- true
+			AdminStatus.ReadyChange <- true
+			AdminStatus.IsShellMode <- true
 			return
 		default:
 			fmt.Println("Illegal command, enter help to get available commands")
-			ReadyChange <- true
-			IsShellMode <- true
+			AdminStatus.ReadyChange <- true
+			AdminStatus.IsShellMode <- true
 		}
 	}
 }
@@ -190,13 +190,13 @@ func HandleShellToNode(startNodeControlConn net.Conn, nodeID uint32) {
 			} else {
 				*CliStatus = "node " + fmt.Sprint(nodeID)
 			}
-			respCommand, _ := common.ConstructPayload(nodeID, "COMMAND", "SHELL", " ", command, 0, 0, AESKey, false)
+			respCommand, _ := common.ConstructPayload(nodeID, "COMMAND", "SHELL", " ", command, 0, 0, AdminStatus.AESKey, false)
 			startNodeControlConn.Write(respCommand)
-			ReadyChange <- true
-			IsShellMode <- true
+			AdminStatus.ReadyChange <- true
+			AdminStatus.IsShellMode <- true
 			return
 		default:
-			respCommand, _ := common.ConstructPayload(nodeID, "COMMAND", "SHELL", " ", command, 0, 0, AESKey, false)
+			respCommand, _ := common.ConstructPayload(nodeID, "COMMAND", "SHELL", " ", command, 0, 0, AdminStatus.AESKey, false)
 			startNodeControlConn.Write(respCommand)
 		}
 	}
@@ -207,7 +207,7 @@ func HandleShellToNode(startNodeControlConn net.Conn, nodeID uint32) {
 func HandleSSHToNode(startNodeControlConn net.Conn, nodeID uint32) {
 	inputReader := bufio.NewReader(os.Stdin)
 	log.Println("[*]Waiting for response,please be patient")
-	if conrinueornot := <-SshSuccess; conrinueornot {
+	if conrinueornot := <-AdminStatus.SshSuccess; conrinueornot {
 		fmt.Print("(ssh mode)>>>")
 		for {
 			command, err := inputReader.ReadString('\n')
@@ -222,15 +222,15 @@ func HandleSSHToNode(startNodeControlConn net.Conn, nodeID uint32) {
 				} else {
 					*CliStatus = "node " + fmt.Sprint(nodeID)
 				}
-				respCommand, _ := common.ConstructPayload(nodeID, "COMMAND", "SSHCOMMAND", " ", command, 0, 0, AESKey, false)
+				respCommand, _ := common.ConstructPayload(nodeID, "COMMAND", "SSHCOMMAND", " ", command, 0, 0, AdminStatus.AESKey, false)
 				startNodeControlConn.Write(respCommand)
-				ReadyChange <- true
-				IsShellMode <- true
+				AdminStatus.ReadyChange <- true
+				AdminStatus.IsShellMode <- true
 				return
 			case "\n":
 				fmt.Print("(ssh mode)>>>")
 			default:
-				respCommand, _ := common.ConstructPayload(nodeID, "COMMAND", "SSHCOMMAND", " ", command, 0, 0, AESKey, false)
+				respCommand, _ := common.ConstructPayload(nodeID, "COMMAND", "SSHCOMMAND", " ", command, 0, 0, AdminStatus.AESKey, false)
 				startNodeControlConn.Write(respCommand)
 
 			}
@@ -244,54 +244,54 @@ func HandleSSHToNode(startNodeControlConn net.Conn, nodeID uint32) {
 // 处理admin模式下用户的输入及由admin发往startnode的控制信号
 func HandleCommandToControlConn(startNodeControlConn net.Conn) {
 	for {
-		AdminCommand := <-AdminCommandChan
+		AdminCommand := <-AdminStuff.AdminCommandChan
 		switch AdminCommand[0] {
 		case "use":
 			if len(AdminCommand) == 2 {
-				if StartNode == "0.0.0.0" {
+				if AdminStuff.StartNode == "0.0.0.0" {
 					fmt.Println("There are no nodes connected!")
-					ReadyChange <- true
-					IsShellMode <- true
+					AdminStatus.ReadyChange <- true
+					AdminStatus.IsShellMode <- true
 				} else if AdminCommand[1] == "1" {
 					*CliStatus = "startnode"
-					ReadyChange <- true
-					IsShellMode <- true
+					AdminStatus.ReadyChange <- true
+					AdminStatus.IsShellMode <- true
 					HandleNodeCommand(startNodeControlConn, AdminCommand[1])
 				} else {
-					if len(Nodes) == 0 {
+					if len(NodeStatus.Nodes) == 0 {
 						fmt.Println("There is no node", AdminCommand[1])
-						ReadyChange <- true
-						IsShellMode <- true
+						AdminStatus.ReadyChange <- true
+						AdminStatus.IsShellMode <- true
 					} else {
 						key, _ := strconv.ParseInt(AdminCommand[1], 10, 32)
-						if _, ok := Nodes[uint32(key)]; ok {
+						if _, ok := NodeStatus.Nodes[uint32(key)]; ok {
 							*CliStatus = "node " + AdminCommand[1]
-							ReadyChange <- true
-							IsShellMode <- true
+							AdminStatus.ReadyChange <- true
+							AdminStatus.IsShellMode <- true
 							HandleNodeCommand(startNodeControlConn, AdminCommand[1])
 						} else {
 							fmt.Println("There is no node", AdminCommand[1])
-							ReadyChange <- true
-							IsShellMode <- true
+							AdminStatus.ReadyChange <- true
+							AdminStatus.IsShellMode <- true
 						}
 					}
 				}
 			} else {
 				fmt.Println("Bad format!")
-				ReadyChange <- true
-				IsShellMode <- true
+				AdminStatus.ReadyChange <- true
+				AdminStatus.IsShellMode <- true
 			}
 		case "chain":
 			ShowChain()
-			ReadyChange <- true
-			IsShellMode <- true
+			AdminStatus.ReadyChange <- true
+			AdminStatus.IsShellMode <- true
 		case "help":
 			ShowMainHelp()
-			ReadyChange <- true
-			IsShellMode <- true
+			AdminStatus.ReadyChange <- true
+			AdminStatus.IsShellMode <- true
 		case "":
-			ReadyChange <- true
-			IsShellMode <- true
+			AdminStatus.ReadyChange <- true
+			AdminStatus.IsShellMode <- true
 			continue
 		case "exit":
 			log.Println("[*]BYE!")
@@ -300,8 +300,8 @@ func HandleCommandToControlConn(startNodeControlConn net.Conn) {
 			return
 		default:
 			fmt.Println("Illegal command, enter help to get available commands")
-			ReadyChange <- true
-			IsShellMode <- true
+			AdminStatus.ReadyChange <- true
+			AdminStatus.IsShellMode <- true
 		}
 	}
 }
