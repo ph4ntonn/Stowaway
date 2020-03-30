@@ -295,7 +295,6 @@ func HandleCommandToControlConn(startNodeControlConn net.Conn) {
 			continue
 		case "exit":
 			log.Println("[*]BYE!")
-			SendOffLineToStartNode(startNodeControlConn)
 			os.Exit(0)
 			return
 		default:

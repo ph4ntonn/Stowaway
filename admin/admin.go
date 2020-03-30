@@ -161,11 +161,15 @@ func HandleStartConn(startNodeConn net.Conn) {
 				startNodeConn.Write(respCommand)
 			case "FILEDATA": //接收文件内容
 				slicenum, _ := strconv.Atoi(nodeResp.FileSliceNum)
+				FileDataMap.Lock()
 				FileDataMap.Payload[slicenum] = nodeResp.Info
-			case "EOF": //文件读取结束
-				AdminStatus.EOF <- nodeResp.FileSliceNum
+				FileDataMap.Unlock()
 			case "FORWARDDATARESP":
-				PortForWardMap.Payload[nodeResp.Clientid].Write([]byte(nodeResp.Info))
+				PortForWardMap.Lock()
+				if _, ok := PortForWardMap.Payload[nodeResp.Clientid]; ok {
+					PortForWardMap.Payload[nodeResp.Clientid].Write([]byte(nodeResp.Info))
+				}
+				PortForWardMap.Unlock()
 			case "FORWARDTIMEOUT":
 				fallthrough
 			case "FORWARDOFFLINE":
@@ -258,13 +262,32 @@ func HandleStartConn(startNodeConn net.Conn) {
 					var tempchan *net.Conn = &startNodeConn
 					respComm, _ := common.ConstructPayload(CurrentNode, "COMMAND", "NAMECONFIRM", " ", " ", 0, 0, AdminStatus.AESKey, false)
 					startNodeConn.Write(respComm)
-					go common.ReceiveFile(tempchan, AdminStatus.EOF, FileDataMap, AdminStatus.CannotRead, UploadFile, AdminStatus.AESKey, true, 0)
+					go common.ReceiveFile(tempchan, FileDataMap, AdminStatus.CannotRead, UploadFile, AdminStatus.AESKey, true, 0)
 				}
+			case "FILESIZE":
+				filesize, _ := strconv.ParseInt(nodeResp.Info, 10, 64)
+				common.File.FileSize = filesize
+				respComm, _ := common.ConstructPayload(CurrentNode, "COMMAND", "FILESIZECONFIRM", " ", " ", 0, 0, AdminStatus.AESKey, false)
+				startNodeConn.Write(respComm)
+				common.File.ReceiveFileSize <- true
+			case "FILESLICENUM":
+				common.File.TotalSilceNum, _ = strconv.Atoi(nodeResp.Info)
+				respComm, _ := common.ConstructPayload(CurrentNode, "COMMAND", "FILESLICENUMCONFIRM", " ", " ", 0, 0, AdminStatus.AESKey, false)
+				startNodeConn.Write(respComm)
+				common.File.ReceiveFileSliceNum <- true
+			case "FILESLICENUMCONFIRM":
+				common.File.TotalConfirm <- true
+			case "FILESIZECONFIRM":
+				common.File.TotalConfirm <- true
 			case "FILENOTEXIST":
-				fmt.Printf("File %s not exist!\n", nodeResp.Info)
+				fmt.Printf("[*]File %s not exist!\n", nodeResp.Info)
 			case "CANNOTREAD":
-				fmt.Printf("File %s cannot be read!\n", nodeResp.Info)
+				fmt.Printf("[*]File %s cannot be read!\n", nodeResp.Info)
 				AdminStatus.CannotRead <- true
+				common.File.ReceiveFileSliceNum <- false
+				os.Remove(nodeResp.Info)
+			case "CANNOTUPLOAD":
+				fmt.Printf("[*]Agent cannot read file: %s\n", nodeResp.Info)
 			case "RECONNID":
 				log.Println("[*]New node join! Node Id is ", nodeResp.CurrentId)
 				AdminStatus.NodesReadyToadd <- map[uint32]string{nodeResp.CurrentId: nodeResp.Info}
@@ -272,7 +295,7 @@ func HandleStartConn(startNodeConn net.Conn) {
 				hbcommpack, _ := common.ConstructPayload(1, "COMMAND", "KEEPALIVE", " ", " ", 0, 0, AdminStatus.AESKey, false)
 				startNodeConn.Write(hbcommpack)
 			case "TRANSSUCCESS":
-				fmt.Println("File transmission complete!")
+				fmt.Println("[*]File transmission complete!")
 			case "FORWARDFAIL":
 				fmt.Println("[*]Remote port seems down,port forward failed!")
 				ForwardStatus.ForwardIsValid <- false

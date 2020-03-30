@@ -4,6 +4,7 @@ import (
 	"Stowaway/common"
 	"Stowaway/node"
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"strconv"
@@ -12,6 +13,7 @@ import (
 )
 
 /*-------------------------重连功能相关代码--------------------------*/
+//重连操作
 func TryReconnect(gap string, monitor string, listenPort string) {
 	lag, _ := strconv.Atoi(gap)
 	for {
@@ -25,6 +27,46 @@ func TryReconnect(gap string, monitor string, listenPort string) {
 			ConnToAdmin = controlConnToAdmin
 			return
 		}
+	}
+}
+
+//admin下线后startnode操作
+func AdminOffline(reConn, monitor, listenPort string, passive bool) {
+	log.Println("[*]Admin seems offline!")
+	if reConn != "0" && reConn != "" && !passive {
+		ClearAllConn()
+		time.Sleep(1 * time.Second)
+		SocksDataChanMap = common.NewUint32ChanStrMap()
+		if AgentStatus.NotLastOne {
+			messCommand, _ := common.ConstructPayload(2, "COMMAND", "CLEAR", " ", " ", 0, AgentStatus.NODEID, AgentStatus.AESKey, false)
+			ProxyChan.ProxyChanToLowerNode <- messCommand
+		}
+		TryReconnect(reConn, monitor, listenPort)
+		if AgentStatus.NotLastOne {
+			messCommand, _ := common.ConstructPayload(2, "COMMAND", "RECONN", " ", " ", 0, AgentStatus.NODEID, AgentStatus.AESKey, false)
+			ProxyChan.ProxyChanToLowerNode <- messCommand
+		}
+	} else if reConn == "0" && passive {
+		ClearAllConn()
+		time.Sleep(1 * time.Second)
+		SocksDataChanMap = common.NewUint32ChanStrMap()
+		if AgentStatus.NotLastOne {
+			messCommand, _ := common.ConstructPayload(2, "COMMAND", "CLEAR", " ", " ", 0, AgentStatus.NODEID, AgentStatus.AESKey, false)
+			ProxyChan.ProxyChanToLowerNode <- messCommand
+		}
+		AgentStatus.Waiting = true
+		<-AgentStatus.ReConnCome
+		if AgentStatus.NotLastOne {
+			messCommand, _ := common.ConstructPayload(2, "COMMAND", "RECONN", " ", " ", 0, AgentStatus.NODEID, AgentStatus.AESKey, false)
+			ProxyChan.ProxyChanToLowerNode <- messCommand
+		}
+	} else {
+		if AgentStatus.NotLastOne {
+			messCommand, _ := common.ConstructPayload(2, "COMMAND", "ADMINOFFLINE", " ", " ", 0, AgentStatus.NODEID, AgentStatus.AESKey, false)
+			ProxyChan.ProxyChanToLowerNode <- messCommand
+		}
+		time.Sleep(2 * time.Second)
+		os.Exit(1)
 	}
 }
 

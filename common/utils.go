@@ -14,7 +14,6 @@ type AdminStatus struct {
 	NodeSocksStarted chan bool
 	GetName          chan bool
 	CannotRead       chan bool
-	EOF              chan string
 	NodesReadyToadd  chan map[uint32]string
 	AESKey           []byte
 }
@@ -27,7 +26,6 @@ func NewAdminStatus() *AdminStatus {
 	nas.NodeSocksStarted = make(chan bool, 1)
 	nas.GetName = make(chan bool, 1)
 	nas.CannotRead = make(chan bool, 1)
-	nas.EOF = make(chan string, 1)
 	nas.NodesReadyToadd = make(chan map[uint32]string)
 	return nas
 }
@@ -54,7 +52,6 @@ type AgentStatus struct {
 	NotLastOne bool
 	Waiting    bool
 	ReConnCome chan bool
-	EOF        chan string
 	AESKey     []byte
 }
 
@@ -64,7 +61,6 @@ func NewAgentStatus() *AgentStatus {
 	nas.NotLastOne = false
 	nas.Waiting = false
 	nas.ReConnCome = make(chan bool, 1)
-	nas.EOF = make(chan string, 1)
 	return nas
 }
 
@@ -104,6 +100,23 @@ type SocksSetting struct {
 func NewSocksSetting() *SocksSetting {
 	nss := new(SocksSetting)
 	return nss
+}
+
+/*-------------------------File upload/download配置相关代码--------------------------*/
+type FileStatus struct {
+	TotalSilceNum       int
+	FileSize            int64
+	TotalConfirm        chan bool
+	ReceiveFileSize     chan bool
+	ReceiveFileSliceNum chan bool
+}
+
+func NewFileStatus() *FileStatus {
+	nfs := new(FileStatus)
+	nfs.TotalConfirm = make(chan bool, 1)
+	nfs.ReceiveFileSliceNum = make(chan bool, 1)
+	nfs.ReceiveFileSize = make(chan bool, 1)
+	return nfs
 }
 
 /*-------------------------ProxyChan相关代码--------------------------*/

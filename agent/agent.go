@@ -183,7 +183,7 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 	for {
 		AdminData, err := common.ExtractPayload(*connToAdmin, AgentStatus.AESKey, NODEID, false)
 		if err != nil {
-			time.Sleep(1 * time.Second)
+			AdminOffline(reConn, monitor, listenPort, passive)
 			continue
 		}
 		if AdminData.NodeId == NODEID {
@@ -253,8 +253,6 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 						delete(ReflectConnMap.Payload, AdminData.Clientid)
 					}
 					ReflectConnMap.Unlock()
-				case "EOF": //文件读取结束
-					AgentStatus.EOF <- AdminData.FileSliceNum
 				case "FINOK":
 					SocksDataChanMap.Lock() //性能损失？
 					if _, ok := SocksDataChanMap.Payload[AdminData.Clientid]; ok {
@@ -329,8 +327,23 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 					} else {
 						respComm, _ := common.ConstructPayload(0, "COMMAND", "NAMECONFIRM", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
 						ProxyChan.ProxyChanToUpperNode <- respComm
-						go common.ReceiveFile(connToAdmin, AgentStatus.EOF, FileDataMap, CannotRead, UploadFile, AgentStatus.AESKey, false, NODEID)
+						go common.ReceiveFile(connToAdmin, FileDataMap, CannotRead, UploadFile, AgentStatus.AESKey, false, NODEID)
 					}
+				case "FILESIZE":
+					filesize, _ := strconv.ParseInt(AdminData.Info, 10, 64)
+					common.File.FileSize = filesize
+					respComm, _ := common.ConstructPayload(0, "COMMAND", "FILESIZECONFIRM", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
+					ProxyChan.ProxyChanToUpperNode <- respComm
+					common.File.ReceiveFileSize <- true
+				case "FILESLICENUM":
+					common.File.TotalSilceNum, _ = strconv.Atoi(AdminData.Info)
+					respComm, _ := common.ConstructPayload(0, "COMMAND", "FILESLICENUMCONFIRM", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
+					ProxyChan.ProxyChanToUpperNode <- respComm
+					common.File.ReceiveFileSliceNum <- true
+				case "FILESLICENUMCONFIRM":
+					common.File.TotalConfirm <- true
+				case "FILESIZECONFIRM":
+					common.File.TotalConfirm <- true
 				case "DOWNLOADFILE":
 					go common.UploadFile(AdminData.Info, connToAdmin, 0, GetName, AgentStatus.AESKey, NODEID, false)
 				case "NAMECONFIRM":
@@ -339,6 +352,8 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 					GetName <- false
 				case "CANNOTREAD":
 					CannotRead <- true
+					common.File.ReceiveFileSliceNum <- false
+					os.Remove(AdminData.Info)
 				case "FORWARDTEST":
 					go TestForward(AdminData.Info)
 				case "REFLECTTEST":
@@ -357,43 +372,6 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 
 					for _, listener := range CurrentPortReflectListener {
 						listener.Close()
-					}
-				case "ADMINOFFLINE":
-					log.Println("[*]Admin seems offline!")
-					if reConn != "0" && reConn != "" && !passive {
-						ClearAllConn()
-						time.Sleep(1 * time.Second)
-						SocksDataChanMap = common.NewUint32ChanStrMap()
-						if AgentStatus.NotLastOne {
-							messCommand, _ := common.ConstructPayload(2, "COMMAND", "CLEAR", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
-							ProxyChan.ProxyChanToLowerNode <- messCommand
-						}
-						TryReconnect(reConn, monitor, listenPort)
-						if AgentStatus.NotLastOne {
-							messCommand, _ := common.ConstructPayload(2, "COMMAND", "RECONN", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
-							ProxyChan.ProxyChanToLowerNode <- messCommand
-						}
-					} else if reConn == "0" && passive {
-						ClearAllConn()
-						time.Sleep(1 * time.Second)
-						SocksDataChanMap = common.NewUint32ChanStrMap()
-						if AgentStatus.NotLastOne {
-							messCommand, _ := common.ConstructPayload(2, "COMMAND", "CLEAR", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
-							ProxyChan.ProxyChanToLowerNode <- messCommand
-						}
-						AgentStatus.Waiting = true
-						<-AgentStatus.ReConnCome
-						if AgentStatus.NotLastOne {
-							messCommand, _ := common.ConstructPayload(2, "COMMAND", "RECONN", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
-							ProxyChan.ProxyChanToLowerNode <- messCommand
-						}
-					} else {
-						if AgentStatus.NotLastOne {
-							messCommand, _ := common.ConstructPayload(2, "COMMAND", "ADMINOFFLINE", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
-							ProxyChan.ProxyChanToLowerNode <- messCommand
-						}
-						time.Sleep(2 * time.Second)
-						os.Exit(1)
 					}
 				case "RECOVER":
 					AlreadyDownNode.Lock()
@@ -573,8 +551,23 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID uint32) {
 					} else {
 						respComm, _ := common.ConstructPayload(0, "COMMAND", "NAMECONFIRM", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
 						ProxyChan.ProxyChanToUpperNode <- respComm
-						go common.ReceiveFile(connToUpperNode, AgentStatus.EOF, FileDataMap, CannotRead, UploadFile, AgentStatus.AESKey, false, NODEID)
+						go common.ReceiveFile(connToUpperNode, FileDataMap, CannotRead, UploadFile, AgentStatus.AESKey, false, NODEID)
 					}
+				case "FILESIZE":
+					filesize, _ := strconv.ParseInt(command.Info, 10, 64)
+					common.File.FileSize = filesize
+					respComm, _ := common.ConstructPayload(0, "COMMAND", "FILESIZECONFIRM", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
+					ProxyChan.ProxyChanToUpperNode <- respComm
+					common.File.ReceiveFileSize <- true
+				case "FILESLICENUM":
+					common.File.TotalSilceNum, _ = strconv.Atoi(command.Info)
+					respComm, _ := common.ConstructPayload(0, "COMMAND", "FILESLICENUMCONFIRM", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
+					ProxyChan.ProxyChanToUpperNode <- respComm
+					common.File.ReceiveFileSliceNum <- true
+				case "FILESLICENUMCONFIRM":
+					common.File.TotalConfirm <- true
+				case "FILESIZECONFIRM":
+					common.File.TotalConfirm <- true
 				case "DOWNLOADFILE":
 					go common.UploadFile(command.Info, connToUpperNode, 0, GetName, AgentStatus.AESKey, NODEID, false)
 				case "NAMECONFIRM":
@@ -583,6 +576,8 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID uint32) {
 					GetName <- false
 				case "CANNOTREAD":
 					CannotRead <- true
+					common.File.ReceiveFileSliceNum <- false
+					os.Remove(command.Info)
 				case "FORWARDTEST":
 					go TestForward(command.Info)
 				case "REFLECTTEST":
@@ -659,9 +654,9 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID uint32) {
 					SocksDataChanMap.Unlock()
 				case "FILEDATA": //接收文件内容
 					slicenum, _ := strconv.Atoi(command.FileSliceNum)
+					FileDataMap.Lock()
 					FileDataMap.Payload[slicenum] = command.Info
-				case "EOF": //文件读取结束
-					AgentStatus.EOF <- command.FileSliceNum
+					FileDataMap.Unlock()
 				case "FIN":
 					CurrentConn.Lock()
 					if _, ok := CurrentConn.Payload[command.Clientid]; ok {

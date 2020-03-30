@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-	"time"
 )
 
 var (
@@ -291,23 +290,11 @@ func TestIfValid(commandtype string, startNodeConn net.Conn, target string, node
 }
 
 /*-------------------------功能控制相关代码--------------------------*/
-//发送下线消息
-func SendOffLineToStartNode(startNodeConn net.Conn) {
-	respCommand, _ := common.ConstructPayload(1, "COMMAND", "ADMINOFFLINE", " ", " ", 0, 0, AdminStatus.AESKey, false)
-	_, err := startNodeConn.Write(respCommand)
-	if err != nil {
-		log.Println("[*]Startnode seems offline!Message cannot be transmitted")
-		return
-	}
-}
-
 //捕捉退出信号
 func MonitorCtrlC(startNodeConn net.Conn) {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	<-signalChan
-	SendOffLineToStartNode(startNodeConn)
-	time.Sleep(3 * time.Second)
 	os.Exit(1)
 }
 
