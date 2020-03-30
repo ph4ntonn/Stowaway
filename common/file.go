@@ -79,7 +79,6 @@ func UploadFile(filename string, controlConn *net.Conn, nodeid uint32, getName c
 			if err != nil {
 				if Notagent {
 					Bar.Finish()
-					fmt.Println("[*]Transmission complete")
 				}
 				return
 			}
