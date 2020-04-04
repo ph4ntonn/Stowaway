@@ -27,14 +27,14 @@ func StartSSH(info string, nodeid uint32) error {
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	})
 	if err != nil {
-		sshMess, _ := common.ConstructPayload(0, "COMMAND", "SSHRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
+		sshMess, _ := common.ConstructPayload(0, "", "COMMAND", "SSHRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
 		ProxyChan.ProxyChanToUpperNode <- sshMess
 		return err
 	}
 	Sshhost, err = sshdial.NewSession()
 
 	if err != nil {
-		sshMess, _ := common.ConstructPayload(0, "COMMAND", "SSHRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
+		sshMess, _ := common.ConstructPayload(0, "", "COMMAND", "SSHRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
 		ProxyChan.ProxyChanToUpperNode <- sshMess
 		return err
 	}
@@ -50,12 +50,8 @@ func StartSSH(info string, nodeid uint32) error {
 	}
 	Sshhost.Stderr = Sshhost.Stdout
 	Sshhost.Shell()
-	sshMess, _ := common.ConstructPayload(0, "COMMAND", "SSHRESP", " ", "SUCCESS", 0, nodeid, AgentStatus.AESKey, false)
+	sshMess, _ := common.ConstructPayload(0, "", "COMMAND", "SSHRESP", " ", "SUCCESS", 0, nodeid, AgentStatus.AESKey, false)
 	ProxyChan.ProxyChanToUpperNode <- sshMess
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
 	return nil
 }
 
@@ -70,7 +66,7 @@ func ReadCommand() {
 		if err != nil {
 			break
 		}
-		sshRespMess, _ := common.ConstructPayload(0, "DATA", "SSHMESS", " ", string(buffer[:len]), 0, AgentStatus.NODEID, AgentStatus.AESKey, false)
+		sshRespMess, _ := common.ConstructPayload(0, "", "DATA", "SSHMESS", " ", string(buffer[:len]), 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
 		ProxyChan.ProxyChanToUpperNode <- sshRespMess
 	}
 }

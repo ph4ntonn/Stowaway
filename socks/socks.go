@@ -11,19 +11,19 @@ import (
 func CheckMethod(conntoupper net.Conn, buffer []byte, username string, secret string, clientid uint32, key []byte, currentid uint32) string {
 	if buffer[0] == 0x05 {
 		if buffer[2] == 0x02 && (username != "") {
-			respdata, _ := common.ConstructPayload(0, "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x02}), clientid, currentid, key, false)
+			respdata, _ := common.ConstructPayload(0, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x02}), clientid, currentid, key, false)
 			conntoupper.Write(respdata)
 			return "PASSWORD"
 		} else if buffer[2] == 0x00 && (username == "" && secret == "") {
-			respdata, _ := common.ConstructPayload(0, "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x00}), clientid, currentid, key, false)
+			respdata, _ := common.ConstructPayload(0, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x00}), clientid, currentid, key, false)
 			conntoupper.Write(respdata)
 			return "NONE"
 		} else if buffer[2] == 0x00 && (username != "") {
-			respdata, _ := common.ConstructPayload(0, "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x02}), clientid, currentid, key, false)
+			respdata, _ := common.ConstructPayload(0, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x02}), clientid, currentid, key, false)
 			conntoupper.Write(respdata)
 			return "ILLEGAL"
 		} else if buffer[2] == 0x02 && (username == "") {
-			respdata, _ := common.ConstructPayload(0, "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x00}), clientid, currentid, key, false)
+			respdata, _ := common.ConstructPayload(0, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x00}), clientid, currentid, key, false)
 			conntoupper.Write(respdata)
 			return "ILLEGAL"
 		}
@@ -38,11 +38,11 @@ func AuthClient(conntoupper net.Conn, buffer []byte, username string, secret str
 	clientpass := string(buffer[3+ulen : 3+ulen+slen])
 	if clientname != username || clientpass != secret {
 		log.Println("Illegal client!")
-		respdata, _ := common.ConstructPayload(0, "DATA", "SOCKSDATARESP", " ", string([]byte{0x01, 0x01}), clientid, currentid, key, false)
+		respdata, _ := common.ConstructPayload(0, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x01, 0x01}), clientid, currentid, key, false)
 		conntoupper.Write(respdata)
 		return false
 	} else {
-		respdata, _ := common.ConstructPayload(0, "DATA", "SOCKSDATARESP", " ", string([]byte{0x01, 0x00}), clientid, currentid, key, false)
+		respdata, _ := common.ConstructPayload(0, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x01, 0x00}), clientid, currentid, key, false)
 		conntoupper.Write(respdata)
 		return true
 	}
@@ -53,6 +53,7 @@ func ConfirmTarget(conntoupper net.Conn, buffer []byte, checknum uint32, key []b
 	connected := false
 	var server net.Conn
 	var serverflag bool
+
 	if buffer[0] == 0x05 {
 		switch buffer[1] {
 		case 0x01:
@@ -83,11 +84,11 @@ func TcpConnect(conntoupper net.Conn, buffer []byte, len int, checknum uint32, k
 	port := strconv.Itoa(int(buffer[len-2])<<8 | int(buffer[len-1]))
 	server, err := net.Dial("tcp", net.JoinHostPort(host, port))
 	if err != nil {
-		respdata, _ := common.ConstructPayload(0, "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}), checknum, currentid, key, false)
+		respdata, _ := common.ConstructPayload(0, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}), checknum, currentid, key, false)
 		conntoupper.Write(respdata)
 		return server, false, false
 	}
-	respdata, _ := common.ConstructPayload(0, "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}), checknum, currentid, key, false)
+	respdata, _ := common.ConstructPayload(0, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}), checknum, currentid, key, false)
 	conntoupper.Write(respdata)
 	return server, true, true
 }
@@ -100,7 +101,7 @@ func Proxyhttp(conntoupper net.Conn, server net.Conn, checknum uint32, key []byt
 			server.Close()
 			return err
 		}
-		respdata, _ := common.ConstructPayload(0, "DATA", "SOCKSDATARESP", " ", string(serverbuffer[:len]), checknum, currentid, key, false)
+		respdata, _ := common.ConstructPayload(0, "", "DATA", "SOCKSDATARESP", " ", string(serverbuffer[:len]), checknum, currentid, key, false)
 		conntoupper.Write(respdata)
 	}
 	return nil

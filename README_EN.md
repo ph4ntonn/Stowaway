@@ -85,7 +85,7 @@ Admin node: ./stowaway admin -s 123 -c 127.0.0.1:9999
 
   -c  It means startnode's address
     
-startnode: ./stowaway agent -l 9999 -s 123 --startnode -r --reconnect 0 --single --activeconnect
+startnode: ./stowaway agent -l 9999 -s 123 --startnode -r
 
   Meaning:
 
@@ -93,35 +93,15 @@ startnode: ./stowaway agent -l 9999 -s 123 --startnode -r --reconnect 0 --single
 
   -r   It means startnode is started passively
 
-  --reconnect In this example,if you want to start startnode passively and also sustain the reconnect function of admin node, then this option must be set, and the value MUST be 0! Otherwise,this option must be deleted.
-
-  --single  If this option is set,it means the whole network including just admin node and startnode(no following simple node),if there are still some simple nodes that need to be added into the network,DO NOT set this option
-
-  ----activeconnect If this option is set,it means the second node(aka the FIRST SIMPLE node) will be started in passive mode,otherwise,this option must be deleted
-
 The following simple node can be started as Example 1's description
 
-And if you do not set the --single option, then you should start the startnode first and admin node successively (mention the sequence! startnode -> admin -> other nodes),then add the following simple nodes into the network.when all the things before are done,you can let the admin node offline(or just keep it online, it's totally up to you)
-
-The next time you want to reconnect to the startnode,just start the admin node like : ./stowaway admin -s 123 -c 127.0.0.1:9999
-
-Then, the whole network will be rebuilt.
-
-But, if you set the --single option,it means you only need to start startnode and admin node, So when they are started,you can also choose to keep the admin node online or just let it offline.
-
-The next time you want to reconnect to the startnode,just start the admin node like : ./stowaway admin -s 123 -c 127.0.0.1:9999 
-
-Then, the whole network will be rebuilt,too.
 ```
 
 **Some points you should know:**
 
-**1.when startnode started as passive mode and admin already connected,then if the following node first actively connect to startnode and sometime disconnect, the following node cannot reconnect to startnode actively again.**
+**1.Every node(except for the admin node),can be connected by several nodes to build the network tree**
 
 **2.When a node offline(for instance,A's following node B offline),it will force all the socks,reflect,forward services down,even the services are not associate to node B,so if you still want to use some of these services,you should restart them manually**
-
-**3.When a node offline(for instance,A's following node B offline),then if you reconnect the node B,before you manipulate node B,you should enter the node A,and type in the command: recover ,this command will help you to recover the node A for the reconnection of node B. After you do that,you can manipulate node B instantly**
-
 
 ## Example
 
@@ -147,7 +127,11 @@ Second simple Node：
 
 When all agent nodes connected，check the topology in admin：
 
-![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/chain.png)
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/tree.png)
+
+When all agent nodes connected，check all nodes's detail：
+
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/detail.png)
 
 Set note for this node：
 
@@ -178,6 +162,10 @@ And it can proxy your traffic to the second simple node and the second simple no
 
 If you want to set username/password for socks5 service(Firefox support this function, Chrome doesn't), For instance, if you want to set the username as ph4ntom and password as 11235,just change the command to : socks 7777 ph4ntom 11235 (Be aware,do not use colon(:) in either username or password)
 
+Shutdown the socks5 proxy service：
+
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/shutdownsocks5.png)
+
 Open ssh：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/ssh.png)
@@ -196,15 +184,26 @@ If you want to upload/download any files,use upload/download + (filepath) under 
 
 Port mapping：
 
+Mapping local port to remote port:
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/portforward.png)
-![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/connect.png)
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/connectforward.png)
 
 Now you can connect to 127.0.0.1:8888 like really connecting to 127.0.0.1:22(forward local port to remote port)
+
+If you want to shutdown the forward service:
+
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/shutdownforward.png)
+
+Mapping remote port to local port:
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/portreflect.png)
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/connectreflect.png)
 
 Now anyone who connect to 127.0.0.1:80 will connect to 127.0.0.1:22 in fact(forward remote port to local port)
+
+If you want to shutdown the reflect service:
+
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/shutdownreflect.png)
 
 ```
 For more detail, just type help to get further informations
@@ -216,14 +215,13 @@ For more detail, just type help to get further informations
 - [x] Reconnection
 - [x] Port mapping
 - [ ] Clean codes, optimize logic
-- [ ] Add cc function
 - [x] Add reverse connect mode
 - [ ] Support port reuse(seems not very essential,so maybe add it later)
 
 ### Attention
 
 - This porject is coding just for fun , the logic structure and code structure are not strict enough, please don't be so serious about it
-- When the admin offline, all agent nodes will be offline too(only when startnode isn't under reconnect mode(passive or active))
+- When the admin offline, all agent nodes will be offline too(only when startnode isn't under reconnect mode)
 - When one of the agents offline, the agent nodes after it will offline
 - Once the admin started, you need to connect at least one agent node to it before you do any operations
 - If you want to compile this project from source code,you can run build_admin.sh/build_agent.sh（Be Mentioned!!!!!!!!!! The default compile result is AGENT mode and please run build_agent.sh. But if you want to compile ADMIN mode,please see the main.go file and FOLLOW THE INSTRUCTION, and next you can run build_admin.sh to get admin mode program.)

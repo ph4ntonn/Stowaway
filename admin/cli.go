@@ -1,11 +1,12 @@
 package admin
 
 import (
+	"Stowaway/config"
 	"fmt"
 )
 
 func Banner() {
-	fmt.Print(`
+	fmt.Printf(`
 ▄▀▀▀▀▄  ▄▀▀▀█▀▀▄  ▄▀▀▀▀▄   ▄▀▀▄    ▄▀▀▄  ▄▀▀█▄   ▄▀▀▄    ▄▀▀▄  ▄▀▀█▄   ▄▀▀▄ ▀▀▄ 
 █ █   ▐ █    █  ▐ █      █ █   █    ▐  █ ▐ ▄▀ ▀▄ █   █    ▐  █ ▐ ▄▀ ▀▄ █   ▀▄ ▄▀ 
    ▀▄   ▐   █     █      █ ▐  █        █   █▄▄▄█ ▐  █        █   █▄▄▄█ ▐     █   
@@ -14,15 +15,16 @@ func Banner() {
  ▐      █                           ▀    ▐   ▐            ▀    ▐   ▐       █     
        ▐                                                                  ▐    
 
-			{ v1.3  Author:ph4ntom }
-`)
+			{ v%s  Author:ph4ntom }
+`, config.VERSION)
 }
 
 func ShowMainHelp() {
 	fmt.Println(`
 	help                                     Show Help information.
 	exit                                     Exit.
-	chain                                    Display connected node information
+	detail                                   Display connected node detail
+	tree 									 Display nodes's topology
 	use        [id]                          Select the target node you want to use.
   `)
 }
@@ -41,7 +43,6 @@ func ShowNodeHelp() {
 	download   [filename]                    Download file from current agent node
 	forward    [lport] [ip:port]             Forward local port to remote (eg:forward 8888 192.168.0.100:22)
 	reflect    [rport] [lport]               Reflect remote port to local port (eg:reflect 22 80)
-	recover                                  Recover the node when the following node reconnect
-	exit                                     Exit.
+	exit                                     Back to upper panel
   `)
 }

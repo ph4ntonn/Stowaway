@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -19,7 +20,7 @@ func TryReconnect(gap string, monitor string, listenPort string) {
 	for {
 		time.Sleep(time.Duration(lag) * time.Second)
 
-		controlConnToAdmin, _, err := node.StartNodeConn(monitor, listenPort, AgentStatus.NODEID, AgentStatus.AESKey)
+		controlConnToAdmin, _, err := node.StartNodeConn(monitor, listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
 		if err != nil {
 			fmt.Println("[*]Admin seems still down")
 		} else {
@@ -38,32 +39,15 @@ func AdminOffline(reConn, monitor, listenPort string, passive bool) {
 		time.Sleep(1 * time.Second)
 		SocksDataChanMap = common.NewUint32ChanStrMap()
 		if AgentStatus.NotLastOne {
-			messCommand, _ := common.ConstructPayload(2, "COMMAND", "CLEAR", " ", " ", 0, AgentStatus.NODEID, AgentStatus.AESKey, false)
-			ProxyChan.ProxyChanToLowerNode <- messCommand
+			BroadCast("CLEAR")
 		}
 		TryReconnect(reConn, monitor, listenPort)
 		if AgentStatus.NotLastOne {
-			messCommand, _ := common.ConstructPayload(2, "COMMAND", "RECONN", " ", " ", 0, AgentStatus.NODEID, AgentStatus.AESKey, false)
-			ProxyChan.ProxyChanToLowerNode <- messCommand
-		}
-	} else if reConn == "0" && passive {
-		ClearAllConn()
-		time.Sleep(1 * time.Second)
-		SocksDataChanMap = common.NewUint32ChanStrMap()
-		if AgentStatus.NotLastOne {
-			messCommand, _ := common.ConstructPayload(2, "COMMAND", "CLEAR", " ", " ", 0, AgentStatus.NODEID, AgentStatus.AESKey, false)
-			ProxyChan.ProxyChanToLowerNode <- messCommand
-		}
-		AgentStatus.Waiting = true
-		<-AgentStatus.ReConnCome
-		if AgentStatus.NotLastOne {
-			messCommand, _ := common.ConstructPayload(2, "COMMAND", "RECONN", " ", " ", 0, AgentStatus.NODEID, AgentStatus.AESKey, false)
-			ProxyChan.ProxyChanToLowerNode <- messCommand
+			BroadCast("RECONN")
 		}
 	} else {
 		if AgentStatus.NotLastOne {
-			messCommand, _ := common.ConstructPayload(2, "COMMAND", "ADMINOFFLINE", " ", " ", 0, AgentStatus.NODEID, AgentStatus.AESKey, false)
-			ProxyChan.ProxyChanToLowerNode <- messCommand
+			BroadCast("ADMINOFFLINE")
 		}
 		time.Sleep(2 * time.Second)
 		os.Exit(1)
@@ -77,8 +61,7 @@ func WaitForExit(NODEID uint32) {
 	signal.Notify(signalChan, os.Interrupt, os.Kill, syscall.SIGHUP)
 	<-signalChan
 	if AgentStatus.NotLastOne {
-		offlineMess, _ := common.ConstructPayload(NODEID+1, "COMMAND", "OFFLINE", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
-		ProxyChan.ProxyChanToLowerNode <- offlineMess
+		BroadCast("OFFLINE")
 	}
 	time.Sleep(5 * time.Second)
 	os.Exit(1)
@@ -136,4 +119,32 @@ func ClearAllConn() {
 		listener.Close()
 	}
 
+}
+
+func ChangeRoute(AdminData *common.Payload) uint32 {
+	route := AdminData.Route
+	routes := strings.Split(route, ":")
+	selected, _ := strconv.ParseInt(routes[0], 10, 32)
+	AdminData.Route = strings.Join(routes[1:], ":")
+	return uint32(selected)
+}
+
+func BroadCast(command string) {
+	var readyToBroadCast []uint32
+	node.NodeInfo.LowerNode.Lock()
+	for nodeid, _ := range node.NodeInfo.LowerNode.Payload {
+		if nodeid == 0 {
+			continue
+		}
+		readyToBroadCast = append(readyToBroadCast, nodeid)
+	}
+	node.NodeInfo.LowerNode.Unlock()
+
+	for _, nodeid := range readyToBroadCast {
+		mess, _ := common.ConstructPayload(nodeid, "", "COMMAND", command, " ", " ", 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+		passToLowerData := common.NewPassToLowerNodeData()
+		passToLowerData.Data = mess
+		passToLowerData.Route = nodeid
+		ProxyChan.ProxyChanToLowerNode <- passToLowerData
+	}
 }

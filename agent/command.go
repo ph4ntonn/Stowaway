@@ -17,11 +17,6 @@ var Command = &cli.Command{
 			Usage:   "secret key",
 		},
 		&cli.StringFlag{
-			Name:    "control",
-			Aliases: []string{"cc"},
-			Usage:   "set cc port",
-		},
-		&cli.StringFlag{
 			Name:    "listen",
 			Aliases: []string{"l"},
 			Usage:   "listen port",
@@ -45,16 +40,6 @@ var Command = &cli.Command{
 			Name:    "monitor",
 			Aliases: []string{"m"},
 			Usage:   "monitor node",
-		},
-		&cli.BoolFlag{
-			Name:    "single",
-			Aliases: []string{"Single"},
-			Usage:   "If only startnode",
-		},
-		&cli.BoolFlag{
-			Name:    "activeconnect",
-			Aliases: []string{"Activeconnect"},
-			Usage:   "Only when the startnode is in passive mode,and if the following node(only the first one) is passive mode too,set this option.",
 		},
 	},
 	Action: func(c *cli.Context) error {

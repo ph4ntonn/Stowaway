@@ -3,6 +3,7 @@ package common
 import (
 	"net"
 	"runtime"
+	"strconv"
 	"sync"
 )
 
@@ -48,23 +49,25 @@ func NewAdminStuff() *AdminStuff {
 
 /*-------------------------Agent相关状态变量代码--------------------------*/
 type AgentStatus struct {
-	NODEID     uint32
-	NotLastOne bool
-	Waiting    bool
-	ReConnCome chan bool
-	AESKey     []byte
+	Nodeid            uint32
+	NotLastOne        bool
+	Waiting           bool
+	ReConnCome        chan bool
+	WaitForIdAllocate chan uint32
+	AESKey            []byte
 }
 
 func NewAgentStatus() *AgentStatus {
 	nas := new(AgentStatus)
-	nas.NODEID = uint32(1)
+	nas.Nodeid = uint32(1)
 	nas.NotLastOne = false
 	nas.Waiting = false
 	nas.ReConnCome = make(chan bool, 1)
+	nas.WaitForIdAllocate = make(chan uint32, 1)
 	return nas
 }
 
-/*-------------------------Node信息代码--------------------------*/
+/*-------------------------Node状态代码--------------------------*/
 type NodeStatus struct {
 	Nodes    map[uint32]string
 	Nodenote map[uint32]string
@@ -75,6 +78,30 @@ func NewNodeStatus() *NodeStatus {
 	nns.Nodes = make(map[uint32]string)
 	nns.Nodenote = make(map[uint32]string)
 	return nns
+}
+
+/*-------------------------Node信息代码--------------------------*/
+type NodeInfo struct {
+	UpperNode uint32
+	LowerNode *Uint32ConnMap
+}
+
+func NewNodeInfo() *NodeInfo {
+	nni := new(NodeInfo)
+	nni.UpperNode = 0
+	nni.LowerNode = NewUint32ConnMap()
+	return nni
+}
+
+/*-------------------------传递给下级节点结构代码--------------------------*/
+type PassToLowerNodeData struct {
+	Route uint32
+	Data  []byte
+}
+
+func NewPassToLowerNodeData() *PassToLowerNodeData {
+	nptlnd := new(PassToLowerNodeData)
+	return nptlnd
 }
 
 /*-------------------------Forward配置相关代码--------------------------*/
@@ -121,13 +148,12 @@ func NewFileStatus() *FileStatus {
 
 /*-------------------------ProxyChan相关代码--------------------------*/
 type ProxyChan struct {
-	ProxyChanToLowerNode chan []byte
+	ProxyChanToLowerNode chan *PassToLowerNodeData
 	ProxyChanToUpperNode chan []byte
 }
 
 func NewProxyChan() *ProxyChan {
 	npc := new(ProxyChan)
-	npc.ProxyChanToLowerNode = make(chan []byte, 1)
 	npc.ProxyChanToUpperNode = make(chan []byte, 1)
 	return npc
 }
@@ -199,4 +225,41 @@ func CheckSystem() (sysType uint32) {
 		sysType = 0xff
 	}
 	return
+}
+
+/*-------------------------操作功能性代码--------------------------*/
+//uint32转换至string类型
+func Uint32Str(num uint32) string {
+	b := strconv.Itoa(int(num))
+	return b
+}
+
+func StrUint32(str string) uint32 {
+	num, _ := strconv.ParseInt(str, 10, 32)
+	return uint32(num)
+}
+
+//倒置[]string
+func StringReverse(src []string) {
+	if src == nil {
+		return
+	}
+	count := len(src)
+	mid := count / 2
+	for i := 0; i < mid; i++ {
+		tmp := src[i]
+		src[i] = src[count-1]
+		src[count-1] = tmp
+		count--
+	}
+}
+
+//获取slice中的特定值
+func FindSpecFromSlice(nodeid uint32, nodes []uint32) int {
+	for key, value := range nodes {
+		if nodeid == value {
+			return key
+		}
+	}
+	return -1
 }

@@ -13,6 +13,10 @@ import (
 type Payload struct {
 	NodeId uint32 //接收节点序号
 
+	RouteLength uint32 //路由长度
+
+	Route string //路由表
+
 	TypeLength uint32 //标识符长度
 
 	Type string //标示是data还是command
@@ -34,10 +38,11 @@ type Payload struct {
 	CurrentId uint32 //当前节点序号
 }
 
-func ConstructPayload(nodeid uint32, ptype string, command string, fileSliceNum string, info string, clientid uint32, currentid uint32, key []byte, pass bool) ([]byte, error) {
+func ConstructPayload(nodeid uint32, route string, ptype string, command string, fileSliceNum string, info string, clientid uint32, currentid uint32, key []byte, pass bool) ([]byte, error) {
 	var buffer bytes.Buffer
 
 	Nodeid := make([]byte, config.NODE_LEN)
+	Routelength := make([]byte, config.ROUTE_LEN)
 	TypeLength := make([]byte, config.TYPE_LEN)
 	CommandLength := make([]byte, config.COMMAND_LEN)
 	FilesliceLength := make([]byte, config.FILESLICENUM_LEN)
@@ -45,6 +50,7 @@ func ConstructPayload(nodeid uint32, ptype string, command string, fileSliceNum 
 	Clientid := make([]byte, config.CLIENT_LEN)
 	Currentid := make([]byte, config.NODE_LEN)
 
+	Routedata := []byte(route)
 	PtypeData := []byte(ptype)
 	Command := []byte(command)
 	FileSliceNumData := []byte(fileSliceNum)
@@ -60,7 +66,7 @@ func ConstructPayload(nodeid uint32, ptype string, command string, fileSliceNum 
 		Info = crypto.AESEncrypt(Info, key)
 	}
 
-	if pass {
+	if len(key) != 0 && pass {
 		key, err := crypto.KeyPadding(key)
 		if err != nil {
 			log.Fatal(err)
@@ -70,6 +76,7 @@ func ConstructPayload(nodeid uint32, ptype string, command string, fileSliceNum 
 	}
 
 	binary.BigEndian.PutUint32(Nodeid, nodeid)
+	binary.BigEndian.PutUint32(Routelength, uint32(len(Routedata)))
 	binary.BigEndian.PutUint32(TypeLength, uint32(len(PtypeData)))
 	binary.BigEndian.PutUint32(CommandLength, uint32(len(Command)))
 	binary.BigEndian.PutUint32(FilesliceLength, uint32(len(FileSliceNumData)))
@@ -78,6 +85,8 @@ func ConstructPayload(nodeid uint32, ptype string, command string, fileSliceNum 
 	binary.BigEndian.PutUint32(Currentid, currentid)
 
 	buffer.Write(Nodeid)
+	buffer.Write(Routelength)
+	buffer.Write(Routedata)
 	buffer.Write(TypeLength)
 	buffer.Write(PtypeData)
 	buffer.Write(CommandLength)
@@ -98,6 +107,7 @@ func ExtractPayload(conn net.Conn, key []byte, currentid uint32, isinit bool) (*
 	var (
 		payload         = &Payload{}
 		nodelen         = make([]byte, config.NODE_LEN)
+		routelen        = make([]byte, config.ROUTE_LEN)
 		typelen         = make([]byte, config.TYPE_LEN)
 		commandlen      = make([]byte, config.COMMAND_LEN)
 		fileslicenumlen = make([]byte, config.FILESLICENUM_LEN)
@@ -115,6 +125,19 @@ func ExtractPayload(conn net.Conn, key []byte, currentid uint32, isinit bool) (*
 		return payload, err
 	}
 	payload.NodeId = binary.BigEndian.Uint32(nodelen)
+
+	_, err = io.ReadFull(conn, routelen)
+	if err != nil {
+		return payload, err
+	}
+	payload.RouteLength = binary.BigEndian.Uint32(routelen)
+
+	routebuffer := make([]byte, payload.RouteLength)
+	_, err = io.ReadFull(conn, routebuffer)
+	if err != nil {
+		return payload, err
+	}
+	payload.Route = string(routebuffer)
 
 	_, err = io.ReadFull(conn, typelen)
 	if err != nil {

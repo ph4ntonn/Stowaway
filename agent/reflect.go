@@ -25,12 +25,12 @@ func TestReflect(portCombine string) {
 	reflectAddr := fmt.Sprintf("0.0.0.0:%s", ports[1])
 	reflectListenerForClient, err := net.Listen("tcp", reflectAddr)
 	if err != nil {
-		respCommand, _ := common.ConstructPayload(0, "COMMAND", "REFLECTFAIL", " ", " ", 0, AgentStatus.NODEID, AgentStatus.AESKey, false)
+		respCommand, _ := common.ConstructPayload(0, "", "COMMAND", "REFLECTFAIL", " ", " ", 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
 		ProxyChan.ProxyChanToUpperNode <- respCommand
 		return
 	} else {
 		defer reflectListenerForClient.Close()
-		respCommand, _ := common.ConstructPayload(0, "COMMAND", "REFLECTOK", " ", " ", 0, AgentStatus.NODEID, AgentStatus.AESKey, false)
+		respCommand, _ := common.ConstructPayload(0, "", "COMMAND", "REFLECTOK", " ", " ", 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
 		ProxyChan.ProxyChanToUpperNode <- respCommand
 	}
 
@@ -41,15 +41,13 @@ func TestReflect(portCombine string) {
 		if err != nil {
 			return
 		} else {
-			respCommand, _ := common.ConstructPayload(0, "DATA", "REFLECT", " ", ports[0], ReflectNum, AgentStatus.NODEID, AgentStatus.AESKey, false)
+			respCommand, _ := common.ConstructPayload(0, "", "DATA", "REFLECT", " ", ports[0], ReflectNum, AgentStatus.Nodeid, AgentStatus.AESKey, false)
 			ProxyChan.ProxyChanToUpperNode <- respCommand
 		}
 		ReflectConnMap.Lock()
 		ReflectConnMap.Payload[ReflectNum] = conn
+		go HandleReflectPort(ReflectConnMap.Payload[ReflectNum], ReflectNum, AgentStatus.Nodeid)
 		ReflectConnMap.Unlock()
-		ReflectConnMap.RLock()
-		go HandleReflectPort(ReflectConnMap.Payload[ReflectNum], ReflectNum, AgentStatus.NODEID)
-		ReflectConnMap.RUnlock()
 		ReflectNum++
 	}
 }
@@ -60,11 +58,11 @@ func HandleReflectPort(reflectconn net.Conn, num uint32, nodeid uint32) {
 	for {
 		len, err := reflectconn.Read(buffer)
 		if err != nil {
-			finMessage, _ := common.ConstructPayload(0, "DATA", "REFLECT", " ", " ", num, AgentStatus.NODEID, AgentStatus.AESKey, false)
+			finMessage, _ := common.ConstructPayload(0, "", "DATA", "REFLECTFIN", " ", " ", num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
 			ProxyChan.ProxyChanToUpperNode <- finMessage
 			return
 		} else {
-			respData, _ := common.ConstructPayload(0, "DATA", "REFLECTDATA", " ", string(buffer[:len]), num, AgentStatus.NODEID, AgentStatus.AESKey, false)
+			respData, _ := common.ConstructPayload(0, "", "DATA", "REFLECTDATA", " ", string(buffer[:len]), num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
 			ProxyChan.ProxyChanToUpperNode <- respData
 		}
 	}

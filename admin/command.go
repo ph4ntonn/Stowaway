@@ -22,11 +22,6 @@ var Command = &cli.Command{
 			Usage:   "connect to startnode",
 		},
 		&cli.StringFlag{
-			Name:    "control",
-			Aliases: []string{"cc"},
-			Usage:   "set cc port",
-		},
-		&cli.StringFlag{
 			Name:    "listen",
 			Aliases: []string{"l"},
 			Usage:   "listen port",

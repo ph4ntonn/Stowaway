@@ -43,7 +43,7 @@ func StartShell(command string, stdin io.Writer, stdout io.Reader, currentid uin
 		if err != nil {
 			return
 		}
-		respShell, _ := common.ConstructPayload(0, "DATA", "SHELLRESP", " ", string(buf[:count]), 0, currentid, AgentStatus.AESKey, false)
+		respShell, _ := common.ConstructPayload(0, "", "DATA", "SHELLRESP", " ", string(buf[:count]), 0, currentid, AgentStatus.AESKey, false)
 		ProxyChan.ProxyChanToUpperNode <- respShell
 	}
 }
