@@ -33,6 +33,7 @@ func NewAdminStatus() *AdminStatus {
 
 /*-------------------------Admin零散变量代码--------------------------*/
 type AdminStuff struct {
+	sync.RWMutex
 	StartNode              string
 	AdminCommandChan       chan []string
 	SocksNum               uint32
@@ -106,6 +107,7 @@ func NewPassToLowerNodeData() *PassToLowerNodeData {
 
 /*-------------------------Forward配置相关代码--------------------------*/
 type ForwardStatus struct {
+	sync.RWMutex
 	ForwardIsValid             chan bool
 	ForwardNum                 uint32
 	CurrentPortForwardListener []net.Listener
@@ -116,6 +118,18 @@ func NewForwardStatus() *ForwardStatus {
 	nfs.ForwardNum = 0
 	nfs.ForwardIsValid = make(chan bool, 1)
 	return nfs
+}
+
+/*-------------------------Reflect配置相关代码--------------------------*/
+type ReflectStatus struct {
+	sync.RWMutex
+	ReflectNum uint32
+}
+
+func NewReflectStatus() *ReflectStatus {
+	nrs := new(ReflectStatus)
+	nrs.ReflectNum = 0
+	return nrs
 }
 
 /*-------------------------Socks5配置相关代码--------------------------*/

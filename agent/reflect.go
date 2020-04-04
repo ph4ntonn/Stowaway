@@ -10,11 +10,11 @@ import (
 var (
 	ReflectConnMap             *common.Uint32ConnMap
 	CurrentPortReflectListener []net.Listener
-	ReflectNum                 uint32
+	ReflectStatus              *common.ReflectStatus
 )
 
 func init() {
-	ReflectNum = 0
+	ReflectStatus = common.NewReflectStatus()
 	ReflectConnMap = common.NewUint32ConnMap()
 }
 
@@ -41,14 +41,16 @@ func TestReflect(portCombine string) {
 		if err != nil {
 			return
 		} else {
-			respCommand, _ := common.ConstructPayload(0, "", "DATA", "REFLECT", " ", ports[0], ReflectNum, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+			respCommand, _ := common.ConstructPayload(0, "", "DATA", "REFLECT", " ", ports[0], ReflectStatus.ReflectNum, AgentStatus.Nodeid, AgentStatus.AESKey, false)
 			ProxyChan.ProxyChanToUpperNode <- respCommand
 		}
 		ReflectConnMap.Lock()
-		ReflectConnMap.Payload[ReflectNum] = conn
-		go HandleReflectPort(ReflectConnMap.Payload[ReflectNum], ReflectNum, AgentStatus.Nodeid)
+		ReflectConnMap.Payload[ReflectStatus.ReflectNum] = conn
+		go HandleReflectPort(ReflectConnMap.Payload[ReflectStatus.ReflectNum], ReflectStatus.ReflectNum, AgentStatus.Nodeid)
 		ReflectConnMap.Unlock()
-		ReflectNum++
+		ReflectStatus.Lock()
+		ReflectStatus.ReflectNum++
+		ReflectStatus.Unlock()
 	}
 }
 

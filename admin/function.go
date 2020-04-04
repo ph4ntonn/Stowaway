@@ -86,14 +86,16 @@ func StartSocksServiceForClient(command []string, startNodeConn net.Conn, nodeID
 	for {
 		conn, err := socksListenerForClient.Accept()
 		if err != nil {
-			log.Println("[*]Socks service stoped")
+			log.Println("[*]Socks service stopped")
 			return
 		}
 		ClientSockets.Lock()
 		ClientSockets.Payload[AdminStuff.SocksNum] = conn
 		go HandleNewSocksConn(startNodeConn, ClientSockets.Payload[AdminStuff.SocksNum], AdminStuff.SocksNum, nodeID)
-		AdminStuff.SocksNum++
 		ClientSockets.Unlock()
+		AdminStuff.Lock()
+		AdminStuff.SocksNum++
+		AdminStuff.Unlock()
 	}
 }
 
@@ -172,16 +174,16 @@ func StartPortForwardForClient(info []string, startNodeConn net.Conn, nodeid uin
 	for {
 		conn, err := forwardListenerForClient.Accept()
 		if err != nil {
-			log.Println("[*]PortForward service stoped")
+			log.Println("[*]PortForward service stopped")
 			return
 		}
 		PortForWardMap.Lock()
 		PortForWardMap.Payload[ForwardStatus.ForwardNum] = conn
-		PortForWardMap.Unlock()
-		PortForWardMap.RLock()
 		go HandleForwardPort(PortForWardMap.Payload[ForwardStatus.ForwardNum], info[2], startNodeConn, ForwardStatus.ForwardNum, nodeid)
-		PortForWardMap.RUnlock()
+		PortForWardMap.Unlock()
+		ForwardStatus.Lock()
 		ForwardStatus.ForwardNum++
+		ForwardStatus.Unlock()
 	}
 }
 
