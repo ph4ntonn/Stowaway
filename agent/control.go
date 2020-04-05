@@ -45,6 +45,17 @@ func AdminOffline(reConn, monitor, listenPort string, passive bool) {
 		if AgentStatus.NotLastOne {
 			BroadCast("RECONN")
 		}
+	} else if passive {
+		ClearAllConn()
+		time.Sleep(1 * time.Second)
+		SocksDataChanMap = common.NewUint32ChanStrMap()
+		if AgentStatus.NotLastOne {
+			BroadCast("CLEAR")
+		}
+		<-AgentStatus.ReConnCome
+		if AgentStatus.NotLastOne {
+			BroadCast("RECONN")
+		}
 	} else {
 		if AgentStatus.NotLastOne {
 			BroadCast("ADMINOFFLINE")

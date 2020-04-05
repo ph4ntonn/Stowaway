@@ -4,6 +4,7 @@ import (
 	"Stowaway/common"
 	"bufio"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -122,10 +123,35 @@ func HandleNewSocksConn(startNodeConn net.Conn, clientsocks net.Conn, num uint32
 
 /*-------------------------Ssh功能启动相关代码--------------------------*/
 // 发送ssh开启命令
-func StartSSHService(startNodeConn net.Conn, info []string, nodeid uint32) {
-	information := fmt.Sprintf("%s::%s::%s", info[1], info[2], info[3])
+func StartSSHService(startNodeConn net.Conn, info []string, nodeid uint32, method string) {
+	var information string
+	information = fmt.Sprintf("%s:::%s:::%s:::%s", info[0], info[1], info[2], method)
+
 	Route.Lock()
 	sshCommand, _ := common.ConstructPayload(nodeid, Route.Route[nodeid], "COMMAND", "SSH", " ", information, 0, 0, AdminStatus.AESKey, false)
+	Route.Unlock()
+	startNodeConn.Write(sshCommand)
+}
+
+//检查私钥文件是否存在
+func CheckKeyFile(file string) []byte {
+	fmt.Println("file is", []byte(file))
+	buffer, err := ioutil.ReadFile(file)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+	return buffer
+}
+
+/*-------------------------SshTunnel功能启动相关代码--------------------------*/
+// 发送SshTunnel开启命令
+func SendSSHTunnel(startNodeConn net.Conn, info []string, nodeid uint32, method string) {
+	var information string
+	information = fmt.Sprintf("%s:::%s:::%s:::%s:::%s", info[0], info[1], info[2], info[3], method)
+
+	Route.Lock()
+	sshCommand, _ := common.ConstructPayload(nodeid, Route.Route[nodeid], "COMMAND", "SSHTUNNEL", " ", information, 0, 0, AdminStatus.AESKey, false)
 	Route.Unlock()
 	startNodeConn.Write(sshCommand)
 }
@@ -274,6 +300,18 @@ func AnalysisInfo(info string) (string, uint32) {
 	upperNode := common.StrUint32(spiltInfo[0])
 	ip := spiltInfo[1]
 	return ip, upperNode
+}
+
+//替换无效字符
+func CheckInput(input string) string {
+	if runtime.GOOS == "windows" {
+		input = strings.Replace(input, "\r\n", "", -1)
+		input = strings.Replace(input, " ", "", -1)
+	} else {
+		input = strings.Replace(input, "\n", "", -1)
+		input = strings.Replace(input, " ", "", -1)
+	}
+	return input
 }
 
 /*-------------------------功能控制相关代码--------------------------*/

@@ -66,6 +66,7 @@ func StartNodeInit(monitor, listenPort, reConn string, passive bool) {
 	for {
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
 		NewNodeMessage := <-node.NewNodeMessageChan
+		<-node.IsAdmin //正常模式启动的节点被连接一定是agent来连接，所以这里不需要判断是否是admin连接
 		ProxyChan.ProxyChanToUpperNode <- NewNodeMessage
 		if AgentStatus.NotLastOne == false {
 			ProxyChan.ProxyChanToLowerNode = make(chan *common.PassToLowerNodeData)
@@ -91,6 +92,7 @@ func SimpleNodeInit(monitor, listenPort string) {
 	for {
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
 		NewNodeMessage := <-node.NewNodeMessageChan
+		<-node.IsAdmin //正常模式启动的节点被连接一定是agent来连接，所以这里不需要判断是否是admin连接
 		ProxyChan.ProxyChanToUpperNode <- NewNodeMessage
 		if AgentStatus.NotLastOne == false {
 			ProxyChan.ProxyChanToLowerNode = make(chan *common.PassToLowerNodeData)
@@ -112,15 +114,20 @@ func StartNodeReversemodeInit(monitor, listenPort string, passive bool) {
 	for {
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
 		NewNodeMessage := <-node.NewNodeMessageChan
-		ProxyChan.ProxyChanToUpperNode <- NewNodeMessage
-		if AgentStatus.NotLastOne == false {
-			ProxyChan.ProxyChanToLowerNode = make(chan *common.PassToLowerNodeData)
-			go HandleConnToLowerNode()
+		isAdmin := <-node.IsAdmin
+		if isAdmin {
+			ConnToAdmin = controlConnForLowerNode
+			AgentStatus.ReConnCome <- true
+		} else {
+			ProxyChan.ProxyChanToUpperNode <- NewNodeMessage
+			if AgentStatus.NotLastOne == false {
+				ProxyChan.ProxyChanToLowerNode = make(chan *common.PassToLowerNodeData)
+				go HandleConnToLowerNode()
+			}
+			AgentStatus.NotLastOne = true
+			lowerid := <-AgentStatus.WaitForIdAllocate
+			go HandleConnFromLowerNode(controlConnForLowerNode, AgentStatus.Nodeid, lowerid)
 		}
-		AgentStatus.NotLastOne = true
-		lowerid := <-AgentStatus.WaitForIdAllocate
-		go HandleConnFromLowerNode(controlConnForLowerNode, AgentStatus.Nodeid, lowerid)
-
 	}
 }
 
@@ -134,6 +141,7 @@ func SimpleNodeReversemodeInit(monitor, listenPort string) {
 	for {
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
 		NewNodeMessage := <-node.NewNodeMessageChan
+		<-node.IsAdmin //被动模式启动的节点被连接一定是agent来连接，所以这里不需要判断是否是admin连接
 		ProxyChan.ProxyChanToUpperNode <- NewNodeMessage
 		if AgentStatus.NotLastOne == false {
 			ProxyChan.ProxyChanToLowerNode = make(chan *common.PassToLowerNodeData)
@@ -311,6 +319,12 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 					}
 				case "SSHCOMMAND":
 					go WriteCommand(AdminData.Info)
+				case "SSHTUNNEL":
+					err := SshTunnelNextNode(AdminData.Info, NODEID)
+					if err != nil {
+						fmt.Println("[*]", err)
+						break
+					}
 				case "CONNECT":
 					status := node.ConnectNextNode(AdminData.Info, NODEID, AgentStatus.AESKey)
 					if !status {
@@ -419,6 +433,7 @@ func HandleConnFromLowerNode(connForLowerNode net.Conn, currentid, lowerid uint3
 	for {
 		command, err := common.ExtractPayload(connForLowerNode, AgentStatus.AESKey, currentid, false)
 		if err != nil {
+			connForLowerNode.Close()
 			node.NodeInfo.LowerNode.Lock()
 			delete(node.NodeInfo.LowerNode.Payload, lowerid) //下级节点掉线，立即将此节点从自己的子节点列表删除
 			node.NodeInfo.LowerNode.Unlock()
@@ -539,6 +554,12 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID uint32) {
 					}
 				case "SSHCOMMAND":
 					go WriteCommand(command.Info)
+				case "SSHTUNNEL":
+					err := SshTunnelNextNode(command.Info, NODEID)
+					if err != nil {
+						fmt.Println("[*]", err)
+						break
+					}
 				case "CONNECT":
 					status := node.ConnectNextNode(command.Info, NODEID, AgentStatus.AESKey)
 					if !status {

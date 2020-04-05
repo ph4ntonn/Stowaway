@@ -71,8 +71,10 @@ func DelNodeFromTopology(nodeid uint32) {
 	Nooode.Lock()
 	if _, ok := Nooode.AllNode[nodeid]; ok {
 		uppernode := Nooode.AllNode[nodeid].Uppernode
-		index := common.FindSpecFromSlice(nodeid, Nooode.AllNode[uppernode].Lowernode)
-		Nooode.AllNode[uppernode].Lowernode = append(Nooode.AllNode[uppernode].Lowernode[:index], Nooode.AllNode[uppernode].Lowernode[index+1:]...)
+		if _, ok := Nooode.AllNode[uppernode]; ok {
+			index := common.FindSpecFromSlice(nodeid, Nooode.AllNode[uppernode].Lowernode)
+			Nooode.AllNode[uppernode].Lowernode = append(Nooode.AllNode[uppernode].Lowernode[:index], Nooode.AllNode[uppernode].Lowernode[index+1:]...)
+		}
 		Del(nodeid)
 		readyToDel = append(readyToDel, nodeid)
 		for _, value := range readyToDel {
@@ -226,6 +228,7 @@ func DelNote(nodeid uint32) bool {
 	return false
 }
 
+//admin端重连后，查找最大的nodeid值，以便之后的分配
 func FindMax() {
 	var tempAllNode []uint32
 	for key, _ := range Nooode.AllNode {

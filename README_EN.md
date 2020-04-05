@@ -11,6 +11,7 @@ PS: Thanks for everyone's star, i'm just an amateur, and the code still need be 
 
 - Obvious node topology
 - Active/passive mode
+- Ssh tunnel mode
 - Can be used on multiple platforms
 - Multi-hop socks5 traffic proxy
 - Multi-hop ssh traffic proxy
@@ -95,6 +96,8 @@ startnode: ./stowaway agent -l 9999 -s 123 --startnode -r
 
 The following simple node can be started as Example 1's description
 
+The next time you want to reconnect to the startnode and rebuild the whole network,just start the admin node like : ./stowaway admin -s 123 -c 127.0.0.1:9999,and then whole network will be rebuilt
+
 ```
 
 **Some points you should know:**
@@ -105,7 +108,7 @@ The following simple node can be started as Example 1's description
 
 ## Example
 
-For instance(one admin;one startnode;two simple nodes）：
+For instance：
 
 Admin：
 
@@ -173,6 +176,14 @@ Open ssh：
 And it can make the second simple node do its work as ssh cilent to start a ssh connection to 127.0.0.1:22(in this example)
 
 PS: In this function,you can type in ```pwd``` to check where you currently are
+
+Now if you want to add another node into the network, you can use sshtunnel command：
+
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/waiting.png)
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/sshtunnel.png)
+
+
+And I suggest to use the "sshtunnel" command to add the node into network when the firewall has stricted all the traffics expect for SSH(In general,you can just use "connect" command,it also works)
 
 Upload/Download file:
 

@@ -14,6 +14,7 @@ PS:谢谢大家的star，这个程序还不成熟规范，写来仅为学习，�
 
 - 一目了然的节点管理
 - 正向/反向连接
+- ssh隧道连接
 - 多平台适配
 - 多级socks5流量代理转发
 - ssh代理连接
@@ -104,6 +105,9 @@ startnode端: ./stowaway agent -l 9999 -s 123 --startnode -r
   -r/--reverse：代表此节点以passive模式启动
 
 后续普通节点同第一种情况中的普通节点启动方法一致
+
+下一次想要重连时，再次执行./stowaway admin -s 123 -c 127.0.0.1:9999，即可重建网络
+
 ```
 
 **几个注意点：**
@@ -114,7 +118,7 @@ startnode端: ./stowaway agent -l 9999 -s 123 --startnode -r
 
 ## Example
 
-一个简单的例子(以一个admin端三个agent端为例）：
+一个简单的例子：
 
 Admin端：
 
@@ -178,6 +182,13 @@ Startnode端：
 此时第二个普通节点会作为ssh客户端,(此节点)会发起ssh连接来访问指定的ssh服务，并将ssh数据回传至admin端
 
 PS: 在ssh模式下，你可以用pwd来判断自己所处的文件夹（好吧，其实就是没法把banner传回来。。）
+
+此时若还有节点需要加入网络，可使用sshtunnel命令：
+
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/waiting.png)
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/sshtunnel.png)
+
+此时将可以利用sshtunnel将节点加入网络，这一方法适用于当防火墙做了流量限制，只有ssh流量能够通过的情况（一般情况下推荐使用connect命令即可，不需要使用sshtunnel）。
 
 上传/下载文件：
 

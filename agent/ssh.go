@@ -16,14 +16,28 @@ var (
 )
 
 func StartSSH(info string, nodeid uint32) error {
-	spiltedinfo := strings.Split(info, "::")
+	var authpayload ssh.AuthMethod
+	spiltedinfo := strings.Split(info, ":::")
 	host := spiltedinfo[0]
 	username := spiltedinfo[1]
-	password := spiltedinfo[2]
+	authway := spiltedinfo[2]
+	method := spiltedinfo[3]
+
+	if method == "1" {
+		authpayload = ssh.Password(authway)
+	} else if method == "2" {
+		key, err := ssh.ParsePrivateKey([]byte(authway))
+		if err != nil {
+			sshMess, _ := common.ConstructPayload(0, "", "COMMAND", "SSHCERTERROR", " ", " ", 0, nodeid, AgentStatus.AESKey, false)
+			ProxyChan.ProxyChanToUpperNode <- sshMess
+			return err
+		}
+		authpayload = ssh.PublicKeys(key)
+	}
 
 	sshdial, err := ssh.Dial("tcp", host, &ssh.ClientConfig{
 		User:            username,
-		Auth:            []ssh.AuthMethod{ssh.Password(password)},
+		Auth:            []ssh.AuthMethod{authpayload},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	})
 	if err != nil {

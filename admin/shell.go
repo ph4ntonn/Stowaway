@@ -77,11 +77,111 @@ func HandleNodeCommand(startNodeConn net.Conn, NodeID string) {
 			AdminStatus.ReadyChange <- true
 			AdminStatus.IsShellMode <- true
 		case "ssh":
-			if len(AdminCommand) == 4 {
-				go StartSSHService(startNodeConn, AdminCommand, nodeID)
-				HandleSSHToNode(startNodeConn, nodeID)
+			if len(AdminCommand) == 2 {
+				fmt.Print("[*]Please choose the auth method(1.username/password 2.certificate):")
+				inputReader := bufio.NewReader(os.Stdin)
+				input, _ := inputReader.ReadString('\n')
+				input = CheckInput(input)
+				if input != "1" && input != "2" {
+					fmt.Println("[*]Wrong answer! Should be 1 or 2")
+					AdminStatus.ReadyChange <- true
+					AdminStatus.IsShellMode <- true
+					break
+				} else if input == "1" {
+					var command []string
+					method := input
+					command = append(command, AdminCommand[1])
+					fmt.Print("[*]Please enter the username:")
+					input, _ = inputReader.ReadString('\n')
+					input = CheckInput(input)
+					command = append(command, input)
+					fmt.Print("[*]Please enter the password:")
+					input, _ = inputReader.ReadString('\n')
+					input = CheckInput(input)
+					command = append(command, input)
+					go StartSSHService(startNodeConn, command, nodeID, method)
+					HandleSSHToNode(startNodeConn, nodeID)
+				} else if input == "2" {
+					var command []string
+					method := input
+					command = append(command, AdminCommand[1])
+					fmt.Print("[*]Please enter the username:")
+					input, _ = inputReader.ReadString('\n')
+					input = CheckInput(input)
+					command = append(command, input)
+					fmt.Print("[*]Please enter the file path of the key:")
+					input, _ = inputReader.ReadString('\n')
+					input = CheckInput(input)
+					result := CheckKeyFile(input)
+					if result == nil {
+						fmt.Println("[*]Cannot find the key file!")
+						AdminStatus.ReadyChange <- true
+						AdminStatus.IsShellMode <- true
+						break
+					} else {
+						command = append(command, string(result))
+						go StartSSHService(startNodeConn, command, nodeID, method)
+						HandleSSHToNode(startNodeConn, nodeID)
+					}
+				}
 			} else {
-				fmt.Println("Bad format! Should be ssh [ip:port] [name] [pass]")
+				fmt.Println("Bad format! Should be ssh [ip:port]")
+				AdminStatus.ReadyChange <- true
+				AdminStatus.IsShellMode <- true
+			}
+		case "sshtunnel":
+			if len(AdminCommand) == 3 {
+				var command []string
+				command = append(command, AdminCommand[1])
+				inputReader := bufio.NewReader(os.Stdin)
+				fmt.Print("[*]Please choose the auth method(1.username/password 2.certificate):")
+				input, _ := inputReader.ReadString('\n')
+				input = CheckInput(input)
+				if input != "1" && input != "2" {
+					fmt.Println("[*]Wrong answer! Should be 1 or 2")
+					AdminStatus.ReadyChange <- true
+					AdminStatus.IsShellMode <- true
+					break
+				} else if input == "1" {
+					var command []string
+					method := input
+					command = append(command, AdminCommand[1])
+					fmt.Print("[*]Please enter the username:")
+					input, _ = inputReader.ReadString('\n')
+					input = CheckInput(input)
+					command = append(command, input)
+					fmt.Print("[*]Please enter the password:")
+					input, _ = inputReader.ReadString('\n')
+					input = CheckInput(input)
+					command = append(command, input)
+					command = append(command, AdminCommand[2])
+					go SendSSHTunnel(startNodeConn, command, nodeID, method)
+				} else if input == "2" {
+					var command []string
+					method := input
+					command = append(command, AdminCommand[1])
+					fmt.Print("[*]Please enter the username:")
+					input, _ = inputReader.ReadString('\n')
+					input = CheckInput(input)
+					command = append(command, input)
+					fmt.Print("[*]Please enter the file path of the key:")
+					input, _ = inputReader.ReadString('\n')
+					input = CheckInput(input)
+					result := CheckKeyFile(input)
+					if result == nil {
+						fmt.Println("[*]Cannot find the key file!")
+						AdminStatus.ReadyChange <- true
+						AdminStatus.IsShellMode <- true
+						break
+					} else {
+						command = append(command, string(result))
+						command = append(command, AdminCommand[2])
+						go SendSSHTunnel(startNodeConn, command, nodeID, method)
+					}
+				}
+
+			} else {
+				fmt.Println("Bad format! Should be sshtunnel [ip:port] [agent-listening port]")
 				AdminStatus.ReadyChange <- true
 				AdminStatus.IsShellMode <- true
 			}
@@ -243,7 +343,6 @@ func HandleSSHToNode(startNodeControlConn net.Conn, nodeID uint32) {
 			default:
 				respCommand, _ := common.ConstructPayload(nodeID, route, "COMMAND", "SSHCOMMAND", " ", command, 0, 0, AdminStatus.AESKey, false)
 				startNodeControlConn.Write(respCommand)
-
 			}
 		}
 	} else {

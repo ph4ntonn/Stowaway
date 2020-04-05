@@ -57,8 +57,8 @@ func ConnectToStartNode(startnodeaddr string) {
 		log.Println("[*]Connection refused!")
 		os.Exit(1)
 	}
-	AddNodeToTopology(1, 0)
-	CalRoute()
+	helloMess, _ := common.ConstructPayload(1, "", "COMMAND", "STOWAWAYADMIN", " ", " ", 0, 0, AdminStatus.AESKey, false)
+	startNodeConn.Write(helloMess)
 	for {
 		command, _ := common.ExtractPayload(startNodeConn, AdminStatus.AESKey, 0, true)
 		switch command.Command {
@@ -68,6 +68,8 @@ func ConnectToStartNode(startnodeaddr string) {
 			AdminStuff.StartNode = strings.Split(startNodeConn.RemoteAddr().String(), ":")[0]
 			log.Printf("[*]Connect to startnode %s successfully!\n", startNodeConn.RemoteAddr().String())
 			NodeStatus.Nodenote[1] = ""
+			AddNodeToTopology(1, 0)
+			CalRoute()
 			go HandleStartConn(startNodeConn)
 			go HandleCommandToControlConn(startNodeConn)
 			go MonitorCtrlC(startNodeConn)
@@ -102,6 +104,9 @@ func HandleInitControlConn(startNodeConn net.Conn) {
 			return
 		}
 		switch command.Command {
+		case "STOWAWAYAGENT":
+			Message, _ := common.ConstructPayload(0, "", "COMMAND", "CONFIRM", " ", " ", 0, 0, AdminStatus.AESKey, false)
+			startNodeConn.Write(Message)
 		case "INIT":
 			respCommand, _ := common.ConstructPayload(1, "", "COMMAND", "ID", " ", " ", 0, 0, AdminStatus.AESKey, false)
 			startNodeConn.Write(respCommand)
@@ -255,6 +260,22 @@ func HandleStartConn(startNodeConn net.Conn) {
 					AdminStatus.ReadyChange <- true
 					AdminStatus.IsShellMode <- true
 				}
+			case "SSHTUNNELRESP":
+				switch nodeResp.Info {
+				case "SUCCESS":
+					fmt.Println("[*]Successfully connect to node by ssh tunnel!")
+					AdminStatus.ReadyChange <- true
+					AdminStatus.IsShellMode <- true
+				case "FAILED":
+					fmt.Println("[*]Fail to connect to node by ssh tunnel! Something wrong is happened!")
+					AdminStatus.ReadyChange <- true
+					AdminStatus.IsShellMode <- true
+				}
+			case "SSHCERTERROR":
+				fmt.Println("[*]Ssh certificate seems wrong")
+				AdminStatus.SshSuccess <- false
+				AdminStatus.ReadyChange <- true
+				AdminStatus.IsShellMode <- true
 			case "NAMECONFIRM":
 				AdminStatus.GetName <- true
 			case "CREATEFAIL":

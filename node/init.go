@@ -12,11 +12,13 @@ var (
 	NodeInfo                    *common.NodeInfo
 	ControlConnForLowerNodeChan chan net.Conn //下级节点控制信道
 	NewNodeMessageChan          chan []byte   //新节点加入消息
+	IsAdmin                     chan bool
 )
 
 func init() {
 	ControlConnForLowerNodeChan = make(chan net.Conn, 1)
 	NewNodeMessageChan = make(chan []byte, 1)
+	IsAdmin = make(chan bool, 1)
 	NodeInfo = common.NewNodeInfo()
 }
 
@@ -27,6 +29,11 @@ func StartNodeConn(monitor string, listenPort string, nodeID uint32, key []byte)
 		log.Println("[*]Connection refused!")
 		return controlConnToUpperNode, 11235, err
 	}
+	helloMess, _ := common.ConstructPayload(nodeID, "", "COMMAND", "STOWAWAYAGENT", " ", " ", 0, 0, key, false)
+	controlConnToUpperNode.Write(helloMess)
+
+	common.ExtractPayload(controlConnToUpperNode, key, 0, true)
+
 	respcommand, _ := common.ConstructPayload(nodeID, "", "COMMAND", "INIT", " ", listenPort, 0, 0, key, false) //主动向上级节点发送初始信息
 	_, err = controlConnToUpperNode.Write(respcommand)
 	if err != nil {
@@ -66,20 +73,28 @@ func StartNodeListen(listenPort string, NodeId uint32, key []byte) {
 			log.Println("[*]", err)
 			return
 		}
-		command, err := common.ExtractPayload(ConnToLowerNode, key, 0, true)
-		if err != nil {
-			log.Println("[*]", err)
-			return
+		for i := 0; i < 2; i++ {
+			command, _ := common.ExtractPayload(ConnToLowerNode, key, 0, true)
+			switch command.Command {
+			case "STOWAWAYADMIN":
+				respcommand, _ := common.ConstructPayload(NodeId, "", "COMMAND", "INIT", " ", listenPort, 0, 0, key, false)
+				ConnToLowerNode.Write(respcommand)
+			case "ID":
+				ControlConnForLowerNodeChan <- ConnToLowerNode
+				NewNodeMessageChan <- NewNodeMessage
+				IsAdmin <- true
+			case "STOWAWAYAGENT":
+				NewNodeMessage, _ = common.ConstructPayload(NodeId, "", "COMMAND", "CONFIRM", " ", " ", 0, NodeId, key, false)
+				ConnToLowerNode.Write(NewNodeMessage)
+			case "INIT":
+				//告知admin新节点消息
+				NewNodeMessage, _ = common.ConstructPayload(0, "", "COMMAND", "NEW", " ", ConnToLowerNode.RemoteAddr().String(), 0, NodeId, key, false)
+				NodeInfo.LowerNode.Payload[0] = ConnToLowerNode //将这个socket用0号位暂存，等待admin分配完id后再将其放入对应的位置
+				ControlConnForLowerNodeChan <- ConnToLowerNode
+				NewNodeMessageChan <- NewNodeMessage //被连接后不终止监听，继续等待可能的后续节点连接，以此组成树状结构
+				IsAdmin <- false
+			}
 		}
-		if command.Command == "INIT" {
-			//告知admin新节点消息
-			NewNodeMessage, _ = common.ConstructPayload(0, "", "COMMAND", "NEW", " ", ConnToLowerNode.RemoteAddr().String(), 0, NodeId, key, false)
-		} else {
-			continue
-		}
-		NodeInfo.LowerNode.Payload[0] = ConnToLowerNode //将这个socket用0号位暂存，等待admin分配完id后再将其放入对应的位置
-		ControlConnForLowerNodeChan <- ConnToLowerNode
-		NewNodeMessageChan <- NewNodeMessage //被连接后不终止监听，继续等待可能的后续节点连接，以此组成树状结构
 	}
 }
 
@@ -93,6 +108,8 @@ func ConnectNextNode(target string, nodeid uint32, key []byte) bool {
 		return false
 	}
 
+	helloMess, _ := common.ConstructPayload(nodeid, "", "COMMAND", "STOWAWAYAGENT", " ", " ", 0, 0, key, false)
+	controlConnToNextNode.Write(helloMess)
 	for {
 		command, err := common.ExtractPayload(controlConnToNextNode, key, 0, true)
 		if err != nil {
@@ -106,6 +123,7 @@ func ConnectNextNode(target string, nodeid uint32, key []byte) bool {
 			NodeInfo.LowerNode.Payload[0] = controlConnToNextNode
 			ControlConnForLowerNodeChan <- controlConnToNextNode
 			NewNodeMessageChan <- NewNodeMessage
+			IsAdmin <- false
 			return true
 		}
 	}
@@ -126,7 +144,7 @@ func AcceptConnFromUpperNode(listenPort string, nodeid uint32, key []byte) (net.
 			log.Println("[*]", err)
 			continue
 		}
-
+		common.ExtractPayload(Comingconn, key, 0, true)
 		respcommand, _ := common.ConstructPayload(nodeid, "", "COMMAND", "INIT", " ", listenPort, 0, 0, key, false)
 		Comingconn.Write(respcommand)
 		command, _ := common.ExtractPayload(Comingconn, key, 0, true) //等待分配id
@@ -135,6 +153,7 @@ func AcceptConnFromUpperNode(listenPort string, nodeid uint32, key []byte) (net.
 			WaitingForConn.Close()
 			return Comingconn, nodeid
 		}
+
 	}
 
 }
