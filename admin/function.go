@@ -135,7 +135,6 @@ func StartSSHService(startNodeConn net.Conn, info []string, nodeid uint32, metho
 
 //检查私钥文件是否存在
 func CheckKeyFile(file string) []byte {
-	fmt.Println("file is", []byte(file))
 	buffer, err := ioutil.ReadFile(file)
 	if err != nil {
 		fmt.Println(err)
