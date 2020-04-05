@@ -21,11 +21,11 @@ func Banner() {
 
 func ShowMainHelp() {
 	fmt.Println(`
-	help                                     Show Help information.
-	exit                                     Exit.
-	detail                                   Display connected node detail
-	tree 									 Display nodes's topology
-	use        [id]                          Select the target node you want to use.
+	help                                     		Show Help information.
+	exit                                     		Exit.
+	detail                                  		Display connected node detail
+	tree                                     		Display nodes's topology
+	use        [id]                          		Select the target node you want to use.
   `)
 }
 
@@ -38,7 +38,7 @@ func ShowNodeHelp() {
 	shell                                    		Start an interactive shell on selected node.
 	socks      [lport] [username] [pass]     		Start a socks5 server.(username and pass are optional)
 	connect    [ip:port]                     		Connect to new node
-	sshtunnel [ip:sshport] [agent-listening port]   Use sshtunnel to add the node into the whole network
+	sshtunnel  [ip:sshport] [agent port]    		Use sshtunnel to add the node into the whole network
 	stopsocks                                		Shut down corresponding socks service
 	upload     [filename]                    		Upload file to current agent node
 	download   [filename]                   		Download file from current agent node
