@@ -51,7 +51,7 @@ startnode端： ./stowaway agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 -
   
   -m 代表上一级节点的地址
   
-  -l 代表监听端口
+  -l 代表监听端口(如果不需要监听，也可直接省略)
 
   -s 参数代表节点通信加密密钥(admin端与agent端必须一致!)
 
@@ -114,7 +114,7 @@ startnode端: ./stowaway agent -l 9999 -s 123 --startnode -r
 
 **1.除了admin节点以外，普通的agent以及startnode节点可以被多个agent端连接，以组成树状网络**
 
-**2.当有节点掉线时（假设a节点后节点b掉线了），那么此时所有的socks，reflect，forward服务都会被强制停止（不管这个服务是否属于b节点）,需要重新手动启用**
+**2.当有节点掉线时，那么此时与此节点有关的socks，reflect，forward服务都会被强制停止**
 
 ## Example
 

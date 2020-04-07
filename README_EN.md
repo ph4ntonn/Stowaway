@@ -50,7 +50,7 @@ startnode： ./stowaway agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 --re
   
   -m    It means Stowaway's monitor node's address (In this case,it's the node we started above)
   
-  -l    It means Stowaway is listening on port 10000 and waiting for incoming connection 
+  -l    It means Stowaway is listening on port 10000 and waiting for incoming connection (optional)
 
   -s    It means Stowaway has used 123 as the encrypt key during the communication 
 
@@ -104,7 +104,7 @@ The next time you want to reconnect to the startnode and rebuild the whole netwo
 
 **1.Every node(except for the admin node),can be connected by several nodes to build the network tree**
 
-**2.When a node offline(for instance,A's following node B offline),it will force all the socks,reflect,forward services down,even the services are not associate to node B,so if you still want to use some of these services,you should restart them manually**
+**2.When a node offline,it will force all the socks,reflect,forward services that related to this node down**
 
 ## Example
 

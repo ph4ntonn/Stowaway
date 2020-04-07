@@ -15,7 +15,8 @@ type AdminStatus struct {
 	NodeSocksStarted chan bool
 	GetName          chan bool
 	CannotRead       chan bool
-	NodesReadyToadd  chan map[uint32]string
+	NodesReadyToadd  chan map[uint32]string //等待加入的node
+	HandleNode       uint32                 //正在操作的节点编号
 	AESKey           []byte
 }
 
@@ -28,6 +29,7 @@ func NewAdminStatus() *AdminStatus {
 	nas.GetName = make(chan bool, 1)
 	nas.CannotRead = make(chan bool, 1)
 	nas.NodesReadyToadd = make(chan map[uint32]string)
+	nas.HandleNode = 0
 	return nas
 }
 
@@ -37,14 +39,17 @@ type AdminStuff struct {
 	StartNode              string
 	AdminCommandChan       chan []string
 	SocksNum               uint32
-	SocksListenerForClient []net.Listener
+	SocksListenerForClient *Uint32ListenerSliceMap
+	SocksMapping           *Uint32Uint32SliceMap
 }
 
 func NewAdminStuff() *AdminStuff {
 	nas := new(AdminStuff)
 	nas.StartNode = "0.0.0.0"
 	nas.SocksNum = 0
-	nas.AdminCommandChan = make(chan []string)
+	nas.AdminCommandChan = make(chan []string, 1)
+	nas.SocksListenerForClient = NewUint32ListenerSliceMap()
+	nas.SocksMapping = NewUint32Uint32SliceMap()
 	return nas
 }
 
@@ -110,13 +115,16 @@ type ForwardStatus struct {
 	sync.RWMutex
 	ForwardIsValid             chan bool
 	ForwardNum                 uint32
-	CurrentPortForwardListener []net.Listener
+	CurrentPortForwardListener *Uint32ListenerSliceMap
+	ForwardMapping             *Uint32Uint32SliceMap
 }
 
 func NewForwardStatus() *ForwardStatus {
 	nfs := new(ForwardStatus)
 	nfs.ForwardNum = 0
 	nfs.ForwardIsValid = make(chan bool, 1)
+	nfs.CurrentPortForwardListener = NewUint32ListenerSliceMap()
+	nfs.ForwardMapping = NewUint32Uint32SliceMap()
 	return nfs
 }
 
@@ -193,6 +201,15 @@ type Uint32StrMap struct {
 	Payload map[uint32]string
 }
 
+/*-------------------------不加锁map相关代码--------------------------*/
+type Uint32ListenerSliceMap struct {
+	Payload map[uint32][]net.Listener
+}
+
+type Uint32Uint32SliceMap struct {
+	Payload map[uint32][]uint32
+}
+
 /*-------------------------初始化各类map相关代码--------------------------*/
 func NewUint32ChanStrMap() *Uint32ChanStrMap {
 	sm := new(Uint32ChanStrMap)
@@ -216,6 +233,18 @@ func NewUint32StrMap() *Uint32StrMap {
 	sm := new(Uint32StrMap)
 	sm.Payload = make(map[uint32]string)
 	return sm
+}
+
+func NewUint32ListenerSliceMap() *Uint32ListenerSliceMap {
+	nilsm := new(Uint32ListenerSliceMap)
+	nilsm.Payload = make(map[uint32][]net.Listener)
+	return nilsm
+}
+
+func NewUint32Uint32SliceMap() *Uint32Uint32SliceMap {
+	nuusm := new(Uint32Uint32SliceMap)
+	nuusm.Payload = make(map[uint32][]uint32)
+	return nuusm
 }
 
 /*-------------------------chan状态判断相关代码--------------------------*/

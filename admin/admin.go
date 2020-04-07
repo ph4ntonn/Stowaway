@@ -238,8 +238,12 @@ func HandleStartConn(startNodeConn net.Conn) {
 				offlineNode := common.StrUint32(nodeResp.Info)
 				log.Println("[*]Node ", offlineNode, " seems offline") //有节点掉线后，将此节点及其之后的节点删除
 				DelNodeFromTopology(offlineNode)
-				log.Println("[*]All agents' socks,reflect,forward service down! Please restart these services manually")
-				CloseAll()
+				if AdminStatus.HandleNode == offlineNode {
+					AdminStuff.AdminCommandChan <- []string{"exit"}
+					<-AdminStatus.ReadyChange
+					<-AdminStatus.IsShellMode
+				}
+				CloseAll(offlineNode)
 			case "SOCKSRESP":
 				switch nodeResp.Info {
 				case "SUCCESS":

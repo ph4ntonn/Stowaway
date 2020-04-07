@@ -63,17 +63,7 @@ func HandleNodeCommand(startNodeConn net.Conn, NodeID string) {
 			AdminStatus.ReadyChange <- true
 			AdminStatus.IsShellMode <- true
 		case "stopsocks":
-			if len(AdminStuff.SocksListenerForClient) == 0 {
-				log.Println("[*]You have never started socks service!")
-			} else {
-				for _, listener := range AdminStuff.SocksListenerForClient {
-					err := listener.Close()
-					if err != nil {
-						log.Println("[*]One socks listener seems already closed.Won't close it again...")
-					}
-				}
-				log.Println("[*]All socks listeners are closed successfully!")
-			}
+			StopSocks()
 			AdminStatus.ReadyChange <- true
 			AdminStatus.IsShellMode <- true
 		case "ssh":
@@ -219,7 +209,7 @@ func HandleNodeCommand(startNodeConn net.Conn, NodeID string) {
 			AdminStatus.ReadyChange <- true
 			AdminStatus.IsShellMode <- true
 		case "stopforward":
-			go StopForward()
+			StopForward()
 			AdminStatus.ReadyChange <- true
 			AdminStatus.IsShellMode <- true
 		case "reflect":
@@ -366,6 +356,7 @@ func HandleCommandToControlConn(startNodeControlConn net.Conn) {
 					*CliStatus = "startnode"
 					AdminStatus.ReadyChange <- true
 					AdminStatus.IsShellMode <- true
+					AdminStatus.HandleNode = common.StrUint32(AdminCommand[1])
 					HandleNodeCommand(startNodeControlConn, AdminCommand[1])
 				} else {
 					if len(NodeStatus.Nodes) == 0 {
@@ -378,6 +369,7 @@ func HandleCommandToControlConn(startNodeControlConn net.Conn) {
 							*CliStatus = "node " + AdminCommand[1]
 							AdminStatus.ReadyChange <- true
 							AdminStatus.IsShellMode <- true
+							AdminStatus.HandleNode = common.StrUint32(AdminCommand[1])
 							HandleNodeCommand(startNodeControlConn, AdminCommand[1])
 						} else {
 							fmt.Println("There is no node", AdminCommand[1])
