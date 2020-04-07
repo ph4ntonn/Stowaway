@@ -22,6 +22,7 @@ var (
 	ReflectConnMap *common.Uint32ConnMap
 	PortReflectMap *common.Uint32ChanStrMap
 )
+var WaitForFindAll chan bool
 
 func init() {
 	ReflectConnMap = common.NewUint32ConnMap()
@@ -29,6 +30,7 @@ func init() {
 	NodeStatus = common.NewNodeStatus()
 	ForwardStatus = common.NewForwardStatus()
 	AdminStuff = common.NewAdminStuff()
+	WaitForFindAll = make(chan bool, 1)
 }
 
 /*-------------------------控制台相关代码--------------------------*/
@@ -368,41 +370,68 @@ func MonitorCtrlC(startNodeConn net.Conn) {
 	os.Exit(1)
 }
 
-//当有一个节点下线，强制关闭该节点对应的服务
-func CloseAll(nodeid uint32) {
+//当有一个节点下线，强制关闭该节点及其子节点对应的服务
+func CloseAll(id uint32) {
+	readyToDel := FindAll(id)
 	AdminStuff.Lock()
-	if _, ok := AdminStuff.SocksListenerForClient.Payload[nodeid]; ok {
-		for _, listener := range AdminStuff.SocksListenerForClient.Payload[nodeid] {
-			err := listener.Close()
-			if err != nil {
+	for _, nodeid := range readyToDel {
+		if _, ok := AdminStuff.SocksListenerForClient.Payload[nodeid]; ok {
+			for _, listener := range AdminStuff.SocksListenerForClient.Payload[nodeid] {
+				err := listener.Close()
+				if err != nil {
+				}
 			}
 		}
 	}
 	ClientSockets.Lock()
-	for _, connid := range AdminStuff.SocksMapping.Payload[nodeid] {
-		if _, ok := ClientSockets.Payload[connid]; ok {
-			ClientSockets.Payload[connid].Close()
-			delete(ClientSockets.Payload, connid)
+	for _, nodeid := range readyToDel {
+		for _, connid := range AdminStuff.SocksMapping.Payload[nodeid] {
+			if _, ok := ClientSockets.Payload[connid]; ok {
+				ClientSockets.Payload[connid].Close()
+				delete(ClientSockets.Payload, connid)
+			}
 		}
 	}
 	ClientSockets.Unlock()
 	AdminStuff.Unlock()
 
 	ForwardStatus.Lock()
-	if _, ok := ForwardStatus.CurrentPortForwardListener.Payload[nodeid]; ok {
-		for _, listener := range ForwardStatus.CurrentPortForwardListener.Payload[nodeid] {
-			err := listener.Close()
-			if err != nil {
+	for _, nodeid := range readyToDel {
+		if _, ok := ForwardStatus.CurrentPortForwardListener.Payload[nodeid]; ok {
+			for _, listener := range ForwardStatus.CurrentPortForwardListener.Payload[nodeid] {
+				err := listener.Close()
+				if err != nil {
+				}
 			}
 		}
 	}
 	PortForWardMap.Lock()
-	for _, connid := range ForwardStatus.ForwardMapping.Payload[nodeid] {
-		if _, ok := PortForWardMap.Payload[connid]; ok {
-			PortForWardMap.Payload[connid].Close()
-			delete(PortForWardMap.Payload, connid)
+	for _, nodeid := range readyToDel {
+		for _, connid := range ForwardStatus.ForwardMapping.Payload[nodeid] {
+			if _, ok := PortForWardMap.Payload[connid]; ok {
+				PortForWardMap.Payload[connid].Close()
+				delete(PortForWardMap.Payload, connid)
+			}
 		}
 	}
 	PortForWardMap.Unlock()
 	ForwardStatus.Unlock()
+}
+
+func FindAll(nodeid uint32) []uint32 {
+	var readyToDel []uint32
+	Nooode.Lock()
+	Find(&readyToDel, nodeid)
+	Nooode.Unlock()
+
+	readyToDel = append(readyToDel, nodeid)
+	WaitForFindAll <- true
+	return readyToDel
+}
+
+func Find(readyToDel *[]uint32, nodeid uint32) {
+	for _, value := range Nooode.AllNode[nodeid].Lowernode {
+		*readyToDel = append(*readyToDel, value)
+		Find(readyToDel, value)
+	}
 }

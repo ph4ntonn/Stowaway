@@ -371,6 +371,9 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 					go TestForward(AdminData.Info)
 				case "REFLECTTEST":
 					go TestReflect(AdminData.Info)
+				case "REFLECTNUM":
+					fmt.Println("id is", AdminData.Clientid)
+					ReflectStatus.ReflectNum <- AdminData.Clientid
 				case "STOPREFLECT":
 					ReflectConnMap.Lock()
 					for key, conn := range ReflectConnMap.Payload {
@@ -606,6 +609,8 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID uint32) {
 					go TestForward(command.Info)
 				case "REFLECTTEST":
 					go TestReflect(command.Info)
+				case "REFLECTNUM":
+					ReflectStatus.ReflectNum <- command.Clientid
 				case "STOPREFLECT":
 					ReflectConnMap.Lock()
 					for key, conn := range ReflectConnMap.Payload {

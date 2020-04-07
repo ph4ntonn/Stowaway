@@ -39,6 +39,7 @@ type AdminStuff struct {
 	StartNode              string
 	AdminCommandChan       chan []string
 	SocksNum               uint32
+	ReflectNum             uint32
 	SocksListenerForClient *Uint32ListenerSliceMap
 	SocksMapping           *Uint32Uint32SliceMap
 }
@@ -47,6 +48,7 @@ func NewAdminStuff() *AdminStuff {
 	nas := new(AdminStuff)
 	nas.StartNode = "0.0.0.0"
 	nas.SocksNum = 0
+	nas.ReflectNum = 0
 	nas.AdminCommandChan = make(chan []string, 1)
 	nas.SocksListenerForClient = NewUint32ListenerSliceMap()
 	nas.SocksMapping = NewUint32Uint32SliceMap()
@@ -130,13 +132,12 @@ func NewForwardStatus() *ForwardStatus {
 
 /*-------------------------Reflect配置相关代码--------------------------*/
 type ReflectStatus struct {
-	sync.RWMutex
-	ReflectNum uint32
+	ReflectNum chan uint32
 }
 
 func NewReflectStatus() *ReflectStatus {
 	nrs := new(ReflectStatus)
-	nrs.ReflectNum = 0
+	nrs.ReflectNum = make(chan uint32)
 	return nrs
 }
 

@@ -237,13 +237,14 @@ func HandleStartConn(startNodeConn net.Conn) {
 			case "AGENTOFFLINE":
 				offlineNode := common.StrUint32(nodeResp.Info)
 				log.Println("[*]Node ", offlineNode, " seems offline") //有节点掉线后，将此节点及其之后的节点删除
+				CloseAll(offlineNode)
+				<-WaitForFindAll
 				DelNodeFromTopology(offlineNode)
 				if AdminStatus.HandleNode == offlineNode {
 					AdminStuff.AdminCommandChan <- []string{"exit"}
 					<-AdminStatus.ReadyChange
 					<-AdminStatus.IsShellMode
 				}
-				CloseAll(offlineNode)
 			case "SOCKSRESP":
 				switch nodeResp.Info {
 				case "SUCCESS":
@@ -326,6 +327,14 @@ func HandleStartConn(startNodeConn net.Conn) {
 				os.Remove(nodeResp.Info)
 			case "CANNOTUPLOAD":
 				fmt.Printf("[*]Agent cannot read file: %s\n", nodeResp.Info)
+			case "GETREFLECTNUM":
+				Route.Lock()
+				AdminStuff.Lock()
+				respComm, _ := common.ConstructPayload(CurrentNode, Route.Route[CurrentNode], "COMMAND", "REFLECTNUM", " ", " ", AdminStuff.ReflectNum, 0, AdminStatus.AESKey, false)
+				AdminStuff.ReflectNum++
+				AdminStuff.Unlock()
+				Route.Unlock()
+				startNodeConn.Write(respComm)
 			case "RECONNID":
 				log.Println("[*]Node ", nodeResp.CurrentId, " reconnect successfully!")
 				ipaddress, uppernode := AnalysisInfo(nodeResp.Info)

@@ -74,7 +74,7 @@ func WaitForExit(NODEID uint32) {
 	if AgentStatus.NotLastOne {
 		BroadCast("OFFLINE")
 	}
-	time.Sleep(5 * time.Second)
+	time.Sleep(1 * time.Second)
 	os.Exit(1)
 }
 
@@ -122,7 +122,7 @@ func ClearAllConn() {
 		err := conn.Close()
 		if err != nil {
 		}
-		delete(ForwardConnMap.Payload, key)
+		delete(ReflectConnMap.Payload, key)
 	}
 	ReflectConnMap.Unlock()
 

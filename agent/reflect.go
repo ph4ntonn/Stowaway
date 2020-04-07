@@ -21,6 +21,7 @@ func init() {
 /*-------------------------Port-reflect启动相关代码--------------------------*/
 //检查是否能够监听
 func TestReflect(portCombine string) {
+	var num uint32
 	ports := strings.Split(portCombine, ":")
 	reflectAddr := fmt.Sprintf("0.0.0.0:%s", ports[1])
 	reflectListenerForClient, err := net.Listen("tcp", reflectAddr)
@@ -41,16 +42,16 @@ func TestReflect(portCombine string) {
 		if err != nil {
 			return
 		} else {
-			respCommand, _ := common.ConstructPayload(0, "", "DATA", "REFLECT", " ", ports[0], ReflectStatus.ReflectNum, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+			respCommand, _ := common.ConstructPayload(0, "", "COMMAND", "GETREFLECTNUM", " ", ports[0], 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+			ProxyChan.ProxyChanToUpperNode <- respCommand
+			num = <-ReflectStatus.ReflectNum
+			respCommand, _ = common.ConstructPayload(0, "", "DATA", "REFLECT", " ", ports[0], num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
 			ProxyChan.ProxyChanToUpperNode <- respCommand
 		}
 		ReflectConnMap.Lock()
-		ReflectConnMap.Payload[ReflectStatus.ReflectNum] = conn
-		go HandleReflectPort(ReflectConnMap.Payload[ReflectStatus.ReflectNum], ReflectStatus.ReflectNum, AgentStatus.Nodeid)
+		ReflectConnMap.Payload[num] = conn
+		go HandleReflectPort(ReflectConnMap.Payload[num], num, AgentStatus.Nodeid)
 		ReflectConnMap.Unlock()
-		ReflectStatus.Lock()
-		ReflectStatus.ReflectNum++
-		ReflectStatus.Unlock()
 	}
 }
 
