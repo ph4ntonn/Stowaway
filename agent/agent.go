@@ -420,10 +420,8 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 func HandleConnToLowerNode() {
 	for {
 		proxyData := <-ProxyChan.ProxyChanToLowerNode
-		fmt.Println("het one")
 		node.NodeInfo.LowerNode.Lock()
 		if _, ok := node.NodeInfo.LowerNode.Payload[proxyData.Route]; ok { //检查此节点是否存活，防止admin误操作在已掉线的节点输入命令导致节点panic
-			fmt.Println("in here")
 			node.NodeInfo.LowerNode.Payload[proxyData.Route].Write(proxyData.Data)
 		}
 		node.NodeInfo.LowerNode.Unlock()
