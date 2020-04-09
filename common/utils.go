@@ -7,6 +7,9 @@ import (
 	"sync"
 )
 
+var AdminId = "0000000000"
+var StartNodeId = "0000000001"
+
 /*-------------------------Admin相关状态变量代码--------------------------*/
 type AdminStatus struct {
 	ReadyChange      chan bool
@@ -15,8 +18,8 @@ type AdminStatus struct {
 	NodeSocksStarted chan bool
 	GetName          chan bool
 	CannotRead       chan bool
-	NodesReadyToadd  chan map[uint32]string //等待加入的node
-	HandleNode       uint32                 //正在操作的节点编号
+	NodesReadyToadd  chan map[string]string //等待加入的node
+	HandleNode       string                 //正在操作的节点编号
 	AESKey           []byte
 }
 
@@ -28,8 +31,8 @@ func NewAdminStatus() *AdminStatus {
 	nas.NodeSocksStarted = make(chan bool, 1)
 	nas.GetName = make(chan bool, 1)
 	nas.CannotRead = make(chan bool, 1)
-	nas.NodesReadyToadd = make(chan map[uint32]string)
-	nas.HandleNode = 0
+	nas.NodesReadyToadd = make(chan map[string]string)
+	nas.HandleNode = AdminId
 	return nas
 }
 
@@ -40,8 +43,8 @@ type AdminStuff struct {
 	AdminCommandChan       chan []string
 	SocksNum               uint32
 	ReflectNum             uint32
-	SocksListenerForClient *Uint32ListenerSliceMap
-	SocksMapping           *Uint32Uint32SliceMap
+	SocksListenerForClient *StrListenerSliceMap
+	SocksMapping           *StrUint32SliceMap
 }
 
 func NewAdminStuff() *AdminStuff {
@@ -50,60 +53,60 @@ func NewAdminStuff() *AdminStuff {
 	nas.SocksNum = 0
 	nas.ReflectNum = 0
 	nas.AdminCommandChan = make(chan []string, 1)
-	nas.SocksListenerForClient = NewUint32ListenerSliceMap()
-	nas.SocksMapping = NewUint32Uint32SliceMap()
+	nas.SocksListenerForClient = NewStrListenerSliceMap()
+	nas.SocksMapping = NewStrUint32SliceMap()
 	return nas
 }
 
 /*-------------------------Agent相关状态变量代码--------------------------*/
 type AgentStatus struct {
-	Nodeid            uint32
+	Nodeid            string
 	NotLastOne        bool
 	Waiting           bool
 	ReConnCome        chan bool
-	WaitForIdAllocate chan uint32
+	WaitForIdAllocate chan string
 	AESKey            []byte
 }
 
 func NewAgentStatus() *AgentStatus {
 	nas := new(AgentStatus)
-	nas.Nodeid = uint32(1)
+	nas.Nodeid = StartNodeId
 	nas.NotLastOne = false
 	nas.Waiting = false
 	nas.ReConnCome = make(chan bool, 1)
-	nas.WaitForIdAllocate = make(chan uint32, 1)
+	nas.WaitForIdAllocate = make(chan string, 1)
 	return nas
 }
 
 /*-------------------------Node状态代码--------------------------*/
 type NodeStatus struct {
-	Nodes    map[uint32]string
-	Nodenote map[uint32]string
+	Nodes    map[string]string
+	Nodenote map[string]string
 }
 
 func NewNodeStatus() *NodeStatus {
 	nns := new(NodeStatus)
-	nns.Nodes = make(map[uint32]string)
-	nns.Nodenote = make(map[uint32]string)
+	nns.Nodes = make(map[string]string)
+	nns.Nodenote = make(map[string]string)
 	return nns
 }
 
 /*-------------------------Node信息代码--------------------------*/
 type NodeInfo struct {
-	UpperNode uint32
-	LowerNode *Uint32ConnMap
+	UpperNode string
+	LowerNode *StrConnMap
 }
 
 func NewNodeInfo() *NodeInfo {
 	nni := new(NodeInfo)
-	nni.UpperNode = 0
-	nni.LowerNode = NewUint32ConnMap()
+	nni.UpperNode = AdminId
+	nni.LowerNode = NewStrConnMap()
 	return nni
 }
 
 /*-------------------------传递给下级节点结构代码--------------------------*/
 type PassToLowerNodeData struct {
-	Route uint32
+	Route string
 	Data  []byte
 }
 
@@ -117,16 +120,16 @@ type ForwardStatus struct {
 	sync.RWMutex
 	ForwardIsValid             chan bool
 	ForwardNum                 uint32
-	CurrentPortForwardListener *Uint32ListenerSliceMap
-	ForwardMapping             *Uint32Uint32SliceMap
+	CurrentPortForwardListener *StrListenerSliceMap
+	ForwardMapping             *StrUint32SliceMap
 }
 
 func NewForwardStatus() *ForwardStatus {
 	nfs := new(ForwardStatus)
 	nfs.ForwardNum = 0
 	nfs.ForwardIsValid = make(chan bool, 1)
-	nfs.CurrentPortForwardListener = NewUint32ListenerSliceMap()
-	nfs.ForwardMapping = NewUint32Uint32SliceMap()
+	nfs.CurrentPortForwardListener = NewStrListenerSliceMap()
+	nfs.ForwardMapping = NewStrUint32SliceMap()
 	return nfs
 }
 
@@ -192,6 +195,11 @@ type IntStrMap struct {
 	Payload map[int]string
 }
 
+type StrConnMap struct {
+	sync.RWMutex
+	Payload map[string]net.Conn
+}
+
 type Uint32ConnMap struct {
 	sync.RWMutex
 	Payload map[uint32]net.Conn
@@ -203,12 +211,12 @@ type Uint32StrMap struct {
 }
 
 /*-------------------------不加锁map相关代码--------------------------*/
-type Uint32ListenerSliceMap struct {
-	Payload map[uint32][]net.Listener
+type StrListenerSliceMap struct {
+	Payload map[string][]net.Listener
 }
 
-type Uint32Uint32SliceMap struct {
-	Payload map[uint32][]uint32
+type StrUint32SliceMap struct {
+	Payload map[string][]uint32
 }
 
 /*-------------------------初始化各类map相关代码--------------------------*/
@@ -216,6 +224,12 @@ func NewUint32ChanStrMap() *Uint32ChanStrMap {
 	sm := new(Uint32ChanStrMap)
 	sm.Payload = make(map[uint32]chan string, 10)
 	return sm
+}
+
+func NewStrConnMap() *StrConnMap {
+	nscm := new(StrConnMap)
+	nscm.Payload = make(map[string]net.Conn)
+	return nscm
 }
 
 func NewIntStrMap() *IntStrMap {
@@ -236,15 +250,15 @@ func NewUint32StrMap() *Uint32StrMap {
 	return sm
 }
 
-func NewUint32ListenerSliceMap() *Uint32ListenerSliceMap {
-	nilsm := new(Uint32ListenerSliceMap)
-	nilsm.Payload = make(map[uint32][]net.Listener)
+func NewStrListenerSliceMap() *StrListenerSliceMap {
+	nilsm := new(StrListenerSliceMap)
+	nilsm.Payload = make(map[string][]net.Listener)
 	return nilsm
 }
 
-func NewUint32Uint32SliceMap() *Uint32Uint32SliceMap {
-	nuusm := new(Uint32Uint32SliceMap)
-	nuusm.Payload = make(map[uint32][]uint32)
+func NewStrUint32SliceMap() *StrUint32SliceMap {
+	nuusm := new(StrUint32SliceMap)
+	nuusm.Payload = make(map[string][]uint32)
 	return nuusm
 }
 
@@ -299,7 +313,7 @@ func StringReverse(src []string) {
 }
 
 //获取slice中的特定值
-func FindSpecFromSlice(nodeid uint32, nodes []uint32) int {
+func FindSpecFromSlice(nodeid string, nodes []string) int {
 	for key, value := range nodes {
 		if nodeid == value {
 			return key

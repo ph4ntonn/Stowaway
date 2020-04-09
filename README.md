@@ -116,6 +116,8 @@ startnode端: ./stowaway agent -l 9999 -s 123 --startnode -r
 
 **2.当有节点掉线时，那么此时与此节点有关的socks，reflect，forward服务都会被强制停止**
 
+**3.如因网络波动或中间节点掉线，导致某一个分支断开（举个例子，admin后接着startnode，startnode后分为两支，一支是startnode->node 2 -> node 3 -> node 4, 一支是startnode->node 5 ->node 6），那么如果node2掉线，node3及node4将不会掉线，而是继续保持存活。此时用户若想将node3及node4重新加入网络，那么用户有两种选择，一种是假如startnode可以直接访问node3，那么用户可随时在startnode将node3用connect或者sshtunnel命令重新加入网络（切记，就算startnode同时也可以访问node4，也请不要直接连接node4，请连接整个缺失链(node3->node4)的头节点node3），这样就可以将node3及node4重新加入网络；另一种选择是当startnode无法直接访问node3时（即必须经过node2），那么请先将node2重启并加入网络，之后再在node2上使用connect或者sshtunnel命令连接node3，从而将node3及node4加入网络（同样的，就算node2能直接访问node4，也请不要连接node4，连接node3即可）。**
+
 ## Example
 
 一个简单的例子：
@@ -239,8 +241,6 @@ PS: 在ssh模式下，你可以用pwd来判断自己所处的文件夹（好吧�
 
 - 此程序仅是闲暇时开发学习，结构及代码结构不够严谨，功能可能存在bug，请多多谅解
 - 本程序编译出来稍微有一些大，但是实测实际占有内存空间并不会很大，大概会比尽量压缩文件大小的情况下多出0.5-1m左右（IOT平台应该也不差这0.5-1m。。，当然有时间我就把程序瘦瘦身 XD）
-- 当admin端掉线，所有后续连接的agent端都会退出(当startnode未开启重连模式时)
-- 当多个agent端中有一个掉线，后续的agent端都会掉线
 - 当有新节点连入时，admin需是在线的状态
 - 如需从源代码编译本项目，请运行build_admin.sh/build_agent.sh文件来编译对应类型的Stowaway(注意！！！！！！默认编译的是agent模式，此时请运行build_agent.sh,如需编译admin，请查看main.go文件中的提示，按照提示进行操作后，运行build_admin.sh文件)
 

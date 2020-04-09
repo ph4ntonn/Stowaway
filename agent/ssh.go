@@ -15,7 +15,7 @@ var (
 	Sshhost *ssh.Session
 )
 
-func StartSSH(info string, nodeid uint32) error {
+func StartSSH(info string, nodeid string) error {
 	var authpayload ssh.AuthMethod
 	spiltedinfo := strings.Split(info, ":::")
 	host := spiltedinfo[0]
@@ -28,7 +28,7 @@ func StartSSH(info string, nodeid uint32) error {
 	} else if method == "2" {
 		key, err := ssh.ParsePrivateKey([]byte(authway))
 		if err != nil {
-			sshMess, _ := common.ConstructPayload(0, "", "COMMAND", "SSHCERTERROR", " ", " ", 0, nodeid, AgentStatus.AESKey, false)
+			sshMess, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "SSHCERTERROR", " ", " ", 0, nodeid, AgentStatus.AESKey, false)
 			ProxyChan.ProxyChanToUpperNode <- sshMess
 			return err
 		}
@@ -41,14 +41,14 @@ func StartSSH(info string, nodeid uint32) error {
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	})
 	if err != nil {
-		sshMess, _ := common.ConstructPayload(0, "", "COMMAND", "SSHRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
+		sshMess, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "SSHRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
 		ProxyChan.ProxyChanToUpperNode <- sshMess
 		return err
 	}
 	Sshhost, err = sshdial.NewSession()
 
 	if err != nil {
-		sshMess, _ := common.ConstructPayload(0, "", "COMMAND", "SSHRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
+		sshMess, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "SSHRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
 		ProxyChan.ProxyChanToUpperNode <- sshMess
 		return err
 	}
@@ -64,7 +64,7 @@ func StartSSH(info string, nodeid uint32) error {
 	}
 	Sshhost.Stderr = Sshhost.Stdout
 	Sshhost.Shell()
-	sshMess, _ := common.ConstructPayload(0, "", "COMMAND", "SSHRESP", " ", "SUCCESS", 0, nodeid, AgentStatus.AESKey, false)
+	sshMess, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "SSHRESP", " ", "SUCCESS", 0, nodeid, AgentStatus.AESKey, false)
 	ProxyChan.ProxyChanToUpperNode <- sshMess
 	return nil
 }
@@ -74,13 +74,13 @@ func WriteCommand(command string) {
 }
 
 func ReadCommand() {
-	buffer := make([]byte, 40960)
+	buffer := make([]byte, 10240)
 	for {
 		len, err := Stdout.Read(buffer)
 		if err != nil {
 			break
 		}
-		sshRespMess, _ := common.ConstructPayload(0, "", "DATA", "SSHMESS", " ", string(buffer[:len]), 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+		sshRespMess, _ := common.ConstructPayload(common.AdminId, "", "DATA", "SSHMESS", " ", string(buffer[:len]), 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
 		ProxyChan.ProxyChanToUpperNode <- sshRespMess
 	}
 }

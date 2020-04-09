@@ -47,18 +47,18 @@ var Command = &cli.Command{
 			log.Printf("Starting agent node on port %s passively\n", c.String("listen"))
 		} else if c.String("listen") != "" && c.Bool("reverse") && c.String("monitor") != "" {
 			log.Println("If you want to start node passively,do not set the -m option")
-			os.Exit(1)
+			os.Exit(0)
 		} else if c.String("listen") != "" && !c.Bool("reverse") && c.String("monitor") == "" {
 			log.Println("You should set the -m option!")
-			os.Exit(1)
+			os.Exit(0)
 		} else if !c.Bool("reverse") && c.String("monitor") != "" {
 			log.Println("Node starting......")
 		} else if c.String("reconnect") != "" && !c.Bool("startnode") {
 			log.Println("Do not set the --reconnect option on simple node")
-			os.Exit(1)
+			os.Exit(0)
 		} else {
 			log.Println("Bad format! See readme!")
-			os.Exit(1)
+			os.Exit(0)
 		}
 		NewAgent(c)
 		return nil

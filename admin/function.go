@@ -60,7 +60,7 @@ func Controlpanel() {
 
 /*-------------------------Socks5功能相关代码--------------------------*/
 // 启动socks5 for client
-func StartSocksServiceForClient(command []string, startNodeConn net.Conn, nodeID uint32) {
+func StartSocksServiceForClient(command []string, startNodeConn net.Conn, nodeID string) {
 	var err error
 
 	Route.Lock()
@@ -77,7 +77,7 @@ func StartSocksServiceForClient(command []string, startNodeConn net.Conn, nodeID
 	socks5Addr := fmt.Sprintf("0.0.0.0:%s", socksPort)
 	socksListenerForClient, err := net.Listen("tcp", socks5Addr)
 	if err != nil {
-		respCommand, _ := common.ConstructPayload(nodeID, route, "COMMAND", "SOCKSOFF", " ", " ", 0, 0, AdminStatus.AESKey, false)
+		respCommand, _ := common.ConstructPayload(nodeID, route, "COMMAND", "SOCKSOFF", " ", " ", 0, common.AdminId, AdminStatus.AESKey, false)
 		_, err = startNodeConn.Write(respCommand)
 		if err != nil {
 			log.Println("[*]Cannot stop agent's socks service,check the connection!")
@@ -106,7 +106,7 @@ func StartSocksServiceForClient(command []string, startNodeConn net.Conn, nodeID
 }
 
 //处理每一个单个的socks socket
-func HandleNewSocksConn(startNodeConn net.Conn, clientsocks net.Conn, num uint32, nodeID uint32) {
+func HandleNewSocksConn(startNodeConn net.Conn, clientsocks net.Conn, num uint32, nodeID string) {
 	Route.Lock()
 	route := Route.Route[nodeID]
 	Route.Unlock()
@@ -116,11 +116,11 @@ func HandleNewSocksConn(startNodeConn net.Conn, clientsocks net.Conn, num uint32
 		len, err := clientsocks.Read(buffer)
 		if err != nil {
 			clientsocks.Close()
-			finMessage, _ := common.ConstructPayload(nodeID, route, "DATA", "FIN", " ", " ", num, 0, AdminStatus.AESKey, false)
+			finMessage, _ := common.ConstructPayload(nodeID, route, "DATA", "FIN", " ", " ", num, common.AdminId, AdminStatus.AESKey, false)
 			startNodeConn.Write(finMessage)
 			return
 		} else {
-			respData, _ := common.ConstructPayload(nodeID, route, "DATA", "SOCKSDATA", " ", string(buffer[:len]), num, 0, AdminStatus.AESKey, false)
+			respData, _ := common.ConstructPayload(nodeID, route, "DATA", "SOCKSDATA", " ", string(buffer[:len]), num, common.AdminId, AdminStatus.AESKey, false)
 			startNodeConn.Write(respData)
 		}
 	}
@@ -152,12 +152,12 @@ func StopSocks() {
 
 /*-------------------------Ssh功能启动相关代码--------------------------*/
 // 发送ssh开启命令
-func StartSSHService(startNodeConn net.Conn, info []string, nodeid uint32, method string) {
+func StartSSHService(startNodeConn net.Conn, info []string, nodeid string, method string) {
 	var information string
 	information = fmt.Sprintf("%s:::%s:::%s:::%s", info[0], info[1], info[2], method)
 
 	Route.Lock()
-	sshCommand, _ := common.ConstructPayload(nodeid, Route.Route[nodeid], "COMMAND", "SSH", " ", information, 0, 0, AdminStatus.AESKey, false)
+	sshCommand, _ := common.ConstructPayload(nodeid, Route.Route[nodeid], "COMMAND", "SSH", " ", information, 0, common.AdminId, AdminStatus.AESKey, false)
 	Route.Unlock()
 	startNodeConn.Write(sshCommand)
 }
@@ -166,7 +166,6 @@ func StartSSHService(startNodeConn net.Conn, info []string, nodeid uint32, metho
 func CheckKeyFile(file string) []byte {
 	buffer, err := ioutil.ReadFile(file)
 	if err != nil {
-		fmt.Println(err)
 		return nil
 	}
 	return buffer
@@ -174,41 +173,41 @@ func CheckKeyFile(file string) []byte {
 
 /*-------------------------SshTunnel功能启动相关代码--------------------------*/
 // 发送SshTunnel开启命令
-func SendSSHTunnel(startNodeConn net.Conn, info []string, nodeid uint32, method string) {
+func SendSSHTunnel(startNodeConn net.Conn, info []string, nodeid string, method string) {
 	var information string
 	information = fmt.Sprintf("%s:::%s:::%s:::%s:::%s", info[0], info[1], info[2], info[3], method)
 
 	Route.Lock()
-	sshCommand, _ := common.ConstructPayload(nodeid, Route.Route[nodeid], "COMMAND", "SSHTUNNEL", " ", information, 0, 0, AdminStatus.AESKey, false)
+	sshCommand, _ := common.ConstructPayload(nodeid, Route.Route[nodeid], "COMMAND", "SSHTUNNEL", " ", information, 0, common.AdminId, AdminStatus.AESKey, false)
 	Route.Unlock()
 	startNodeConn.Write(sshCommand)
 }
 
 /*-------------------------Port Forward功能启动相关代码--------------------------*/
 // 发送forward开启命令
-func HandleForwardPort(forwardconn net.Conn, target string, startNodeConn net.Conn, num uint32, nodeid uint32) {
+func HandleForwardPort(forwardconn net.Conn, target string, startNodeConn net.Conn, num uint32, nodeid string) {
 	Route.Lock()
 	route := Route.Route[nodeid]
 	Route.Unlock()
 
-	forwardCommand, _ := common.ConstructPayload(nodeid, route, "DATA", "FORWARD", " ", target, num, 0, AdminStatus.AESKey, false)
+	forwardCommand, _ := common.ConstructPayload(nodeid, route, "DATA", "FORWARD", " ", target, num, common.AdminId, AdminStatus.AESKey, false)
 	startNodeConn.Write(forwardCommand)
 
 	buffer := make([]byte, 10240)
 	for {
 		len, err := forwardconn.Read(buffer)
 		if err != nil {
-			finMessage, _ := common.ConstructPayload(nodeid, route, "DATA", "FORWARDFIN", " ", " ", num, 0, AdminStatus.AESKey, false)
+			finMessage, _ := common.ConstructPayload(nodeid, route, "DATA", "FORWARDFIN", " ", " ", num, common.AdminId, AdminStatus.AESKey, false)
 			startNodeConn.Write(finMessage)
 			return
 		} else {
-			respData, _ := common.ConstructPayload(nodeid, route, "DATA", "FORWARDDATA", " ", string(buffer[:len]), num, 0, AdminStatus.AESKey, false)
+			respData, _ := common.ConstructPayload(nodeid, route, "DATA", "FORWARDDATA", " ", string(buffer[:len]), num, common.AdminId, AdminStatus.AESKey, false)
 			startNodeConn.Write(respData)
 		}
 	}
 }
 
-func StartPortForwardForClient(info []string, startNodeConn net.Conn, nodeid uint32, AESKey []byte) {
+func StartPortForwardForClient(info []string, startNodeConn net.Conn, nodeid string, AESKey []byte) {
 	TestIfValid("FORWARDTEST", startNodeConn, info[2], nodeid)
 	if <-ForwardStatus.ForwardIsValid {
 	} else {
@@ -268,12 +267,12 @@ func StopForward() {
 
 /*-------------------------Reflect Port相关代码--------------------------*/
 //测试agent是否能够监听
-func StartReflectForClient(info []string, startNodeConn net.Conn, nodeid uint32, AESKey []byte) {
+func StartReflectForClient(info []string, startNodeConn net.Conn, nodeid string, AESKey []byte) {
 	tempInfo := fmt.Sprintf("%s:%s", info[1], info[2])
 	TestIfValid("REFLECTTEST", startNodeConn, tempInfo, nodeid)
 }
 
-func TryReflect(startNodeConn net.Conn, nodeid uint32, id uint32, port string) {
+func TryReflect(startNodeConn net.Conn, nodeid string, id uint32, port string) {
 	target := fmt.Sprintf("127.0.0.1:%s", port)
 	reflectConn, err := net.Dial("tcp", target)
 	if err == nil {
@@ -282,14 +281,14 @@ func TryReflect(startNodeConn net.Conn, nodeid uint32, id uint32, port string) {
 		ReflectConnMap.Unlock()
 	} else {
 		Route.Lock()
-		respdata, _ := common.ConstructPayload(nodeid, Route.Route[nodeid], "DATA", "REFLECTTIMEOUT", " ", " ", id, 0, AdminStatus.AESKey, false)
+		respdata, _ := common.ConstructPayload(nodeid, Route.Route[nodeid], "DATA", "REFLECTTIMEOUT", " ", " ", id, common.AdminId, AdminStatus.AESKey, false)
 		Route.Unlock()
 		startNodeConn.Write(respdata)
 		return
 	}
 }
 
-func HandleReflect(startNodeConn net.Conn, reflectDataChan chan string, num uint32, nodeid uint32) {
+func HandleReflect(startNodeConn net.Conn, reflectDataChan chan string, num uint32, nodeid string) {
 	ReflectConnMap.RLock()
 	reflectConn := ReflectConnMap.Payload[num]
 	ReflectConnMap.RUnlock()
@@ -314,37 +313,37 @@ func HandleReflect(startNodeConn net.Conn, reflectDataChan chan string, num uint
 		for {
 			len, err := reflectConn.Read(serverbuffer)
 			if err != nil {
-				respdata, _ := common.ConstructPayload(nodeid, route, "DATA", "REFLECTOFFLINE", " ", " ", num, 0, AdminStatus.AESKey, false)
+				respdata, _ := common.ConstructPayload(nodeid, route, "DATA", "REFLECTOFFLINE", " ", " ", num, common.AdminId, AdminStatus.AESKey, false)
 				startNodeConn.Write(respdata)
 				return
 			}
-			respdata, _ := common.ConstructPayload(nodeid, route, "DATA", "REFLECTDATARESP", " ", string(serverbuffer[:len]), num, 0, AdminStatus.AESKey, false)
+			respdata, _ := common.ConstructPayload(nodeid, route, "DATA", "REFLECTDATARESP", " ", string(serverbuffer[:len]), num, common.AdminId, AdminStatus.AESKey, false)
 			startNodeConn.Write(respdata)
 		}
 	}()
 }
 
-func StopReflect(startNodeConn net.Conn, nodeid uint32) {
+func StopReflect(startNodeConn net.Conn, nodeid string) {
 	fmt.Println("[*]Stop command has been sent")
 	Route.Lock()
-	command, _ := common.ConstructPayload(nodeid, Route.Route[nodeid], "COMMAND", "STOPREFLECT", " ", " ", 0, 0, AdminStatus.AESKey, false)
+	command, _ := common.ConstructPayload(nodeid, Route.Route[nodeid], "COMMAND", "STOPREFLECT", " ", " ", 0, common.AdminId, AdminStatus.AESKey, false)
 	Route.Unlock()
 	startNodeConn.Write(command)
 }
 
 /*-------------------------一些功能相关代码--------------------------*/
 //测试是否端口可用
-func TestIfValid(commandtype string, startNodeConn net.Conn, target string, nodeid uint32) {
+func TestIfValid(commandtype string, startNodeConn net.Conn, target string, nodeid string) {
 	Route.Lock()
-	command, _ := common.ConstructPayload(nodeid, Route.Route[nodeid], "COMMAND", commandtype, " ", target, 0, 0, AdminStatus.AESKey, false)
+	command, _ := common.ConstructPayload(nodeid, Route.Route[nodeid], "COMMAND", commandtype, " ", target, 0, common.AdminId, AdminStatus.AESKey, false)
 	Route.Unlock()
 	startNodeConn.Write(command)
 }
 
 //拆分Info
-func AnalysisInfo(info string) (string, uint32) {
+func AnalysisInfo(info string) (string, string) {
 	spiltInfo := strings.Split(info, ":::")
-	upperNode := common.StrUint32(spiltInfo[0])
+	upperNode := spiltInfo[0]
 	ip := spiltInfo[1]
 	return ip, upperNode
 }
@@ -361,17 +360,36 @@ func CheckInput(input string) string {
 	return input
 }
 
-/*-------------------------功能控制相关代码--------------------------*/
+//找到所有的子节点
+func FindAll(nodeid string) []string {
+	var readyToDel []string
+	Nooode.Lock()
+	Find(&readyToDel, nodeid)
+	Nooode.Unlock()
+
+	readyToDel = append(readyToDel, nodeid)
+	WaitForFindAll <- true
+	return readyToDel
+}
+
+func Find(readyToDel *[]string, nodeid string) {
+	for _, value := range Nooode.AllNode[nodeid].Lowernode {
+		*readyToDel = append(*readyToDel, value)
+		Find(readyToDel, value)
+	}
+}
+
+/*-------------------------控制相关代码--------------------------*/
 //捕捉退出信号
 func MonitorCtrlC(startNodeConn net.Conn) {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	<-signalChan
-	os.Exit(1)
+	os.Exit(0)
 }
 
 //当有一个节点下线，强制关闭该节点及其子节点对应的服务
-func CloseAll(id uint32) {
+func CloseAll(id string) {
 	readyToDel := FindAll(id)
 	AdminStuff.Lock()
 	for _, nodeid := range readyToDel {
@@ -391,6 +409,7 @@ func CloseAll(id uint32) {
 				delete(ClientSockets.Payload, connid)
 			}
 		}
+		AdminStuff.SocksMapping.Payload[nodeid] = make([]uint32, 0)
 	}
 	ClientSockets.Unlock()
 	AdminStuff.Unlock()
@@ -413,25 +432,8 @@ func CloseAll(id uint32) {
 				delete(PortForWardMap.Payload, connid)
 			}
 		}
+		ForwardStatus.ForwardMapping.Payload[nodeid] = make([]uint32, 0)
 	}
 	PortForWardMap.Unlock()
 	ForwardStatus.Unlock()
-}
-
-func FindAll(nodeid uint32) []uint32 {
-	var readyToDel []uint32
-	Nooode.Lock()
-	Find(&readyToDel, nodeid)
-	Nooode.Unlock()
-
-	readyToDel = append(readyToDel, nodeid)
-	WaitForFindAll <- true
-	return readyToDel
-}
-
-func Find(readyToDel *[]uint32, nodeid uint32) {
-	for _, value := range Nooode.AllNode[nodeid].Lowernode {
-		*readyToDel = append(*readyToDel, value)
-		Find(readyToDel, value)
-	}
 }

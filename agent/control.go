@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-/*-------------------------重连功能相关代码--------------------------*/
+/*-------------------------startnode重连功能相关代码--------------------------*/
 //重连操作
 func TryReconnect(gap string, monitor string, listenPort string) {
 	lag, _ := strconv.Atoi(gap)
@@ -56,26 +56,55 @@ func AdminOffline(reConn, monitor, listenPort string, passive bool) {
 		if AgentStatus.NotLastOne {
 			BroadCast("RECONN")
 		}
-	} else {
-		if AgentStatus.NotLastOne {
-			BroadCast("ADMINOFFLINE")
+	}
+}
+
+/*-------------------------普通节点等待重连相关代码--------------------------*/
+//节点间连接断开时，等待重连的代码
+func WaitingAdmin(nodeid string) {
+	//清理工作
+	ClearAllConn()
+	SocksDataChanMap = common.NewUint32ChanStrMap()
+	if AgentStatus.NotLastOne {
+		BroadCast("CLEAR")
+	}
+	//等待重连
+	ConnToAdmin = <-node.Adminconn
+	respCommand, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "RECONNID", " ", "", 0, nodeid, AgentStatus.AESKey, false)
+	ProxyChan.ProxyChanToUpperNode <- respCommand
+	if AgentStatus.NotLastOne {
+		BroadCast("RECONN")
+	}
+	node.Offline = false
+}
+
+//等待重连时，用来供上一个节点起HandleConnFromLowerNode函数
+func PrepareForReOnlineNode() {
+	for {
+		nodeid := <-node.ReOnlineId
+		conn := <-node.ReOnlineConn
+		//如果此节点没有启动过HandleConnToLowerNode函数，启动之
+		if AgentStatus.NotLastOne == false {
+			ProxyChan.ProxyChanToLowerNode = make(chan *common.PassToLowerNodeData)
+			go HandleConnToLowerNode()
 		}
-		time.Sleep(2 * time.Second)
-		os.Exit(1)
+		AgentStatus.NotLastOne = true
+		//记录此节点，启动HandleConnFromLowerNode
+		node.NodeInfo.LowerNode.Lock()
+		node.NodeInfo.LowerNode.Payload[nodeid] = conn
+		node.NodeInfo.LowerNode.Unlock()
+		go HandleConnFromLowerNode(conn, AgentStatus.Nodeid, nodeid)
+		node.PrepareForReOnlineNodeReady <- true
 	}
 }
 
 /*-------------------------程序控制相关代码--------------------------*/
 //捕捉程序退出信号
-func WaitForExit(NODEID uint32) {
+func WaitForExit(NODEID string) {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt, os.Kill, syscall.SIGHUP)
 	<-signalChan
-	if AgentStatus.NotLastOne {
-		BroadCast("OFFLINE")
-	}
-	time.Sleep(1 * time.Second)
-	os.Exit(1)
+	os.Exit(0)
 }
 
 /*-------------------------清除现存连接及发送FIN信号相关代码--------------------------*/
@@ -132,19 +161,21 @@ func ClearAllConn() {
 
 }
 
-func ChangeRoute(AdminData *common.Payload) uint32 {
+//查找需要递交的路由
+func ChangeRoute(AdminData *common.Payload) string {
 	route := AdminData.Route
 	routes := strings.Split(route, ":")
-	selected, _ := strconv.ParseInt(routes[0], 10, 32)
+	selected := routes[0]
 	AdminData.Route = strings.Join(routes[1:], ":")
-	return uint32(selected)
+	return selected
 }
 
+//广播消息
 func BroadCast(command string) {
-	var readyToBroadCast []uint32
+	var readyToBroadCast []string
 	node.NodeInfo.LowerNode.Lock()
 	for nodeid, _ := range node.NodeInfo.LowerNode.Payload {
-		if nodeid == 0 {
+		if nodeid == common.AdminId {
 			continue
 		}
 		readyToBroadCast = append(readyToBroadCast, nodeid)

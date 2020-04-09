@@ -21,7 +21,7 @@ func init() {
 
 /*-------------------------上传/下载文件相关代码--------------------------*/
 //admin || agent上传文件
-func UploadFile(route, filename string, controlConn *net.Conn, nodeid uint32, getName chan bool, AESKey []byte, currentid uint32, Notagent bool) {
+func UploadFile(route, filename string, controlConn *net.Conn, nodeid string, getName chan bool, AESKey []byte, currentid string, Notagent bool) {
 	var slicenum int = 0
 
 	info, err := os.Stat(filename)
@@ -91,7 +91,7 @@ func UploadFile(route, filename string, controlConn *net.Conn, nodeid uint32, ge
 		}
 	} else {
 		if !Notagent {
-			respData, _ = ConstructPayload(0, route, "COMMAND", "CANNOTUPLOAD", " ", info.Name(), 0, currentid, AESKey, false) //对端没有拿到文件名
+			respData, _ = ConstructPayload(AdminId, route, "COMMAND", "CANNOTUPLOAD", " ", info.Name(), 0, currentid, AESKey, false) //对端没有拿到文件名
 			(*controlConn).Write(respData)
 		} else {
 			fmt.Println("[*]File cannot be uploaded!")
@@ -101,7 +101,7 @@ func UploadFile(route, filename string, controlConn *net.Conn, nodeid uint32, ge
 }
 
 //admin下载文件
-func DownloadFile(route, filename string, conn net.Conn, nodeid uint32, currentid uint32, AESKey []byte) {
+func DownloadFile(route, filename string, conn net.Conn, nodeid string, currentid string, AESKey []byte) {
 	respData, _ := ConstructPayload(nodeid, route, "COMMAND", "DOWNLOADFILE", " ", filename, 0, currentid, AESKey, false)
 	_, err := conn.Write(respData)
 	if err != nil {
@@ -110,7 +110,7 @@ func DownloadFile(route, filename string, conn net.Conn, nodeid uint32, currenti
 }
 
 //admin || agent接收文件
-func ReceiveFile(route string, controlConnToAdmin *net.Conn, FileDataMap *IntStrMap, CannotRead chan bool, UploadFile *os.File, AESKey []byte, Notagent bool, currentid uint32) {
+func ReceiveFile(route string, controlConnToAdmin *net.Conn, FileDataMap *IntStrMap, CannotRead chan bool, UploadFile *os.File, AESKey []byte, Notagent bool, currentid string) {
 	defer UploadFile.Close()
 	if Notagent {
 		fmt.Println("\n[*]Downloading file,please wait......")
@@ -153,7 +153,7 @@ func ReceiveFile(route string, controlConnToAdmin *net.Conn, FileDataMap *IntStr
 		Bar.Finish()
 		fmt.Println("[*]Transmission complete")
 	} else {
-		respData, _ := ConstructPayload(0, route, "COMMAND", "TRANSSUCCESS", " ", " ", 0, currentid, AESKey, false)
+		respData, _ := ConstructPayload(AdminId, route, "COMMAND", "TRANSSUCCESS", " ", " ", 0, currentid, AESKey, false)
 		(*controlConnToAdmin).Write(respData)
 	}
 	return

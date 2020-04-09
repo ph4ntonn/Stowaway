@@ -4,7 +4,6 @@ import (
 	"Stowaway/common"
 	"Stowaway/socks"
 	"net"
-	"strconv"
 )
 
 var CurrentConn *common.Uint32ConnMap
@@ -16,12 +15,12 @@ func init() {
 /*-------------------------Socks启动相关代码--------------------------*/
 //暂时没啥用，仅做回复socks开启命令之用
 func StartSocks() {
-	socksstartmess, _ := common.ConstructPayload(0, "", "COMMAND", "SOCKSRESP", " ", "SUCCESS", 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+	socksstartmess, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "SOCKSRESP", " ", "SUCCESS", 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
 	ProxyChan.ProxyChanToUpperNode <- socksstartmess
 }
 
 //处理socks请求
-func HanleClientSocksConn(info chan string, socksUsername, socksPass string, checknum uint32, currentid uint32) {
+func HanleClientSocksConn(info chan string, socksUsername, socksPass string, checknum uint32, currentid string) {
 	var (
 		server       net.Conn
 		serverflag   bool
@@ -90,11 +89,10 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 
 //发送server offline通知
 func SendFin(num uint32) {
-	nodeid := strconv.Itoa(int(AgentStatus.Nodeid))
 	SocksDataChanMap.RLock()
 	if _, ok := SocksDataChanMap.Payload[num]; ok {
 		SocksDataChanMap.RUnlock()
-		respData, _ := common.ConstructPayload(0, "", "DATA", "FIN", " ", nodeid, num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+		respData, _ := common.ConstructPayload(common.AdminId, "", "DATA", "FIN", " ", " ", num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
 		ProxyChan.ProxyChanToUpperNode <- respData
 		return
 	} else {

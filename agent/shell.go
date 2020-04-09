@@ -35,7 +35,7 @@ func CreatInteractiveShell() (io.Reader, io.Writer) {
 }
 
 //启动shell
-func StartShell(command string, stdin io.Writer, stdout io.Reader, currentid uint32) {
+func StartShell(command string, stdin io.Writer, stdout io.Reader, currentid string) {
 	buf := make([]byte, 1024)
 	stdin.Write([]byte(command))
 	for {
@@ -43,7 +43,7 @@ func StartShell(command string, stdin io.Writer, stdout io.Reader, currentid uin
 		if err != nil {
 			return
 		}
-		respShell, _ := common.ConstructPayload(0, "", "DATA", "SHELLRESP", " ", string(buf[:count]), 0, currentid, AgentStatus.AESKey, false)
+		respShell, _ := common.ConstructPayload(common.AdminId, "", "DATA", "SHELLRESP", " ", string(buf[:count]), 0, currentid, AgentStatus.AESKey, false)
 		ProxyChan.ProxyChanToUpperNode <- respShell
 	}
 }

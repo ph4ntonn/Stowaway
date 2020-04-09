@@ -15,7 +15,7 @@ import (
 
 var (
 	CliStatus      *string
-	NodeIdAllocate uint32
+	CurrentClient  []string //记录当前网络中的节点，主要用来将string型的id对照至int型的序号，方便用户理解
 	AdminStatus    *common.AdminStatus
 	FileDataMap    *common.IntStrMap
 	ClientSockets  *common.Uint32ConnMap
@@ -25,7 +25,6 @@ var (
 //启动admin
 func NewAdmin(c *cli.Context) {
 	var InitStatus string = "admin"
-	NodeIdAllocate = 1
 	AdminStatus = common.NewAdminStatus()
 	ClientSockets = common.NewUint32ConnMap()
 	FileDataMap = common.NewIntStrMap()
@@ -55,20 +54,21 @@ func ConnectToStartNode(startnodeaddr string) {
 	startNodeConn, err := net.Dial("tcp", startnodeaddr)
 	if err != nil {
 		log.Println("[*]Connection refused!")
-		os.Exit(1)
+		os.Exit(0)
 	}
-	helloMess, _ := common.ConstructPayload(1, "", "COMMAND", "STOWAWAYADMIN", " ", " ", 0, 0, AdminStatus.AESKey, false)
+	helloMess, _ := common.ConstructPayload(common.StartNodeId, "", "COMMAND", "STOWAWAYADMIN", " ", " ", 0, common.AdminId, AdminStatus.AESKey, false)
 	startNodeConn.Write(helloMess)
 	for {
-		command, _ := common.ExtractPayload(startNodeConn, AdminStatus.AESKey, 0, true)
+		command, _ := common.ExtractPayload(startNodeConn, AdminStatus.AESKey, common.AdminId, true)
 		switch command.Command {
 		case "INIT":
-			respCommand, _ := common.ConstructPayload(1, "", "COMMAND", "ID", " ", " ", 0, 0, AdminStatus.AESKey, false)
+			respCommand, _ := common.ConstructPayload(common.StartNodeId, "", "COMMAND", "ID", " ", " ", 0, common.AdminId, AdminStatus.AESKey, false)
 			startNodeConn.Write(respCommand)
 			AdminStuff.StartNode = strings.Split(startNodeConn.RemoteAddr().String(), ":")[0]
 			log.Printf("[*]Connect to startnode %s successfully!\n", startNodeConn.RemoteAddr().String())
-			NodeStatus.Nodenote[1] = ""
-			AddNodeToTopology(1, 0)
+			NodeStatus.Nodenote[common.StartNodeId] = ""
+			CurrentClient = append(CurrentClient, common.StartNodeId) //记录startnode加入网络
+			AddNodeToTopology(common.StartNodeId, common.AdminId)
 			CalRoute()
 			go HandleStartConn(startNodeConn)
 			go HandleCommandToControlConn(startNodeConn)
@@ -84,7 +84,7 @@ func StartListen(listenPort string) {
 	localListener, err := net.Listen("tcp", localAddr)
 	if err != nil {
 		log.Printf("[*]Cannot listen %s", localAddr)
-		os.Exit(1)
+		os.Exit(0)
 	}
 	for {
 		startNodeConn, _ := localListener.Accept() //一定要有连接进入才可继续操作，故没有连接时，admin端无法操作
@@ -98,20 +98,21 @@ func StartListen(listenPort string) {
 // 初始化与startnode的连接
 func HandleInitControlConn(startNodeConn net.Conn) {
 	for {
-		command, err := common.ExtractPayload(startNodeConn, AdminStatus.AESKey, 0, true)
+		command, err := common.ExtractPayload(startNodeConn, AdminStatus.AESKey, common.AdminId, true)
 		if err != nil {
 			log.Println("[*]Startnode seems offline, control channel set up failed.Exiting...")
 			return
 		}
 		switch command.Command {
 		case "STOWAWAYAGENT":
-			Message, _ := common.ConstructPayload(0, "", "COMMAND", "CONFIRM", " ", " ", 0, 0, AdminStatus.AESKey, false)
+			Message, _ := common.ConstructPayload(common.StartNodeId, "", "COMMAND", "CONFIRM", " ", " ", 0, common.AdminId, AdminStatus.AESKey, false)
 			startNodeConn.Write(Message)
 		case "INIT":
-			respCommand, _ := common.ConstructPayload(1, "", "COMMAND", "ID", " ", " ", 0, 0, AdminStatus.AESKey, false)
+			respCommand, _ := common.ConstructPayload(common.StartNodeId, "", "COMMAND", "ID", " ", " ", 0, common.AdminId, AdminStatus.AESKey, false)
 			startNodeConn.Write(respCommand)
-			NodeStatus.Nodenote[1] = ""
-			AddNodeToTopology(1, 0)
+			NodeStatus.Nodenote[common.StartNodeId] = ""
+			CurrentClient = append(CurrentClient, common.StartNodeId) //记录startnode加入网络
+			AddNodeToTopology(common.StartNodeId, common.AdminId)
 			CalRoute()
 			go HandleStartConn(startNodeConn)
 			go HandleCommandToControlConn(startNodeConn)
@@ -124,10 +125,10 @@ func HandleInitControlConn(startNodeConn net.Conn) {
 // 处理与startnode的信道
 func HandleStartConn(startNodeConn net.Conn) {
 	for {
-		nodeResp, err := common.ExtractPayload(startNodeConn, AdminStatus.AESKey, 0, true)
+		nodeResp, err := common.ExtractPayload(startNodeConn, AdminStatus.AESKey, common.AdminId, true)
 		if err != nil {
 			log.Println("[*]StartNode seems offline")
-			DelNodeFromTopology(1)
+			DelNodeFromTopology(common.StartNodeId)
 			AdminStuff.StartNode = "offline"
 			startNodeConn.Close()
 			break
@@ -161,10 +162,8 @@ func HandleStartConn(startNodeConn net.Conn) {
 					delete(ClientSockets.Payload, nodeResp.Clientid)
 				}
 				ClientSockets.Unlock()
-				clientnum, _ := strconv.ParseInt(nodeResp.Info, 10, 32)
-				client := uint32(clientnum)
 				Route.Lock()
-				respCommand, _ := common.ConstructPayload(client, Route.Route[client], "DATA", "FINOK", " ", " ", nodeResp.Clientid, 0, AdminStatus.AESKey, false)
+				respCommand, _ := common.ConstructPayload(nodeResp.CurrentId, Route.Route[nodeResp.CurrentId], "DATA", "FINOK", " ", " ", nodeResp.Clientid, common.AdminId, AdminStatus.AESKey, false)
 				Route.Unlock()
 				startNodeConn.Write(respCommand)
 			case "FILEDATA": //接收文件内容
@@ -224,23 +223,25 @@ func HandleStartConn(startNodeConn net.Conn) {
 		case "COMMAND":
 			switch nodeResp.Command {
 			case "NEW":
-				log.Println("[*]New node join! Node Id is ", NodeIdAllocate+1)
-				AdminStatus.NodesReadyToadd <- map[uint32]string{NodeIdAllocate + 1: nodeResp.Info}
-				NodeStatus.Nodenote[NodeIdAllocate+1] = ""
-				NodeIdAllocate++
-				AddNodeToTopology(NodeIdAllocate, nodeResp.CurrentId)
-				CalRoute()
+				nodeid := GenerateNodeId() //生成一个新的nodeid号进行分配
+				Nooode.Lock()
+				log.Println("[*]New node join! Node Id is ", len(CurrentClient))
+				Nooode.Unlock()
+				AdminStatus.NodesReadyToadd <- map[string]string{nodeid: nodeResp.Info} //将此节点加入detail命令所使用的NodeStatus.Nodes结构体
+				NodeStatus.Nodenote[nodeid] = ""                                        //初始的note置空
+				AddNodeToTopology(nodeid, nodeResp.CurrentId)                           //加入拓扑
+				CalRoute()                                                              //计算路由
 				Route.Lock()
-				respCommand, _ := common.ConstructPayload(NodeIdAllocate, Route.Route[NodeIdAllocate], "COMMAND", "ID", " ", " ", 0, 0, AdminStatus.AESKey, false)
+				respCommand, _ := common.ConstructPayload(nodeid, Route.Route[nodeid], "COMMAND", "ID", " ", " ", 0, common.AdminId, AdminStatus.AESKey, false)
 				Route.Unlock()
 				startNodeConn.Write(respCommand)
 			case "AGENTOFFLINE":
-				offlineNode := common.StrUint32(nodeResp.Info)
-				log.Println("[*]Node ", offlineNode, " seems offline") //有节点掉线后，将此节点及其之后的节点删除
-				CloseAll(offlineNode)
+				log.Println("[*]Node ", FindIntByNodeid(nodeResp.Info)+1, " seems offline") //有节点掉线后，将此节点及其之后的节点删除
+				CloseAll(nodeResp.Info)                                                     //清除一切与此节点及其子节点有关的连接及功能
 				<-WaitForFindAll
-				DelNodeFromTopology(offlineNode)
-				if AdminStatus.HandleNode == offlineNode {
+				DelNodeFromTopology(nodeResp.Info) //从拓扑中删除
+				//这里不用重新计算路由，因为控制端已经不会允许已掉线的节点及其子节点的流量流通
+				if AdminStatus.HandleNode == nodeResp.Info && *CliStatus != "admin" { //如果admin端正好操控此节点
 					AdminStuff.AdminCommandChan <- []string{"exit"}
 					<-AdminStatus.ReadyChange
 					<-AdminStatus.IsShellMode
@@ -290,27 +291,27 @@ func HandleStartConn(startNodeConn net.Conn) {
 				UploadFile, err := os.Create(nodeResp.Info)
 				Route.Lock()
 				if err != nil {
-					respComm, _ := common.ConstructPayload(CurrentNode, Route.Route[CurrentNode], "COMMAND", "CREATEFAIL", " ", " ", 0, 0, AdminStatus.AESKey, false)
+					respComm, _ := common.ConstructPayload(CurrentNode, Route.Route[CurrentNode], "COMMAND", "CREATEFAIL", " ", " ", 0, common.AdminId, AdminStatus.AESKey, false)
 					startNodeConn.Write(respComm)
 				} else {
 					var tempchan *net.Conn = &startNodeConn
-					respComm, _ := common.ConstructPayload(CurrentNode, Route.Route[CurrentNode], "COMMAND", "NAMECONFIRM", " ", " ", 0, 0, AdminStatus.AESKey, false)
+					respComm, _ := common.ConstructPayload(CurrentNode, Route.Route[CurrentNode], "COMMAND", "NAMECONFIRM", " ", " ", 0, common.AdminId, AdminStatus.AESKey, false)
 					startNodeConn.Write(respComm)
-					go common.ReceiveFile(Route.Route[CurrentNode], tempchan, FileDataMap, AdminStatus.CannotRead, UploadFile, AdminStatus.AESKey, true, 0)
+					go common.ReceiveFile(Route.Route[CurrentNode], tempchan, FileDataMap, AdminStatus.CannotRead, UploadFile, AdminStatus.AESKey, true, common.AdminId)
 				}
 				Route.Unlock()
 			case "FILESIZE":
 				filesize, _ := strconv.ParseInt(nodeResp.Info, 10, 64)
 				common.File.FileSize = filesize
 				Route.Lock()
-				respComm, _ := common.ConstructPayload(CurrentNode, Route.Route[CurrentNode], "COMMAND", "FILESIZECONFIRM", " ", " ", 0, 0, AdminStatus.AESKey, false)
+				respComm, _ := common.ConstructPayload(CurrentNode, Route.Route[CurrentNode], "COMMAND", "FILESIZECONFIRM", " ", " ", 0, common.AdminId, AdminStatus.AESKey, false)
 				Route.Unlock()
 				startNodeConn.Write(respComm)
 				common.File.ReceiveFileSize <- true
 			case "FILESLICENUM":
 				common.File.TotalSilceNum, _ = strconv.Atoi(nodeResp.Info)
 				Route.Lock()
-				respComm, _ := common.ConstructPayload(CurrentNode, Route.Route[CurrentNode], "COMMAND", "FILESLICENUMCONFIRM", " ", " ", 0, 0, AdminStatus.AESKey, false)
+				respComm, _ := common.ConstructPayload(CurrentNode, Route.Route[CurrentNode], "COMMAND", "FILESLICENUMCONFIRM", " ", " ", 0, common.AdminId, AdminStatus.AESKey, false)
 				Route.Unlock()
 				startNodeConn.Write(respComm)
 				common.File.ReceiveFileSliceNum <- true
@@ -330,20 +331,21 @@ func HandleStartConn(startNodeConn net.Conn) {
 			case "GETREFLECTNUM":
 				Route.Lock()
 				AdminStuff.Lock()
-				respComm, _ := common.ConstructPayload(CurrentNode, Route.Route[CurrentNode], "COMMAND", "REFLECTNUM", " ", " ", AdminStuff.ReflectNum, 0, AdminStatus.AESKey, false)
+				respComm, _ := common.ConstructPayload(CurrentNode, Route.Route[CurrentNode], "COMMAND", "REFLECTNUM", " ", " ", AdminStuff.ReflectNum, common.AdminId, AdminStatus.AESKey, false)
 				AdminStuff.ReflectNum++
 				AdminStuff.Unlock()
 				Route.Unlock()
 				startNodeConn.Write(respComm)
 			case "RECONNID":
-				log.Println("[*]Node ", nodeResp.CurrentId, " reconnect successfully!")
+				log.Println("[*]Node reconnect successfully!")
 				ipaddress, uppernode := AnalysisInfo(nodeResp.Info)
-				AdminStatus.NodesReadyToadd <- map[uint32]string{nodeResp.CurrentId: ipaddress}
+				AdminStatus.NodesReadyToadd <- map[string]string{nodeResp.CurrentId: ipaddress}
+				NodeStatus.Nodenote[nodeResp.CurrentId] = ""
+				ReconnAddCurrentClient(nodeResp.CurrentId) //在节点reconn回来的时候要考虑多种情况，若admin是掉线过，可以直接append，若admin没有掉线过，那么就需要判断重连回来的节点序号是否在CurrentClient中，如果已经存在就不需要append
 				AddNodeToTopology(nodeResp.CurrentId, uppernode)
 				CalRoute()
-				FindMax()
 			case "HEARTBEAT":
-				hbcommpack, _ := common.ConstructPayload(1, "", "COMMAND", "KEEPALIVE", " ", " ", 0, 0, AdminStatus.AESKey, false)
+				hbcommpack, _ := common.ConstructPayload(common.StartNodeId, "", "COMMAND", "KEEPALIVE", " ", " ", 0, common.AdminId, AdminStatus.AESKey, false)
 				startNodeConn.Write(hbcommpack)
 			case "TRANSSUCCESS":
 				fmt.Println("[*]File transmission complete!")

@@ -39,11 +39,13 @@ func ShowNodeHelp() {
 	socks      [lport] [username] [pass]     		Start a socks5 server.(username and pass are optional)
 	connect    [ip:port]                     		Connect to new node
 	sshtunnel  [ip:sshport] [agent port]    		Use sshtunnel to add the node into the whole network
-	stopsocks                                		Shut down corresponding socks service
+	stopsocks                                		Shut down all socks services
 	upload     [filename]                    		Upload file to current agent node
 	download   [filename]                   		Download file from current agent node
 	forward    [lport] [ip:port]             		Forward local port to remote (eg:forward 8888 192.168.0.100:22)
+	stopforward                                		Shut down all forward services
 	reflect    [rport] [lport]               		Reflect remote port to local port (eg:reflect 22 80)
+	stopreflect                                		Shut down all reflect services
 	exit                                     		Back to upper panel
   `)
 }

@@ -106,6 +106,8 @@ The next time you want to reconnect to the startnode and rebuild the whole netwo
 
 **2.When a node offline,it will force all the socks,reflect,forward services that related to this node down**
 
+**3.If one of the branches is disconnected due to network fluctuations or disconnection of intermediate nodes (for example, admin is followed by startnode, and startnode's branch is divided into two branches, one is startnode-> node 2-> node 3-> node 4,another is startnode-> node 5-> node 6), then if node2 goes offline, node3 and node4 will not go offline, but will continue to survive. At this time, if the user wants to rejoin node3 and node4 to the network, the user has two options. One is that if startnode can directly access node3, then the user can reconnect the node3 with the connect or sshtunnel command at startnode at any time (remember, even if startnode can also access node4 at the same time, please DO NOT directly connect to node4, please connect the head node node3 of the entire missing chain (node3-> node4), so that you can rejoin node3 and node4 to the network; another option is when startnode cannot directly access node3 (that means you must pass through node2), please restart node2 and join it into the network first, and then use connect or sshtunnel command on node2 to connect to node3, so that node3 and node4 will rejoin to the network (As mentioned before, even if node2 can directly access node4, please do not connect to node4, just connect to node3)**
+
 ## Example
 
 For instance：
@@ -233,8 +235,6 @@ For more detail, just type help to get further informations
 
 - This porject is coding just for fun , the logic structure and code structure are not strict enough, please don't be so serious about it
 - This program will be slightly bigger than usual after compiled, but actually through my test , it just 1 MB more than usual,Maybe slightly big on IOT platform(1MB maybe not a big deal lol),so if you got any problem when you are using it on IOT platform,just tell me, and i will try my best to decrease the size.
-- When the admin offline, all agent nodes will be offline too(only when startnode isn't under reconnect mode)
-- When one of the agents offline, the agent nodes after it will offline
 - Admin node MUST be online when new node is added into the network
 - If you want to compile this project from source code,you can run build_admin.sh/build_agent.sh（Be Mentioned!!!!!!!!!! The default compile result is AGENT mode and please run build_agent.sh. But if you want to compile ADMIN mode,please see the main.go file and FOLLOW THE INSTRUCTION, and next you can run build_admin.sh to get admin mode program.)
 

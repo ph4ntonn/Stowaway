@@ -11,7 +11,7 @@ import (
 )
 
 type Payload struct {
-	NodeId uint32 //接收节点序号
+	NodeId string //接收节点序号
 
 	RouteLength uint32 //路由长度
 
@@ -35,26 +35,26 @@ type Payload struct {
 
 	Clientid uint32 //socks以及forward功能中用来标识当前需要操作的connection
 
-	CurrentId uint32 //当前节点序号
+	CurrentId string //当前节点序号
 }
 
-func ConstructPayload(nodeid uint32, route string, ptype string, command string, fileSliceNum string, info string, clientid uint32, currentid uint32, key []byte, pass bool) ([]byte, error) {
+func ConstructPayload(nodeid string, route string, ptype string, command string, fileSliceNum string, info string, clientid uint32, currentid string, key []byte, pass bool) ([]byte, error) {
 	var buffer bytes.Buffer
 
-	Nodeid := make([]byte, config.NODE_LEN)
 	Routelength := make([]byte, config.ROUTE_LEN)
 	TypeLength := make([]byte, config.TYPE_LEN)
 	CommandLength := make([]byte, config.COMMAND_LEN)
 	FilesliceLength := make([]byte, config.FILESLICENUM_LEN)
 	InfoLength := make([]byte, config.INFO_LEN)
 	Clientid := make([]byte, config.CLIENT_LEN)
-	Currentid := make([]byte, config.NODE_LEN)
 
+	Nodeid := []byte(nodeid)
 	Routedata := []byte(route)
 	PtypeData := []byte(ptype)
 	Command := []byte(command)
 	FileSliceNumData := []byte(fileSliceNum)
 	Info := []byte(info)
+	Currentid := []byte(currentid)
 
 	if len(key) != 0 && !pass {
 		key, err := crypto.KeyPadding(key)
@@ -75,14 +75,12 @@ func ConstructPayload(nodeid uint32, route string, ptype string, command string,
 		Command = crypto.AESEncrypt(Command, key)
 	}
 
-	binary.BigEndian.PutUint32(Nodeid, nodeid)
 	binary.BigEndian.PutUint32(Routelength, uint32(len(Routedata)))
 	binary.BigEndian.PutUint32(TypeLength, uint32(len(PtypeData)))
 	binary.BigEndian.PutUint32(CommandLength, uint32(len(Command)))
 	binary.BigEndian.PutUint32(FilesliceLength, uint32(len(FileSliceNumData)))
 	binary.BigEndian.PutUint32(InfoLength, uint32(len(Info)))
 	binary.BigEndian.PutUint32(Clientid, clientid)
-	binary.BigEndian.PutUint32(Currentid, currentid)
 
 	buffer.Write(Nodeid)
 	buffer.Write(Routelength)
@@ -103,7 +101,7 @@ func ConstructPayload(nodeid uint32, route string, ptype string, command string,
 	return payload, nil
 }
 
-func ExtractPayload(conn net.Conn, key []byte, currentid uint32, isinit bool) (*Payload, error) {
+func ExtractPayload(conn net.Conn, key []byte, currentid string, isinit bool) (*Payload, error) {
 	var (
 		payload         = &Payload{}
 		nodelen         = make([]byte, config.NODE_LEN)
@@ -124,7 +122,7 @@ func ExtractPayload(conn net.Conn, key []byte, currentid uint32, isinit bool) (*
 	if err != nil {
 		return payload, err
 	}
-	payload.NodeId = binary.BigEndian.Uint32(nodelen)
+	payload.NodeId = string(nodelen)
 
 	_, err = io.ReadFull(conn, routelen)
 	if err != nil {
@@ -213,7 +211,7 @@ func ExtractPayload(conn net.Conn, key []byte, currentid uint32, isinit bool) (*
 	if err != nil {
 		return payload, err
 	}
-	payload.CurrentId = binary.BigEndian.Uint32(currentidlen)
+	payload.CurrentId = string(currentidlen)
 
 	return payload, nil
 }

@@ -2,29 +2,32 @@ package admin
 
 import (
 	"Stowaway/common"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
+
+	"github.com/gofrs/uuid"
 )
 
 type Node struct {
-	Uppernode uint32
-	Lowernode []uint32
+	Uppernode string
+	Lowernode []string
 }
 
 type SafeNodeMap struct {
 	sync.RWMutex
-	AllNode map[uint32]*Node
+	AllNode map[string]*Node
 }
 
 type SafeRouteMap struct {
 	sync.RWMutex
-	Route map[uint32]string
+	Route map[string]string
 }
 
 var Nooode *SafeNodeMap
 var Route *SafeRouteMap
-var readyToDel []uint32
+var readyToDel []string
 
 func init() {
 	Nooode = NewSafeNodeMap()
@@ -33,25 +36,25 @@ func init() {
 
 func NewNode() *Node {
 	nn := new(Node)
-	nn.Lowernode = make([]uint32, 0)
+	nn.Lowernode = make([]string, 0)
 	return nn
 }
 
 func NewSafeNodeMap() *SafeNodeMap {
 	nsnm := new(SafeNodeMap)
-	nsnm.AllNode = make(map[uint32]*Node)
+	nsnm.AllNode = make(map[string]*Node)
 	return nsnm
 }
 
 func NewSafeRouteMap() *SafeRouteMap {
 	nsrm := new(SafeRouteMap)
-	nsrm.Route = make(map[uint32]string)
+	nsrm.Route = make(map[string]string)
 	return nsrm
 }
 
 /*-------------------------节点拓扑相关代码--------------------------*/
 //将节点加入拓扑
-func AddNodeToTopology(nodeid uint32, uppernodeid uint32) {
+func AddNodeToTopology(nodeid string, uppernodeid string) {
 	Nooode.Lock()
 	if _, ok := Nooode.AllNode[nodeid]; ok {
 		Nooode.AllNode[nodeid].Uppernode = uppernodeid
@@ -60,14 +63,14 @@ func AddNodeToTopology(nodeid uint32, uppernodeid uint32) {
 		Nooode.AllNode[nodeid] = tempnode
 		Nooode.AllNode[nodeid].Uppernode = uppernodeid
 	}
-	if uppernodeid != 0 {
+	if uppernodeid != common.AdminId {
 		Nooode.AllNode[uppernodeid].Lowernode = append(Nooode.AllNode[uppernodeid].Lowernode, nodeid)
 	}
 	Nooode.Unlock()
 }
 
 //将节点从拓扑中删除
-func DelNodeFromTopology(nodeid uint32) {
+func DelNodeFromTopology(nodeid string) {
 	Nooode.Lock()
 	if _, ok := Nooode.AllNode[nodeid]; ok {
 		uppernode := Nooode.AllNode[nodeid].Uppernode
@@ -82,13 +85,13 @@ func DelNodeFromTopology(nodeid uint32) {
 			delete(NodeStatus.Nodes, value)
 			delete(NodeStatus.Nodenote, value)
 		}
-		readyToDel = make([]uint32, 0)
+		readyToDel = make([]string, 0)
 	}
 	Nooode.Unlock()
 }
 
 //收集需要删除的节点
-func Del(nodeid uint32) {
+func Del(nodeid string) {
 	for _, value := range Nooode.AllNode[nodeid].Lowernode {
 		readyToDel = append(readyToDel, value)
 		Del(value)
@@ -102,14 +105,14 @@ func CalRoute() {
 		var temp []string = []string{}
 		count := key
 
-		if key == 0 {
+		if key == common.AdminId {
 			continue
 		}
 
 		for {
-			if Nooode.AllNode[count].Uppernode != 0 && Nooode.AllNode[count].Uppernode != 1 {
+			if Nooode.AllNode[count].Uppernode != common.AdminId && Nooode.AllNode[count].Uppernode != common.StartNodeId {
 				count = Nooode.AllNode[count].Uppernode
-				node := common.Uint32Str(count)
+				node := count
 				temp = append(temp, node)
 			} else {
 				common.StringReverse(temp)
@@ -127,14 +130,13 @@ func CalRoute() {
 // 显示节点拓扑详细信息
 func ShowDetail() {
 	if AdminStuff.StartNode != "0.0.0.0" {
-		var nodes []uint32
-		fmt.Printf("StartNode:[1] %s   note:%s\n", AdminStuff.StartNode, NodeStatus.Nodenote[1])
+		var nodes []string
+		fmt.Printf("StartNode:[1] %s   note:%s\n", AdminStuff.StartNode, NodeStatus.Nodenote[common.StartNodeId])
 		for Nodeid, _ := range NodeStatus.Nodes {
 			nodes = append(nodes, Nodeid)
 		}
-		CheckRange(nodes)
 		for _, value := range nodes {
-			fmt.Printf("Node[%s]: %s  note:%s\n", fmt.Sprint(value), NodeStatus.Nodes[value], NodeStatus.Nodenote[value])
+			fmt.Printf("Node[%s]: %s  note:%s\n", fmt.Sprint(FindIntByNodeid(value)+1), NodeStatus.Nodes[value], NodeStatus.Nodenote[value])
 		}
 	} else {
 		fmt.Println("There is no agent connected!")
@@ -144,29 +146,38 @@ func ShowDetail() {
 //显示节点层级关系
 func ShowTree() {
 	if AdminStuff.StartNode != "0.0.0.0" {
-		var nodes []uint32
+		var nodes []string
+		var nodesid []int
 		Nooode.Lock()
 		for key, _ := range Nooode.AllNode {
 			nodes = append(nodes, key)
 		}
-		CheckRange(nodes)
 		for _, value := range nodes {
-			if value == 1 {
-				fmt.Printf("StartNode[%s]'s child nodes:\n", fmt.Sprint(value))
-				if len(Nooode.AllNode[value].Lowernode) == 0 {
+			id := FindIntByNodeid(value)
+			nodesid = append(nodesid, id)
+		}
+		CheckRange(nodesid)
+		for _, value := range nodesid {
+			node := CurrentClient[value]
+			nodestatus := Nooode.AllNode[node]
+			if node == common.StartNodeId {
+				fmt.Printf("StartNode[%s]'s child nodes:\n", fmt.Sprint(value+1))
+				if len(nodestatus.Lowernode) == 0 {
 					fmt.Println("\tThere is no child node for this one.")
 				} else {
-					for _, child := range Nooode.AllNode[value].Lowernode {
-						fmt.Printf("\tNode [%s]\n", fmt.Sprint(child))
+					for _, child := range nodestatus.Lowernode {
+						childid := FindIntByNodeid(child)
+						fmt.Printf("\tNode [%s]\n", fmt.Sprint(childid+1))
 					}
 				}
 			} else {
-				fmt.Printf("Node[%s]'s child nodes:\n", fmt.Sprint(value))
-				if len(Nooode.AllNode[value].Lowernode) == 0 {
+				fmt.Printf("Node[%s]'s child nodes:\n", fmt.Sprint(value+1))
+				if len(nodestatus.Lowernode) == 0 {
 					fmt.Println("\tThere is no child node for this one.")
 				} else {
-					for _, child := range Nooode.AllNode[value].Lowernode {
-						fmt.Printf("\tNode [%s]\n", fmt.Sprint(child))
+					for _, child := range nodestatus.Lowernode {
+						childid := FindIntByNodeid(child)
+						fmt.Printf("\tNode [%s]\n", fmt.Sprint(childid+1))
 					}
 				}
 			}
@@ -177,8 +188,41 @@ func ShowTree() {
 	}
 }
 
-//排序 || 防止map元素内存错位带来的展示效果错误
-func CheckRange(nodes []uint32) {
+// 将节点加入拓扑
+func AddToChain() {
+	for {
+		newNode := <-AdminStatus.NodesReadyToadd
+		for key, value := range newNode {
+			NodeStatus.Nodes[key] = value
+		}
+	}
+}
+
+//为node添加note
+func AddNote(data []string, nodeid string) bool {
+	info := ""
+	data = data[1:len(data)]
+	for _, i := range data {
+		info = info + " " + i
+	}
+	if _, ok := NodeStatus.Nodenote[nodeid]; ok {
+		NodeStatus.Nodenote[nodeid] = info
+		return true
+	}
+	return false
+}
+
+//为node删除note
+func DelNote(nodeid string) bool {
+	if _, ok := NodeStatus.Nodenote[nodeid]; ok {
+		NodeStatus.Nodenote[nodeid] = ""
+		return true
+	}
+	return false
+}
+
+//排序
+func CheckRange(nodes []int) {
 	for m := len(nodes) - 1; m > 0; m-- {
 		var flag bool = false
 		for n := 0; n < m; n++ {
@@ -195,45 +239,49 @@ func CheckRange(nodes []uint32) {
 	}
 }
 
-// 将节点加入拓扑
-func AddToChain() {
-	for {
-		newNode := <-AdminStatus.NodesReadyToadd
-		for key, value := range newNode {
-			NodeStatus.Nodes[key] = value
+//生成一个nodeid
+func GenerateNodeId() string {
+	u2, _ := uuid.NewV4()
+	uu := strings.Replace(u2.String(), "-", "", -1)
+	uuid := uu[11:21] //取10位，尽量减少包头长度
+	CurrentClient = append(CurrentClient, uuid)
+	return uuid
+}
+
+//将字符串型的nodeid转为对应的int
+func FindNumByNodeid(id string) (string, error) {
+	var NO_NODE = errors.New("This node isn't exist")
+
+	if id == "" {
+		return "", NO_NODE
+	}
+
+	nodeid := common.StrUint32(id)
+	currentid := int(nodeid) - 1
+
+	if len(CurrentClient) < int(nodeid) {
+		return "", NO_NODE
+	}
+
+	return CurrentClient[currentid], nil
+}
+
+//用int找到对应的nodeid
+func FindIntByNodeid(id string) int {
+	for key, value := range CurrentClient {
+		if value == id {
+			return key
 		}
 	}
+	return 0
 }
 
-//为node添加note
-func AddNote(data []string, nodeid uint32) bool {
-	info := ""
-	data = data[1:len(data)]
-	for _, i := range data {
-		info = info + " " + i
+//重连时对添加clientid的操作
+func ReconnAddCurrentClient(id string) {
+	for _, value := range CurrentClient {
+		if value == id {
+			return
+		}
 	}
-	if _, ok := NodeStatus.Nodenote[nodeid]; ok {
-		NodeStatus.Nodenote[nodeid] = info
-		return true
-	}
-	return false
-}
-
-//为node删除note
-func DelNote(nodeid uint32) bool {
-	if _, ok := NodeStatus.Nodenote[nodeid]; ok {
-		NodeStatus.Nodenote[nodeid] = ""
-		return true
-	}
-	return false
-}
-
-//admin端重连后，查找最大的nodeid值，以便之后的分配
-func FindMax() {
-	var tempAllNode []uint32
-	for key, _ := range Nooode.AllNode {
-		tempAllNode = append(tempAllNode, key)
-	}
-	CheckRange(tempAllNode)
-	NodeIdAllocate = tempAllNode[len(tempAllNode)-1]
+	CurrentClient = append(CurrentClient, id)
 }

@@ -5,12 +5,10 @@ import (
 	"Stowaway/node"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/urfave/cli/v2"
 )
@@ -55,14 +53,15 @@ func NewAgent(c *cli.Context) {
 // 后续想让startnode与simplenode实现不一样的功能，故将两种node实现代码分开写
 func StartNodeInit(monitor, listenPort, reConn string, passive bool) {
 	var err error
-	AgentStatus.Nodeid = uint32(1)
+	AgentStatus.Nodeid = common.StartNodeId
 	ConnToAdmin, AgentStatus.Nodeid, err = node.StartNodeConn(monitor, listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
 	if err != nil {
-		os.Exit(1)
+		os.Exit(0)
 	}
 	go common.SendHeartBeatControl(&ConnToAdmin, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go HandleStartNodeConn(&ConnToAdmin, monitor, listenPort, reConn, passive, AgentStatus.Nodeid)
 	go node.StartNodeListen(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
+	go PrepareForReOnlineNode()
 	for {
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
 		NewNodeMessage := <-node.NewNodeMessageChan
@@ -81,14 +80,15 @@ func StartNodeInit(monitor, listenPort, reConn string, passive bool) {
 //普通的node节点
 func SimpleNodeInit(monitor, listenPort string) {
 	var err error
-	AgentStatus.Nodeid = uint32(0)
+	AgentStatus.Nodeid = common.AdminId
 	ConnToAdmin, AgentStatus.Nodeid, err = node.StartNodeConn(monitor, listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
 	if err != nil {
-		os.Exit(1)
+		os.Exit(0)
 	}
 	go common.SendHeartBeatControl(&ConnToAdmin, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go HandleSimpleNodeConn(&ConnToAdmin, AgentStatus.Nodeid)
 	go node.StartNodeListen(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
+	go PrepareForReOnlineNode()
 	for {
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
 		NewNodeMessage := <-node.NewNodeMessageChan
@@ -106,11 +106,12 @@ func SimpleNodeInit(monitor, listenPort string) {
 
 //reverse mode下的startnode节点
 func StartNodeReversemodeInit(monitor, listenPort string, passive bool) {
-	AgentStatus.Nodeid = uint32(1)
+	AgentStatus.Nodeid = common.StartNodeId
 	ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNode(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go common.SendHeartBeatControl(&ConnToAdmin, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go HandleStartNodeConn(&ConnToAdmin, monitor, listenPort, "", passive, AgentStatus.Nodeid)
 	go node.StartNodeListen(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
+	go PrepareForReOnlineNode()
 	for {
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
 		NewNodeMessage := <-node.NewNodeMessageChan
@@ -133,11 +134,12 @@ func StartNodeReversemodeInit(monitor, listenPort string, passive bool) {
 
 //reverse mode下的普通节点
 func SimpleNodeReversemodeInit(monitor, listenPort string) {
-	AgentStatus.Nodeid = uint32(0)
+	AgentStatus.Nodeid = common.AdminId
 	ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNode(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go common.SendHeartBeatControl(&ConnToAdmin, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go HandleSimpleNodeConn(&ConnToAdmin, AgentStatus.Nodeid)
 	go node.StartNodeListen(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
+	go PrepareForReOnlineNode()
 	for {
 		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
 		NewNodeMessage := <-node.NewNodeMessageChan
@@ -158,7 +160,7 @@ func SimpleNodeReversemodeInit(monitor, listenPort string) {
 //startnode启动代码开始
 
 //启动startnode
-func HandleStartNodeConn(connToAdmin *net.Conn, monitor, listenPort, reConn string, passive bool, NODEID uint32) {
+func HandleStartNodeConn(connToAdmin *net.Conn, monitor, listenPort, reConn string, passive bool, NODEID string) {
 	go HandleConnFromAdmin(connToAdmin, monitor, listenPort, reConn, passive, NODEID)
 	go HandleConnToAdmin(connToAdmin)
 }
@@ -175,7 +177,7 @@ func HandleConnToAdmin(connToAdmin *net.Conn) {
 }
 
 //看函数名猜功能.jpg XD
-func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn string, passive bool, NODEID uint32) {
+func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn string, passive bool, NODEID string) {
 	var (
 		CannotRead = make(chan bool, 1)
 		GetName    = make(chan bool, 1)
@@ -185,6 +187,7 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 	for {
 		AdminData, err := common.ExtractPayload(*connToAdmin, AgentStatus.AESKey, NODEID, false)
 		if err != nil {
+			fmt.Println(err)
 			AdminOffline(reConn, monitor, listenPort, passive)
 			continue
 		}
@@ -285,7 +288,7 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 					}
 					SocksDataChanMap.Unlock()
 				case "HEARTBEAT":
-					hbdatapack, _ := common.ConstructPayload(0, "", "COMMAND", "KEEPALIVE", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
+					hbdatapack, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "KEEPALIVE", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
 					ProxyChan.ProxyChanToUpperNode <- hbdatapack
 				}
 			case "COMMAND":
@@ -328,29 +331,29 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 				case "CONNECT":
 					status := node.ConnectNextNode(AdminData.Info, NODEID, AgentStatus.AESKey)
 					if !status {
-						message, _ := common.ConstructPayload(0, "", "COMMAND", "NODECONNECTFAIL", " ", "", 0, NODEID, AgentStatus.AESKey, false)
+						message, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "NODECONNECTFAIL", " ", "", 0, NODEID, AgentStatus.AESKey, false)
 						ProxyChan.ProxyChanToUpperNode <- message
 					}
 				case "FILENAME":
 					var err error
 					UploadFile, err := os.Create(AdminData.Info)
 					if err != nil {
-						respComm, _ := common.ConstructPayload(0, "", "COMMAND", "CREATEFAIL", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
+						respComm, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "CREATEFAIL", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
 						ProxyChan.ProxyChanToUpperNode <- respComm
 					} else {
-						respComm, _ := common.ConstructPayload(0, "", "COMMAND", "NAMECONFIRM", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
+						respComm, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "NAMECONFIRM", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
 						ProxyChan.ProxyChanToUpperNode <- respComm
 						go common.ReceiveFile("", connToAdmin, FileDataMap, CannotRead, UploadFile, AgentStatus.AESKey, false, NODEID)
 					}
 				case "FILESIZE":
 					filesize, _ := strconv.ParseInt(AdminData.Info, 10, 64)
 					common.File.FileSize = filesize
-					respComm, _ := common.ConstructPayload(0, "", "COMMAND", "FILESIZECONFIRM", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
+					respComm, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "FILESIZECONFIRM", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
 					ProxyChan.ProxyChanToUpperNode <- respComm
 					common.File.ReceiveFileSize <- true
 				case "FILESLICENUM":
 					common.File.TotalSilceNum, _ = strconv.Atoi(AdminData.Info)
-					respComm, _ := common.ConstructPayload(0, "", "COMMAND", "FILESLICENUMCONFIRM", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
+					respComm, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "FILESLICENUMCONFIRM", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
 					ProxyChan.ProxyChanToUpperNode <- respComm
 					common.File.ReceiveFileSliceNum <- true
 				case "FILESLICENUMCONFIRM":
@@ -358,7 +361,7 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 				case "FILESIZECONFIRM":
 					common.File.TotalConfirm <- true
 				case "DOWNLOADFILE":
-					go common.UploadFile("", AdminData.Info, connToAdmin, 0, GetName, AgentStatus.AESKey, NODEID, false)
+					go common.UploadFile("", AdminData.Info, connToAdmin, common.AdminId, GetName, AgentStatus.AESKey, NODEID, false)
 				case "NAMECONFIRM":
 					GetName <- true
 				case "CREATEFAIL":
@@ -366,7 +369,7 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 				case "CANNOTREAD":
 					CannotRead <- true
 					common.File.ReceiveFileSliceNum <- false
-					os.Remove(AdminData.Info)
+					os.Remove(AdminData.Info) //删除空文件
 				case "FORWARDTEST":
 					go TestForward(AdminData.Info)
 				case "REFLECTTEST":
@@ -397,14 +400,14 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 			if AdminData.Route == "" && AdminData.Command == "ID" {
 				AgentStatus.WaitForIdAllocate <- AdminData.NodeId //将此节点序号递交，以便启动HandleConnFromLowerNode函数
 				node.NodeInfo.LowerNode.Lock()
-				tempconn := node.NodeInfo.LowerNode.Payload[0]
+				tempconn := node.NodeInfo.LowerNode.Payload[common.AdminId]
 				node.NodeInfo.LowerNode.Payload[AdminData.NodeId] = tempconn
 				node.NodeInfo.LowerNode.Unlock()
 			}
 			routeid := ChangeRoute(AdminData) //更改路由并返回下一个路由点
 			proxyData, _ := common.ConstructPayload(AdminData.NodeId, AdminData.Route, AdminData.Type, AdminData.Command, AdminData.FileSliceNum, AdminData.Info, AdminData.Clientid, AdminData.CurrentId, AgentStatus.AESKey, true)
 			passToLowerData := common.NewPassToLowerNodeData()
-			if routeid == 0 { //当返回的路由点为0，说明就是自己的子节点
+			if routeid == "" { //当返回的路由点为0，说明就是自己的子节点
 				passToLowerData.Route = AdminData.NodeId
 			} else { //不是0，说明不是自己的子节点，还需要一定轮数的递送
 				passToLowerData.Route = routeid
@@ -432,7 +435,7 @@ func HandleConnToLowerNode() {
 }
 
 //看到那个from了么
-func HandleConnFromLowerNode(connForLowerNode net.Conn, currentid, lowerid uint32) {
+func HandleConnFromLowerNode(connForLowerNode net.Conn, currentid, lowerid string) {
 	for {
 		command, err := common.ExtractPayload(connForLowerNode, AgentStatus.AESKey, currentid, false)
 		if err != nil {
@@ -440,7 +443,7 @@ func HandleConnFromLowerNode(connForLowerNode net.Conn, currentid, lowerid uint3
 			node.NodeInfo.LowerNode.Lock()
 			delete(node.NodeInfo.LowerNode.Payload, lowerid) //下级节点掉线，立即将此节点从自己的子节点列表删除
 			node.NodeInfo.LowerNode.Unlock()
-			offlineMess, _ := common.ConstructPayload(0, "", "COMMAND", "AGENTOFFLINE", " ", common.Uint32Str(lowerid), 0, currentid, AgentStatus.AESKey, false) //通知admin下级节点已经下线
+			offlineMess, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "AGENTOFFLINE", " ", lowerid, 0, currentid, AgentStatus.AESKey, false) //通知admin下级节点已经下线
 			ProxyChan.ProxyChanToUpperNode <- offlineMess
 			return
 		}
@@ -448,8 +451,8 @@ func HandleConnFromLowerNode(connForLowerNode net.Conn, currentid, lowerid uint3
 		case "COMMAND":
 			if command.Command == "RECONNID" {
 				if _, ok := node.NodeInfo.LowerNode.Payload[command.CurrentId]; ok {
-					info := fmt.Sprintf("%s:::%s", common.Uint32Str(currentid), connForLowerNode.RemoteAddr().String())
-					proxyCommand, _ := common.ConstructPayload(0, "", "COMMAND", command.Command, " ", info, 0, command.CurrentId, AgentStatus.AESKey, false)
+					info := fmt.Sprintf("%s:::%s", currentid, connForLowerNode.RemoteAddr().String())
+					proxyCommand, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", command.Command, " ", info, 0, command.CurrentId, AgentStatus.AESKey, false)
 					ProxyChan.ProxyChanToUpperNode <- proxyCommand
 					continue
 				} else {
@@ -483,7 +486,7 @@ func HandleConnFromLowerNode(connForLowerNode net.Conn, currentid, lowerid uint3
 //普通节点启动代码开始
 
 //启动普通节点
-func HandleSimpleNodeConn(connToUpperNode *net.Conn, NODEID uint32) {
+func HandleSimpleNodeConn(connToUpperNode *net.Conn, NODEID string) {
 	go HandleConnFromUpperNode(connToUpperNode, NODEID)
 	go HandleConnToUpperNode(connToUpperNode)
 }
@@ -494,14 +497,13 @@ func HandleConnToUpperNode(connToUpperNode *net.Conn) {
 		proxyData := <-ProxyChan.ProxyChanToUpperNode
 		_, err := (*connToUpperNode).Write(proxyData)
 		if err != nil {
-			log.Println("[*]Command cannot be proxy")
-			return
+			continue
 		}
 	}
 }
 
 //处理来自上一级节点的控制信道
-func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID uint32) {
+func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 	var (
 		CannotRead = make(chan bool, 1)
 		GetName    = make(chan bool, 1)
@@ -511,11 +513,9 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID uint32) {
 	for {
 		command, err := common.ExtractPayload(*connToUpperNode, AgentStatus.AESKey, NODEID, false)
 		if err != nil {
-			if AgentStatus.NotLastOne {
-				BroadCast("OFFLINE")
-			}
-			time.Sleep(2 * time.Second)
-			os.Exit(1)
+			node.Offline = true
+			WaitingAdmin(NODEID) //上一级节点间网络连接断开后不掉线，等待上级节点重连回来
+			continue
 		}
 		if command.NodeId == NODEID {
 			switch command.Type {
@@ -535,13 +535,6 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID uint32) {
 							StartShell(command.Info, stdin, stdout, NODEID)
 						}()
 					}
-				case "OFFLINE": //上一级节点下线
-					fmt.Println("[*]Upper node seems down")
-					if AgentStatus.NotLastOne {
-						BroadCast("OFFLINE")
-					}
-					time.Sleep(2 * time.Second)
-					os.Exit(1)
 				case "SOCKS":
 					socksinfo := strings.Split(command.Info, ":::")
 					SocksInfo.SocksUsername = socksinfo[1]
@@ -566,29 +559,29 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID uint32) {
 				case "CONNECT":
 					status := node.ConnectNextNode(command.Info, NODEID, AgentStatus.AESKey)
 					if !status {
-						message, _ := common.ConstructPayload(0, "", "COMMAND", "NODECONNECTFAIL", " ", "", 0, NODEID, AgentStatus.AESKey, false)
+						message, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "NODECONNECTFAIL", " ", "", 0, NODEID, AgentStatus.AESKey, false)
 						ProxyChan.ProxyChanToUpperNode <- message
 					}
 				case "FILENAME":
 					var err error
 					UploadFile, err := os.Create(command.Info)
 					if err != nil {
-						respComm, _ := common.ConstructPayload(0, "", "COMMAND", "CREATEFAIL", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
+						respComm, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "CREATEFAIL", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
 						ProxyChan.ProxyChanToUpperNode <- respComm
 					} else {
-						respComm, _ := common.ConstructPayload(0, "", "COMMAND", "NAMECONFIRM", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
+						respComm, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "NAMECONFIRM", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
 						ProxyChan.ProxyChanToUpperNode <- respComm
 						go common.ReceiveFile("", connToUpperNode, FileDataMap, CannotRead, UploadFile, AgentStatus.AESKey, false, NODEID)
 					}
 				case "FILESIZE":
 					filesize, _ := strconv.ParseInt(command.Info, 10, 64)
 					common.File.FileSize = filesize
-					respComm, _ := common.ConstructPayload(0, "", "COMMAND", "FILESIZECONFIRM", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
+					respComm, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "FILESIZECONFIRM", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
 					ProxyChan.ProxyChanToUpperNode <- respComm
 					common.File.ReceiveFileSize <- true
 				case "FILESLICENUM":
 					common.File.TotalSilceNum, _ = strconv.Atoi(command.Info)
-					respComm, _ := common.ConstructPayload(0, "", "COMMAND", "FILESLICENUMCONFIRM", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
+					respComm, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "FILESLICENUMCONFIRM", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
 					ProxyChan.ProxyChanToUpperNode <- respComm
 					common.File.ReceiveFileSliceNum <- true
 				case "FILESLICENUMCONFIRM":
@@ -596,7 +589,7 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID uint32) {
 				case "FILESIZECONFIRM":
 					common.File.TotalConfirm <- true
 				case "DOWNLOADFILE":
-					go common.UploadFile("", command.Info, connToUpperNode, 0, GetName, AgentStatus.AESKey, NODEID, false)
+					go common.UploadFile("", command.Info, connToUpperNode, common.AdminId, GetName, AgentStatus.AESKey, NODEID, false)
 				case "NAMECONFIRM":
 					GetName <- true
 				case "CREATEFAIL":
@@ -624,15 +617,8 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID uint32) {
 					for _, listener := range CurrentPortReflectListener {
 						listener.Close()
 					}
-				case "ADMINOFFLINE":
-					fmt.Println("[*]Admin seems offline")
-					if AgentStatus.NotLastOne {
-						BroadCast("ADMINOFFLINE")
-					}
-					time.Sleep(2 * time.Second)
-					os.Exit(1)
 				case "RECONN":
-					respCommand, _ := common.ConstructPayload(0, "", "COMMAND", "RECONNID", " ", "", 0, NODEID, AgentStatus.AESKey, false)
+					respCommand, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "RECONNID", " ", "", 0, NODEID, AgentStatus.AESKey, false)
 					ProxyChan.ProxyChanToUpperNode <- respCommand
 					if AgentStatus.NotLastOne {
 						BroadCast("RECONN")
@@ -746,14 +732,14 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID uint32) {
 			if command.Route == "" && command.Command == "ID" {
 				AgentStatus.WaitForIdAllocate <- command.NodeId
 				node.NodeInfo.LowerNode.Lock()
-				tempconn := node.NodeInfo.LowerNode.Payload[0]
+				tempconn := node.NodeInfo.LowerNode.Payload[common.AdminId]
 				node.NodeInfo.LowerNode.Payload[command.NodeId] = tempconn
 				node.NodeInfo.LowerNode.Unlock()
 			}
 			routeid := ChangeRoute(command)
 			proxyData, _ := common.ConstructPayload(command.NodeId, command.Route, command.Type, command.Command, command.FileSliceNum, command.Info, command.Clientid, command.CurrentId, AgentStatus.AESKey, true)
 			passToLowerData := common.NewPassToLowerNodeData()
-			if routeid == 0 {
+			if routeid == "" {
 				passToLowerData.Route = command.NodeId
 			} else {
 				passToLowerData.Route = routeid

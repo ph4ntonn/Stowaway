@@ -32,12 +32,12 @@ var Command = &cli.Command{
 			log.Printf("[*]Starting admin node on port %s\n", c.String("listen"))
 		} else if c.String("connect") != "" && c.String("listen") != "" {
 			log.Println("[*]If you are using active connect mode, do not set -l option")
-			os.Exit(1)
+			os.Exit(0)
 		} else if c.String("connect") != "" && c.String("listen") == "" {
 			log.Println("[*]Trying to connect startnode actively...")
 		} else {
 			log.Println("[*]Please at least set the -l/--listen option")
-			os.Exit(1)
+			os.Exit(0)
 		}
 		NewAdmin(c)
 		return nil
