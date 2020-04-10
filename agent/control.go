@@ -56,6 +56,8 @@ func AdminOffline(reConn, monitor, listenPort string, passive bool) {
 		if AgentStatus.NotLastOne {
 			BroadCast("RECONN")
 		}
+	} else {
+		os.Exit(0)
 	}
 }
 
