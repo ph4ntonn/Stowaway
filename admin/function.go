@@ -153,12 +153,12 @@ func StopSocks() {
 /*-------------------------Ssh功能启动相关代码--------------------------*/
 // 发送ssh开启命令
 func StartSSHService(startNodeConn net.Conn, info []string, nodeid string, method string) {
-	var information string
-	information = fmt.Sprintf("%s:::%s:::%s:::%s", info[0], info[1], info[2], method)
+	information := fmt.Sprintf("%s:::%s:::%s:::%s", info[0], info[1], info[2], method)
 
 	Route.Lock()
 	sshCommand, _ := common.ConstructPayload(nodeid, Route.Route[nodeid], "COMMAND", "SSH", " ", information, 0, common.AdminId, AdminStatus.AESKey, false)
 	Route.Unlock()
+
 	startNodeConn.Write(sshCommand)
 }
 
@@ -174,12 +174,12 @@ func CheckKeyFile(file string) []byte {
 /*-------------------------SshTunnel功能启动相关代码--------------------------*/
 // 发送SshTunnel开启命令
 func SendSSHTunnel(startNodeConn net.Conn, info []string, nodeid string, method string) {
-	var information string
-	information = fmt.Sprintf("%s:::%s:::%s:::%s:::%s", info[0], info[1], info[2], info[3], method)
+	information := fmt.Sprintf("%s:::%s:::%s:::%s:::%s", info[0], info[1], info[2], info[3], method)
 
 	Route.Lock()
 	sshCommand, _ := common.ConstructPayload(nodeid, Route.Route[nodeid], "COMMAND", "SSHTUNNEL", " ", information, 0, common.AdminId, AdminStatus.AESKey, false)
 	Route.Unlock()
+
 	startNodeConn.Write(sshCommand)
 }
 
@@ -209,6 +209,7 @@ func HandleForwardPort(forwardconn net.Conn, target string, startNodeConn net.Co
 
 func StartPortForwardForClient(info []string, startNodeConn net.Conn, nodeid string, AESKey []byte) {
 	TestIfValid("FORWARDTEST", startNodeConn, info[2], nodeid)
+
 	if <-ForwardStatus.ForwardIsValid {
 	} else {
 		return
@@ -216,14 +217,17 @@ func StartPortForwardForClient(info []string, startNodeConn net.Conn, nodeid str
 
 	localPort := info[1]
 	forwardAddr := fmt.Sprintf("0.0.0.0:%s", localPort)
+
 	forwardListenerForClient, err := net.Listen("tcp", forwardAddr)
 	if err != nil {
 		log.Println("[*]Cannot forward this local port!")
 		return
 	}
+
 	ForwardStatus.Lock()
 	ForwardStatus.CurrentPortForwardListener.Payload[nodeid] = append(ForwardStatus.CurrentPortForwardListener.Payload[nodeid], forwardListenerForClient)
 	ForwardStatus.Unlock()
+
 	for {
 		conn, err := forwardListenerForClient.Accept()
 		if err != nil {
@@ -309,25 +313,27 @@ func HandleReflect(startNodeConn net.Conn, reflectDataChan chan string, num uint
 	}()
 
 	go func() {
-		serverbuffer := make([]byte, 10240)
+		serverBuffer := make([]byte, 10240)
 		for {
-			len, err := reflectConn.Read(serverbuffer)
+			len, err := reflectConn.Read(serverBuffer)
 			if err != nil {
-				respdata, _ := common.ConstructPayload(nodeid, route, "DATA", "REFLECTOFFLINE", " ", " ", num, common.AdminId, AdminStatus.AESKey, false)
-				startNodeConn.Write(respdata)
+				respData, _ := common.ConstructPayload(nodeid, route, "DATA", "REFLECTOFFLINE", " ", " ", num, common.AdminId, AdminStatus.AESKey, false)
+				startNodeConn.Write(respData)
 				return
 			}
-			respdata, _ := common.ConstructPayload(nodeid, route, "DATA", "REFLECTDATARESP", " ", string(serverbuffer[:len]), num, common.AdminId, AdminStatus.AESKey, false)
-			startNodeConn.Write(respdata)
+			respData, _ := common.ConstructPayload(nodeid, route, "DATA", "REFLECTDATARESP", " ", string(serverBuffer[:len]), num, common.AdminId, AdminStatus.AESKey, false)
+			startNodeConn.Write(respData)
 		}
 	}()
 }
 
 func StopReflect(startNodeConn net.Conn, nodeid string) {
 	fmt.Println("[*]Stop command has been sent")
+
 	Route.Lock()
 	command, _ := common.ConstructPayload(nodeid, Route.Route[nodeid], "COMMAND", "STOPREFLECT", " ", " ", 0, common.AdminId, AdminStatus.AESKey, false)
 	Route.Unlock()
+
 	startNodeConn.Write(command)
 }
 
@@ -337,6 +343,7 @@ func TestIfValid(commandtype string, startNodeConn net.Conn, target string, node
 	Route.Lock()
 	command, _ := common.ConstructPayload(nodeid, Route.Route[nodeid], "COMMAND", commandtype, " ", target, 0, common.AdminId, AdminStatus.AESKey, false)
 	Route.Unlock()
+
 	startNodeConn.Write(command)
 }
 

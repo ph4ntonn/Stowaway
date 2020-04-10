@@ -63,9 +63,9 @@ func StartNodeInit(monitor, listenPort, reConn string, passive bool) {
 	go node.StartNodeListen(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go PrepareForReOnlineNode()
 	for {
-		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
-		NewNodeMessage := <-node.NewNodeMessageChan
-		<-node.IsAdmin //正常模式启动的节点被连接一定是agent来连接，所以这里不需要判断是否是admin连接
+		controlConnForLowerNode := <-node.NodeStuff.ControlConnForLowerNodeChan
+		NewNodeMessage := <-node.NodeStuff.NewNodeMessageChan
+		<-node.NodeStuff.IsAdmin //正常模式启动的节点被连接一定是agent来连接，所以这里不需要判断是否是admin连接
 		ProxyChan.ProxyChanToUpperNode <- NewNodeMessage
 		if AgentStatus.NotLastOne == false {
 			ProxyChan.ProxyChanToLowerNode = make(chan *common.PassToLowerNodeData)
@@ -90,9 +90,9 @@ func SimpleNodeInit(monitor, listenPort string) {
 	go node.StartNodeListen(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go PrepareForReOnlineNode()
 	for {
-		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
-		NewNodeMessage := <-node.NewNodeMessageChan
-		<-node.IsAdmin //正常模式启动的节点被连接一定是agent来连接，所以这里不需要判断是否是admin连接
+		controlConnForLowerNode := <-node.NodeStuff.ControlConnForLowerNodeChan
+		NewNodeMessage := <-node.NodeStuff.NewNodeMessageChan
+		<-node.NodeStuff.IsAdmin //正常模式启动的节点被连接一定是agent来连接，所以这里不需要判断是否是admin连接
 		ProxyChan.ProxyChanToUpperNode <- NewNodeMessage
 		if AgentStatus.NotLastOne == false {
 			ProxyChan.ProxyChanToLowerNode = make(chan *common.PassToLowerNodeData)
@@ -113,9 +113,9 @@ func StartNodeReversemodeInit(monitor, listenPort string, passive bool) {
 	go node.StartNodeListen(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go PrepareForReOnlineNode()
 	for {
-		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
-		NewNodeMessage := <-node.NewNodeMessageChan
-		isAdmin := <-node.IsAdmin
+		controlConnForLowerNode := <-node.NodeStuff.ControlConnForLowerNodeChan
+		NewNodeMessage := <-node.NodeStuff.NewNodeMessageChan
+		isAdmin := <-node.NodeStuff.IsAdmin
 		if isAdmin {
 			ConnToAdmin = controlConnForLowerNode
 			AgentStatus.ReConnCome <- true
@@ -141,9 +141,9 @@ func SimpleNodeReversemodeInit(monitor, listenPort string) {
 	go node.StartNodeListen(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go PrepareForReOnlineNode()
 	for {
-		controlConnForLowerNode := <-node.ControlConnForLowerNodeChan
-		NewNodeMessage := <-node.NewNodeMessageChan
-		<-node.IsAdmin //被动模式启动的节点被连接一定是agent来连接，所以这里不需要判断是否是admin连接
+		controlConnForLowerNode := <-node.NodeStuff.ControlConnForLowerNodeChan
+		NewNodeMessage := <-node.NodeStuff.NewNodeMessageChan
+		<-node.NodeStuff.IsAdmin //被动模式启动的节点被连接一定是agent来连接，所以这里不需要判断是否是admin连接
 		ProxyChan.ProxyChanToUpperNode <- NewNodeMessage
 		if AgentStatus.NotLastOne == false {
 			ProxyChan.ProxyChanToLowerNode = make(chan *common.PassToLowerNodeData)
@@ -187,7 +187,6 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 	for {
 		AdminData, err := common.ExtractPayload(*connToAdmin, AgentStatus.AESKey, NODEID, false)
 		if err != nil {
-			fmt.Println(err)
 			AdminOffline(reConn, monitor, listenPort, passive)
 			continue
 		}
@@ -202,9 +201,8 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 						SocksDataChanMap.RUnlock()
 					} else {
 						SocksDataChanMap.RUnlock()
-						tempchan := make(chan string, 10)
 						SocksDataChanMap.Lock()
-						SocksDataChanMap.Payload[AdminData.Clientid] = tempchan
+						SocksDataChanMap.Payload[AdminData.Clientid] = make(chan string, 10)
 						go HanleClientSocksConn(SocksDataChanMap.Payload[AdminData.Clientid], SocksInfo.SocksUsername, SocksInfo.SocksPass, AdminData.Clientid, NODEID)
 						SocksDataChanMap.Payload[AdminData.Clientid] <- AdminData.Info
 						SocksDataChanMap.Unlock()
@@ -223,8 +221,7 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 						if _, ok := PortFowardMap.Payload[AdminData.Clientid]; ok {
 							PortFowardMap.Payload[AdminData.Clientid] <- AdminData.Info
 						} else {
-							tempchan := make(chan string, 10)
-							PortFowardMap.Payload[AdminData.Clientid] = tempchan
+							PortFowardMap.Payload[AdminData.Clientid] = make(chan string, 10)
 							go HandleForward(PortFowardMap.Payload[AdminData.Clientid], AdminData.Clientid)
 							PortFowardMap.Payload[AdminData.Clientid] <- AdminData.Info
 						}
@@ -273,9 +270,7 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 				case "FIN":
 					CurrentConn.Lock()
 					if _, ok := CurrentConn.Payload[AdminData.Clientid]; ok {
-						err := CurrentConn.Payload[AdminData.Clientid].Close()
-						if err != nil {
-						}
+						CurrentConn.Payload[AdminData.Clientid].Close()
 						delete(CurrentConn.Payload, AdminData.Clientid)
 					}
 					CurrentConn.Unlock()
@@ -375,14 +370,11 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 				case "REFLECTTEST":
 					go TestReflect(AdminData.Info)
 				case "REFLECTNUM":
-					fmt.Println("id is", AdminData.Clientid)
 					ReflectStatus.ReflectNum <- AdminData.Clientid
 				case "STOPREFLECT":
 					ReflectConnMap.Lock()
 					for key, conn := range ReflectConnMap.Payload {
-						err := conn.Close()
-						if err != nil {
-						}
+						conn.Close()
 						delete(ForwardConnMap.Payload, key)
 					}
 					ReflectConnMap.Unlock()
@@ -400,8 +392,7 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 			if AdminData.Route == "" && AdminData.Command == "ID" {
 				AgentStatus.WaitForIdAllocate <- AdminData.NodeId //将此节点序号递交，以便启动HandleConnFromLowerNode函数
 				node.NodeInfo.LowerNode.Lock()
-				tempconn := node.NodeInfo.LowerNode.Payload[common.AdminId]
-				node.NodeInfo.LowerNode.Payload[AdminData.NodeId] = tempconn
+				node.NodeInfo.LowerNode.Payload[AdminData.NodeId] = node.NodeInfo.LowerNode.Payload[common.AdminId]
 				node.NodeInfo.LowerNode.Unlock()
 			}
 			routeid := ChangeRoute(AdminData) //更改路由并返回下一个路由点
@@ -449,7 +440,8 @@ func HandleConnFromLowerNode(connForLowerNode net.Conn, currentid, lowerid strin
 		}
 		switch command.Type {
 		case "COMMAND":
-			if command.Command == "RECONNID" {
+			switch command.Command {
+			case "RECONNID":
 				if _, ok := node.NodeInfo.LowerNode.Payload[command.CurrentId]; ok {
 					info := fmt.Sprintf("%s:::%s", currentid, connForLowerNode.RemoteAddr().String())
 					proxyCommand, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", command.Command, " ", info, 0, command.CurrentId, AgentStatus.AESKey, false)
@@ -460,17 +452,14 @@ func HandleConnFromLowerNode(connForLowerNode net.Conn, currentid, lowerid strin
 					ProxyChan.ProxyChanToUpperNode <- proxyCommand
 					continue
 				}
-			}
-			if command.Command == "HEARTBEAT" {
+			case "HEARTBEAT":
 				hbcommpack, _ := common.ConstructPayload(command.CurrentId, "", "COMMAND", "KEEPALIVE", " ", " ", 0, currentid, AgentStatus.AESKey, false)
 				passToLowerData := common.NewPassToLowerNodeData()
 				passToLowerData.Data = hbcommpack
 				passToLowerData.Route = command.CurrentId
 				ProxyChan.ProxyChanToLowerNode <- passToLowerData
 				continue
-			}
-			if command.NodeId == currentid { //暂时只有admin需要处理
-			} else {
+			default:
 				proxyData, _ := common.ConstructPayload(command.NodeId, command.Route, command.Type, command.Command, command.FileSliceNum, command.Info, command.Clientid, command.CurrentId, AgentStatus.AESKey, true)
 				ProxyChan.ProxyChanToUpperNode <- proxyData
 			}
@@ -513,7 +502,7 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 	for {
 		command, err := common.ExtractPayload(*connToUpperNode, AgentStatus.AESKey, NODEID, false)
 		if err != nil {
-			node.Offline = true
+			node.NodeStuff.Offline = true
 			WaitingAdmin(NODEID) //上一级节点间网络连接断开后不掉线，等待上级节点重连回来
 			continue
 		}
@@ -574,8 +563,7 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 						go common.ReceiveFile("", connToUpperNode, FileDataMap, CannotRead, UploadFile, AgentStatus.AESKey, false, NODEID)
 					}
 				case "FILESIZE":
-					filesize, _ := strconv.ParseInt(command.Info, 10, 64)
-					common.File.FileSize = filesize
+					common.File.FileSize, _ = strconv.ParseInt(command.Info, 10, 64)
 					respComm, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "FILESIZECONFIRM", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
 					ProxyChan.ProxyChanToUpperNode <- respComm
 					common.File.ReceiveFileSize <- true
@@ -607,9 +595,7 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 				case "STOPREFLECT":
 					ReflectConnMap.Lock()
 					for key, conn := range ReflectConnMap.Payload {
-						err := conn.Close()
-						if err != nil {
-						}
+						conn.Close()
 						delete(ForwardConnMap.Payload, key)
 					}
 					ReflectConnMap.Unlock()
@@ -642,9 +628,8 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 						SocksDataChanMap.RUnlock()
 					} else {
 						SocksDataChanMap.RUnlock()
-						tempchan := make(chan string, 10)
 						SocksDataChanMap.Lock()
-						SocksDataChanMap.Payload[command.Clientid] = tempchan
+						SocksDataChanMap.Payload[command.Clientid] = make(chan string, 10)
 						go HanleClientSocksConn(SocksDataChanMap.Payload[command.Clientid], SocksInfo.SocksUsername, SocksInfo.SocksPass, command.Clientid, NODEID)
 						SocksDataChanMap.Payload[command.Clientid] <- command.Info
 						SocksDataChanMap.Unlock()
@@ -689,8 +674,7 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 						if _, ok := PortFowardMap.Payload[command.Clientid]; ok {
 							PortFowardMap.Payload[command.Clientid] <- command.Info
 						} else {
-							tempchan := make(chan string, 10)
-							PortFowardMap.Payload[command.Clientid] = tempchan
+							PortFowardMap.Payload[command.Clientid] = make(chan string, 10)
 							go HandleForward(PortFowardMap.Payload[command.Clientid], command.Clientid)
 							PortFowardMap.Payload[command.Clientid] <- command.Info
 						}
@@ -732,8 +716,7 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 			if command.Route == "" && command.Command == "ID" {
 				AgentStatus.WaitForIdAllocate <- command.NodeId
 				node.NodeInfo.LowerNode.Lock()
-				tempconn := node.NodeInfo.LowerNode.Payload[common.AdminId]
-				node.NodeInfo.LowerNode.Payload[command.NodeId] = tempconn
+				node.NodeInfo.LowerNode.Payload[command.NodeId] = node.NodeInfo.LowerNode.Payload[common.AdminId]
 				node.NodeInfo.LowerNode.Unlock()
 			}
 			routeid := ChangeRoute(command)

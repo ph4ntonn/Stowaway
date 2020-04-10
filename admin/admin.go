@@ -210,8 +210,7 @@ func HandleStartConn(startNodeConn net.Conn) {
 					if _, ok := PortReflectMap.Payload[nodeResp.Clientid]; ok {
 						PortReflectMap.Payload[nodeResp.Clientid] <- nodeResp.Info
 					} else {
-						tempchan := make(chan string, 10)
-						PortReflectMap.Payload[nodeResp.Clientid] = tempchan
+						PortReflectMap.Payload[nodeResp.Clientid] = make(chan string, 10)
 						go HandleReflect(startNodeConn, PortReflectMap.Payload[nodeResp.Clientid], nodeResp.Clientid, nodeResp.CurrentId)
 						PortReflectMap.Payload[nodeResp.Clientid] <- nodeResp.Info
 					}
@@ -224,9 +223,7 @@ func HandleStartConn(startNodeConn net.Conn) {
 			switch nodeResp.Command {
 			case "NEW":
 				nodeid := GenerateNodeId() //生成一个新的nodeid号进行分配
-				Nooode.Lock()
 				log.Println("[*]New node join! Node Id is ", len(CurrentClient))
-				Nooode.Unlock()
 				AdminStatus.NodesReadyToadd <- map[string]string{nodeid: nodeResp.Info} //将此节点加入detail命令所使用的NodeStatus.Nodes结构体
 				NodeStatus.Nodenote[nodeid] = ""                                        //初始的note置空
 				AddNodeToTopology(nodeid, nodeResp.CurrentId)                           //加入拓扑
@@ -294,15 +291,13 @@ func HandleStartConn(startNodeConn net.Conn) {
 					respComm, _ := common.ConstructPayload(CurrentNode, Route.Route[CurrentNode], "COMMAND", "CREATEFAIL", " ", " ", 0, common.AdminId, AdminStatus.AESKey, false)
 					startNodeConn.Write(respComm)
 				} else {
-					var tempchan *net.Conn = &startNodeConn
 					respComm, _ := common.ConstructPayload(CurrentNode, Route.Route[CurrentNode], "COMMAND", "NAMECONFIRM", " ", " ", 0, common.AdminId, AdminStatus.AESKey, false)
 					startNodeConn.Write(respComm)
-					go common.ReceiveFile(Route.Route[CurrentNode], tempchan, FileDataMap, AdminStatus.CannotRead, UploadFile, AdminStatus.AESKey, true, common.AdminId)
+					go common.ReceiveFile(Route.Route[CurrentNode], &startNodeConn, FileDataMap, AdminStatus.CannotRead, UploadFile, AdminStatus.AESKey, true, common.AdminId)
 				}
 				Route.Unlock()
 			case "FILESIZE":
-				filesize, _ := strconv.ParseInt(nodeResp.Info, 10, 64)
-				common.File.FileSize = filesize
+				common.File.FileSize, _ = strconv.ParseInt(nodeResp.Info, 10, 64)
 				Route.Lock()
 				respComm, _ := common.ConstructPayload(CurrentNode, Route.Route[CurrentNode], "COMMAND", "FILESIZECONFIRM", " ", " ", 0, common.AdminId, AdminStatus.AESKey, false)
 				Route.Unlock()

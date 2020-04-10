@@ -104,6 +104,43 @@ func NewNodeInfo() *NodeInfo {
 	return nni
 }
 
+/*-------------------------Node上下级信息代码--------------------------*/
+type NodeStuff struct {
+	ControlConnForLowerNodeChan chan net.Conn //下级节点控制信道
+	Adminconn                   chan net.Conn
+	ReOnlineConn                chan net.Conn
+	NewNodeMessageChan          chan []byte //新节点加入消息
+	IsAdmin                     chan bool   //分辨连接是属于admin还是agent
+	PrepareForReOnlineNodeReady chan bool
+	ReOnlineId                  chan string
+	Offline                     bool //判断当前状态是否是掉线状态
+}
+
+func NewNodeStuff() *NodeStuff {
+	nns := new(NodeStuff)
+	nns.ControlConnForLowerNodeChan = make(chan net.Conn, 1)
+	nns.Adminconn = make(chan net.Conn, 1)
+	nns.ReOnlineConn = make(chan net.Conn, 1)
+	nns.NewNodeMessageChan = make(chan []byte, 1)
+	nns.IsAdmin = make(chan bool, 1)
+	nns.PrepareForReOnlineNodeReady = make(chan bool, 1)
+	nns.ReOnlineId = make(chan string, 1)
+	nns.Offline = false
+	return nns
+}
+
+/*-------------------------Node上下级信息代码--------------------------*/
+type Node struct {
+	Uppernode string
+	Lowernode []string
+}
+
+func NewNode() *Node {
+	nn := new(Node)
+	nn.Lowernode = make([]string, 0)
+	return nn
+}
+
 /*-------------------------传递给下级节点结构代码--------------------------*/
 type PassToLowerNodeData struct {
 	Route string
@@ -210,6 +247,16 @@ type Uint32StrMap struct {
 	Payload map[uint32]string
 }
 
+type SafeNodeMap struct {
+	sync.RWMutex
+	AllNode map[string]*Node
+}
+
+type SafeRouteMap struct {
+	sync.RWMutex
+	Route map[string]string
+}
+
 /*-------------------------不加锁map相关代码--------------------------*/
 type StrListenerSliceMap struct {
 	Payload map[string][]net.Listener
@@ -260,6 +307,18 @@ func NewStrUint32SliceMap() *StrUint32SliceMap {
 	nuusm := new(StrUint32SliceMap)
 	nuusm.Payload = make(map[string][]uint32)
 	return nuusm
+}
+
+func NewSafeNodeMap() *SafeNodeMap {
+	nsnm := new(SafeNodeMap)
+	nsnm.AllNode = make(map[string]*Node)
+	return nsnm
+}
+
+func NewSafeRouteMap() *SafeRouteMap {
+	nsrm := new(SafeRouteMap)
+	nsrm.Route = make(map[string]string)
+	return nsrm
 }
 
 /*-------------------------chan状态判断相关代码--------------------------*/

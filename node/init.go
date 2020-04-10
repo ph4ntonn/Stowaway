@@ -9,26 +9,12 @@ import (
 )
 
 var (
-	NodeInfo                    *common.NodeInfo
-	ControlConnForLowerNodeChan chan net.Conn //下级节点控制信道
-	Adminconn                   chan net.Conn
-	ReOnlineConn                chan net.Conn
-	NewNodeMessageChan          chan []byte //新节点加入消息
-	IsAdmin                     chan bool   //分辨连接是属于admin还是agent
-	PrepareForReOnlineNodeReady chan bool
-	ReOnlineId                  chan string
-	Offline                     bool //判断当前状态是否是掉线状态
+	NodeInfo  *common.NodeInfo
+	NodeStuff *common.NodeStuff
 )
 
 func init() {
-	ControlConnForLowerNodeChan = make(chan net.Conn, 1)
-	Adminconn = make(chan net.Conn, 1)
-	ReOnlineConn = make(chan net.Conn, 1)
-	NewNodeMessageChan = make(chan []byte, 1)
-	IsAdmin = make(chan bool, 1)
-	PrepareForReOnlineNodeReady = make(chan bool, 1)
-	ReOnlineId = make(chan string, 1)
-	Offline = false
+	NodeStuff = common.NewNodeStuff()
 	NodeInfo = common.NewNodeInfo()
 }
 
@@ -90,13 +76,13 @@ func StartNodeListen(listenPort string, NodeId string, key []byte) {
 				respcommand, _ := common.ConstructPayload(NodeId, "", "COMMAND", "INIT", " ", listenPort, 0, common.AdminId, key, false)
 				ConnToLowerNode.Write(respcommand)
 			case "ID":
-				ControlConnForLowerNodeChan <- ConnToLowerNode
-				NewNodeMessageChan <- NewNodeMessage
-				IsAdmin <- true
+				NodeStuff.ControlConnForLowerNodeChan <- ConnToLowerNode
+				NodeStuff.NewNodeMessageChan <- NewNodeMessage
+				NodeStuff.IsAdmin <- true
 			case "REONLINESUC":
-				Adminconn <- ConnToLowerNode
+				NodeStuff.Adminconn <- ConnToLowerNode
 			case "STOWAWAYAGENT":
-				if !Offline {
+				if !NodeStuff.Offline {
 					NewNodeMessage, _ = common.ConstructPayload(NodeId, "", "COMMAND", "CONFIRM", " ", " ", 0, NodeId, key, false)
 					ConnToLowerNode.Write(NewNodeMessage)
 				} else {
@@ -107,9 +93,9 @@ func StartNodeListen(listenPort string, NodeId string, key []byte) {
 				//告知admin新节点消息
 				NewNodeMessage, _ = common.ConstructPayload(common.AdminId, "", "COMMAND", "NEW", " ", ConnToLowerNode.RemoteAddr().String(), 0, NodeId, key, false)
 				NodeInfo.LowerNode.Payload[common.AdminId] = ConnToLowerNode //将这个socket用0号位暂存，等待admin分配完id后再将其放入对应的位置
-				ControlConnForLowerNodeChan <- ConnToLowerNode
-				NewNodeMessageChan <- NewNodeMessage //被连接后不终止监听，继续等待可能的后续节点连接，以此组成树状结构
-				IsAdmin <- false
+				NodeStuff.ControlConnForLowerNodeChan <- ConnToLowerNode
+				NodeStuff.NewNodeMessageChan <- NewNodeMessage //被连接后不终止监听，继续等待可能的后续节点连接，以此组成树状结构
+				NodeStuff.IsAdmin <- false
 			}
 		}
 	}
@@ -117,8 +103,6 @@ func StartNodeListen(listenPort string, NodeId string, key []byte) {
 
 //connect命令代码
 func ConnectNextNode(target string, nodeid string, key []byte) bool {
-	var NewNodeMessage []byte
-
 	controlConnToNextNode, err := net.Dial("tcp", target)
 
 	if err != nil {
@@ -127,6 +111,7 @@ func ConnectNextNode(target string, nodeid string, key []byte) bool {
 
 	helloMess, _ := common.ConstructPayload(nodeid, "", "COMMAND", "STOWAWAYAGENT", " ", " ", 0, common.AdminId, key, false)
 	controlConnToNextNode.Write(helloMess)
+
 	for {
 		command, err := common.ExtractPayload(controlConnToNextNode, key, common.AdminId, true)
 		if err != nil {
@@ -136,18 +121,18 @@ func ConnectNextNode(target string, nodeid string, key []byte) bool {
 		switch command.Command {
 		case "INIT":
 			//类似与上面
-			NewNodeMessage, _ = common.ConstructPayload(common.AdminId, "", "COMMAND", "NEW", " ", controlConnToNextNode.RemoteAddr().String(), 0, nodeid, key, false)
+			NewNodeMessage, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "NEW", " ", controlConnToNextNode.RemoteAddr().String(), 0, nodeid, key, false)
 			NodeInfo.LowerNode.Payload[common.AdminId] = controlConnToNextNode
-			ControlConnForLowerNodeChan <- controlConnToNextNode
-			NewNodeMessageChan <- NewNodeMessage
-			IsAdmin <- false
+			NodeStuff.ControlConnForLowerNodeChan <- controlConnToNextNode
+			NodeStuff.NewNodeMessageChan <- NewNodeMessage
+			NodeStuff.IsAdmin <- false
 			return true
 		case "REONLINE":
 			//普通节点重连
-			ReOnlineId <- command.CurrentId
-			ReOnlineConn <- controlConnToNextNode
-			<-PrepareForReOnlineNodeReady
-			NewNodeMessage, _ = common.ConstructPayload(nodeid, "", "COMMAND", "REONLINESUC", " ", " ", 0, nodeid, key, false)
+			NodeStuff.ReOnlineId <- command.CurrentId
+			NodeStuff.ReOnlineConn <- controlConnToNextNode
+			<-NodeStuff.PrepareForReOnlineNodeReady
+			NewNodeMessage, _ := common.ConstructPayload(nodeid, "", "COMMAND", "REONLINESUC", " ", " ", 0, nodeid, key, false)
 			controlConnToNextNode.Write(NewNodeMessage)
 			return true
 		}
@@ -169,9 +154,12 @@ func AcceptConnFromUpperNode(listenPort string, nodeid string, key []byte) (net.
 			log.Println("[*]", err)
 			continue
 		}
+
 		common.ExtractPayload(Comingconn, key, common.AdminId, true)
+
 		respcommand, _ := common.ConstructPayload(nodeid, "", "COMMAND", "INIT", " ", listenPort, 0, common.AdminId, key, false)
 		Comingconn.Write(respcommand)
+
 		command, _ := common.ExtractPayload(Comingconn, key, common.AdminId, true) //等待分配id
 		if command.Command == "ID" {
 			nodeid = command.NodeId

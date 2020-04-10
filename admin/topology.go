@@ -5,51 +5,17 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"sync"
 
 	"github.com/gofrs/uuid"
 )
 
-type Node struct {
-	Uppernode string
-	Lowernode []string
-}
-
-type SafeNodeMap struct {
-	sync.RWMutex
-	AllNode map[string]*Node
-}
-
-type SafeRouteMap struct {
-	sync.RWMutex
-	Route map[string]string
-}
-
-var Nooode *SafeNodeMap
-var Route *SafeRouteMap
+var Nooode *common.SafeNodeMap
+var Route *common.SafeRouteMap
 var readyToDel []string
 
 func init() {
-	Nooode = NewSafeNodeMap()
-	Route = NewSafeRouteMap()
-}
-
-func NewNode() *Node {
-	nn := new(Node)
-	nn.Lowernode = make([]string, 0)
-	return nn
-}
-
-func NewSafeNodeMap() *SafeNodeMap {
-	nsnm := new(SafeNodeMap)
-	nsnm.AllNode = make(map[string]*Node)
-	return nsnm
-}
-
-func NewSafeRouteMap() *SafeRouteMap {
-	nsrm := new(SafeRouteMap)
-	nsrm.Route = make(map[string]string)
-	return nsrm
+	Nooode = common.NewSafeNodeMap()
+	Route = common.NewSafeRouteMap()
 }
 
 /*-------------------------节点拓扑相关代码--------------------------*/
@@ -59,7 +25,7 @@ func AddNodeToTopology(nodeid string, uppernodeid string) {
 	if _, ok := Nooode.AllNode[nodeid]; ok {
 		Nooode.AllNode[nodeid].Uppernode = uppernodeid
 	} else {
-		tempnode := NewNode()
+		tempnode := common.NewNode()
 		Nooode.AllNode[nodeid] = tempnode
 		Nooode.AllNode[nodeid].Uppernode = uppernodeid
 	}
@@ -78,8 +44,10 @@ func DelNodeFromTopology(nodeid string) {
 			index := common.FindSpecFromSlice(nodeid, Nooode.AllNode[uppernode].Lowernode)
 			Nooode.AllNode[uppernode].Lowernode = append(Nooode.AllNode[uppernode].Lowernode[:index], Nooode.AllNode[uppernode].Lowernode[index+1:]...)
 		}
+
 		Del(nodeid)
 		readyToDel = append(readyToDel, nodeid)
+
 		for _, value := range readyToDel {
 			delete(Nooode.AllNode, value)
 			delete(NodeStatus.Nodes, value)
@@ -131,7 +99,9 @@ func CalRoute() {
 func ShowDetail() {
 	if AdminStuff.StartNode != "0.0.0.0" {
 		var nodes []string
+
 		fmt.Printf("StartNode:[1] %s   note:%s\n", AdminStuff.StartNode, NodeStatus.Nodenote[common.StartNodeId])
+
 		for Nodeid, _ := range NodeStatus.Nodes {
 			nodes = append(nodes, Nodeid)
 		}
@@ -148,6 +118,7 @@ func ShowTree() {
 	if AdminStuff.StartNode != "0.0.0.0" {
 		var nodes []string
 		var nodesid []int
+
 		Nooode.Lock()
 		for key, _ := range Nooode.AllNode {
 			nodes = append(nodes, key)
@@ -156,7 +127,9 @@ func ShowTree() {
 			id := FindIntByNodeid(value)
 			nodesid = append(nodesid, id)
 		}
+
 		CheckRange(nodesid)
+
 		for _, value := range nodesid {
 			node := CurrentClient[value]
 			nodestatus := Nooode.AllNode[node]
@@ -200,11 +173,13 @@ func AddToChain() {
 
 //为node添加note
 func AddNote(data []string, nodeid string) bool {
-	info := ""
+	var info string
 	data = data[1:len(data)]
+
 	for _, i := range data {
 		info = info + " " + i
 	}
+
 	if _, ok := NodeStatus.Nodenote[nodeid]; ok {
 		NodeStatus.Nodenote[nodeid] = info
 		return true

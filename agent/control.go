@@ -69,20 +69,20 @@ func WaitingAdmin(nodeid string) {
 		BroadCast("CLEAR")
 	}
 	//等待重连
-	ConnToAdmin = <-node.Adminconn
+	ConnToAdmin = <-node.NodeStuff.Adminconn
 	respCommand, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "RECONNID", " ", "", 0, nodeid, AgentStatus.AESKey, false)
 	ProxyChan.ProxyChanToUpperNode <- respCommand
 	if AgentStatus.NotLastOne {
 		BroadCast("RECONN")
 	}
-	node.Offline = false
+	node.NodeStuff.Offline = false
 }
 
 //等待重连时，用来供上一个节点起HandleConnFromLowerNode函数
 func PrepareForReOnlineNode() {
 	for {
-		nodeid := <-node.ReOnlineId
-		conn := <-node.ReOnlineConn
+		nodeid := <-node.NodeStuff.ReOnlineId
+		conn := <-node.NodeStuff.ReOnlineConn
 		//如果此节点没有启动过HandleConnToLowerNode函数，启动之
 		if AgentStatus.NotLastOne == false {
 			ProxyChan.ProxyChanToLowerNode = make(chan *common.PassToLowerNodeData)
@@ -94,7 +94,7 @@ func PrepareForReOnlineNode() {
 		node.NodeInfo.LowerNode.Payload[nodeid] = conn
 		node.NodeInfo.LowerNode.Unlock()
 		go HandleConnFromLowerNode(conn, AgentStatus.Nodeid, nodeid)
-		node.PrepareForReOnlineNodeReady <- true
+		node.NodeStuff.PrepareForReOnlineNodeReady <- true
 	}
 }
 

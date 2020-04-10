@@ -63,17 +63,17 @@ func SshTunnelNextNode(info string, nodeid string) error {
 		case "INIT":
 			NewNodeMessage, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "NEW", " ", nodeConn.RemoteAddr().String(), 0, nodeid, AgentStatus.AESKey, false)
 			node.NodeInfo.LowerNode.Payload[common.AdminId] = nodeConn
-			node.ControlConnForLowerNodeChan <- nodeConn
-			node.NewNodeMessageChan <- NewNodeMessage
-			node.IsAdmin <- false
+			node.NodeStuff.ControlConnForLowerNodeChan <- nodeConn
+			node.NodeStuff.NewNodeMessageChan <- NewNodeMessage
+			node.NodeStuff.IsAdmin <- false
 			sshMess, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "SUCCESS", 0, nodeid, AgentStatus.AESKey, false)
 			ProxyChan.ProxyChanToUpperNode <- sshMess
 			return nil
 		case "REONLINE":
 			//普通节点重连
-			node.ReOnlineId <- command.CurrentId
-			node.ReOnlineConn <- nodeConn
-			<-node.PrepareForReOnlineNodeReady
+			node.NodeStuff.ReOnlineId <- command.CurrentId
+			node.NodeStuff.ReOnlineConn <- nodeConn
+			<-node.NodeStuff.PrepareForReOnlineNodeReady
 			NewNodeMessage, _ := common.ConstructPayload(nodeid, "", "COMMAND", "REONLINESUC", " ", " ", 0, nodeid, AgentStatus.AESKey, false)
 			nodeConn.Write(NewNodeMessage)
 			sshMess, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "SUCCESS", 0, nodeid, AgentStatus.AESKey, false)

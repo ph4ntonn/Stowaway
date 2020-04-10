@@ -15,6 +15,7 @@ var (
 	Sshhost *ssh.Session
 )
 
+//启动ssh
 func StartSSH(info string, nodeid string) error {
 	var authpayload ssh.AuthMethod
 	spiltedinfo := strings.Split(info, ":::")
