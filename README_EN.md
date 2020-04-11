@@ -30,7 +30,7 @@ If you don't want to compile the project by yourself, you can check the [release
 
 Example 1：Admin node waiting the connection from startnode
 ```
-Admin node：./stowaway admin -l 9999 -s 123
+Admin node：./stowaway_admin -l 9999 -s 123
   
   Meaning：
   
@@ -42,7 +42,7 @@ Admin node：./stowaway admin -l 9999 -s 123
   
   Be aware! -s option's value must be as same as the agents' 
  
-startnode： ./stowaway agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 --reconnect 5
+startnode： ./stowaway_agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 --reconnect 5
 
   Meaning：
   
@@ -61,9 +61,9 @@ startnode： ./stowaway agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 --re
 
 And now, if you want to start the following simple node passively(means waiting for the connection from upper node instead of connecting to upper node actively)
 
-Then,the command of startnode should be changed to : ./stowaway agent -m 127.0.0.1:9999 --startnode -s 123 --reconnect 5
+Then,the command of startnode should be changed to : ./stowaway_agent -m 127.0.0.1:9999 --startnode -s 123 --reconnect 5
   
-The following simple node: ./stowaway agent -l 10001 -s 123 -r
+The following simple node: ./stowaway_agent -l 10001 -s 123 -r
 
   -r It means you want to start the node in passive mode(For instance: you can add node 2 into the net via node 1 actively connect to node 2, instead of node 1 just waiting for the connection from node 2 )
 
@@ -71,22 +71,22 @@ And now, you can use admin,type in 'use 1' ---> 'connect 127.0.0.1:10001' to add
 
 But,if you want to start the following simple node actively(means connecting to upper node actively instead of waiting for the connection from upper node)
 
-Then, the command of startnode will still : ./stowaway agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 --reconnect 5  
+Then, the command of startnode will still : ./stowaway_agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 --reconnect 5  
 
-The following simple node: ./stowaway agent -m 127.0.0.1:10000 -l 10001 -s 123
+The following simple node: ./stowaway_agent -m 127.0.0.1:10000 -l 10001 -s 123
 
 And now ,you can add this simple node into network
 ```
 
 Example 2： Admin node connecting to startnode actively
 ```
-Admin node: ./stowaway admin -s 123 -c 127.0.0.1:9999
+Admin node: ./stowaway_admin -s 123 -c 127.0.0.1:9999
 
   Meaning:
 
   -c  It means startnode's address
     
-startnode: ./stowaway agent -l 9999 -s 123 --startnode -r
+startnode: ./stowaway_agent -l 9999 -s 123 --startnode -r
 
   Meaning:
 
@@ -96,7 +96,7 @@ startnode: ./stowaway agent -l 9999 -s 123 --startnode -r
 
 The following simple node can be started as Example 1's description
 
-The next time you want to reconnect to the startnode and rebuild the whole network,just start the admin node like : ./stowaway admin -s 123 -c 127.0.0.1:9999,and then whole network will be rebuilt
+The next time you want to reconnect to the startnode and rebuild the whole network,just start the admin node like : ./stowaway_admin -s 123 -c 127.0.0.1:9999,and then whole network will be rebuilt
 
 ```
 

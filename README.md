@@ -33,7 +33,7 @@ Stowaway分为admin端和agent端两种形式
 第一种情况： Admin端监听，等待startnode连接
 
 ```
-Admin端：./stowaway admin -l 9999 -s 123
+Admin端：./stowaway_admin -l 9999 -s 123
   
   命令解析：
   
@@ -43,7 +43,7 @@ Admin端：./stowaway admin -l 9999 -s 123
 
   -s 参数代表节点通信加密密钥(admin端与agent端必须一致!)
  
-startnode端： ./stowaway agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 --reconnect 5
+startnode端： ./stowaway_agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 --reconnect 5
   
   命令解析：
   
@@ -63,9 +63,9 @@ startnode端： ./stowaway agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 -
 
 此时若后续的节点希望以passive模式启动（即本节点等待上一级节点的主动连接，而不是主动连接上一节点）
 
-那么，上述startnode命令可改为 ./stowaway agent -m 127.0.0.1:9999 --startnode -s 123 --reconnect 5
+那么，上述startnode命令可改为 ./stowaway_agent -m 127.0.0.1:9999 --startnode -s 123 --reconnect 5
 
-后续节点启动命令为：./stowaway agent -l 10001 -s 123 -r
+后续节点启动命令为：./stowaway_agent -l 10001 -s 123 -r
 
   -r 代表以passive模式启动（即本节点等待上一级节点的主动连接，而不是主动连接上一节点，若正向连接可以去除此选项）
 
@@ -73,9 +73,9 @@ startnode端： ./stowaway agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 -
 
 若后续节点希望以active模式启动（即本节点主动连接上一级节点）
 
-那么，startnode启动命令仍为：./stowaway agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 --reconnect 5 
+那么，startnode启动命令仍为：./stowaway_agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 --reconnect 5 
 
-后续节点启动命令为：./stowaway agent -m 127.0.0.1:10000 -l 10001 -s 123
+后续节点启动命令为：./stowaway_agent -m 127.0.0.1:10000 -l 10001 -s 123
 
 此时即可将后续节点加入网络
  
@@ -84,7 +84,7 @@ startnode端： ./stowaway agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 -
 第二种情况：Admin端主动连接startnode端
 
 ```
-Admin端: ./stowaway admin -s 123 -c 127.0.0.1:9999
+Admin端: ./stowaway_admin -s 123 -c 127.0.0.1:9999
   
   命令解析：
   
@@ -94,7 +94,7 @@ Admin端: ./stowaway admin -s 123 -c 127.0.0.1:9999
 
   -c 代表startnode所在的地址
 
-startnode端: ./stowaway agent -l 9999 -s 123 --startnode -r
+startnode端: ./stowaway_agent -l 9999 -s 123 --startnode -r
 
   命令解析：
 
@@ -106,7 +106,7 @@ startnode端: ./stowaway agent -l 9999 -s 123 --startnode -r
 
 后续普通节点同第一种情况中的普通节点启动方法一致
 
-下一次想要重连时，再次执行./stowaway admin -s 123 -c 127.0.0.1:9999，即可重建网络
+下一次想要重连时，再次执行./stowaway_admin -s 123 -c 127.0.0.1:9999，即可重建网络
 
 ```
 
