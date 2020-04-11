@@ -39,6 +39,18 @@ var Flags = []cli.Flag{
 		Aliases: []string{"m"},
 		Usage:   "monitor node",
 	},
+	&cli.StringFlag{
+		Name:  "rehost",
+		Usage: "specify reuse host",
+	},
+	&cli.StringFlag{
+		Name:  "report",
+		Usage: "specify reuse port",
+	},
+	&cli.BoolFlag{
+		Name:  "rhostreuse",
+		Usage: "remote host reusing port",
+	},
 }
 
 func Action(c *cli.Context) error {
@@ -55,6 +67,14 @@ func Action(c *cli.Context) error {
 	} else if c.String("reconnect") != "" && !c.Bool("startnode") {
 		log.Println("Do not set the --reconnect option on simple node")
 		os.Exit(0)
+	} else if (c.String("rehost") == "" && c.String("report") != "") || (c.String("rehost") != "" && c.String("report") == "") {
+		log.Println("Need rehost/report option")
+		os.Exit(0)
+	} else if (c.String("report") != "" || c.String("rehost") != "") && (c.String("listen") != "" || c.String("monitor") != "") {
+		log.Println("Choose one from (--report,--rehost) and -l and -m")
+		os.Exit(0)
+	} else if (c.String("report") != "" && c.String("rehost") != "") && (c.String("listen") == "" && c.String("monitor") == "") {
+		log.Printf("Starting agent node reusing port %s \n", c.String("report"))
 	} else {
 		log.Println("Bad format! See readme!")
 		os.Exit(0)

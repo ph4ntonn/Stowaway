@@ -178,8 +178,20 @@ func HandleNodeCommand(startNodeConn net.Conn, nodeID string) {
 			}
 		case "connect":
 			if len(AdminCommand) == 2 {
-				respCommand, _ := common.ConstructPayload(nodeID, route, "COMMAND", "CONNECT", " ", AdminCommand[1], 0, common.AdminId, AdminStatus.AESKey, false)
-				startNodeConn.Write(respCommand)
+				inputReader := bufio.NewReader(os.Stdin)
+				for {
+					fmt.Print("[*]Is the node you want to connect reusing the port?(1.Yes/2.No):") //判断reuse或者不是，调用不同的函数
+					input, _ := inputReader.ReadString('\n')
+					choice := CheckInput(input)
+					if choice != "1" && choice != "2" {
+						fmt.Println("[*]You should type in 1 or 2!")
+						continue
+					}
+					data := AdminCommand[1] + ":::" + choice
+					respCommand, _ := common.ConstructPayload(nodeID, route, "COMMAND", "CONNECT", " ", data, 0, common.AdminId, AdminStatus.AESKey, false)
+					startNodeConn.Write(respCommand)
+					break
+				}
 			} else {
 				fmt.Println("Bad format! Should be connect [ip:port]")
 			}

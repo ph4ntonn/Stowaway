@@ -18,6 +18,7 @@ PS: Thanks for everyone's star, i'm just an amateur, and the code still need be 
 - Remote interactive shell
 - Upload/download functions
 - Port Mapping(local to remote/remote to local)
+- Port Reuse
 - Network traffic encryption with AES-256(CBC mode)
 
 
@@ -34,8 +35,6 @@ Admin node：./stowaway_admin -l 9999 -s 123
   
   Meaning：
   
-  admin  It means Stowaway is started as admin mode
-  
   -l     It means Stowaway is listening on port 9999 and waiting for incoming connection
 
   -s     It means Stowaway has used 123 as the encrypt key during the communication
@@ -45,8 +44,6 @@ Admin node：./stowaway_admin -l 9999 -s 123
 startnode： ./stowaway_agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 --reconnect 5
 
   Meaning：
-  
-  agent It means Stowaway is started as agent mode 
   
   -m    It means Stowaway's monitor node's address (In this case,it's the node we started above)
   
@@ -98,6 +95,38 @@ The following simple node can be started as Example 1's description
 
 The next time you want to reconnect to the startnode and rebuild the whole network,just start the admin node like : ./stowaway_admin -s 123 -c 127.0.0.1:9999,and then whole network will be rebuilt
 
+```
+
+```
+Port Reuse:
+
+  Now Stowaway provide the port reuse function based on SO_REUSEPORT和SO_REUSEADDR features
+
+  In Linux environment, it can reuse some port(it depends,so you can just try and know if it works)
+
+  In Windows environment,it cannot reuse service port like IIS,RDP,can reuse Mysql,Apache and so on
+
+  Be careful,don't use this function in nginx,cos it may cause the nginx service broken
+
+For example:(startnode is reusing port 80)
+
+Admin: ./stowaway_admin -c 192.168.0.105:80 -s 123 --rhostreuse
+
+  -c/-s same as i mentioned before
+
+  --rhostreuse it means the node that admin want to connect is under port reusing mode(if the node is working normally, just remove the option)
+
+Startnode: ./stowaway_agent -s 123 --startnode --report 80 --rehost 192.168.0.105
+
+  -s/--startnode the same as i mentioned before 
+
+  --report it means the port you want ti reuse
+
+  --rehost it means the ip address you want to listen on(DO NOT set 0.0.0.0,it will make the reuse funtion lose its effect)
+
+Now if there is a simple node followed by startnode and want to connect to startnode,the command can be like this: ./stowaway_agent -s 123 -m 192.168.0.105:80 --rhostreuse
+
+All options's meanings are the same as i mentioned before
 ```
 
 **Some points you should know:**
@@ -229,13 +258,13 @@ For more detail, just type help to get further informations
 - [x] Port mapping
 - [ ] Clean codes, optimize logic
 - [x] Add reverse connect mode
-- [ ] Support port reuse(seems not very essential,so maybe add it later)
+- [x] Support port reuse
 
 ### Attention
 
 - This porject is coding just for fun , the logic structure and code structure are not strict enough, please don't be so serious about it
 - This program will be slightly bigger than usual after compiled, but actually through my test , it just 1 MB more than usual,Maybe slightly big on IOT platform(1MB maybe not a big deal lol),so if you got any problem when you are using it on IOT platform,just tell me, and i will try my best to decrease the size.
-- Admin node MUST be online when new node is added into the network
+- Admin node MUST be online when new node is being added into the network
 - If you want to compile this project from source code,you can run build_admin.sh/build_agent.sh（Be Mentioned!!!!!!!!!! The default compile result is AGENT mode and please run build_agent.sh. But if you want to compile ADMIN mode,please see the main.go file and FOLLOW THE INSTRUCTION, and next you can run build_admin.sh to get admin mode program.)
 
 ### Thanks

@@ -21,6 +21,7 @@ PS:谢谢大家的star，这个程序还不成熟规范，写来仅为学习，�
 - 远程交互式shell
 - 上传及下载文件
 - 端口本地/远程映射
+- 端口复用
 - 节点间流量以AES-256(CBC模式)进行加密
 
 ## Usage
@@ -37,8 +38,6 @@ Admin端：./stowaway_admin -l 9999 -s 123
   
   命令解析：
   
-  admin代表以admin模式启动
-  
   -l 参数代表监听端口
 
   -s 参数代表节点通信加密密钥(admin端与agent端必须一致!)
@@ -46,8 +45,6 @@ Admin端：./stowaway_admin -l 9999 -s 123
 startnode端： ./stowaway_agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 --reconnect 5
   
   命令解析：
-  
-  agent代表以agent端模式启动
   
   -m 代表上一级节点的地址
   
@@ -88,8 +85,6 @@ Admin端: ./stowaway_admin -s 123 -c 127.0.0.1:9999
   
   命令解析：
   
-  admin代表以admin模式启动
-  
   -s 同上
 
   -c 代表startnode所在的地址
@@ -97,8 +92,6 @@ Admin端: ./stowaway_admin -s 123 -c 127.0.0.1:9999
 startnode端: ./stowaway_agent -l 9999 -s 123 --startnode -r
 
   命令解析：
-
-  agent代表以agent模式启动
 
   -l，-s ，--startnode同上
 
@@ -108,6 +101,42 @@ startnode端: ./stowaway_agent -l 9999 -s 123 --startnode -r
 
 下一次想要重连时，再次执行./stowaway_admin -s 123 -c 127.0.0.1:9999，即可重建网络
 
+```
+
+```
+端口复用机制：
+
+  当前Stowaway提供基于SO_REUSEPORT和SO_REUSEADDR特性的端口复用功能
+
+  在linux下可以部分的功能端口
+
+  在windows下不可复用iis，rdp端口
+
+  nginx在默认状态下不可复用，即使打开设置，也有几率导致原有服务崩溃
+
+示例：(若startnode端采用端口复用机制复用80端口)
+
+  Admin端：./stowaway_admin -c 192.168.0.105:80 -s 123 --rhostreuse
+
+    命令解析：
+
+    -c/-s 同上，不再赘述
+
+    --rhostreuse 此选项被设置时，代表需要连接的节点正在端口复用的模式下运行(如果正常运行，则不需要设置此选项)
+
+  此时startnode端： ./stowaway_agent -s 123 --startnode --report 80 --rehost 192.168.0.105
+
+    命令解析：
+
+    -s/--startnode同上
+
+    --report 代表需要被复用的端口
+
+    --rehost 代表复用端口时需要监听的本机ip（不可用0.0.0.0）
+
+  此时如果后续有节点想要连接startnode: ./stowaway_agent -s 123 -m 192.168.0.105:80 --rhostreuse
+
+  命令解析如admin，不再赘述
 ```
 
 **几个注意点：**
@@ -235,13 +264,13 @@ PS: 在ssh模式下，你可以用pwd来判断自己所处的文件夹（好吧�
 - [ ] 清理代码，优化逻辑
 - [x] 节点反向连接
 - [x] 端口映射
-- [ ] 支持端口复用(试验后觉得比较鸡肋，暂时先不加进去)
+- [x] 支持端口复用(感觉虽然效果不是特别好，但聊胜于无)
 
 ### 注意事项
 
 - 此程序仅是闲暇时开发学习，结构及代码结构不够严谨，功能可能存在bug，请多多谅解
 - 本程序编译出来稍微有一些大，但是实测实际占有内存空间并不会很大，大概会比尽量压缩文件大小的情况下多出0.5-1m左右（IOT平台应该也不差这0.5-1m。。，当然有时间我就把程序瘦瘦身 XD）
-- 当有新节点连入时，admin需是在线的状态
+- admin不在线时，新节点将不允许加入
 - 如需从源代码编译本项目，请运行build_admin.sh/build_agent.sh文件来编译对应类型的Stowaway(注意！！！！！！默认编译的是agent模式，此时请运行build_agent.sh,如需编译admin，请查看main.go文件中的提示，按照提示进行操作后，运行build_admin.sh文件)
 
 ### 致谢

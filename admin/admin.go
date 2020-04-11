@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"Stowaway/common"
+	"Stowaway/node"
 
 	"github.com/urfave/cli/v2"
 )
@@ -32,6 +33,7 @@ func NewAdmin(c *cli.Context) {
 	AdminStatus.AESKey = []byte(c.String("secret"))
 	listenPort := c.String("listen")
 	startnodeaddr := c.String("connect")
+	rhostreuse := c.Bool("rhostreuse")
 
 	Banner()
 
@@ -43,37 +45,48 @@ func NewAdmin(c *cli.Context) {
 	if startnodeaddr == "" {
 		go StartListen(listenPort)
 	} else {
-		ConnectToStartNode(startnodeaddr)
+		ConnectToStartNode(startnodeaddr, rhostreuse)
 	}
 	go AddToChain()
 	CliStatus = &InitStatus
 	Controlpanel()
 }
 
-func ConnectToStartNode(startnodeaddr string) {
-	startNodeConn, err := net.Dial("tcp", startnodeaddr)
-	if err != nil {
-		log.Println("[*]Connection refused!")
-		os.Exit(0)
-	}
-	helloMess, _ := common.ConstructPayload(common.StartNodeId, "", "COMMAND", "STOWAWAYADMIN", " ", " ", 0, common.AdminId, AdminStatus.AESKey, false)
-	startNodeConn.Write(helloMess)
+func ConnectToStartNode(startnodeaddr string, rhostreuse bool) {
 	for {
-		command, _ := common.ExtractPayload(startNodeConn, AdminStatus.AESKey, common.AdminId, true)
-		switch command.Command {
-		case "INIT":
-			respCommand, _ := common.ConstructPayload(common.StartNodeId, "", "COMMAND", "ID", " ", " ", 0, common.AdminId, AdminStatus.AESKey, false)
-			startNodeConn.Write(respCommand)
-			AdminStuff.StartNode = strings.Split(startNodeConn.RemoteAddr().String(), ":")[0]
-			log.Printf("[*]Connect to startnode %s successfully!\n", startNodeConn.RemoteAddr().String())
-			NodeStatus.Nodenote[common.StartNodeId] = ""
-			CurrentClient = append(CurrentClient, common.StartNodeId) //记录startnode加入网络
-			AddNodeToTopology(common.StartNodeId, common.AdminId)
-			CalRoute()
-			go HandleStartConn(startNodeConn)
-			go HandleCommandToControlConn(startNodeConn)
-			go MonitorCtrlC(startNodeConn)
-			return
+		startNodeConn, err := net.Dial("tcp", startnodeaddr)
+		if err != nil {
+			log.Println("[*]Connection refused!")
+			os.Exit(0)
+		}
+
+		if rhostreuse { //如果startnode在reuse状态下
+			err = node.IfValid(startNodeConn)
+			if err != nil {
+				startNodeConn.Close()
+				continue
+			}
+		}
+
+		helloMess, _ := common.ConstructPayload(common.StartNodeId, "", "COMMAND", "STOWAWAYADMIN", " ", " ", 0, common.AdminId, AdminStatus.AESKey, false)
+		startNodeConn.Write(helloMess)
+		for {
+			command, _ := common.ExtractPayload(startNodeConn, AdminStatus.AESKey, common.AdminId, true)
+			switch command.Command {
+			case "INIT":
+				respCommand, _ := common.ConstructPayload(common.StartNodeId, "", "COMMAND", "ID", " ", " ", 0, common.AdminId, AdminStatus.AESKey, false)
+				startNodeConn.Write(respCommand)
+				AdminStuff.StartNode = strings.Split(startNodeConn.RemoteAddr().String(), ":")[0]
+				log.Printf("[*]Connect to startnode %s successfully!\n", startNodeConn.RemoteAddr().String())
+				NodeStatus.Nodenote[common.StartNodeId] = ""
+				CurrentClient = append(CurrentClient, common.StartNodeId) //记录startnode加入网络
+				AddNodeToTopology(common.StartNodeId, common.AdminId)
+				CalRoute()
+				go HandleStartConn(startNodeConn)
+				go HandleCommandToControlConn(startNodeConn)
+				go MonitorCtrlC(startNodeConn)
+				return
+			}
 		}
 	}
 }

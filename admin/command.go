@@ -24,6 +24,10 @@ var Flags = []cli.Flag{
 		Aliases: []string{"l"},
 		Usage:   "listen port",
 	},
+	&cli.BoolFlag{
+		Name:  "rhostreuse",
+		Usage: "remote host reusing port",
+	},
 }
 
 func Action(c *cli.Context) error {
