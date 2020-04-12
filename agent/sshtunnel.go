@@ -47,6 +47,7 @@ func SshTunnelNextNode(info string, nodeid string) error {
 	if err != nil {
 		sshMess, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
 		ProxyChan.ProxyChanToUpperNode <- sshMess
+		nodeConn.Close()
 		return err
 	}
 
@@ -54,6 +55,7 @@ func SshTunnelNextNode(info string, nodeid string) error {
 	if err != nil {
 		sshMess, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
 		ProxyChan.ProxyChanToUpperNode <- sshMess
+		nodeConn.Close()
 		return err
 	}
 
@@ -64,6 +66,7 @@ func SshTunnelNextNode(info string, nodeid string) error {
 		if err != nil {
 			sshMess, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
 			ProxyChan.ProxyChanToUpperNode <- sshMess
+			nodeConn.Close()
 			return err
 		}
 		switch command.Command {
