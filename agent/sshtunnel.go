@@ -50,6 +50,13 @@ func SshTunnelNextNode(info string, nodeid string) error {
 		return err
 	}
 
+	err = node.SendSecret(nodeConn, AgentStatus.AESKey)
+	if err != nil {
+		sshMess, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
+		ProxyChan.ProxyChanToUpperNode <- sshMess
+		return err
+	}
+
 	helloMess, _ := common.ConstructPayload(nodeid, "", "COMMAND", "STOWAWAYAGENT", " ", " ", 0, common.AdminId, AgentStatus.AESKey, false)
 	nodeConn.Write(helloMess)
 	for {
