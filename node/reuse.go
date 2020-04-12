@@ -215,7 +215,7 @@ func CheckValid(conn net.Conn, reuse bool, report string) error {
 	var NOT_VALID = errors.New("Not valid")
 	defer conn.SetReadDeadline(time.Time{})
 	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
-	message := make([]byte, 12)
+	message := make([]byte, 8)
 	count, err := io.ReadFull(conn, message)
 
 	if timeouterr, ok := err.(net.Error); ok && timeouterr.Timeout() {

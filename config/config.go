@@ -2,7 +2,7 @@ package config
 
 const VERSION = "1.6" //版本号
 
-const VALIDMESSAGE = "STOWAWAYCOME"  //reuse模式下发送的特征数据
+const VALIDMESSAGE = "STOWAWAY"      //reuse模式下发送的特征数据
 const READYMESSAGE = "STOWAWAYREADY" //同上
 
 const INFO_LEN = 64         //数据包实际承载信息长度
