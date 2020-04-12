@@ -452,6 +452,16 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 					for _, listener := range CurrentPortReflectListener {
 						listener.Close()
 					}
+				case "LISTEN":
+					err := TestListen(AdminData.Info)
+					if err != nil {
+						respComm, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "LISTENRESP", " ", "FAILED", 0, NODEID, AgentStatus.AESKey, false)
+						ProxyChan.ProxyChanToUpperNode <- respComm
+					} else {
+						respComm, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "LISTENRESP", " ", "SUCCESS", 0, NODEID, AgentStatus.AESKey, false)
+						ProxyChan.ProxyChanToUpperNode <- respComm
+						go node.StartNodeListen(AdminData.Info, NODEID, AgentStatus.AESKey)
+					}
 				case "KEEPALIVE":
 				default:
 					continue
@@ -684,6 +694,16 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 					SocksDataChanMap = common.NewUint32ChanStrMap()
 					if AgentStatus.NotLastOne {
 						BroadCast("CLEAR")
+					}
+				case "LISTEN":
+					err := TestListen(command.Info)
+					if err != nil {
+						respComm, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "LISTENRESP", " ", "FAILED", 0, NODEID, AgentStatus.AESKey, false)
+						ProxyChan.ProxyChanToUpperNode <- respComm
+					} else {
+						respComm, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "LISTENRESP", " ", "SUCCESS", 0, NODEID, AgentStatus.AESKey, false)
+						ProxyChan.ProxyChanToUpperNode <- respComm
+						go node.StartNodeListen(command.Info, NODEID, AgentStatus.AESKey)
 					}
 				case "KEEPALIVE":
 				default:

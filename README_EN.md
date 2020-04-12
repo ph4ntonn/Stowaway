@@ -64,6 +64,8 @@ The following simple node: ./stowaway_agent -l 10001 -s 123 -r
 
   -r It means you want to start the node in passive mode(For instance: you can add node 2 into the net via node 1 actively connect to node 2, instead of node 1 just waiting for the connection from node 2 )
 
+  -l    It means Stowaway is listening on port 10000 and waiting for incoming connection (optional)
+
 And now, you can use admin,type in 'use 1' ---> 'connect 127.0.0.1:10001' to add this simple node into network
 
 But,if you want to start the following simple node actively(means connecting to upper node actively instead of waiting for the connection from upper node)
@@ -247,6 +249,9 @@ If you want to shutdown the reflect service:
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/shutdownreflect.png)
 
+If you want to open a new listener on node 3 for accepting the following nodes connection,you can use "listen" command(PS:If you use the -l option when you start the node 3,then the listener created by -l option will not be killed because of "listen" command,you can also use it too)
+
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/listen.png)
 ```
 For more detail, just type help to get further informations
 ```

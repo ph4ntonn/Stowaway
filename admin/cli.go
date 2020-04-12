@@ -32,6 +32,7 @@ func ShowMainHelp() {
 func ShowNodeHelp() {
 	fmt.Println(`
 	help                                     		Show Help information.
+	listen     [port]                      			Start port listening on selected node
 	addnote    [string]                      		Add note for this node
 	delnote                                  		Delete note of this node
 	ssh        [ip:port] [username] [pass]   		Start SSH through selected node.

@@ -2,10 +2,13 @@ package node
 
 import (
 	"Stowaway/common"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
+	"time"
 )
 
 var (
@@ -25,6 +28,13 @@ func StartNodeConn(monitor string, listenPort string, nodeID string, key []byte)
 		log.Println("[*]Connection refused!")
 		return controlConnToUpperNode, "", err
 	}
+
+	err = SendSecret(controlConnToUpperNode, key)
+	if err != nil {
+		log.Println("[*]Connection refused!")
+		return controlConnToUpperNode, "", err
+	}
+
 	helloMess, _ := common.ConstructPayload(nodeID, "", "COMMAND", "STOWAWAYAGENT", " ", " ", 0, common.AdminId, key, false)
 	controlConnToUpperNode.Write(helloMess)
 
@@ -69,6 +79,12 @@ func StartNodeListen(listenPort string, NodeId string, key []byte) {
 			log.Println("[*]", err)
 			return
 		}
+
+		err = CheckSecret(ConnToLowerNode, key)
+		if err != nil {
+			continue
+		}
+
 		for i := 0; i < 2; i++ {
 			command, _ := common.ExtractPayload(ConnToLowerNode, key, common.AdminId, true)
 			switch command.Command {
@@ -109,6 +125,12 @@ func ConnectNextNode(target string, nodeid string, key []byte) bool {
 		return false
 	}
 
+	err = SendSecret(controlConnToNextNode, key)
+	if err != nil {
+		log.Println("[*]", err)
+		return false
+	}
+
 	helloMess, _ := common.ConstructPayload(nodeid, "", "COMMAND", "STOWAWAYAGENT", " ", " ", 0, common.AdminId, key, false)
 	controlConnToNextNode.Write(helloMess)
 
@@ -118,6 +140,7 @@ func ConnectNextNode(target string, nodeid string, key []byte) bool {
 			log.Println("[*]", err)
 			return false
 		}
+
 		switch command.Command {
 		case "INIT":
 			//类似与上面
@@ -155,6 +178,11 @@ func AcceptConnFromUpperNode(listenPort string, nodeid string, key []byte) (net.
 			continue
 		}
 
+		err = CheckSecret(Comingconn, key)
+		if err != nil {
+			continue
+		}
+
 		common.ExtractPayload(Comingconn, key, common.AdminId, true)
 
 		respcommand, _ := common.ConstructPayload(nodeid, "", "COMMAND", "INIT", " ", listenPort, 0, common.AdminId, key, false)
@@ -169,4 +197,60 @@ func AcceptConnFromUpperNode(listenPort string, nodeid string, key []byte) (net.
 
 	}
 
+}
+
+//发送secret值
+func SendSecret(conn net.Conn, key []byte) error {
+	var NOT_VALID = errors.New("not valid")
+	defer conn.SetReadDeadline(time.Time{})
+	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+	secret := common.GetStringMd5(string(key))
+	conn.Write([]byte(secret[:16]))
+
+	buffer := make([]byte, 16)
+	count, err := io.ReadFull(conn, buffer)
+
+	if timeouterr, ok := err.(net.Error); ok && timeouterr.Timeout() {
+		conn.Close()
+		return NOT_VALID
+	}
+
+	if err != nil {
+		conn.Close()
+		return NOT_VALID
+	}
+
+	if string(buffer[:count]) == secret[:16] {
+		return nil
+	}
+	conn.Close()
+	return NOT_VALID
+}
+
+//检查secret值，在连接建立前测试合法性
+func CheckSecret(conn net.Conn, key []byte) error {
+	var NOT_VALID = errors.New("not valid")
+	defer conn.SetReadDeadline(time.Time{})
+	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+	secret := common.GetStringMd5(string(key))
+
+	buffer := make([]byte, 16)
+	count, err := io.ReadFull(conn, buffer)
+
+	if timeouterr, ok := err.(net.Error); ok && timeouterr.Timeout() {
+		conn.Close()
+		return NOT_VALID
+	}
+
+	if err != nil {
+		conn.Close()
+		return NOT_VALID
+	}
+
+	if string(buffer[:count]) == secret[:16] {
+		conn.Write([]byte(secret[:16]))
+		return nil
+	}
+	conn.Close()
+	return NOT_VALID
 }

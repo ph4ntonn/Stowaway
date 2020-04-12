@@ -66,6 +66,12 @@ func ConnectToStartNode(startnodeaddr string, rhostreuse bool) {
 				startNodeConn.Close()
 				continue
 			}
+		} else {
+			err := node.SendSecret(startNodeConn, AdminStatus.AESKey)
+			if err != nil {
+				log.Println("[*]Connection refused!")
+				os.Exit(0)
+			}
 		}
 
 		helloMess, _ := common.ConstructPayload(common.StartNodeId, "", "COMMAND", "STOWAWAYADMIN", " ", " ", 0, common.AdminId, AdminStatus.AESKey, false)
@@ -101,6 +107,12 @@ func StartListen(listenPort string) {
 	}
 	for {
 		startNodeConn, _ := localListener.Accept() //一定要有连接进入才可继续操作，故没有连接时，admin端无法操作
+
+		err = node.CheckSecret(startNodeConn, AdminStatus.AESKey)
+		if err != nil {
+			continue
+		}
+
 		log.Printf("[*]StartNode connected from %s!\n", startNodeConn.RemoteAddr().String())
 		AdminStuff.StartNode = strings.Split(startNodeConn.RemoteAddr().String(), ":")[0]
 		go HandleInitControlConn(startNodeConn)
@@ -369,6 +381,13 @@ func HandleStartConn(startNodeConn net.Conn) {
 				fmt.Println("[*]Port reflect successfully started!")
 			case "NODECONNECTFAIL":
 				fmt.Println("[*]Target seems down! Fail to connect")
+			case "LISTENRESP":
+				switch nodeResp.Info {
+				case "FAILED":
+					fmt.Println("[*]Cannot listen this port!")
+				case "SUCCESS":
+					fmt.Println("[*]Listen successfully!")
+				}
 			default:
 				log.Println("[*]Unknown Command")
 				continue

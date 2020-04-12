@@ -66,6 +66,8 @@ startnode端： ./stowaway_agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 -
 
   -r 代表以passive模式启动（即本节点等待上一级节点的主动连接，而不是主动连接上一节点，若正向连接可以去除此选项）
 
+  -l 代表监听端口(如果不需要监听，也可直接省略)
+
 此时在admin端进入startnode(use 1)，使用connect命令（connect 127.0.0.1:10001)即可将后续节点加入网络
 
 若后续节点希望以active模式启动（即本节点主动连接上一级节点）
@@ -253,6 +255,9 @@ PS: 在ssh模式下，你可以用pwd来判断自己所处的文件夹（好吧�
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/shutdownreflect.png)
 
+如果想在node3上新开一个监听端口来让后续节点连接（原来如果启动时设置过-l选项，则之前的监听不会因此停止）
+
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/listen.png)
 ```
 具体命令使用可输入help查询
 ```

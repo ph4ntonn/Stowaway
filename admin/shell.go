@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 )
 
@@ -40,14 +41,14 @@ func HandleNodeCommand(startNodeConn net.Conn, nodeID string) {
 				fmt.Println("Illegal username/password! Try again!")
 				AdminStatus.ReadyChange <- true
 				AdminStatus.IsShellMode <- true
-				break
+				continue
 			} else if len(AdminCommand) == 4 {
 				socksStartData = fmt.Sprintf("%s:::%s:::%s", AdminCommand[1], AdminCommand[2], AdminCommand[3])
 			} else {
 				fmt.Println("[*]Illegal format! Should be socks [lport] (username) (password) ps:username and password are optional ")
 				AdminStatus.ReadyChange <- true
 				AdminStatus.IsShellMode <- true
-				break
+				continue
 			}
 			respCommand, err := common.ConstructPayload(nodeID, route, "COMMAND", "SOCKS", " ", socksStartData, 0, common.AdminId, AdminStatus.AESKey, false)
 			_, err = startNodeConn.Write(respCommand)
@@ -77,7 +78,7 @@ func HandleNodeCommand(startNodeConn net.Conn, nodeID string) {
 					fmt.Println("[*]Wrong answer! Should be 1 or 2")
 					AdminStatus.ReadyChange <- true
 					AdminStatus.IsShellMode <- true
-					break
+					continue
 				} else if input == "1" {
 					var command []string
 					method := input
@@ -108,7 +109,7 @@ func HandleNodeCommand(startNodeConn net.Conn, nodeID string) {
 						fmt.Println("[*]Cannot find the key file!")
 						AdminStatus.ReadyChange <- true
 						AdminStatus.IsShellMode <- true
-						break
+						continue
 					} else {
 						command = append(command, string(result))
 						go StartSSHService(startNodeConn, command, nodeID, method)
@@ -132,7 +133,7 @@ func HandleNodeCommand(startNodeConn net.Conn, nodeID string) {
 					fmt.Println("[*]Wrong answer! Should be 1 or 2")
 					AdminStatus.ReadyChange <- true
 					AdminStatus.IsShellMode <- true
-					break
+					continue
 				} else if input == "1" {
 					var command []string
 					method := input
@@ -163,7 +164,7 @@ func HandleNodeCommand(startNodeConn net.Conn, nodeID string) {
 						fmt.Println("[*]Cannot find the key file!")
 						AdminStatus.ReadyChange <- true
 						AdminStatus.IsShellMode <- true
-						break
+						continue
 					} else {
 						command = append(command, string(result))
 						command = append(command, AdminCommand[2])
@@ -197,11 +198,27 @@ func HandleNodeCommand(startNodeConn net.Conn, nodeID string) {
 			}
 			AdminStatus.ReadyChange <- true
 			AdminStatus.IsShellMode <- true
+		case "listen":
+			if len(AdminCommand) == 2 {
+				port, err := strconv.Atoi(AdminCommand[1])
+				if err != nil || port < 0 || port > 65535 {
+					fmt.Println("[*]Bad format! Should be listen [port],and port must between 1~65535")
+					AdminStatus.ReadyChange <- true
+					AdminStatus.IsShellMode <- true
+					continue
+				}
+				respCommand, _ := common.ConstructPayload(nodeID, route, "COMMAND", "LISTEN", " ", AdminCommand[1], 0, common.AdminId, AdminStatus.AESKey, false)
+				startNodeConn.Write(respCommand)
+			} else {
+				fmt.Println("[*]Bad format! Should be listen [port]")
+			}
+			AdminStatus.ReadyChange <- true
+			AdminStatus.IsShellMode <- true
 		case "upload":
 			if len(AdminCommand) == 2 {
 				go common.UploadFile(route, AdminCommand[1], &startNodeConn, nodeID, AdminStatus.GetName, AdminStatus.AESKey, common.AdminId, true)
 			} else {
-				fmt.Println("Bad format! Should be upload [filename]")
+				fmt.Println("[*]Bad format! Should be upload [filename]")
 			}
 			AdminStatus.ReadyChange <- true
 			AdminStatus.IsShellMode <- true
@@ -209,7 +226,7 @@ func HandleNodeCommand(startNodeConn net.Conn, nodeID string) {
 			if len(AdminCommand) == 2 {
 				go common.DownloadFile(route, AdminCommand[1], startNodeConn, nodeID, common.AdminId, AdminStatus.AESKey)
 			} else {
-				fmt.Println("Bad format! Should be download [filename]")
+				fmt.Println("[*]Bad format! Should be download [filename]")
 			}
 			AdminStatus.ReadyChange <- true
 			AdminStatus.IsShellMode <- true
@@ -217,7 +234,7 @@ func HandleNodeCommand(startNodeConn net.Conn, nodeID string) {
 			if len(AdminCommand) == 3 {
 				go StartPortForwardForClient(AdminCommand, startNodeConn, nodeID, AdminStatus.AESKey)
 			} else {
-				fmt.Println("Bad format! Should be forward [localport] [rhostip]:[rhostport]")
+				fmt.Println("[*]Bad format! Should be forward [localport] [rhostip]:[rhostport]")
 			}
 			AdminStatus.ReadyChange <- true
 			AdminStatus.IsShellMode <- true
@@ -229,7 +246,7 @@ func HandleNodeCommand(startNodeConn net.Conn, nodeID string) {
 			if len(AdminCommand) == 3 {
 				go StartReflectForClient(AdminCommand, startNodeConn, nodeID, AdminStatus.AESKey)
 			} else {
-				fmt.Println("Bad format! Should be reflect [rhostport] [localport]")
+				fmt.Println("[*]Bad format! Should be reflect [rhostport] [localport]")
 			}
 			AdminStatus.ReadyChange <- true
 			AdminStatus.IsShellMode <- true
@@ -269,7 +286,7 @@ func HandleNodeCommand(startNodeConn net.Conn, nodeID string) {
 			AdminStatus.IsShellMode <- true
 			return
 		default:
-			fmt.Println("Illegal command, enter help to get available commands")
+			fmt.Println("[*]Illegal command, enter help to get available commands")
 			AdminStatus.ReadyChange <- true
 			AdminStatus.IsShellMode <- true
 		}
@@ -362,7 +379,7 @@ func HandleCommandToControlConn(startNodeControlConn net.Conn) {
 		case "use":
 			if len(AdminCommand) == 2 {
 				if AdminStuff.StartNode == "0.0.0.0" {
-					fmt.Println("There are no nodes connected!")
+					fmt.Println("[*]There are no nodes connected!")
 					AdminStatus.ReadyChange <- true
 					AdminStatus.IsShellMode <- true
 				} else if AdminCommand[1] == "1" {
@@ -374,13 +391,13 @@ func HandleCommandToControlConn(startNodeControlConn net.Conn) {
 					HandleNodeCommand(startNodeControlConn, currentid)
 				} else {
 					if len(NodeStatus.Nodes) == 0 {
-						fmt.Println("There is no node", AdminCommand[1])
+						fmt.Println("[*]There is no node", AdminCommand[1])
 						AdminStatus.ReadyChange <- true
 						AdminStatus.IsShellMode <- true
 					} else {
 						currentid, err := FindNumByNodeid(AdminCommand[1])
 						if err != nil {
-							fmt.Println("There is no node", AdminCommand[1])
+							fmt.Println("[*]There is no node", AdminCommand[1])
 							AdminStatus.ReadyChange <- true
 							AdminStatus.IsShellMode <- true
 							continue
@@ -392,14 +409,14 @@ func HandleCommandToControlConn(startNodeControlConn net.Conn) {
 							AdminStatus.HandleNode = currentid
 							HandleNodeCommand(startNodeControlConn, currentid)
 						} else {
-							fmt.Println("There is no node", AdminCommand[1])
+							fmt.Println("[*]There is no node", AdminCommand[1])
 							AdminStatus.ReadyChange <- true
 							AdminStatus.IsShellMode <- true
 						}
 					}
 				}
 			} else {
-				fmt.Println("Bad format!")
+				fmt.Println("[*]Bad format!")
 				AdminStatus.ReadyChange <- true
 				AdminStatus.IsShellMode <- true
 			}
@@ -424,7 +441,7 @@ func HandleCommandToControlConn(startNodeControlConn net.Conn) {
 			os.Exit(0)
 			return
 		default:
-			fmt.Println("Illegal command, enter help to get available commands")
+			fmt.Println("[*]Illegal command, enter help to get available commands")
 			AdminStatus.ReadyChange <- true
 			AdminStatus.IsShellMode <- true
 		}

@@ -1,6 +1,8 @@
 package common
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"net"
 	"runtime"
 	"strconv"
@@ -379,4 +381,12 @@ func FindSpecFromSlice(nodeid string, nodes []string) int {
 		}
 	}
 	return -1
+}
+
+//生成md5值
+func GetStringMd5(s string) string {
+	md5 := md5.New()
+	md5.Write([]byte(s))
+	md5Str := hex.EncodeToString(md5.Sum(nil))
+	return md5Str
 }

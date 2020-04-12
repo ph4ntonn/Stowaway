@@ -3,8 +3,10 @@ package agent
 import (
 	"Stowaway/common"
 	"Stowaway/node"
+	"errors"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"os/signal"
 	"strconv"
@@ -191,4 +193,17 @@ func BroadCast(command string) {
 		passToLowerData.Route = nodeid
 		ProxyChan.ProxyChanToLowerNode <- passToLowerData
 	}
+}
+
+/*-------------------------监听相关代码--------------------------*/
+//尝试监听
+func TestListen(port string) error {
+	var CAN_NOT_LISTEN = errors.New("cannot listen")
+	listenAddr := fmt.Sprintf("0.0.0.0:%s", port)
+	testListener, err := net.Listen("tcp", listenAddr)
+	if err != nil {
+		return CAN_NOT_LISTEN
+	}
+	testListener.Close()
+	return nil
 }
