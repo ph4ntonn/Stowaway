@@ -10,8 +10,6 @@ import (
 
 	"Stowaway/common"
 	"Stowaway/node"
-
-	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -24,21 +22,21 @@ var (
 )
 
 //启动admin
-func NewAdmin(c *cli.Context) {
+func NewAdmin(c *common.AdminOptions) {
 	var InitStatus string = "admin"
 	AdminStatus = common.NewAdminStatus()
 	ClientSockets = common.NewUint32ConnMap()
 	FileDataMap = common.NewIntStrMap()
 	PortForWardMap = common.NewUint32ConnMap()
-	AdminStatus.AESKey = []byte(c.String("secret"))
-	listenPort := c.String("listen")
-	startnodeaddr := c.String("connect")
-	rhostreuse := c.Bool("rhostreuse")
+	AdminStatus.AESKey = []byte(c.Secret)
+	listenPort := c.Listen
+	startnodeaddr := c.Connect
+	rhostreuse := c.Rhostreuse
 
 	Banner()
 
 	if len(AdminStatus.AESKey) != 0 {
-		log.Println("[*]Now Connection is encrypting with secret ", c.String("secret"))
+		log.Println("[*]Now Connection is encrypting with secret ", c.Secret)
 	} else {
 		log.Println("[*]Now Connection is maintianed without any encryption!")
 	}

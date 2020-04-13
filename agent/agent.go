@@ -9,8 +9,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-
-	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -22,22 +20,22 @@ var (
 )
 var ConnToAdmin net.Conn
 
-func NewAgent(c *cli.Context) {
+func NewAgent(c *common.AgentOptions) {
 	AgentStatus = common.NewAgentStatus()
 	SocksInfo = common.NewSocksSetting()
 	ProxyChan = common.NewProxyChan()
 	SocksDataChanMap = common.NewUint32ChanStrMap()
 	FileDataMap = common.NewIntStrMap()
 
-	AgentStatus.AESKey = []byte(c.String("secret"))
-	listenPort := c.String("listen")
-	reconn := c.String("reconnect")
-	passive := c.Bool("reverse")
-	monitor := c.String("monitor")
-	isStartNode := c.Bool("startnode")
-	reusehost := c.String("rehost")
-	reuseport := c.String("report")
-	rhostreuse := c.Bool("rhostreuse")
+	AgentStatus.AESKey = []byte(c.Secret)
+	listenPort := c.Listen
+	reconn := c.Reconnect
+	passive := c.Reverse
+	monitor := c.Monitor
+	isStartNode := c.IsStartNode
+	reusehost := c.ReuseHost
+	reuseport := c.ReusePort
+	rhostreuse := c.RhostReuse
 
 	if isStartNode && passive == false && reusehost == "" && reuseport == "" {
 		go WaitForExit(AgentStatus.Nodeid)

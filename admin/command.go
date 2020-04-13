@@ -1,47 +1,35 @@
 package admin
 
 import (
+	"Stowaway/common"
+	"flag"
 	"log"
 	"os"
-
-	"github.com/urfave/cli/v2"
 )
 
-// Command  cli settings
-var Flags = []cli.Flag{
-	&cli.StringFlag{
-		Name:    "secret",
-		Aliases: []string{"s"},
-		Usage:   "secret key",
-	},
-	&cli.StringFlag{
-		Name:    "connect",
-		Aliases: []string{"c"},
-		Usage:   "connect to startnode",
-	},
-	&cli.StringFlag{
-		Name:    "listen",
-		Aliases: []string{"l"},
-		Usage:   "listen port",
-	},
-	&cli.BoolFlag{
-		Name:  "rhostreuse",
-		Usage: "remote host reusing port",
-	},
-}
+var Args *common.AdminOptions
 
-func Action(c *cli.Context) error {
-	if c.String("listen") != "" && c.String("connect") == "" {
-		log.Printf("[*]Starting admin node on port %s\n", c.String("listen"))
-	} else if c.String("connect") != "" && c.String("listen") != "" {
+func init() {
+	Args = new(common.AdminOptions)
+	flag.StringVar(&Args.Secret, "s", "", "Remote `ip` address.")
+	flag.StringVar(&Args.Listen, "l", "", "Remote `ip` address.")
+	flag.StringVar(&Args.Connect, "c", "", "Remote `ip` address.")
+	flag.BoolVar(&Args.Rhostreuse, "rhostreuse", false, "")
+}
+func ParseCommand() {
+
+	flag.Parse()
+
+	if Args.Listen != "" && Args.Connect == "" {
+		log.Printf("[*]Starting admin node on port %s\n", Args.Listen)
+	} else if Args.Connect != "" && Args.Listen != "" {
 		log.Println("[*]If you are using active connect mode, do not set -l option")
 		os.Exit(0)
-	} else if c.String("connect") != "" && c.String("listen") == "" {
+	} else if Args.Connect != "" && Args.Listen == "" {
 		log.Println("[*]Trying to connect startnode actively...")
 	} else {
-		log.Println("[*]Please at least set the -l/--listen option")
+		log.Println("Bad format! See readme!")
 		os.Exit(0)
 	}
-	NewAdmin(c)
-	return nil
+	NewAdmin(Args)
 }

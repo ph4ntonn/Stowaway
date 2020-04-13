@@ -12,6 +12,27 @@ import (
 var AdminId = "0000000000"
 var StartNodeId = "0000000001"
 
+/*-------------------------Admin命令参数结构代码--------------------------*/
+type AdminOptions struct {
+	Secret     string
+	Listen     string
+	Connect    string
+	Rhostreuse bool
+}
+
+/*-------------------------Agent命令参数结构代码--------------------------*/
+type AgentOptions struct {
+	Secret      string
+	Listen      string
+	Reconnect   string
+	Reverse     bool
+	Monitor     string
+	IsStartNode bool
+	ReuseHost   string
+	ReusePort   string
+	RhostReuse  bool
+}
+
 /*-------------------------Admin相关状态变量代码--------------------------*/
 type AdminStatus struct {
 	ReadyChange      chan bool
