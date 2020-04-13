@@ -11,15 +11,17 @@ var Args *common.AgentOptions
 
 func init() {
 	Args = new(common.AgentOptions)
-	flag.StringVar(&Args.Secret, "s", "", "Remote `ip` address.")
-	flag.StringVar(&Args.Listen, "l", "", "Remote `ip` address.")
-	flag.StringVar(&Args.Reconnect, "reconnect", "", "Remote `ip` address.")
+	flag.StringVar(&Args.Secret, "s", "", "")
+	flag.StringVar(&Args.Listen, "l", "", "")
+	flag.StringVar(&Args.Reconnect, "reconnect", "", "")
 	flag.BoolVar(&Args.Reverse, "r", false, "")
-	flag.StringVar(&Args.Monitor, "m", "", "Remote `ip` address.")
+	flag.StringVar(&Args.Monitor, "m", "", "")
 	flag.BoolVar(&Args.IsStartNode, "startnode", false, "")
-	flag.StringVar(&Args.ReuseHost, "rehost", "", "Remote `ip` address.")
-	flag.StringVar(&Args.ReusePort, "report", "", "Remote `ip` address.")
+	flag.StringVar(&Args.ReuseHost, "rehost", "", "")
+	flag.StringVar(&Args.ReusePort, "report", "", "")
 	flag.BoolVar(&Args.RhostReuse, "rhostreuse", false, "")
+
+	flag.Usage = func() {}
 }
 
 func ParseCommand() {

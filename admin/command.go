@@ -11,11 +11,12 @@ var Args *common.AdminOptions
 
 func init() {
 	Args = new(common.AdminOptions)
-	flag.StringVar(&Args.Secret, "s", "", "Remote `ip` address.")
-	flag.StringVar(&Args.Listen, "l", "", "Remote `ip` address.")
-	flag.StringVar(&Args.Connect, "c", "", "Remote `ip` address.")
-	flag.BoolVar(&Args.Rhostreuse, "rhostreuse", false, "")
+	flag.StringVar(&Args.Secret, "s", "", "Communication secret")
+	flag.StringVar(&Args.Listen, "l", "", "Listen port")
+	flag.StringVar(&Args.Connect, "c", "", "The startnode address when you actively connect to it")
+	flag.BoolVar(&Args.Rhostreuse, "rhostreuse", false, "If the startnode is reusing port")
 }
+
 func ParseCommand() {
 
 	flag.Parse()
