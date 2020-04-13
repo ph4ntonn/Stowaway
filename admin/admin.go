@@ -88,7 +88,6 @@ func ConnectToStartNode(startnodeaddr string, rhostreuse bool) {
 				CalRoute()
 				go HandleStartConn(startNodeConn)
 				go HandleCommandToControlConn(startNodeConn)
-				go MonitorCtrlC(startNodeConn)
 				return
 			}
 		}
@@ -139,7 +138,6 @@ func HandleInitControlConn(startNodeConn net.Conn) {
 			CalRoute()
 			go HandleStartConn(startNodeConn)
 			go HandleCommandToControlConn(startNodeConn)
-			go MonitorCtrlC(startNodeConn)
 			return
 		}
 	}

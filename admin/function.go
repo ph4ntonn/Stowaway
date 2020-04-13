@@ -8,11 +8,9 @@ import (
 	"log"
 	"net"
 	"os"
-	"os/signal"
 	"runtime"
 	"strconv"
 	"strings"
-	"syscall"
 )
 
 var (
@@ -387,14 +385,6 @@ func Find(readyToDel *[]string, nodeid string) {
 }
 
 /*-------------------------控制相关代码--------------------------*/
-//捕捉退出信号
-func MonitorCtrlC(startNodeConn net.Conn) {
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
-	<-signalChan
-	os.Exit(0)
-}
-
 //当有一个节点下线，强制关闭该节点及其子节点对应的服务
 func CloseAll(id string) {
 	readyToDel := FindAll(id)
