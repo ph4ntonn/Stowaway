@@ -40,19 +40,28 @@ func NewAgent(c *cli.Context) {
 	rhostreuse := c.Bool("rhostreuse")
 
 	if isStartNode && passive == false && reusehost == "" && reuseport == "" {
-		go StartNodeInit(monitor, listenPort, reconn, passive)
+		go WaitForExit(AgentStatus.Nodeid)
+		StartNodeInit(monitor, listenPort, reconn, passive)
 	} else if passive == false && reusehost == "" && reuseport == "" {
-		go SimpleNodeInit(monitor, listenPort, rhostreuse)
+		go WaitForExit(AgentStatus.Nodeid)
+		SimpleNodeInit(monitor, listenPort, rhostreuse)
 	} else if isStartNode && passive && reusehost == "" && reuseport == "" {
-		go StartNodeReversemodeInit(monitor, listenPort, passive)
+		go WaitForExit(AgentStatus.Nodeid)
+		StartNodeReversemodeInit(monitor, listenPort, passive)
 	} else if passive && reusehost == "" && reuseport == "" {
-		go SimpleNodeReversemodeInit(monitor, listenPort)
+		go WaitForExit(AgentStatus.Nodeid)
+		SimpleNodeReversemodeInit(monitor, listenPort)
 	} else if reusehost != "" && reuseport != "" && isStartNode {
-		go StartNodeReuseInit(reusehost, reuseport)
+		go WaitForExit(AgentStatus.Nodeid)
+		StartNodeReuseInit(reusehost, reuseport, listenPort, 1)
 	} else if reusehost != "" && reuseport != "" {
-		go SimpleNodeReuseInit(reusehost, reuseport)
+		go WaitForExit(AgentStatus.Nodeid)
+		SimpleNodeReuseInit(reusehost, reuseport, listenPort, 1)
+	} else if reuseport != "" && listenPort != "" && isStartNode {
+		StartNodeReuseInit(reusehost, reuseport, listenPort, 2)
+	} else if reuseport != "" && listenPort != "" {
+		SimpleNodeReuseInit(reusehost, reuseport, listenPort, 2)
 	}
-	WaitForExit(AgentStatus.Nodeid)
 }
 
 // 初始化代码开始
@@ -167,12 +176,25 @@ func SimpleNodeReversemodeInit(monitor, listenPort string) {
 }
 
 //reuseport下的startnode节点
-func StartNodeReuseInit(reusehost, reuseport string) {
+func StartNodeReuseInit(reusehost, reuseport, localport string, method int) {
 	AgentStatus.Nodeid = common.StartNodeId
-	ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeReuse(reusehost, reuseport, AgentStatus.Nodeid, AgentStatus.AESKey)
+	if method == 1 {
+		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeReuse(reusehost, reuseport, AgentStatus.Nodeid, AgentStatus.AESKey)
+	} else {
+		err := node.SetPortReuseRules(localport, reuseport)
+		if err != nil {
+			fmt.Println("[*]Cannot set the iptable rules!")
+			os.Exit(0)
+		}
+		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeIpTableReuse(reuseport, localport, AgentStatus.Nodeid, AgentStatus.AESKey)
+	}
 	go common.SendHeartBeatControl(&ConnToAdmin, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go HandleStartNodeConn(&ConnToAdmin, "", "", "", true, AgentStatus.Nodeid)
-	go node.StartNodeListenReuse(reusehost, reuseport, AgentStatus.Nodeid, AgentStatus.AESKey)
+	if method == 1 {
+		go node.StartNodeListenReuse(reusehost, reuseport, AgentStatus.Nodeid, AgentStatus.AESKey)
+	} else {
+		go node.StartNodeListenIpTableReuse(reuseport, localport, AgentStatus.Nodeid, AgentStatus.AESKey)
+	}
 	go PrepareForReOnlineNode()
 	for {
 		controlConnForLowerNode := <-node.NodeStuff.ControlConnForLowerNodeChan
@@ -195,17 +217,30 @@ func StartNodeReuseInit(reusehost, reuseport string) {
 }
 
 //reuseport下的普通节点
-func SimpleNodeReuseInit(reusehost, reuseport string) {
+func SimpleNodeReuseInit(reusehost, reuseport, localport string, method int) {
 	AgentStatus.Nodeid = common.AdminId
-	ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeReuse(reusehost, reuseport, AgentStatus.Nodeid, AgentStatus.AESKey)
+	if method == 1 {
+		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeReuse(reusehost, reuseport, AgentStatus.Nodeid, AgentStatus.AESKey)
+	} else {
+		err := node.SetPortReuseRules(localport, reuseport)
+		if err != nil {
+			fmt.Println("[*]Cannot set the iptable rules!")
+			os.Exit(0)
+		}
+		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeIpTableReuse(reuseport, localport, AgentStatus.Nodeid, AgentStatus.AESKey)
+	}
 	go common.SendHeartBeatControl(&ConnToAdmin, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go HandleSimpleNodeConn(&ConnToAdmin, AgentStatus.Nodeid)
-	go node.StartNodeListenReuse(reusehost, reuseport, AgentStatus.Nodeid, AgentStatus.AESKey)
+	if method == 1 {
+		go node.StartNodeListenReuse(reusehost, reuseport, AgentStatus.Nodeid, AgentStatus.AESKey)
+	} else {
+		go node.StartNodeListenIpTableReuse(reuseport, localport, AgentStatus.Nodeid, AgentStatus.AESKey)
+	}
 	go PrepareForReOnlineNode()
 	for {
 		controlConnForLowerNode := <-node.NodeStuff.ControlConnForLowerNodeChan
 		NewNodeMessage := <-node.NodeStuff.NewNodeMessageChan
-		<-node.NodeStuff.IsAdmin //被动模式启动的节点被连接一定是agent来连接，所以这里不需要判断是否是admin连接
+		<-node.NodeStuff.IsAdmin
 		ProxyChan.ProxyChanToUpperNode <- NewNodeMessage
 		if AgentStatus.NotLastOne == false {
 			ProxyChan.ProxyChanToLowerNode = make(chan *common.PassToLowerNodeData)

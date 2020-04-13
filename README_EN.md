@@ -102,31 +102,65 @@ The next time you want to reconnect to the startnode and rebuild the whole netwo
 ```
 Port Reuse:
 
-  Now Stowaway provide the port reuse function based on SO_REUSEPORT和SO_REUSEADDR features
+  Now Stowaway provide the port reuse functions based on SO_REUSEPORT和SO_REUSEADDR features and iptable rules(startnode and simple node can both use this function)
 
-  In Linux environment, it can reuse some port(it depends,so you can just try and know if it works)
+  In Linux environment, it can reuse most ports
 
   In Windows environment,it cannot reuse service port like IIS,RDP,can reuse Mysql,Apache and so on
 
-  Be careful,don't use this function in nginx,cos it may cause the nginx service broken
+  Nginx is not supported under default setting
 
-For example:(startnode is reusing port 80)
+SO_REUSEPORT/SO_REUSEADDR mode's example:(startnode is reusing port 80)
 
-Admin: ./stowaway_admin -c 192.168.0.105:80 -s 123 --rhostreuse
+  Mainly support windows operation system
 
-  -c/-s same as i mentioned before
+  Admin: ./stowaway_admin -c 192.168.0.105:80 -s 123 --rhostreuse
 
-  --rhostreuse it means the node that admin want to connect is under port reusing mode(if the node is working normally, just remove the option)
+    -c/-s same as i mentioned before
 
-Startnode: ./stowaway_agent -s 123 --startnode --report 80 --rehost 192.168.0.105
+    --rhostreuse it means the node that admin want to connect is under port reusing mode(This option MUST be set if the node you want to connect is reusing port)
 
-  -s/--startnode the same as i mentioned before 
+  Startnode: ./stowaway_agent -s 123 --startnode --report 80 --rehost 192.168.0.105
 
-  --report it means the port you want ti reuse
+    -s/--startnode the same as i mentioned before 
 
-  --rehost it means the ip address you want to listen on(DO NOT set 0.0.0.0,it will make the reuse funtion lose its effect)
+    --report it means the port you want to reuse
+
+    --rehost it means the ip address you want to listen on(DO NOT set 0.0.0.0,it will make the reuse funtion lose its effect)
 
 Now if there is a simple node followed by startnode and want to connect to startnode,the command can be like this: ./stowaway_agent -s 123 -m 192.168.0.105:80 --rhostreuse
+
+All options's meanings are the same as i mentioned before
+
+Iptables mode's example:(startnode is reusing port 22)
+
+  Mainly support Linux,needs root privilege
+
+  And this kind of reusing method depend on using iptables rule to redirect traffics to the port(-l option) before they reach the reuse port(--report option).
+
+  Startnode: ./stowaway_agent -s 123 --startnode --report 22 -l 10000
+
+    --startnode/-s same as i mentioned before 
+
+    --report it means the port you want to reuse
+
+    -l it means the port that will accept all redirect traffics(node will listen on it)
+
+when the startnode started,you can use the reuse.py in bolder "script"
+
+Open the reusing function: python port_reuse.py --start --rhost 192.168.0.105 --rport 22
+
+And now admin can connect to startnode: ./stowaway_admin -c 192.168.0.105:22 -s 123 --rhostreuse
+
+  -c/-s/--rhostreuse same as i mentioned before
+
+Attention! :If node is killed by ctrl-c or command "kill",it will clean up the iptables rules automatically,but if it is killed by command "kill -9",then it can't do that and it will lead to the service originally run on the reusing port cannot be reached,so in order to avoid this situation ,the reuse.py provide the function that can stop the "port reusing" function.
+
+If you want to stop "port reusing",just run reuse.py like this: python reuse.py --stop --rhost 192.168.0.105 --rport 22
+
+And then the "port reusing" will be closed,and the service originally run on the reusing port can be reached again
+
+Now if there is a simple node followed by startnode and want to connect to startnode,the command can be like this: ./stowaway_agent -s 123 -m 192.168.0.105:22 --rhostreuse
 
 All options's meanings are the same as i mentioned before
 ```

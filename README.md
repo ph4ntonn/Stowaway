@@ -108,15 +108,17 @@ startnode端: ./stowaway_agent -l 9999 -s 123 --startnode -r
 ```
 端口复用机制：
 
-  当前Stowaway提供基于SO_REUSEPORT和SO_REUSEADDR特性的端口复用功能
+  当前Stowaway提供基于SO_REUSEPORT和SO_REUSEADDR特性的端口复用功能及基于iptables的端口复用功能
 
-  在linux下可以部分的功能端口
+  在linux下可以大部分的功能端口
 
-  在windows下不可复用iis，rdp端口
+  在windows下不可复用iis，rdp端口，可以复用mysql，apache服务的端口
 
-  nginx在默认状态下不可复用，即使打开设置，也有几率导致原有服务崩溃
+  nginx在默认状态下不可复用
 
-示例：(若startnode端采用端口复用机制复用80端口)
+SO_REUSEPORT和SO_REUSEADDR模式下示例：(若startnode端采用端口复用机制复用80端口)
+
+  主要支持windows环境下的复用  
 
   Admin端：./stowaway_admin -c 192.168.0.105:80 -s 123 --rhostreuse
 
@@ -124,7 +126,7 @@ startnode端: ./stowaway_agent -l 9999 -s 123 --startnode -r
 
     -c/-s 同上，不再赘述
 
-    --rhostreuse 此选项被设置时，代表需要连接的节点正在端口复用的模式下运行(如果正常运行，则不需要设置此选项)
+    --rhostreuse 此选项被设置时，代表需要连接的节点正在端口复用的模式下运行(如果被连接的节点处于端口复用模式，必须设置此选项)
 
   此时startnode端： ./stowaway_agent -s 123 --startnode --report 80 --rehost 192.168.0.105
 
@@ -139,6 +141,46 @@ startnode端: ./stowaway_agent -l 9999 -s 123 --startnode -r
   此时如果后续有节点想要连接startnode: ./stowaway_agent -s 123 -m 192.168.0.105:80 --rhostreuse
 
   命令解析如admin，不再赘述
+
+iptables模式下示例：(若startnode端采用端口复用机制复用22端口)
+
+  主要支持linux环境下的复用，需要root权限
+
+  此复用不是纯粹的“复用”，主要是靠设置iptables规则，使得流量在路由决策之前被处理，从而将流量从目标“report”导向“listenport(-l)”，递交给agent端进行处理分发，实现某种意义上的端口“复用”
+
+startnode端： ./stowaway_agent -s 123 --startnode --report 22 -l 10000
+
+    命令解析：
+
+    -s/--startnode同上
+
+    --report 代表需要被复用的端口
+
+    -l 代表复用端口时需要监听的端口（所有访问report端口的流量将会导向这个端口）
+
+在startnode启动后，使用script目录下的reuse.py
+
+打开复用：python reuse.py --start --rhost 192.168.0.105 --rport 22
+
+此时Admin端就可以连接：./stowaway_admin -c 192.168.0.105:22 -s 123 --rhostreuse
+
+  命令解析：
+
+    -c/-s 同上，不再赘述
+
+    --rhostreuse 此选项被设置时，代表需要连接的节点正在端口复用的模式下运行(如果被连接的节点处于端口复用模式，必须设置此选项) 
+
+注意：如果startnode被ctrl-c或者kill命令杀死，程序将会自动清理iptables规则，但如果被kill -9 杀死，则无法自动清除
+
+故而为了防止startnode异常退出后，iptables规则没有被清理导致被复用的服务无法访问，script目录下的reuse.py提供了关闭iptables规则的功能
+
+当需要关闭时，运行：python reuse.py --stop --rhost 192.168.0.105 --rport 22
+
+即可关闭转发规则，使得原服务能够被正常访问
+
+  此时如果后续有节点想要连接startnode: ./stowaway_agent -s 123 -m 192.168.0.105:22 --rhostreuse
+
+  命令解析如admin，不再赘述 
 ```
 
 **几个注意点：**

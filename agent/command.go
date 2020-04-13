@@ -59,7 +59,7 @@ func Action(c *cli.Context) error {
 	} else if c.String("listen") != "" && c.Bool("reverse") && c.String("monitor") != "" {
 		log.Println("If you want to start node passively,do not set the -m option")
 		os.Exit(0)
-	} else if c.String("listen") != "" && !c.Bool("reverse") && c.String("monitor") == "" {
+	} else if c.String("listen") != "" && !c.Bool("reverse") && c.String("monitor") == "" && c.String("report") == "" {
 		log.Println("You should set the -m option!")
 		os.Exit(0)
 	} else if !c.Bool("reverse") && c.String("monitor") != "" {
@@ -67,14 +67,19 @@ func Action(c *cli.Context) error {
 	} else if c.String("reconnect") != "" && !c.Bool("startnode") {
 		log.Println("Do not set the --reconnect option on simple node")
 		os.Exit(0)
-	} else if (c.String("rehost") == "" && c.String("report") != "") || (c.String("rehost") != "" && c.String("report") == "") {
-		log.Println("Need rehost/report option")
+	} else if (c.String("report") != "" || c.String("rehost") != "") && (c.String("monitor") != "") {
+		log.Println("Choose one from (--report,--rehost) and -m")
 		os.Exit(0)
-	} else if (c.String("report") != "" || c.String("rehost") != "") && (c.String("listen") != "" || c.String("monitor") != "") {
-		log.Println("Choose one from (--report,--rehost) and -l and -m")
+	} else if c.String("report") != "" && c.String("rehost") == "" && c.String("listen") == "" {
+		log.Println("If you want to reuse port through iptable method,you should set --report and -l simultaneously,or if you want to use SO_REUSE method,you should set --report and --rehost instead")
+		os.Exit(0)
+	} else if c.String("report") != "" && c.String("rehost") != "" && c.String("listen") != "" {
+		log.Println("Should be report+rehost or report+listen")
 		os.Exit(0)
 	} else if (c.String("report") != "" && c.String("rehost") != "") && (c.String("listen") == "" && c.String("monitor") == "") {
 		log.Printf("Starting agent node reusing port %s \n", c.String("report"))
+	} else if c.String("report") != "" && c.String("listen") != "" && c.String("rehost") == "" && c.String("monitor") == "" {
+		log.Printf("Now agent node is listening on port %s and reusing port %s", c.String("listen"), c.String("report"))
 	} else {
 		log.Println("Bad format! See readme!")
 		os.Exit(0)
