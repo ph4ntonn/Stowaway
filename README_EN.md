@@ -10,7 +10,8 @@ PS: Thanks for everyone's star, i'm just an amateur, and the code still need be 
 ## Features
 
 - Obvious node topology
-- Active/passive mode
+- Clear information display of nodes
+- Active/passive connect mode between nodes
 - Ssh tunnel mode
 - Can be used on multiple platforms
 - Multi-hop socks5 traffic proxy
@@ -19,6 +20,7 @@ PS: Thanks for everyone's star, i'm just an amateur, and the code still need be 
 - Upload/download functions
 - Port Mapping(local to remote/remote to local)
 - Port Reuse
+- Authenicate each other between nodes
 - Network traffic encryption with AES-256(CBC mode)
 
 
@@ -292,8 +294,9 @@ For more detail, just type help to get further informations
 ## TODO
 
 - [x] Network traffic encryption
-- [x] Method to turn off socks5 proxy
-- [x] Reconnection
+- [x] Enhance the robustness of the whole program
+- [x] Method to turn on/off most functions given
+- [x] Automatic reconnection
 - [x] Port mapping
 - [ ] Clean codes, optimize logic
 - [x] Add reverse connect mode
