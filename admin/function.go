@@ -365,25 +365,6 @@ func CheckInput(input string) string {
 	return input
 }
 
-//找到所有的子节点
-func FindAll(nodeid string) []string {
-	var readyToDel []string
-	Nooode.Lock()
-	Find(&readyToDel, nodeid)
-	Nooode.Unlock()
-
-	readyToDel = append(readyToDel, nodeid)
-	WaitForFindAll <- true
-	return readyToDel
-}
-
-func Find(readyToDel *[]string, nodeid string) {
-	for _, value := range Nooode.AllNode[nodeid].Lowernode {
-		*readyToDel = append(*readyToDel, value)
-		Find(readyToDel, value)
-	}
-}
-
 /*-------------------------控制相关代码--------------------------*/
 //当有一个节点下线，强制关闭该节点及其子节点对应的服务
 func CloseAll(id string) {

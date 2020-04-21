@@ -35,6 +35,26 @@ func AddNodeToTopology(nodeid string, uppernodeid string) {
 	Nooode.Unlock()
 }
 
+//重连时对添加clientid的操作
+func ReconnAddCurrentClient(id string) {
+	for _, value := range CurrentClient {
+		if value == id {
+			return
+		}
+	}
+	CurrentClient = append(CurrentClient, id)
+}
+
+// 将节点加入拓扑
+func AddToChain() {
+	for {
+		newNode := <-AdminStatus.NodesReadyToadd
+		for key, value := range newNode {
+			NodeStatus.Nodes[key] = value
+		}
+	}
+}
+
 //将节点从拓扑中删除
 func DelNodeFromTopology(nodeid string) {
 	Nooode.Lock()
@@ -66,6 +86,27 @@ func Del(nodeid string) {
 	}
 }
 
+//找到所有的子节点
+func FindAll(nodeid string) []string {
+	var readyToDel []string
+	Nooode.Lock()
+	Find(&readyToDel, nodeid)
+	Nooode.Unlock()
+
+	readyToDel = append(readyToDel, nodeid)
+	WaitForFindAll <- true
+	return readyToDel
+}
+
+//收集所有的子节点
+func Find(readyToDel *[]string, nodeid string) {
+	for _, value := range Nooode.AllNode[nodeid].Lowernode {
+		*readyToDel = append(*readyToDel, value)
+		Find(readyToDel, value)
+	}
+}
+
+/*-------------------------路由相关代码--------------------------*/
 //计算路由表
 func CalRoute() {
 	Nooode.Lock()
@@ -95,6 +136,7 @@ func CalRoute() {
 	Nooode.Unlock()
 }
 
+/*-------------------------节点拓扑信息相关代码--------------------------*/
 // 显示节点拓扑详细信息
 func ShowDetail() {
 	if AdminStuff.StartNode != "0.0.0.0" {
@@ -161,16 +203,6 @@ func ShowTree() {
 	}
 }
 
-// 将节点加入拓扑
-func AddToChain() {
-	for {
-		newNode := <-AdminStatus.NodesReadyToadd
-		for key, value := range newNode {
-			NodeStatus.Nodes[key] = value
-		}
-	}
-}
-
 //为node添加note
 func AddNote(data []string, nodeid string) bool {
 	var info string
@@ -214,6 +246,7 @@ func CheckRange(nodes []int) {
 	}
 }
 
+/*-------------------------nodeid生成、搜索相关代码--------------------------*/
 //生成一个nodeid
 func GenerateNodeId() string {
 	u2, _ := uuid.NewV4()
@@ -249,14 +282,4 @@ func FindIntByNodeid(id string) int {
 		}
 	}
 	return 0
-}
-
-//重连时对添加clientid的操作
-func ReconnAddCurrentClient(id string) {
-	for _, value := range CurrentClient {
-		if value == id {
-			return
-		}
-	}
-	CurrentClient = append(CurrentClient, id)
 }
