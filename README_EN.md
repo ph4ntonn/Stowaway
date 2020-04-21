@@ -2,9 +2,9 @@
 
 Stowaway is Multi-hop proxy tool for security researchers and pentesters
 
-Users can easily proxy their network traffic to intranet nodes (multi-layer)
+Users can easily proxy their network traffic to intranet nodes (multi-layer),break the restrction and manipulate all the nodes that under your control XD
 
-PS: Thanks for everyone's star, i'm just an amateur, and the code still need be optimized,so if you find anything wrong or bugs, feel free to tell me, and i'll fix it :kissing_heart:. 
+PS: Thanks for everyone's star, i'm just an amateur, and the code still need be optimized,so if you find anything wrong or bugs, feel free to tell me, prs and issues are welcome :kissing_heart:. 
 > This tool is limited to security research and teaching, and the user bears all legal and related responsibilities caused by the use of this tool! The author does not assume any legal and related responsibilities!
 
 ## Features
@@ -158,15 +158,16 @@ And now admin can connect to startnode: ./stowaway_admin -c 192.168.0.105:22 -s 
 
   -c/-s/--rhostreuse same as i mentioned before
 
+Now if there is a simple node followed by startnode and want to connect to startnode,the command can be like this:
+./stowaway_agent -s 123 -m 192.168.0.105:22 --rhostreuse
+
+  All options's meanings are the same as i mentioned before
+
 Attention! :If node is killed by ctrl-c or command "kill",it will clean up the iptables rules automatically,but if it is killed by command "kill -9",then it can't do that and it will lead to the service originally run on the reusing port cannot be reached,so in order to avoid this situation ,the reuse.py provide the function that can stop the "port reusing" function.
 
 If you want to stop "port reusing",just run reuse.py like this: python reuse.py --stop --rhost 192.168.0.105 --rport 22
 
 And then the "port reusing" will be closed,and the service originally run on the reusing port can be reached again
-
-Now if there is a simple node followed by startnode and want to connect to startnode,the command can be like this: ./stowaway_agent -s 123 -m 192.168.0.105:22 --rhostreuse
-
-All options's meanings are the same as i mentioned before
 ```
 
 **Some points you should know:**

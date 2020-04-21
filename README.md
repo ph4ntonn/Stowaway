@@ -2,11 +2,11 @@
 
 [English](README_EN.md)
 
-Stowaway是一个利用go语言编写的多级代理工具
+Stowaway是一个利用go语言编写、专为渗透测试工作者制作的多级代理工具
 
-用户可使用此程序将外部流量通过多个节点代理至内网，并实现管理功能
+用户可使用此程序将外部流量通过多个节点代理至内网，突破内网访问限制，并轻松实现管理功能
 
-PS:谢谢大家的star，这个程序还不成熟规范，写来仅为学习，我也还是个菜鸟，后续会继续优化，同时欢迎大家使用后提出问题 :kissing_heart:。
+PS:谢谢大家的star，同时欢迎大家使用后提出问题 :kissing_heart:。
 
 > 此工具仅限于安全研究和教学，用户承担因使用此工具而导致的所有法律和相关责任！ 作者不承担任何法律和相关责任！
 
@@ -160,7 +160,7 @@ startnode端： ./stowaway_agent -s 123 --startnode --report 22 -l 10000
 
     --report 代表需要被复用的端口
 
-    -l 代表复用端口时需要监听的端口（所有访问report端口的流量将会导向这个端口）
+    -l 代表复用端口时需要监听的端口（渗透测试者所有访问report端口的流量将会导向这个端口）
 
 在startnode启动后，使用script目录下的reuse.py
 
@@ -172,7 +172,11 @@ startnode端： ./stowaway_agent -s 123 --startnode --report 22 -l 10000
 
     -c/-s 同上，不再赘述
 
-    --rhostreuse 此选项被设置时，代表需要连接的节点正在端口复用的模式下运行(如果被连接的节点处于端口复用模式，必须设置此选项) 
+    --rhostreuse 此选项被设置时，代表需要连接的节点正在端口复用的模式下运行(如果被连接的节点处于端口复用模式，必须设置此选项)
+
+此时如果后续有节点想要连接startnode: ./stowaway_agent -s 123 -m 192.168.0.105:22 --rhostreuse
+
+    命令解析如admin，不再赘述 
 
 注意：如果startnode被ctrl-c或者kill命令杀死，程序将会自动清理iptables规则，但如果被kill -9 杀死，则无法自动清除
 
@@ -182,9 +186,6 @@ startnode端： ./stowaway_agent -s 123 --startnode --report 22 -l 10000
 
 即可关闭转发规则，使得原服务能够被正常访问
 
-  此时如果后续有节点想要连接startnode: ./stowaway_agent -s 123 -m 192.168.0.105:22 --rhostreuse
-
-  命令解析如admin，不再赘述 
 ```
 
 **几个注意点：**
