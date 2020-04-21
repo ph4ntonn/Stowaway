@@ -49,7 +49,7 @@ startnode： ./stowaway_agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 --re
   
   -m    It means Stowaway's monitor node's address (In this case,it's the node we started above)
   
-  -l    It means Stowaway is listening on port 10000 and waiting for incoming connection (optional)
+  -l    It means Stowaway is listening on port 10000 and waiting for incoming connection (optional，you can also open the listening port via "listen" command)
 
   -s    It means Stowaway has used 123 as the encrypt key during the communication 
 
@@ -66,15 +66,17 @@ The following simple node: ./stowaway_agent -l 10001 -s 123 -r
 
   -r It means you want to start the node in passive mode(For instance: you can add node 2 into the net via node 1 actively connect to node 2, instead of node 1 just waiting for the connection from node 2 )
 
-  -l    It means Stowaway is listening on port 10000 and waiting for incoming connection (optional)
+  -l    It means Stowaway is listening on port 10000 and waiting for incoming connection
 
 And now, you can use admin,type in 'use 1' ---> 'connect 127.0.0.1:10001' to add this simple node into network
+
+
 
 But,if you want to start the following simple node actively(means connecting to upper node actively instead of waiting for the connection from upper node)
 
 Then, the command of startnode will still : ./stowaway_agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 --reconnect 5  
 
-The following simple node: ./stowaway_agent -m 127.0.0.1:10000 -l 10001 -s 123
+The following simple node: ./stowaway_agent -m 127.0.0.1:10000 -s 123
 
 And now ,you can add this simple node into network
 ```

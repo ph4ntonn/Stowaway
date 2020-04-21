@@ -28,7 +28,7 @@ PS:谢谢大家的star，这个程序还不成熟规范，写来仅为学习，�
 
 ## Usage
 
-Stowaway一共分为三种角色，admin，startnode和普通node，其中startnode和普通node的区别在于startnode是第一个节点（即所有普通节点里的第一个节点）
+Stowaway一共分为三种角色，admin，startnode和普通node，其中startnode和普通node的区别在于startnode是第一个节点（即所有普通节点里的第一个节点，相当于“入口”节点）
 
 
 不想编译的盆油可以直接用[release](https://github.com/ph4ntonn/Stowaway/releases)下编译完成的程序(同时提供未经压缩版及upx压缩版，可各取所需)
@@ -56,7 +56,7 @@ startnode端： ./stowaway_agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 -
 
   --startnode 代表此节点是agent端的第一个节点（第一个节点必须加上--startnode选项！若无--startnode表示为普通节点，命令与startnode一致）
 
-  --reconnect 代表startnode将在admin下线后主动尝试不断重连（此例子中为每5秒重连一次）注意：若需要重连功能，只需要在startnode使用此参数即可，其后节点无需此参数，正常启动即可
+  --reconnect 代表startnode将在admin下线后主动尝试不断重连（此例子中为每5秒重连一次）注意：若需要重连功能，只需要在startnode使用此参数即可，其后节点无需此参数，正常启动即可,若不需要重连，省略此选项即可
 
 
 
@@ -68,7 +68,7 @@ startnode端： ./stowaway_agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 -
 
   -r 代表以passive模式启动（即本节点等待上一级节点的主动连接，而不是主动连接上一节点，若正向连接可以去除此选项）
 
-  -l 代表监听端口(如果暂时不需要监听，也可直接省略,后续如果需要开启，可参见listen命令的用法)
+  -l 代表监听端口
 
 此时在admin端进入startnode(use 1)，使用connect命令（connect 127.0.0.1:10001)即可将后续节点加入网络
 
@@ -78,7 +78,7 @@ startnode端： ./stowaway_agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 -
 
 那么，startnode启动命令仍为：./stowaway_agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 --reconnect 5 
 
-后续节点启动命令为：./stowaway_agent -m 127.0.0.1:10000 -l 10001 -s 123
+后续节点启动命令为：./stowaway_agent -m 127.0.0.1:10000 -s 123
 
 此时即可将后续节点加入网络
  
