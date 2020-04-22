@@ -33,6 +33,8 @@ Stowaway一共分为三种角色，admin，startnode和普通node，其中startn
 
 不想编译的盆油可以直接用[release](https://github.com/ph4ntonn/Stowaway/releases)下编译完成的程序(同时提供未经压缩版及upx压缩版，可各取所需)
 
+演示视频：[Youtube](https://www.youtube.com/watch?v=O3DHQ1ESMhw)
+
 第一种情况： Admin端监听，等待startnode连接
 
 ```

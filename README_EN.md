@@ -31,6 +31,8 @@ Stowaway can be excuted as two kinds of mode: admin && agent(including startnode
 
 If you don't want to compile the project by yourself, you can check the [release](https://github.com/ph4ntonn/Stowaway/releases) tag to get ONE!（Compressed and Uncompressed files are provided, choose the one you like)
 
+Demo video: [Youtube](https://www.youtube.com/watch?v=O3DHQ1ESMhw)
+
 Example 1：Admin node waiting the connection from startnode
 ```
 Admin node：./stowaway_admin -l 9999 -s 123
