@@ -297,7 +297,7 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 					} else {
 						SocksDataChanMap.RUnlock()
 						SocksDataChanMap.Lock()
-						SocksDataChanMap.Payload[AdminData.Clientid] = make(chan string, 10)
+						SocksDataChanMap.Payload[AdminData.Clientid] = make(chan string, 1)
 						go HanleClientSocksConn(SocksDataChanMap.Payload[AdminData.Clientid], SocksInfo.SocksUsername, SocksInfo.SocksPass, AdminData.Clientid, NODEID)
 						SocksDataChanMap.Payload[AdminData.Clientid] <- AdminData.Info
 						SocksDataChanMap.Unlock()
@@ -316,7 +316,7 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 						if _, ok := PortFowardMap.Payload[AdminData.Clientid]; ok {
 							PortFowardMap.Payload[AdminData.Clientid] <- AdminData.Info
 						} else {
-							PortFowardMap.Payload[AdminData.Clientid] = make(chan string, 10)
+							PortFowardMap.Payload[AdminData.Clientid] = make(chan string, 1)
 							go HandleForward(PortFowardMap.Payload[AdminData.Clientid], AdminData.Clientid)
 							PortFowardMap.Payload[AdminData.Clientid] <- AdminData.Info
 						}
@@ -380,6 +380,8 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 				case "HEARTBEAT":
 					hbdatapack, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "KEEPALIVE", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
 					ProxyChan.ProxyChanToUpperNode <- hbdatapack
+				default:
+					continue
 				}
 			case "COMMAND":
 				switch AdminData.Command {
@@ -659,7 +661,15 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 						break
 					}
 				case "CONNECT":
-					status := node.ConnectNextNode(command.Info, NODEID, AgentStatus.AESKey)
+					var status bool = false
+					command := strings.Split(command.Info, ":::")
+					addr := command[0]
+					choice := command[1]
+					if choice == "1" {
+						status = node.ConnectNextNodeReuse(addr, NODEID, AgentStatus.AESKey)
+					} else {
+						status = node.ConnectNextNode(addr, NODEID, AgentStatus.AESKey)
+					}
 					if !status {
 						message, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "NODECONNECTFAIL", " ", "", 0, NODEID, AgentStatus.AESKey, false)
 						ProxyChan.ProxyChanToUpperNode <- message
@@ -752,7 +762,7 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 					} else {
 						SocksDataChanMap.RUnlock()
 						SocksDataChanMap.Lock()
-						SocksDataChanMap.Payload[command.Clientid] = make(chan string, 10)
+						SocksDataChanMap.Payload[command.Clientid] = make(chan string, 1)
 						go HanleClientSocksConn(SocksDataChanMap.Payload[command.Clientid], SocksInfo.SocksUsername, SocksInfo.SocksPass, command.Clientid, NODEID)
 						SocksDataChanMap.Payload[command.Clientid] <- command.Info
 						SocksDataChanMap.Unlock()
@@ -774,9 +784,7 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 				case "FIN":
 					CurrentConn.Lock()
 					if _, ok := CurrentConn.Payload[command.Clientid]; ok {
-						err := CurrentConn.Payload[command.Clientid].Close()
-						if err != nil {
-						}
+						CurrentConn.Payload[command.Clientid].Close()
 						delete(CurrentConn.Payload, command.Clientid)
 					}
 					CurrentConn.Unlock()
@@ -797,7 +805,7 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 						if _, ok := PortFowardMap.Payload[command.Clientid]; ok {
 							PortFowardMap.Payload[command.Clientid] <- command.Info
 						} else {
-							PortFowardMap.Payload[command.Clientid] = make(chan string, 10)
+							PortFowardMap.Payload[command.Clientid] = make(chan string, 1)
 							go HandleForward(PortFowardMap.Payload[command.Clientid], command.Clientid)
 							PortFowardMap.Payload[command.Clientid] <- command.Info
 						}
