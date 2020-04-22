@@ -1,6 +1,7 @@
-package common
+package share
 
 import (
+	"Stowaway/utils"
 	"fmt"
 	"math"
 	"net"
@@ -12,11 +13,11 @@ import (
 	"github.com/cheggaaa/pb/v3"
 )
 
-var File *FileStatus
+var File *utils.FileStatus
 var Bar *pb.ProgressBar
 
 func init() {
-	File = NewFileStatus()
+	File = utils.NewFileStatus()
 }
 
 /*-------------------------上传/下载文件相关代码--------------------------*/
@@ -29,13 +30,13 @@ func UploadFile(route, filename string, controlConn *net.Conn, nodeid string, ge
 		if Notagent {
 			fmt.Println("[*]File not found!")
 		} else {
-			respData, _ := ConstructPayload(nodeid, route, "COMMAND", "FILENOTEXIST", " ", filename, 0, currentid, AESKey, false) //发送文件是否存在的情况
+			respData, _ := utils.ConstructPayload(nodeid, route, "COMMAND", "FILENOTEXIST", " ", filename, 0, currentid, AESKey, false) //发送文件是否存在的情况
 			(*controlConn).Write(respData)
 		}
 		return
 	}
 
-	respData, _ := ConstructPayload(nodeid, route, "COMMAND", "FILENAME", " ", info.Name(), 0, currentid, AESKey, false) //发送文件名
+	respData, _ := utils.ConstructPayload(nodeid, route, "COMMAND", "FILENAME", " ", info.Name(), 0, currentid, AESKey, false) //发送文件名
 	(*controlConn).Write(respData)
 
 	if <-getName {
@@ -48,7 +49,7 @@ func UploadFile(route, filename string, controlConn *net.Conn, nodeid string, ge
 			if Notagent {
 				fmt.Println("[*]Cannot read the file")
 			}
-			respData, _ := ConstructPayload(nodeid, route, "COMMAND", "CANNOTREAD", " ", info.Name(), 0, currentid, AESKey, false) //检查是否能读
+			respData, _ := utils.ConstructPayload(nodeid, route, "COMMAND", "CANNOTREAD", " ", info.Name(), 0, currentid, AESKey, false) //检查是否能读
 			(*controlConn).Write(respData)
 			return
 		}
@@ -56,19 +57,19 @@ func UploadFile(route, filename string, controlConn *net.Conn, nodeid string, ge
 		fileSliceNum := math.Ceil(float64(fileInfo.Size()) / 10240)
 		fileSliceStr := strconv.FormatInt(int64(fileSliceNum), 10) //计算文件需要被分多少包
 
-		respData, _ = ConstructPayload(nodeid, route, "COMMAND", "FILESLICENUM", " ", fileSliceStr, 0, currentid, AESKey, false)
+		respData, _ = utils.ConstructPayload(nodeid, route, "COMMAND", "FILESLICENUM", " ", fileSliceStr, 0, currentid, AESKey, false)
 		(*controlConn).Write(respData) //告知包数量
 
 		if Notagent {
 			fmt.Println("\n[*]File transmitting, please wait...")
-			Bar = NewBar(fileInfo.Size())
+			Bar = utils.NewBar(fileInfo.Size())
 			Bar.Start()
 		}
 
 		<-File.TotalConfirm //当对端确定接收到包数量通知后继续
 
 		filesize := strconv.FormatInt(fileInfo.Size(), 10)
-		respData, _ = ConstructPayload(nodeid, route, "COMMAND", "FILESIZE", " ", filesize, 0, currentid, AESKey, false)
+		respData, _ = utils.ConstructPayload(nodeid, route, "COMMAND", "FILESIZE", " ", filesize, 0, currentid, AESKey, false)
 		(*controlConn).Write(respData) //告知文件大小
 
 		<-File.TotalConfirm //当对端确定接收到文件大小通知后继续
@@ -81,7 +82,7 @@ func UploadFile(route, filename string, controlConn *net.Conn, nodeid string, ge
 				}
 				return
 			}
-			fileData, _ := ConstructPayload(nodeid, route, "DATA", "FILEDATA", strconv.Itoa(slicenum), string(buff[:n]), 0, currentid, AESKey, false) //发送文件内容
+			fileData, _ := utils.ConstructPayload(nodeid, route, "DATA", "FILEDATA", strconv.Itoa(slicenum), string(buff[:n]), 0, currentid, AESKey, false) //发送文件内容
 			(*controlConn).Write(fileData)
 			slicenum++
 			if Notagent {
@@ -90,7 +91,7 @@ func UploadFile(route, filename string, controlConn *net.Conn, nodeid string, ge
 		}
 	} else {
 		if !Notagent {
-			respData, _ = ConstructPayload(AdminId, route, "COMMAND", "CANNOTUPLOAD", " ", info.Name(), 0, currentid, AESKey, false) //对端没有拿到文件名
+			respData, _ = utils.ConstructPayload(utils.AdminId, route, "COMMAND", "CANNOTUPLOAD", " ", info.Name(), 0, currentid, AESKey, false) //对端没有拿到文件名
 			(*controlConn).Write(respData)
 		} else {
 			fmt.Println("[*]File cannot be uploaded!")
@@ -101,7 +102,7 @@ func UploadFile(route, filename string, controlConn *net.Conn, nodeid string, ge
 
 //admin下载文件
 func DownloadFile(route, filename string, conn net.Conn, nodeid string, currentid string, AESKey []byte) {
-	respData, _ := ConstructPayload(nodeid, route, "COMMAND", "DOWNLOADFILE", " ", filename, 0, currentid, AESKey, false)
+	respData, _ := utils.ConstructPayload(nodeid, route, "COMMAND", "DOWNLOADFILE", " ", filename, 0, currentid, AESKey, false)
 	_, err := conn.Write(respData)
 	if err != nil {
 		return
@@ -109,7 +110,7 @@ func DownloadFile(route, filename string, conn net.Conn, nodeid string, currenti
 }
 
 //admin || agent接收文件
-func ReceiveFile(route string, controlConnToAdmin *net.Conn, FileDataMap *IntStrMap, CannotRead chan bool, UploadFile *os.File, AESKey []byte, Notagent bool, currentid string) {
+func ReceiveFile(route string, controlConnToAdmin *net.Conn, FileDataMap *utils.IntStrMap, CannotRead chan bool, UploadFile *os.File, AESKey []byte, Notagent bool, currentid string) {
 	defer UploadFile.Close()
 	if Notagent {
 		fmt.Println("\n[*]Downloading file,please wait......")
@@ -119,7 +120,7 @@ func ReceiveFile(route string, controlConnToAdmin *net.Conn, FileDataMap *IntStr
 	<-File.ReceiveFileSize     //确认收到文件大小
 
 	if Notagent {
-		Bar = NewBar(File.FileSize)
+		Bar = utils.NewBar(File.FileSize)
 		Bar.Start()
 	}
 
@@ -152,7 +153,7 @@ func ReceiveFile(route string, controlConnToAdmin *net.Conn, FileDataMap *IntStr
 		Bar.Finish()
 		fmt.Println("[*]Transmission complete")
 	} else {
-		respData, _ := ConstructPayload(AdminId, route, "COMMAND", "TRANSSUCCESS", " ", " ", 0, currentid, AESKey, false)
+		respData, _ := utils.ConstructPayload(utils.AdminId, route, "COMMAND", "TRANSSUCCESS", " ", " ", 0, currentid, AESKey, false)
 		(*controlConnToAdmin).Write(respData)
 	}
 	return

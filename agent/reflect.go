@@ -1,21 +1,21 @@
 package agent
 
 import (
-	"Stowaway/common"
+	"Stowaway/utils"
 	"fmt"
 	"net"
 	"strings"
 )
 
 var (
-	ReflectConnMap             *common.Uint32ConnMap
+	ReflectConnMap             *utils.Uint32ConnMap
 	CurrentPortReflectListener []net.Listener
-	ReflectStatus              *common.ReflectStatus
+	ReflectStatus              *utils.ReflectStatus
 )
 
 func init() {
-	ReflectStatus = common.NewReflectStatus()
-	ReflectConnMap = common.NewUint32ConnMap()
+	ReflectStatus = utils.NewReflectStatus()
+	ReflectConnMap = utils.NewUint32ConnMap()
 }
 
 /*-------------------------Port-reflect启动相关代码--------------------------*/
@@ -26,12 +26,12 @@ func TestReflect(portCombine string) {
 	reflectAddr := fmt.Sprintf("0.0.0.0:%s", ports[1])
 	reflectListenerForClient, err := net.Listen("tcp", reflectAddr)
 	if err != nil {
-		respCommand, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "REFLECTFAIL", " ", " ", 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+		respCommand, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "REFLECTFAIL", " ", " ", 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
 		ProxyChan.ProxyChanToUpperNode <- respCommand
 		return
 	} else {
 		defer reflectListenerForClient.Close()
-		respCommand, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "REFLECTOK", " ", " ", 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+		respCommand, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "REFLECTOK", " ", " ", 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
 		ProxyChan.ProxyChanToUpperNode <- respCommand
 	}
 
@@ -42,10 +42,10 @@ func TestReflect(portCombine string) {
 		if err != nil {
 			return
 		} else {
-			respCommand, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "GETREFLECTNUM", " ", ports[0], 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+			respCommand, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "GETREFLECTNUM", " ", ports[0], 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
 			ProxyChan.ProxyChanToUpperNode <- respCommand
 			num = <-ReflectStatus.ReflectNum
-			respCommand, _ = common.ConstructPayload(common.AdminId, "", "DATA", "REFLECT", " ", ports[0], num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+			respCommand, _ = utils.ConstructPayload(utils.AdminId, "", "DATA", "REFLECT", " ", ports[0], num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
 			ProxyChan.ProxyChanToUpperNode <- respCommand
 		}
 		ReflectConnMap.Lock()
@@ -61,11 +61,11 @@ func HandleReflectPort(reflectconn net.Conn, num uint32, nodeid string) {
 	for {
 		len, err := reflectconn.Read(buffer)
 		if err != nil {
-			finMessage, _ := common.ConstructPayload(common.AdminId, "", "DATA", "REFLECTFIN", " ", " ", num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+			finMessage, _ := utils.ConstructPayload(utils.AdminId, "", "DATA", "REFLECTFIN", " ", " ", num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
 			ProxyChan.ProxyChanToUpperNode <- finMessage
 			return
 		} else {
-			respData, _ := common.ConstructPayload(common.AdminId, "", "DATA", "REFLECTDATA", " ", string(buffer[:len]), num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+			respData, _ := utils.ConstructPayload(utils.AdminId, "", "DATA", "REFLECTDATA", " ", string(buffer[:len]), num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
 			ProxyChan.ProxyChanToUpperNode <- respData
 		}
 	}

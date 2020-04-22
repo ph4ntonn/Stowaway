@@ -1,21 +1,20 @@
 package agent
 
 import (
-	"Stowaway/common"
-	"Stowaway/socks"
+	"Stowaway/utils"
 	"net"
 )
 
-var CurrentConn *common.Uint32ConnMap
+var CurrentConn *utils.Uint32ConnMap
 
 func init() {
-	CurrentConn = common.NewUint32ConnMap()
+	CurrentConn = utils.NewUint32ConnMap()
 }
 
 /*-------------------------Socks启动相关代码--------------------------*/
 //暂时没啥用，仅做回复socks开启命令之用
 func StartSocks() {
-	socksstartmess, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "SOCKSRESP", " ", "SUCCESS", 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+	socksstartmess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SOCKSRESP", " ", "SUCCESS", 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
 	ProxyChan.ProxyChanToUpperNode <- socksstartmess
 }
 
@@ -34,7 +33,7 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 			if !ok { //重连后原先引用失效，当chan释放后，若不捕捉，会无限循环
 				return
 			}
-			method = socks.CheckMethod(ConnToAdmin, []byte(data), socksUsername, socksPass, checknum, AgentStatus.AESKey, AgentStatus.Nodeid)
+			method = CheckMethod(ConnToAdmin, []byte(data), socksUsername, socksPass, checknum, AgentStatus.AESKey, AgentStatus.Nodeid)
 			if method == "NONE" {
 				isAuthed = true
 			}
@@ -43,13 +42,13 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 			if !ok {
 				return
 			}
-			isAuthed = socks.AuthClient(ConnToAdmin, []byte(data), socksUsername, socksPass, checknum, AgentStatus.AESKey, AgentStatus.Nodeid)
+			isAuthed = AuthClient(ConnToAdmin, []byte(data), socksUsername, socksPass, checknum, AgentStatus.AESKey, AgentStatus.Nodeid)
 		} else if isAuthed == true && tcpconnected == false {
 			data, ok := <-info
 			if !ok {
 				return
 			}
-			server, tcpconnected, serverflag = socks.ConfirmTarget(ConnToAdmin, []byte(data), checknum, AgentStatus.AESKey, AgentStatus.Nodeid)
+			server, tcpconnected, serverflag = ConfirmTarget(ConnToAdmin, []byte(data), checknum, AgentStatus.AESKey, AgentStatus.Nodeid)
 			if serverflag == false {
 				return
 			}
@@ -76,7 +75,7 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 					}
 				}
 			}()
-			err := socks.Proxyhttp(ConnToAdmin, server, checknum, AgentStatus.AESKey, currentid)
+			err := Proxyhttp(ConnToAdmin, server, checknum, AgentStatus.AESKey, currentid)
 			if err != nil {
 				go SendFin(checknum)
 				return
@@ -92,7 +91,7 @@ func SendFin(num uint32) {
 	SocksDataChanMap.RLock()
 	if _, ok := SocksDataChanMap.Payload[num]; ok {
 		SocksDataChanMap.RUnlock()
-		respData, _ := common.ConstructPayload(common.AdminId, "", "DATA", "FIN", " ", " ", num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+		respData, _ := utils.ConstructPayload(utils.AdminId, "", "DATA", "FIN", " ", " ", num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
 		ProxyChan.ProxyChanToUpperNode <- respData
 		return
 	} else {

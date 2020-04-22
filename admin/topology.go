@@ -1,7 +1,7 @@
 package admin
 
 import (
-	"Stowaway/common"
+	"Stowaway/utils"
 	"errors"
 	"fmt"
 	"strings"
@@ -9,13 +9,13 @@ import (
 	"github.com/gofrs/uuid"
 )
 
-var Nooode *common.SafeNodeMap
-var Route *common.SafeRouteMap
+var Nooode *utils.SafeNodeMap
+var Route *utils.SafeRouteMap
 var readyToDel []string
 
 func init() {
-	Nooode = common.NewSafeNodeMap()
-	Route = common.NewSafeRouteMap()
+	Nooode = utils.NewSafeNodeMap()
+	Route = utils.NewSafeRouteMap()
 }
 
 /*-------------------------节点拓扑相关代码--------------------------*/
@@ -25,11 +25,11 @@ func AddNodeToTopology(nodeid string, uppernodeid string) {
 	if _, ok := Nooode.AllNode[nodeid]; ok {
 		Nooode.AllNode[nodeid].Uppernode = uppernodeid
 	} else {
-		tempnode := common.NewNode()
+		tempnode := utils.NewNode()
 		Nooode.AllNode[nodeid] = tempnode
 		Nooode.AllNode[nodeid].Uppernode = uppernodeid
 	}
-	if uppernodeid != common.AdminId {
+	if uppernodeid != utils.AdminId {
 		Nooode.AllNode[uppernodeid].Lowernode = append(Nooode.AllNode[uppernodeid].Lowernode, nodeid)
 	}
 	Nooode.Unlock()
@@ -61,7 +61,7 @@ func DelNodeFromTopology(nodeid string) {
 	if _, ok := Nooode.AllNode[nodeid]; ok {
 		uppernode := Nooode.AllNode[nodeid].Uppernode
 		if _, ok := Nooode.AllNode[uppernode]; ok {
-			index := common.FindSpecFromSlice(nodeid, Nooode.AllNode[uppernode].Lowernode)
+			index := utils.FindSpecFromSlice(nodeid, Nooode.AllNode[uppernode].Lowernode)
 			Nooode.AllNode[uppernode].Lowernode = append(Nooode.AllNode[uppernode].Lowernode[:index], Nooode.AllNode[uppernode].Lowernode[index+1:]...)
 		}
 
@@ -114,17 +114,17 @@ func CalRoute() {
 		var temp []string = []string{}
 		count := key
 
-		if key == common.AdminId {
+		if key == utils.AdminId {
 			continue
 		}
 
 		for {
-			if Nooode.AllNode[count].Uppernode != common.AdminId && Nooode.AllNode[count].Uppernode != common.StartNodeId {
+			if Nooode.AllNode[count].Uppernode != utils.AdminId && Nooode.AllNode[count].Uppernode != utils.StartNodeId {
 				count = Nooode.AllNode[count].Uppernode
 				node := count
 				temp = append(temp, node)
 			} else {
-				common.StringReverse(temp)
+				utils.StringReverse(temp)
 				route := strings.Join(temp, ":")
 				Route.Lock()
 				Route.Route[key] = route
@@ -142,7 +142,7 @@ func ShowDetail() {
 	if AdminStuff.StartNode != "0.0.0.0" {
 		var nodes []string
 
-		fmt.Printf("StartNode:[1] %s   note:%s\n", AdminStuff.StartNode, NodeStatus.Nodenote[common.StartNodeId])
+		fmt.Printf("StartNode:[1] %s   note:%s\n", AdminStuff.StartNode, NodeStatus.Nodenote[utils.StartNodeId])
 
 		for Nodeid, _ := range NodeStatus.Nodes {
 			nodes = append(nodes, Nodeid)
@@ -175,7 +175,7 @@ func ShowTree() {
 		for _, value := range nodesid {
 			node := CurrentClient[value]
 			nodestatus := Nooode.AllNode[node]
-			if node == common.StartNodeId {
+			if node == utils.StartNodeId {
 				fmt.Printf("StartNode[%s]'s child nodes:\n", fmt.Sprint(value+1))
 				if len(nodestatus.Lowernode) == 0 {
 					fmt.Println("\tThere is no child node for this one.")
@@ -264,7 +264,7 @@ func FindNumByNodeid(id string) (string, error) {
 		return "", NO_NODE
 	}
 
-	nodeid := common.StrUint32(id)
+	nodeid := utils.StrUint32(id)
 	currentid := int(nodeid) - 1
 
 	if len(CurrentClient) < int(nodeid) {

@@ -1,7 +1,7 @@
 package node
 
 import (
-	"Stowaway/common"
+	"Stowaway/utils"
 	"errors"
 	"fmt"
 	"io"
@@ -12,13 +12,13 @@ import (
 )
 
 var (
-	NodeInfo  *common.NodeInfo
-	NodeStuff *common.NodeStuff
+	NodeInfo  *utils.NodeInfo
+	NodeStuff *utils.NodeStuff
 )
 
 func init() {
-	NodeStuff = common.NewNodeStuff()
-	NodeInfo = common.NewNodeInfo()
+	NodeStuff = utils.NewNodeStuff()
+	NodeInfo = utils.NewNodeInfo()
 }
 
 /*-------------------------一般模式下初始化节点代码--------------------------*/
@@ -36,12 +36,12 @@ func StartNodeConn(monitor string, listenPort string, nodeID string, key []byte)
 		return controlConnToUpperNode, "", err
 	}
 
-	helloMess, _ := common.ConstructPayload(nodeID, "", "COMMAND", "STOWAWAYAGENT", " ", " ", 0, common.AdminId, key, false)
+	helloMess, _ := utils.ConstructPayload(nodeID, "", "COMMAND", "STOWAWAYAGENT", " ", " ", 0, utils.AdminId, key, false)
 	controlConnToUpperNode.Write(helloMess)
 
-	common.ExtractPayload(controlConnToUpperNode, key, common.AdminId, true)
+	utils.ExtractPayload(controlConnToUpperNode, key, utils.AdminId, true)
 
-	respcommand, _ := common.ConstructPayload(nodeID, "", "COMMAND", "INIT", " ", listenPort, 0, common.AdminId, key, false) //主动向上级节点发送初始信息
+	respcommand, _ := utils.ConstructPayload(nodeID, "", "COMMAND", "INIT", " ", listenPort, 0, utils.AdminId, key, false) //主动向上级节点发送初始信息
 	_, err = controlConnToUpperNode.Write(respcommand)
 	if err != nil {
 		log.Printf("[*]Error occured: %s", err)
@@ -49,7 +49,7 @@ func StartNodeConn(monitor string, listenPort string, nodeID string, key []byte)
 	}
 	//等待admin为其分配一个id号
 	for {
-		command, _ := common.ExtractPayload(controlConnToUpperNode, key, common.AdminId, true)
+		command, _ := utils.ExtractPayload(controlConnToUpperNode, key, utils.AdminId, true)
 		switch command.Command {
 		case "ID":
 			nodeID = command.NodeId
@@ -87,10 +87,10 @@ func StartNodeListen(listenPort string, NodeId string, key []byte) {
 		}
 
 		for i := 0; i < 2; i++ {
-			command, _ := common.ExtractPayload(ConnToLowerNode, key, common.AdminId, true)
+			command, _ := utils.ExtractPayload(ConnToLowerNode, key, utils.AdminId, true)
 			switch command.Command {
 			case "STOWAWAYADMIN":
-				respcommand, _ := common.ConstructPayload(NodeId, "", "COMMAND", "INIT", " ", listenPort, 0, common.AdminId, key, false)
+				respcommand, _ := utils.ConstructPayload(NodeId, "", "COMMAND", "INIT", " ", listenPort, 0, utils.AdminId, key, false)
 				ConnToLowerNode.Write(respcommand)
 			case "ID":
 				NodeStuff.ControlConnForLowerNodeChan <- ConnToLowerNode
@@ -100,16 +100,16 @@ func StartNodeListen(listenPort string, NodeId string, key []byte) {
 				NodeStuff.Adminconn <- ConnToLowerNode
 			case "STOWAWAYAGENT":
 				if !NodeStuff.Offline {
-					NewNodeMessage, _ = common.ConstructPayload(NodeId, "", "COMMAND", "CONFIRM", " ", " ", 0, NodeId, key, false)
+					NewNodeMessage, _ = utils.ConstructPayload(NodeId, "", "COMMAND", "CONFIRM", " ", " ", 0, NodeId, key, false)
 					ConnToLowerNode.Write(NewNodeMessage)
 				} else {
-					respcommand, _ := common.ConstructPayload(NodeId, "", "COMMAND", "REONLINE", " ", listenPort, 0, NodeId, key, false)
+					respcommand, _ := utils.ConstructPayload(NodeId, "", "COMMAND", "REONLINE", " ", listenPort, 0, NodeId, key, false)
 					ConnToLowerNode.Write(respcommand)
 				}
 			case "INIT":
 				//告知admin新节点消息
-				NewNodeMessage, _ = common.ConstructPayload(common.AdminId, "", "COMMAND", "NEW", " ", ConnToLowerNode.RemoteAddr().String(), 0, NodeId, key, false)
-				NodeInfo.LowerNode.Payload[common.AdminId] = ConnToLowerNode //将这个socket用0号位暂存，等待admin分配完id后再将其放入对应的位置
+				NewNodeMessage, _ = utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NEW", " ", ConnToLowerNode.RemoteAddr().String(), 0, NodeId, key, false)
+				NodeInfo.LowerNode.Payload[utils.AdminId] = ConnToLowerNode //将这个socket用0号位暂存，等待admin分配完id后再将其放入对应的位置
 				NodeStuff.ControlConnForLowerNodeChan <- ConnToLowerNode
 				NodeStuff.NewNodeMessageChan <- NewNodeMessage //被连接后不终止监听，继续等待可能的后续节点连接，以此组成树状结构
 				NodeStuff.IsAdmin <- false
@@ -133,11 +133,11 @@ func ConnectNextNode(target string, nodeid string, key []byte) bool {
 		return false
 	}
 
-	helloMess, _ := common.ConstructPayload(nodeid, "", "COMMAND", "STOWAWAYAGENT", " ", " ", 0, common.AdminId, key, false)
+	helloMess, _ := utils.ConstructPayload(nodeid, "", "COMMAND", "STOWAWAYAGENT", " ", " ", 0, utils.AdminId, key, false)
 	controlConnToNextNode.Write(helloMess)
 
 	for {
-		command, err := common.ExtractPayload(controlConnToNextNode, key, common.AdminId, true)
+		command, err := utils.ExtractPayload(controlConnToNextNode, key, utils.AdminId, true)
 		if err != nil {
 			log.Println("[*]", err)
 			return false
@@ -146,8 +146,8 @@ func ConnectNextNode(target string, nodeid string, key []byte) bool {
 		switch command.Command {
 		case "INIT":
 			//类似与上面
-			NewNodeMessage, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "NEW", " ", controlConnToNextNode.RemoteAddr().String(), 0, nodeid, key, false)
-			NodeInfo.LowerNode.Payload[common.AdminId] = controlConnToNextNode
+			NewNodeMessage, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NEW", " ", controlConnToNextNode.RemoteAddr().String(), 0, nodeid, key, false)
+			NodeInfo.LowerNode.Payload[utils.AdminId] = controlConnToNextNode
 			NodeStuff.ControlConnForLowerNodeChan <- controlConnToNextNode
 			NodeStuff.NewNodeMessageChan <- NewNodeMessage
 			NodeStuff.IsAdmin <- false
@@ -157,7 +157,7 @@ func ConnectNextNode(target string, nodeid string, key []byte) bool {
 			NodeStuff.ReOnlineId <- command.CurrentId
 			NodeStuff.ReOnlineConn <- controlConnToNextNode
 			<-NodeStuff.PrepareForReOnlineNodeReady
-			NewNodeMessage, _ := common.ConstructPayload(nodeid, "", "COMMAND", "REONLINESUC", " ", " ", 0, nodeid, key, false)
+			NewNodeMessage, _ := utils.ConstructPayload(nodeid, "", "COMMAND", "REONLINESUC", " ", " ", 0, nodeid, key, false)
 			controlConnToNextNode.Write(NewNodeMessage)
 			return true
 		}
@@ -186,12 +186,12 @@ func AcceptConnFromUpperNode(listenPort string, nodeid string, key []byte) (net.
 			continue
 		}
 
-		common.ExtractPayload(Comingconn, key, common.AdminId, true)
+		utils.ExtractPayload(Comingconn, key, utils.AdminId, true)
 
-		respcommand, _ := common.ConstructPayload(nodeid, "", "COMMAND", "INIT", " ", listenPort, 0, common.AdminId, key, false)
+		respcommand, _ := utils.ConstructPayload(nodeid, "", "COMMAND", "INIT", " ", listenPort, 0, utils.AdminId, key, false)
 		Comingconn.Write(respcommand)
 
-		command, _ := common.ExtractPayload(Comingconn, key, common.AdminId, true) //等待分配id
+		command, _ := utils.ExtractPayload(Comingconn, key, utils.AdminId, true) //等待分配id
 		if command.Command == "ID" {
 			nodeid = command.NodeId
 			WaitingForConn.Close()
@@ -208,7 +208,7 @@ func SendSecret(conn net.Conn, key []byte) error {
 	var NOT_VALID = errors.New("not valid")
 	defer conn.SetReadDeadline(time.Time{})
 	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
-	secret := common.GetStringMd5(string(key))
+	secret := utils.GetStringMd5(string(key))
 	conn.Write([]byte(secret[:16]))
 
 	buffer := make([]byte, 16)
@@ -236,7 +236,7 @@ func CheckSecret(conn net.Conn, key []byte) error {
 	var NOT_VALID = errors.New("not valid")
 	defer conn.SetReadDeadline(time.Time{})
 	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
-	secret := common.GetStringMd5(string(key))
+	secret := utils.GetStringMd5(string(key))
 
 	buffer := make([]byte, 16)
 	count, err := io.ReadFull(conn, buffer)

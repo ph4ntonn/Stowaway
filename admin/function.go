@@ -1,7 +1,7 @@
 package admin
 
 import (
-	"Stowaway/common"
+	"Stowaway/utils"
 	"bufio"
 	"fmt"
 	"io/ioutil"
@@ -14,20 +14,20 @@ import (
 )
 
 var (
-	AdminStuff     *common.AdminStuff
-	NodeStatus     *common.NodeStatus
-	ForwardStatus  *common.ForwardStatus
-	ReflectConnMap *common.Uint32ConnMap
-	PortReflectMap *common.Uint32ChanStrMap
+	AdminStuff     *utils.AdminStuff
+	NodeStatus     *utils.NodeStatus
+	ForwardStatus  *utils.ForwardStatus
+	ReflectConnMap *utils.Uint32ConnMap
+	PortReflectMap *utils.Uint32ChanStrMap
 )
 var WaitForFindAll chan bool
 
 func init() {
-	ReflectConnMap = common.NewUint32ConnMap()
-	PortReflectMap = common.NewUint32ChanStrMap()
-	NodeStatus = common.NewNodeStatus()
-	ForwardStatus = common.NewForwardStatus()
-	AdminStuff = common.NewAdminStuff()
+	ReflectConnMap = utils.NewUint32ConnMap()
+	PortReflectMap = utils.NewUint32ChanStrMap()
+	NodeStatus = utils.NewNodeStatus()
+	ForwardStatus = utils.NewForwardStatus()
+	AdminStuff = utils.NewAdminStuff()
 	WaitForFindAll = make(chan bool, 1)
 }
 
@@ -75,7 +75,7 @@ func StartSocksServiceForClient(command []string, startNodeConn net.Conn, nodeID
 	socks5Addr := fmt.Sprintf("0.0.0.0:%s", socksPort)
 	socksListenerForClient, err := net.Listen("tcp", socks5Addr)
 	if err != nil {
-		respCommand, _ := common.ConstructPayload(nodeID, route, "COMMAND", "SOCKSOFF", " ", " ", 0, common.AdminId, AdminStatus.AESKey, false)
+		respCommand, _ := utils.ConstructPayload(nodeID, route, "COMMAND", "SOCKSOFF", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 		_, err = startNodeConn.Write(respCommand)
 		if err != nil {
 			log.Println("[*]Cannot stop agent's socks service,check the connection!")
@@ -114,11 +114,11 @@ func HandleNewSocksConn(startNodeConn net.Conn, clientsocks net.Conn, num uint32
 		len, err := clientsocks.Read(buffer)
 		if err != nil {
 			clientsocks.Close()
-			finMessage, _ := common.ConstructPayload(nodeID, route, "DATA", "FIN", " ", " ", num, common.AdminId, AdminStatus.AESKey, false)
+			finMessage, _ := utils.ConstructPayload(nodeID, route, "DATA", "FIN", " ", " ", num, utils.AdminId, AdminStatus.AESKey, false)
 			startNodeConn.Write(finMessage)
 			return
 		} else {
-			respData, _ := common.ConstructPayload(nodeID, route, "DATA", "SOCKSDATA", " ", string(buffer[:len]), num, common.AdminId, AdminStatus.AESKey, false)
+			respData, _ := utils.ConstructPayload(nodeID, route, "DATA", "SOCKSDATA", " ", string(buffer[:len]), num, utils.AdminId, AdminStatus.AESKey, false)
 			startNodeConn.Write(respData)
 		}
 	}
@@ -154,7 +154,7 @@ func StartSSHService(startNodeConn net.Conn, info []string, nodeid string, metho
 	information := fmt.Sprintf("%s:::%s:::%s:::%s", info[0], info[1], info[2], method)
 
 	Route.Lock()
-	sshCommand, _ := common.ConstructPayload(nodeid, Route.Route[nodeid], "COMMAND", "SSH", " ", information, 0, common.AdminId, AdminStatus.AESKey, false)
+	sshCommand, _ := utils.ConstructPayload(nodeid, Route.Route[nodeid], "COMMAND", "SSH", " ", information, 0, utils.AdminId, AdminStatus.AESKey, false)
 	Route.Unlock()
 
 	startNodeConn.Write(sshCommand)
@@ -175,7 +175,7 @@ func SendSSHTunnel(startNodeConn net.Conn, info []string, nodeid string, method 
 	information := fmt.Sprintf("%s:::%s:::%s:::%s:::%s", info[0], info[1], info[2], info[3], method)
 
 	Route.Lock()
-	sshCommand, _ := common.ConstructPayload(nodeid, Route.Route[nodeid], "COMMAND", "SSHTUNNEL", " ", information, 0, common.AdminId, AdminStatus.AESKey, false)
+	sshCommand, _ := utils.ConstructPayload(nodeid, Route.Route[nodeid], "COMMAND", "SSHTUNNEL", " ", information, 0, utils.AdminId, AdminStatus.AESKey, false)
 	Route.Unlock()
 
 	startNodeConn.Write(sshCommand)
@@ -188,18 +188,18 @@ func HandleForwardPort(forwardconn net.Conn, target string, startNodeConn net.Co
 	route := Route.Route[nodeid]
 	Route.Unlock()
 
-	forwardCommand, _ := common.ConstructPayload(nodeid, route, "DATA", "FORWARD", " ", target, num, common.AdminId, AdminStatus.AESKey, false)
+	forwardCommand, _ := utils.ConstructPayload(nodeid, route, "DATA", "FORWARD", " ", target, num, utils.AdminId, AdminStatus.AESKey, false)
 	startNodeConn.Write(forwardCommand)
 
 	buffer := make([]byte, 10240)
 	for {
 		len, err := forwardconn.Read(buffer)
 		if err != nil {
-			finMessage, _ := common.ConstructPayload(nodeid, route, "DATA", "FORWARDFIN", " ", " ", num, common.AdminId, AdminStatus.AESKey, false)
+			finMessage, _ := utils.ConstructPayload(nodeid, route, "DATA", "FORWARDFIN", " ", " ", num, utils.AdminId, AdminStatus.AESKey, false)
 			startNodeConn.Write(finMessage)
 			return
 		} else {
-			respData, _ := common.ConstructPayload(nodeid, route, "DATA", "FORWARDDATA", " ", string(buffer[:len]), num, common.AdminId, AdminStatus.AESKey, false)
+			respData, _ := utils.ConstructPayload(nodeid, route, "DATA", "FORWARDDATA", " ", string(buffer[:len]), num, utils.AdminId, AdminStatus.AESKey, false)
 			startNodeConn.Write(respData)
 		}
 	}
@@ -283,7 +283,7 @@ func TryReflect(startNodeConn net.Conn, nodeid string, id uint32, port string) {
 		ReflectConnMap.Unlock()
 	} else {
 		Route.Lock()
-		respdata, _ := common.ConstructPayload(nodeid, Route.Route[nodeid], "DATA", "REFLECTTIMEOUT", " ", " ", id, common.AdminId, AdminStatus.AESKey, false)
+		respdata, _ := utils.ConstructPayload(nodeid, Route.Route[nodeid], "DATA", "REFLECTTIMEOUT", " ", " ", id, utils.AdminId, AdminStatus.AESKey, false)
 		Route.Unlock()
 		startNodeConn.Write(respdata)
 		return
@@ -315,11 +315,11 @@ func HandleReflect(startNodeConn net.Conn, reflectDataChan chan string, num uint
 		for {
 			len, err := reflectConn.Read(serverBuffer)
 			if err != nil {
-				respData, _ := common.ConstructPayload(nodeid, route, "DATA", "REFLECTOFFLINE", " ", " ", num, common.AdminId, AdminStatus.AESKey, false)
+				respData, _ := utils.ConstructPayload(nodeid, route, "DATA", "REFLECTOFFLINE", " ", " ", num, utils.AdminId, AdminStatus.AESKey, false)
 				startNodeConn.Write(respData)
 				return
 			}
-			respData, _ := common.ConstructPayload(nodeid, route, "DATA", "REFLECTDATARESP", " ", string(serverBuffer[:len]), num, common.AdminId, AdminStatus.AESKey, false)
+			respData, _ := utils.ConstructPayload(nodeid, route, "DATA", "REFLECTDATARESP", " ", string(serverBuffer[:len]), num, utils.AdminId, AdminStatus.AESKey, false)
 			startNodeConn.Write(respData)
 		}
 	}()
@@ -329,7 +329,7 @@ func StopReflect(startNodeConn net.Conn, nodeid string) {
 	fmt.Println("[*]Stop command has been sent")
 
 	Route.Lock()
-	command, _ := common.ConstructPayload(nodeid, Route.Route[nodeid], "COMMAND", "STOPREFLECT", " ", " ", 0, common.AdminId, AdminStatus.AESKey, false)
+	command, _ := utils.ConstructPayload(nodeid, Route.Route[nodeid], "COMMAND", "STOPREFLECT", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 	Route.Unlock()
 
 	startNodeConn.Write(command)
@@ -339,7 +339,7 @@ func StopReflect(startNodeConn net.Conn, nodeid string) {
 //测试是否端口可用
 func TestIfValid(commandtype string, startNodeConn net.Conn, target string, nodeid string) {
 	Route.Lock()
-	command, _ := common.ConstructPayload(nodeid, Route.Route[nodeid], "COMMAND", commandtype, " ", target, 0, common.AdminId, AdminStatus.AESKey, false)
+	command, _ := utils.ConstructPayload(nodeid, Route.Route[nodeid], "COMMAND", commandtype, " ", target, 0, utils.AdminId, AdminStatus.AESKey, false)
 	Route.Unlock()
 
 	startNodeConn.Write(command)

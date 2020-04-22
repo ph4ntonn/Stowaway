@@ -1,7 +1,8 @@
 package admin
 
 import (
-	"Stowaway/common"
+	"Stowaway/share"
+	"Stowaway/utils"
 	"bufio"
 	"fmt"
 	"log"
@@ -27,7 +28,7 @@ func HandleNodeCommand(startNodeConn net.Conn, nodeID string) {
 		AdminCommand := <-AdminStuff.AdminCommandChan
 		switch AdminCommand[0] {
 		case "shell":
-			respCommand, err := common.ConstructPayload(nodeID, route, "COMMAND", "SHELL", " ", "", 0, common.AdminId, AdminStatus.AESKey, false)
+			respCommand, err := utils.ConstructPayload(nodeID, route, "COMMAND", "SHELL", " ", "", 0, utils.AdminId, AdminStatus.AESKey, false)
 			_, err = startNodeConn.Write(respCommand)
 			if err != nil {
 				log.Printf("[*]ERROR OCCURED!: %s", err)
@@ -50,7 +51,7 @@ func HandleNodeCommand(startNodeConn net.Conn, nodeID string) {
 				AdminStatus.IsShellMode <- true
 				continue
 			}
-			respCommand, err := common.ConstructPayload(nodeID, route, "COMMAND", "SOCKS", " ", socksStartData, 0, common.AdminId, AdminStatus.AESKey, false)
+			respCommand, err := utils.ConstructPayload(nodeID, route, "COMMAND", "SOCKS", " ", socksStartData, 0, utils.AdminId, AdminStatus.AESKey, false)
 			_, err = startNodeConn.Write(respCommand)
 			if err != nil {
 				log.Println("[*]StartNode seems offline")
@@ -189,7 +190,7 @@ func HandleNodeCommand(startNodeConn net.Conn, nodeID string) {
 						continue
 					}
 					data := AdminCommand[1] + ":::" + choice
-					respCommand, _ := common.ConstructPayload(nodeID, route, "COMMAND", "CONNECT", " ", data, 0, common.AdminId, AdminStatus.AESKey, false)
+					respCommand, _ := utils.ConstructPayload(nodeID, route, "COMMAND", "CONNECT", " ", data, 0, utils.AdminId, AdminStatus.AESKey, false)
 					startNodeConn.Write(respCommand)
 					break
 				}
@@ -207,7 +208,7 @@ func HandleNodeCommand(startNodeConn net.Conn, nodeID string) {
 					AdminStatus.IsShellMode <- true
 					continue
 				}
-				respCommand, _ := common.ConstructPayload(nodeID, route, "COMMAND", "LISTEN", " ", AdminCommand[1], 0, common.AdminId, AdminStatus.AESKey, false)
+				respCommand, _ := utils.ConstructPayload(nodeID, route, "COMMAND", "LISTEN", " ", AdminCommand[1], 0, utils.AdminId, AdminStatus.AESKey, false)
 				startNodeConn.Write(respCommand)
 			} else {
 				fmt.Println("[*]Bad format! Should be listen [port]")
@@ -216,7 +217,7 @@ func HandleNodeCommand(startNodeConn net.Conn, nodeID string) {
 			AdminStatus.IsShellMode <- true
 		case "upload":
 			if len(AdminCommand) == 2 {
-				go common.UploadFile(route, AdminCommand[1], &startNodeConn, nodeID, AdminStatus.GetName, AdminStatus.AESKey, common.AdminId, true)
+				go share.UploadFile(route, AdminCommand[1], &startNodeConn, nodeID, AdminStatus.GetName, AdminStatus.AESKey, utils.AdminId, true)
 			} else {
 				fmt.Println("[*]Bad format! Should be upload [filename]")
 			}
@@ -224,7 +225,7 @@ func HandleNodeCommand(startNodeConn net.Conn, nodeID string) {
 			AdminStatus.IsShellMode <- true
 		case "download":
 			if len(AdminCommand) == 2 {
-				go common.DownloadFile(route, AdminCommand[1], startNodeConn, nodeID, common.AdminId, AdminStatus.AESKey)
+				go share.DownloadFile(route, AdminCommand[1], startNodeConn, nodeID, utils.AdminId, AdminStatus.AESKey)
 			} else {
 				fmt.Println("[*]Bad format! Should be download [filename]")
 			}
@@ -312,18 +313,18 @@ func HandleShellToNode(startNodeControlConn net.Conn, nodeID string) {
 		}
 		switch command {
 		case "exit\n":
-			if nodeID == common.StartNodeId {
+			if nodeID == utils.StartNodeId {
 				*CliStatus = "startnode"
 			} else {
 				*CliStatus = "node " + fmt.Sprint(FindIntByNodeid(nodeID)+1)
 			}
-			respCommand, _ := common.ConstructPayload(nodeID, route, "COMMAND", "SHELL", " ", command, 0, common.AdminId, AdminStatus.AESKey, false)
+			respCommand, _ := utils.ConstructPayload(nodeID, route, "COMMAND", "SHELL", " ", command, 0, utils.AdminId, AdminStatus.AESKey, false)
 			startNodeControlConn.Write(respCommand)
 			AdminStatus.ReadyChange <- true
 			AdminStatus.IsShellMode <- true
 			return
 		default:
-			respCommand, _ := common.ConstructPayload(nodeID, route, "COMMAND", "SHELL", " ", command, 0, common.AdminId, AdminStatus.AESKey, false)
+			respCommand, _ := utils.ConstructPayload(nodeID, route, "COMMAND", "SHELL", " ", command, 0, utils.AdminId, AdminStatus.AESKey, false)
 			startNodeControlConn.Write(respCommand)
 		}
 	}
@@ -348,12 +349,12 @@ func HandleSSHToNode(startNodeControlConn net.Conn, nodeID string) {
 			}
 			switch command {
 			case "exit\n":
-				if nodeID == common.StartNodeId {
+				if nodeID == utils.StartNodeId {
 					*CliStatus = "startnode"
 				} else {
 					*CliStatus = "node " + fmt.Sprint(FindIntByNodeid(nodeID)+1)
 				}
-				respCommand, _ := common.ConstructPayload(nodeID, route, "COMMAND", "SSHCOMMAND", " ", command, 0, common.AdminId, AdminStatus.AESKey, false)
+				respCommand, _ := utils.ConstructPayload(nodeID, route, "COMMAND", "SSHCOMMAND", " ", command, 0, utils.AdminId, AdminStatus.AESKey, false)
 				startNodeControlConn.Write(respCommand)
 				AdminStatus.ReadyChange <- true
 				AdminStatus.IsShellMode <- true
@@ -361,7 +362,7 @@ func HandleSSHToNode(startNodeControlConn net.Conn, nodeID string) {
 			case "\n":
 				fmt.Print("(ssh mode)>>>")
 			default:
-				respCommand, _ := common.ConstructPayload(nodeID, route, "COMMAND", "SSHCOMMAND", " ", command, 0, common.AdminId, AdminStatus.AESKey, false)
+				respCommand, _ := utils.ConstructPayload(nodeID, route, "COMMAND", "SSHCOMMAND", " ", command, 0, utils.AdminId, AdminStatus.AESKey, false)
 				startNodeControlConn.Write(respCommand)
 			}
 		}

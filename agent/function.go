@@ -1,8 +1,8 @@
 package agent
 
 import (
-	"Stowaway/common"
 	"Stowaway/node"
+	"Stowaway/utils"
 	"errors"
 	"fmt"
 	"log"
@@ -39,7 +39,7 @@ func AdminOffline(reConn, monitor, listenPort string, passive bool) {
 	if reConn != "0" && reConn != "" && !passive {
 		ClearAllConn()
 		time.Sleep(1 * time.Second)
-		SocksDataChanMap = common.NewUint32ChanStrMap()
+		SocksDataChanMap = utils.NewUint32ChanStrMap()
 		if AgentStatus.NotLastOne {
 			BroadCast("CLEAR")
 		}
@@ -50,7 +50,7 @@ func AdminOffline(reConn, monitor, listenPort string, passive bool) {
 	} else if passive {
 		ClearAllConn()
 		time.Sleep(1 * time.Second)
-		SocksDataChanMap = common.NewUint32ChanStrMap()
+		SocksDataChanMap = utils.NewUint32ChanStrMap()
 		if AgentStatus.NotLastOne {
 			BroadCast("CLEAR")
 		}
@@ -68,13 +68,13 @@ func AdminOffline(reConn, monitor, listenPort string, passive bool) {
 func WaitingAdmin(nodeid string) {
 	//清理工作
 	ClearAllConn()
-	SocksDataChanMap = common.NewUint32ChanStrMap()
+	SocksDataChanMap = utils.NewUint32ChanStrMap()
 	if AgentStatus.NotLastOne {
 		BroadCast("CLEAR")
 	}
 	//等待重连
 	ConnToAdmin = <-node.NodeStuff.Adminconn
-	respCommand, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "RECONNID", " ", "", 0, nodeid, AgentStatus.AESKey, false)
+	respCommand, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "RECONNID", " ", "", 0, nodeid, AgentStatus.AESKey, false)
 	ProxyChan.ProxyChanToUpperNode <- respCommand
 	if AgentStatus.NotLastOne {
 		BroadCast("RECONN")
@@ -89,7 +89,7 @@ func PrepareForReOnlineNode() {
 		conn := <-node.NodeStuff.ReOnlineConn
 		//如果此节点没有启动过HandleConnToLowerNode函数，启动之
 		if AgentStatus.NotLastOne == false {
-			ProxyChan.ProxyChanToLowerNode = make(chan *common.PassToLowerNodeData)
+			ProxyChan.ProxyChanToLowerNode = make(chan *utils.PassToLowerNodeData)
 			go HandleConnToLowerNode()
 		}
 		AgentStatus.NotLastOne = true
@@ -125,7 +125,7 @@ func ClearAllConn() {
 
 	SocksDataChanMap.Lock()
 	for key, _ := range SocksDataChanMap.Payload {
-		if !common.IsClosed(SocksDataChanMap.Payload[key]) {
+		if !utils.IsClosed(SocksDataChanMap.Payload[key]) {
 			close(SocksDataChanMap.Payload[key])
 		}
 		delete(SocksDataChanMap.Payload, key)
@@ -134,7 +134,7 @@ func ClearAllConn() {
 
 	PortFowardMap.Lock()
 	for key, _ := range PortFowardMap.Payload {
-		if !common.IsClosed(PortFowardMap.Payload[key]) {
+		if !utils.IsClosed(PortFowardMap.Payload[key]) {
 			close(PortFowardMap.Payload[key])
 		}
 		delete(PortFowardMap.Payload, key)
@@ -166,7 +166,7 @@ func ClearAllConn() {
 }
 
 //查找需要递交的路由
-func ChangeRoute(AdminData *common.Payload) string {
+func ChangeRoute(AdminData *utils.Payload) string {
 	route := AdminData.Route
 	routes := strings.Split(route, ":")
 	selected := routes[0]
@@ -179,7 +179,7 @@ func BroadCast(command string) {
 	var readyToBroadCast []string
 	node.NodeInfo.LowerNode.Lock()
 	for nodeid, _ := range node.NodeInfo.LowerNode.Payload {
-		if nodeid == common.AdminId {
+		if nodeid == utils.AdminId {
 			continue
 		}
 		readyToBroadCast = append(readyToBroadCast, nodeid)
@@ -187,8 +187,8 @@ func BroadCast(command string) {
 	node.NodeInfo.LowerNode.Unlock()
 
 	for _, nodeid := range readyToBroadCast {
-		mess, _ := common.ConstructPayload(nodeid, "", "COMMAND", command, " ", " ", 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
-		passToLowerData := common.NewPassToLowerNodeData()
+		mess, _ := utils.ConstructPayload(nodeid, "", "COMMAND", command, " ", " ", 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+		passToLowerData := utils.NewPassToLowerNodeData()
 		passToLowerData.Data = mess
 		passToLowerData.Route = nodeid
 		ProxyChan.ProxyChanToLowerNode <- passToLowerData

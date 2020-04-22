@@ -1,8 +1,8 @@
 package node
 
 import (
-	"Stowaway/common"
 	"Stowaway/config"
+	"Stowaway/utils"
 	"errors"
 	"fmt"
 	"io"
@@ -29,12 +29,12 @@ func StartNodeConnReuse(monitor string, listenPort string, nodeID string, key []
 			continue
 		}
 
-		helloMess, _ := common.ConstructPayload(nodeID, "", "COMMAND", "STOWAWAYAGENT", " ", " ", 0, common.AdminId, key, false)
+		helloMess, _ := utils.ConstructPayload(nodeID, "", "COMMAND", "STOWAWAYAGENT", " ", " ", 0, utils.AdminId, key, false)
 		controlConnToUpperNode.Write(helloMess)
 
-		common.ExtractPayload(controlConnToUpperNode, key, common.AdminId, true)
+		utils.ExtractPayload(controlConnToUpperNode, key, utils.AdminId, true)
 
-		respcommand, _ := common.ConstructPayload(nodeID, "", "COMMAND", "INIT", " ", listenPort, 0, common.AdminId, key, false) //主动向上级节点发送初始信息
+		respcommand, _ := utils.ConstructPayload(nodeID, "", "COMMAND", "INIT", " ", listenPort, 0, utils.AdminId, key, false) //主动向上级节点发送初始信息
 		_, err = controlConnToUpperNode.Write(respcommand)
 		if err != nil {
 			log.Printf("[*]Error occured: %s", err)
@@ -42,7 +42,7 @@ func StartNodeConnReuse(monitor string, listenPort string, nodeID string, key []
 		}
 		//等待admin为其分配一个id号
 		for {
-			command, _ := common.ExtractPayload(controlConnToUpperNode, key, common.AdminId, true)
+			command, _ := utils.ExtractPayload(controlConnToUpperNode, key, utils.AdminId, true)
 			switch command.Command {
 			case "ID":
 				nodeID = command.NodeId
@@ -67,11 +67,11 @@ func ConnectNextNodeReuse(target string, nodeid string, key []byte) bool {
 			continue
 		}
 
-		helloMess, _ := common.ConstructPayload(nodeid, "", "COMMAND", "STOWAWAYAGENT", " ", " ", 0, common.AdminId, key, false)
+		helloMess, _ := utils.ConstructPayload(nodeid, "", "COMMAND", "STOWAWAYAGENT", " ", " ", 0, utils.AdminId, key, false)
 		controlConnToNextNode.Write(helloMess)
 
 		for {
-			command, err := common.ExtractPayload(controlConnToNextNode, key, common.AdminId, true)
+			command, err := utils.ExtractPayload(controlConnToNextNode, key, utils.AdminId, true)
 			if err != nil {
 				log.Println("[*]", err)
 				return false
@@ -79,8 +79,8 @@ func ConnectNextNodeReuse(target string, nodeid string, key []byte) bool {
 			switch command.Command {
 			case "INIT":
 				//类似与上面
-				NewNodeMessage, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "NEW", " ", controlConnToNextNode.RemoteAddr().String(), 0, nodeid, key, false)
-				NodeInfo.LowerNode.Payload[common.AdminId] = controlConnToNextNode
+				NewNodeMessage, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NEW", " ", controlConnToNextNode.RemoteAddr().String(), 0, nodeid, key, false)
+				NodeInfo.LowerNode.Payload[utils.AdminId] = controlConnToNextNode
 				NodeStuff.ControlConnForLowerNodeChan <- controlConnToNextNode
 				NodeStuff.NewNodeMessageChan <- NewNodeMessage
 				NodeStuff.IsAdmin <- false
@@ -90,7 +90,7 @@ func ConnectNextNodeReuse(target string, nodeid string, key []byte) bool {
 				NodeStuff.ReOnlineId <- command.CurrentId
 				NodeStuff.ReOnlineConn <- controlConnToNextNode
 				<-NodeStuff.PrepareForReOnlineNodeReady
-				NewNodeMessage, _ := common.ConstructPayload(nodeid, "", "COMMAND", "REONLINESUC", " ", " ", 0, nodeid, key, false)
+				NewNodeMessage, _ := utils.ConstructPayload(nodeid, "", "COMMAND", "REONLINESUC", " ", " ", 0, nodeid, key, false)
 				controlConnToNextNode.Write(NewNodeMessage)
 				return true
 			}

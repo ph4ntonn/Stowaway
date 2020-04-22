@@ -1,16 +1,16 @@
 package agent
 
 import (
-	"Stowaway/common"
+	"Stowaway/utils"
 	"flag"
 	"log"
 	"os"
 )
 
-var Args *common.AgentOptions
+var Args *utils.AgentOptions
 
 func init() {
-	Args = new(common.AgentOptions)
+	Args = new(utils.AgentOptions)
 	flag.StringVar(&Args.Secret, "s", "", "")
 	flag.StringVar(&Args.Listen, "l", "", "")
 	flag.StringVar(&Args.Reconnect, "reconnect", "", "")

@@ -1,8 +1,8 @@
 package agent
 
 import (
-	"Stowaway/common"
 	"Stowaway/node"
+	"Stowaway/utils"
 	"fmt"
 	"strings"
 
@@ -24,7 +24,7 @@ func SshTunnelNextNode(info string, nodeid string) error {
 	} else if method == "2" {
 		key, err := ssh.ParsePrivateKey([]byte(authway))
 		if err != nil {
-			sshMess, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "SSHCERTERROR", " ", " ", 0, nodeid, AgentStatus.AESKey, false)
+			sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHCERTERROR", " ", " ", 0, nodeid, AgentStatus.AESKey, false)
 			ProxyChan.ProxyChanToUpperNode <- sshMess
 			return err
 		}
@@ -37,7 +37,7 @@ func SshTunnelNextNode(info string, nodeid string) error {
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	})
 	if err != nil {
-		sshMess, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
+		sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
 		ProxyChan.ProxyChanToUpperNode <- sshMess
 		return err
 	}
@@ -45,7 +45,7 @@ func SshTunnelNextNode(info string, nodeid string) error {
 	nodeConn, err := SshClient.Dial("tcp", fmt.Sprintf("127.0.0.1:%s", lport))
 
 	if err != nil {
-		sshMess, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
+		sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
 		ProxyChan.ProxyChanToUpperNode <- sshMess
 		nodeConn.Close()
 		return err
@@ -53,30 +53,30 @@ func SshTunnelNextNode(info string, nodeid string) error {
 
 	err = node.SendSecret(nodeConn, AgentStatus.AESKey)
 	if err != nil {
-		sshMess, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
+		sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
 		ProxyChan.ProxyChanToUpperNode <- sshMess
 		nodeConn.Close()
 		return err
 	}
 
-	helloMess, _ := common.ConstructPayload(nodeid, "", "COMMAND", "STOWAWAYAGENT", " ", " ", 0, common.AdminId, AgentStatus.AESKey, false)
+	helloMess, _ := utils.ConstructPayload(nodeid, "", "COMMAND", "STOWAWAYAGENT", " ", " ", 0, utils.AdminId, AgentStatus.AESKey, false)
 	nodeConn.Write(helloMess)
 	for {
-		command, err := common.ExtractPayload(nodeConn, AgentStatus.AESKey, common.AdminId, true)
+		command, err := utils.ExtractPayload(nodeConn, AgentStatus.AESKey, utils.AdminId, true)
 		if err != nil {
-			sshMess, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
+			sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
 			ProxyChan.ProxyChanToUpperNode <- sshMess
 			nodeConn.Close()
 			return err
 		}
 		switch command.Command {
 		case "INIT":
-			NewNodeMessage, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "NEW", " ", nodeConn.RemoteAddr().String(), 0, nodeid, AgentStatus.AESKey, false)
-			node.NodeInfo.LowerNode.Payload[common.AdminId] = nodeConn
+			NewNodeMessage, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NEW", " ", nodeConn.RemoteAddr().String(), 0, nodeid, AgentStatus.AESKey, false)
+			node.NodeInfo.LowerNode.Payload[utils.AdminId] = nodeConn
 			node.NodeStuff.ControlConnForLowerNodeChan <- nodeConn
 			node.NodeStuff.NewNodeMessageChan <- NewNodeMessage
 			node.NodeStuff.IsAdmin <- false
-			sshMess, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "SUCCESS", 0, nodeid, AgentStatus.AESKey, false)
+			sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "SUCCESS", 0, nodeid, AgentStatus.AESKey, false)
 			ProxyChan.ProxyChanToUpperNode <- sshMess
 			return nil
 		case "REONLINE":
@@ -84,9 +84,9 @@ func SshTunnelNextNode(info string, nodeid string) error {
 			node.NodeStuff.ReOnlineId <- command.CurrentId
 			node.NodeStuff.ReOnlineConn <- nodeConn
 			<-node.NodeStuff.PrepareForReOnlineNodeReady
-			NewNodeMessage, _ := common.ConstructPayload(nodeid, "", "COMMAND", "REONLINESUC", " ", " ", 0, nodeid, AgentStatus.AESKey, false)
+			NewNodeMessage, _ := utils.ConstructPayload(nodeid, "", "COMMAND", "REONLINESUC", " ", " ", 0, nodeid, AgentStatus.AESKey, false)
 			nodeConn.Write(NewNodeMessage)
-			sshMess, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "SUCCESS", 0, nodeid, AgentStatus.AESKey, false)
+			sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "SUCCESS", 0, nodeid, AgentStatus.AESKey, false)
 			ProxyChan.ProxyChanToUpperNode <- sshMess
 			return nil
 		}

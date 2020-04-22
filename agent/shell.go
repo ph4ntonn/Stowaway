@@ -1,7 +1,7 @@
 package agent
 
 import (
-	"Stowaway/common"
+	"Stowaway/utils"
 	"fmt"
 	"io"
 	"os/exec"
@@ -11,7 +11,7 @@ import (
 //创建交互式shell
 func CreatInteractiveShell() (io.Reader, io.Writer) {
 	var cmd *exec.Cmd
-	sys := common.CheckSystem()
+	sys := utils.CheckSystem()
 	switch sys {
 	case 0x01:
 		cmd = exec.Command("c:\\windows\\system32\\cmd.exe")
@@ -43,7 +43,7 @@ func StartShell(command string, stdin io.Writer, stdout io.Reader, currentid str
 		if err != nil {
 			return
 		}
-		respShell, _ := common.ConstructPayload(common.AdminId, "", "DATA", "SHELLRESP", " ", string(buf[:count]), 0, currentid, AgentStatus.AESKey, false)
+		respShell, _ := utils.ConstructPayload(utils.AdminId, "", "DATA", "SHELLRESP", " ", string(buf[:count]), 0, currentid, AgentStatus.AESKey, false)
 		ProxyChan.ProxyChanToUpperNode <- respShell
 	}
 }

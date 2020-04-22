@@ -1,16 +1,16 @@
 package admin
 
 import (
-	"Stowaway/common"
+	"Stowaway/utils"
 	"flag"
 	"log"
 	"os"
 )
 
-var Args *common.AdminOptions
+var Args *utils.AdminOptions
 
 func init() {
-	Args = new(common.AdminOptions)
+	Args = new(utils.AdminOptions)
 	flag.StringVar(&Args.Secret, "s", "", "Communication secret")
 	flag.StringVar(&Args.Listen, "l", "", "Listen port")
 	flag.StringVar(&Args.Connect, "c", "", "The startnode address when you actively connect to it")

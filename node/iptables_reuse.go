@@ -1,7 +1,7 @@
 package node
 
 import (
-	"Stowaway/common"
+	"Stowaway/utils"
 	"fmt"
 	"log"
 	"net"
@@ -38,12 +38,12 @@ func AcceptConnFromUpperNodeIpTableReuse(report, localport string, nodeid string
 			continue
 		}
 
-		common.ExtractPayload(Comingconn, key, common.AdminId, true)
+		utils.ExtractPayload(Comingconn, key, utils.AdminId, true)
 
-		respcommand, _ := common.ConstructPayload(nodeid, "", "COMMAND", "INIT", " ", report, 0, common.AdminId, key, false)
+		respcommand, _ := utils.ConstructPayload(nodeid, "", "COMMAND", "INIT", " ", report, 0, utils.AdminId, key, false)
 		Comingconn.Write(respcommand)
 
-		command, _ := common.ExtractPayload(Comingconn, key, common.AdminId, true) //等待分配id
+		command, _ := utils.ExtractPayload(Comingconn, key, utils.AdminId, true) //等待分配id
 		if command.Command == "ID" {
 			nodeid = command.NodeId
 			WaitingForConn.Close()
@@ -82,10 +82,10 @@ func StartNodeListenIpTableReuse(report, localport string, NodeId string, key []
 		}
 
 		for i := 0; i < 2; i++ {
-			command, _ := common.ExtractPayload(ConnToLowerNode, key, common.AdminId, true)
+			command, _ := utils.ExtractPayload(ConnToLowerNode, key, utils.AdminId, true)
 			switch command.Command {
 			case "STOWAWAYADMIN":
-				respcommand, _ := common.ConstructPayload(NodeId, "", "COMMAND", "INIT", " ", report, 0, common.AdminId, key, false)
+				respcommand, _ := utils.ConstructPayload(NodeId, "", "COMMAND", "INIT", " ", report, 0, utils.AdminId, key, false)
 				ConnToLowerNode.Write(respcommand)
 			case "ID":
 				NodeStuff.ControlConnForLowerNodeChan <- ConnToLowerNode
@@ -95,15 +95,15 @@ func StartNodeListenIpTableReuse(report, localport string, NodeId string, key []
 				NodeStuff.Adminconn <- ConnToLowerNode
 			case "STOWAWAYAGENT":
 				if !NodeStuff.Offline {
-					NewNodeMessage, _ = common.ConstructPayload(NodeId, "", "COMMAND", "CONFIRM", " ", " ", 0, NodeId, key, false)
+					NewNodeMessage, _ = utils.ConstructPayload(NodeId, "", "COMMAND", "CONFIRM", " ", " ", 0, NodeId, key, false)
 					ConnToLowerNode.Write(NewNodeMessage)
 				} else {
-					respcommand, _ := common.ConstructPayload(NodeId, "", "COMMAND", "REONLINE", " ", report, 0, NodeId, key, false)
+					respcommand, _ := utils.ConstructPayload(NodeId, "", "COMMAND", "REONLINE", " ", report, 0, NodeId, key, false)
 					ConnToLowerNode.Write(respcommand)
 				}
 			case "INIT":
-				NewNodeMessage, _ = common.ConstructPayload(common.AdminId, "", "COMMAND", "NEW", " ", ConnToLowerNode.RemoteAddr().String(), 0, NodeId, key, false)
-				NodeInfo.LowerNode.Payload[common.AdminId] = ConnToLowerNode
+				NewNodeMessage, _ = utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NEW", " ", ConnToLowerNode.RemoteAddr().String(), 0, NodeId, key, false)
+				NodeInfo.LowerNode.Payload[utils.AdminId] = ConnToLowerNode
 				NodeStuff.ControlConnForLowerNodeChan <- ConnToLowerNode
 				NodeStuff.NewNodeMessageChan <- NewNodeMessage
 				NodeStuff.IsAdmin <- false

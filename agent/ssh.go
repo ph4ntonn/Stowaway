@@ -1,7 +1,7 @@
 package agent
 
 import (
-	"Stowaway/common"
+	"Stowaway/utils"
 	"fmt"
 	"io"
 	"strings"
@@ -29,7 +29,7 @@ func StartSSH(info string, nodeid string) error {
 	} else if method == "2" {
 		key, err := ssh.ParsePrivateKey([]byte(authway))
 		if err != nil {
-			sshMess, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "SSHCERTERROR", " ", " ", 0, nodeid, AgentStatus.AESKey, false)
+			sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHCERTERROR", " ", " ", 0, nodeid, AgentStatus.AESKey, false)
 			ProxyChan.ProxyChanToUpperNode <- sshMess
 			return err
 		}
@@ -42,14 +42,14 @@ func StartSSH(info string, nodeid string) error {
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	})
 	if err != nil {
-		sshMess, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "SSHRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
+		sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
 		ProxyChan.ProxyChanToUpperNode <- sshMess
 		return err
 	}
 	Sshhost, err = sshdial.NewSession()
 
 	if err != nil {
-		sshMess, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "SSHRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
+		sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
 		ProxyChan.ProxyChanToUpperNode <- sshMess
 		return err
 	}
@@ -65,7 +65,7 @@ func StartSSH(info string, nodeid string) error {
 	}
 	Sshhost.Stderr = Sshhost.Stdout
 	Sshhost.Shell()
-	sshMess, _ := common.ConstructPayload(common.AdminId, "", "COMMAND", "SSHRESP", " ", "SUCCESS", 0, nodeid, AgentStatus.AESKey, false)
+	sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHRESP", " ", "SUCCESS", 0, nodeid, AgentStatus.AESKey, false)
 	ProxyChan.ProxyChanToUpperNode <- sshMess
 	return nil
 }
@@ -81,7 +81,7 @@ func ReadCommand() {
 		if err != nil {
 			break
 		}
-		sshRespMess, _ := common.ConstructPayload(common.AdminId, "", "DATA", "SSHMESS", " ", string(buffer[:len]), 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+		sshRespMess, _ := utils.ConstructPayload(utils.AdminId, "", "DATA", "SSHMESS", " ", string(buffer[:len]), 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
 		ProxyChan.ProxyChanToUpperNode <- sshRespMess
 	}
 }
