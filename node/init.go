@@ -21,6 +21,7 @@ func init() {
 	NodeInfo = common.NewNodeInfo()
 }
 
+/*-------------------------一般模式下初始化节点代码--------------------------*/
 //初始化一个节点连接操作
 func StartNodeConn(monitor string, listenPort string, nodeID string, key []byte) (net.Conn, string, error) {
 	controlConnToUpperNode, err := net.Dial("tcp", monitor)
@@ -117,6 +118,7 @@ func StartNodeListen(listenPort string, NodeId string, key []byte) {
 	}
 }
 
+/*-------------------------节点主动connect模式代码--------------------------*/
 //connect命令代码
 func ConnectNextNode(target string, nodeid string, key []byte) bool {
 	controlConnToNextNode, err := net.Dial("tcp", target)
@@ -162,6 +164,7 @@ func ConnectNextNode(target string, nodeid string, key []byte) bool {
 	}
 }
 
+/*-------------------------节点被动模式下功能代码--------------------------*/
 //被动模式下startnode接收admin重连 && 普通节点被动启动等待上级节点主动连接
 func AcceptConnFromUpperNode(listenPort string, nodeid string, key []byte) (net.Conn, string) {
 	listenAddr := fmt.Sprintf("0.0.0.0:%s", listenPort)
@@ -199,6 +202,7 @@ func AcceptConnFromUpperNode(listenPort string, nodeid string, key []byte) (net.
 
 }
 
+/*-------------------------一般模式及被动模式下(除了reuse模式)节点互相校验代码--------------------------*/
 //发送secret值
 func SendSecret(conn net.Conn, key []byte) error {
 	var NOT_VALID = errors.New("not valid")

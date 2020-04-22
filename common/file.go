@@ -157,11 +157,3 @@ func ReceiveFile(route string, controlConnToAdmin *net.Conn, FileDataMap *IntStr
 	}
 	return
 }
-
-//进度条
-func NewBar(length int64) *pb.ProgressBar {
-	bar := pb.New64(int64(length))
-	bar.SetTemplate(pb.Full)
-	bar.Set(pb.Bytes, true)
-	return bar
-}

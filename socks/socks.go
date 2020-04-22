@@ -8,6 +8,8 @@ import (
 	"strconv"
 )
 
+/*-------------------------Socks5功能代码-------------------------*/
+//判断是否需要用户名/密码
 func CheckMethod(conntoupper net.Conn, buffer []byte, username string, secret string, clientid uint32, key []byte, currentid string) string {
 	if buffer[0] == 0x05 {
 		if buffer[2] == 0x02 && (username != "") {
@@ -31,6 +33,7 @@ func CheckMethod(conntoupper net.Conn, buffer []byte, username string, secret st
 	return "RETURN"
 }
 
+//如果需要用户名/密码，验证用户合法性
 func AuthClient(conntoupper net.Conn, buffer []byte, username string, secret string, clientid uint32, key []byte, currentid string) bool {
 	ulen := int(buffer[1])
 	slen := int(buffer[2+ulen])
@@ -48,6 +51,7 @@ func AuthClient(conntoupper net.Conn, buffer []byte, username string, secret str
 	}
 }
 
+//判断代理方式
 func ConfirmTarget(conntoupper net.Conn, buffer []byte, checknum uint32, key []byte, currentid string) (net.Conn, bool, bool) {
 	len := len(buffer)
 	connected := false
@@ -67,6 +71,7 @@ func ConfirmTarget(conntoupper net.Conn, buffer []byte, checknum uint32, key []b
 	return server, connected, serverflag
 }
 
+//如果是代理tcp
 func TcpConnect(conntoupper net.Conn, buffer []byte, len int, checknum uint32, key []byte, currentid string) (net.Conn, bool, bool) {
 	host := ""
 	var server net.Conn
@@ -93,6 +98,7 @@ func TcpConnect(conntoupper net.Conn, buffer []byte, len int, checknum uint32, k
 	return server, true, true
 }
 
+//转发流量
 func Proxyhttp(conntoupper net.Conn, server net.Conn, checknum uint32, key []byte, currentid string) error {
 	serverbuffer := make([]byte, 20480)
 	for {

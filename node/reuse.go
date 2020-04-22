@@ -13,7 +13,7 @@ import (
 
 //reuse模式下的共用代码
 
-/*-------------------------端口复用模式下主动连接功能代码--------------------------*/
+/*-------------------------端口复用模式下节点主动连接功能代码--------------------------*/
 //初始化时的连接
 func StartNodeConnReuse(monitor string, listenPort string, nodeID string, key []byte) (net.Conn, string, error) {
 	for {
@@ -98,7 +98,7 @@ func ConnectNextNodeReuse(target string, nodeid string, key []byte) bool {
 	}
 }
 
-/*-------------------------端口复用模式下判断、转发功能代码--------------------------*/
+/*-------------------------端口复用模式下判断流量、转发流量功能代码--------------------------*/
 //发送特征字段
 func IfValid(conn net.Conn) error {
 	var NOT_VALID = errors.New("Not valid")
@@ -138,7 +138,7 @@ func CheckValid(conn net.Conn, reuse bool, report string) error {
 	}
 }
 
-//不是stowaway的连接，进行代理
+//不是来自Stowaway的连接，进行代理
 func ProxyStream(conn net.Conn, message []byte, report string) {
 	reuseAddr := fmt.Sprintf("127.0.0.1:%s", report)
 	reuseConn, err := net.Dial("tcp", reuseAddr)

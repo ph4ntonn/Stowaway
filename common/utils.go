@@ -7,6 +7,8 @@ import (
 	"runtime"
 	"strconv"
 	"sync"
+
+	"github.com/cheggaaa/pb/v3"
 )
 
 var AdminId = "0000000000"
@@ -365,6 +367,14 @@ func CheckSystem() (sysType uint32) {
 		sysType = 0xff
 	}
 	return
+}
+
+/*-------------------------进度条生成相关代码--------------------------*/
+func NewBar(length int64) *pb.ProgressBar {
+	bar := pb.New64(int64(length))
+	bar.SetTemplate(pb.Full)
+	bar.Set(pb.Bytes, true)
+	return bar
 }
 
 /*-------------------------操作功能性代码--------------------------*/
