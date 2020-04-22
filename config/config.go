@@ -1,6 +1,6 @@
 package config
 
-const VERSION = "1.6" //版本号
+const VERSION = "1.6.1" //版本号
 
 const VALIDMESSAGE = "STOWAWAY"      //reuse模式下发送的特征数据
 const READYMESSAGE = "STOWAWAYREADY" //同上
