@@ -1,3 +1,5 @@
+![stowaway.png](https://github.com/ph4ntonn/Stowaway/blob/master/img/logo.png)
+
 # Stowaway
 
 Stowaway is Multi-hop proxy tool for security researchers and pentesters
