@@ -1,11 +1,12 @@
 package agent
 
 import (
-	"Stowaway/utils"
 	"fmt"
 	"log"
 	"net"
 	"strconv"
+
+	"Stowaway/utils"
 )
 
 /*-------------------------Socks5功能代码-------------------------*/

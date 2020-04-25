@@ -51,6 +51,7 @@ func NewAdmin(c *utils.AdminOptions) {
 	Controlpanel()
 }
 
+//主动连接startnode端代码
 func ConnectToStartNode(startnodeaddr string, rhostreuse bool) {
 	for {
 		startNodeConn, err := net.Dial("tcp", startnodeaddr)

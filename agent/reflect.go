@@ -1,10 +1,11 @@
 package agent
 
 import (
-	"Stowaway/utils"
 	"fmt"
 	"net"
 	"strings"
+
+	"Stowaway/utils"
 )
 
 var (

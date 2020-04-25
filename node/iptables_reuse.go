@@ -1,7 +1,6 @@
 package node
 
 import (
-	"Stowaway/utils"
 	"fmt"
 	"log"
 	"net"
@@ -10,6 +9,8 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+
+	"Stowaway/utils"
 )
 
 const CHAIN_NAME = "STOWAWAY"

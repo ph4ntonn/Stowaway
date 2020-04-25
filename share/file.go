@@ -1,7 +1,6 @@
 package share
 
 import (
-	"Stowaway/utils"
 	"fmt"
 	"math"
 	"net"
@@ -9,6 +8,8 @@ import (
 	"runtime"
 	"strconv"
 	"time"
+
+	"Stowaway/utils"
 
 	"github.com/cheggaaa/pb/v3"
 )

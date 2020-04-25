@@ -1,8 +1,6 @@
 package agent
 
 import (
-	"Stowaway/node"
-	"Stowaway/utils"
 	"errors"
 	"fmt"
 	"log"
@@ -13,7 +11,12 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"Stowaway/node"
+	"Stowaway/utils"
 )
+
+//一些agent端共用的零碎功能代码
 
 /*-------------------------startnode重连功能相关代码--------------------------*/
 //重连操作

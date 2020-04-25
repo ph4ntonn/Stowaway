@@ -1,14 +1,15 @@
 package node
 
 import (
-	"Stowaway/config"
-	"Stowaway/utils"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net"
 	"time"
+
+	"Stowaway/config"
+	"Stowaway/utils"
 )
 
 //reuse模式下的共用代码

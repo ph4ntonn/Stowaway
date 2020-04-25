@@ -1,8 +1,9 @@
 package main
 
 import (
-	"Stowaway/agent"
 	"runtime"
+
+	"Stowaway/agent"
 )
 
 //注意！需要编译agent模式的程序时，在18行前加上注释符号‘//’，去掉20行的注释符号, 并将上方import Stowaway/admin改为Stowaway/agent

@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"Stowaway/utils"
 	"bufio"
 	"fmt"
 	"io/ioutil"
@@ -11,6 +10,8 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+
+	"Stowaway/utils"
 )
 
 var (
@@ -30,6 +31,10 @@ func init() {
 	AdminStuff = utils.NewAdminStuff()
 	WaitForFindAll = make(chan bool, 1)
 }
+
+//admin端相关功能代码都比较简单一些，大多数功能实现都在agent端
+//所以admin端就写在一个文件里了，分太多文件也不好
+//agent端分文件写
 
 /*-------------------------控制台相关代码--------------------------*/
 // 启动控制台

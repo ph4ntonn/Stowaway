@@ -1,13 +1,14 @@
 package utils
 
 import (
-	"Stowaway/config"
-	"Stowaway/crypto"
 	"bytes"
 	"encoding/binary"
 	"io"
 	"log"
 	"net"
+
+	"Stowaway/config"
+	"Stowaway/crypto"
 )
 
 type Payload struct {

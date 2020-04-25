@@ -1,8 +1,9 @@
 package admin
 
 import (
-	"Stowaway/config"
 	"fmt"
+
+	"Stowaway/config"
 )
 
 func Banner() {

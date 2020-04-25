@@ -1,10 +1,11 @@
 package agent
 
 import (
-	"Stowaway/utils"
 	"fmt"
 	"io"
 	"strings"
+
+	"Stowaway/utils"
 
 	"golang.org/x/crypto/ssh"
 )

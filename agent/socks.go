@@ -1,8 +1,9 @@
 package agent
 
 import (
-	"Stowaway/utils"
 	"net"
+
+	"Stowaway/utils"
 )
 
 var CurrentConn *utils.Uint32ConnMap

@@ -1,7 +1,6 @@
 package node
 
 import (
-	"Stowaway/utils"
 	"errors"
 	"fmt"
 	"io"
@@ -9,6 +8,8 @@ import (
 	"net"
 	"os"
 	"time"
+
+	"Stowaway/utils"
 )
 
 var (

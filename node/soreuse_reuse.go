@@ -1,11 +1,12 @@
 package node
 
 import (
-	"Stowaway/utils"
 	"fmt"
 	"log"
 	"net"
 	"os"
+
+	"Stowaway/utils"
 
 	reuseport "github.com/libp2p/go-reuseport"
 )
