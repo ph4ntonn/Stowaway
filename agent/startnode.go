@@ -14,6 +14,10 @@ import (
 )
 
 //startnode启动代码
+//todo:可以为startnode加入一个保护机制，在startnode启动时可以设置是否开启此机制
+//即当有节点异常断线时，可设置是否让startnode暂时断开与第二级节点的连接
+//防止异常断线是由于管理员发现节点引起的，并根据connection进行逐点反查从而顺藤摸瓜找到入口点startnode,使得渗透测试者失去内网的入口点
+//先暂时不加入，权当一个胡思乱想的idea，今后可视情况增加对startnode保护机制的处理代码，使得入口点更加稳固和隐蔽
 
 func HandleStartNodeConn(connToAdmin *net.Conn, monitor, listenPort, reConn string, passive bool, NODEID string) {
 	go HandleConnFromAdmin(connToAdmin, monitor, listenPort, reConn, passive, NODEID)
