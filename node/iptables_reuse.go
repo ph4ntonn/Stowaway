@@ -19,7 +19,7 @@ const STOP_FORWARDING = "stowawayleaving"
 
 /*-------------------------Iptable复用模式功能代码--------------------------*/
 //以下大致与SO_REUSEPORT,SO_REUSEADDR模式下相同
-func AcceptConnFromUpperNodeIpTableReuse(report, localport string, nodeid string, key []byte) (net.Conn, string) {
+func AcceptConnFromUpperNodeIPTableReuse(report, localport string, nodeid string, key []byte) (net.Conn, string) {
 	listenAddr := fmt.Sprintf("0.0.0.0:%s", localport)
 	WaitingForConn, err := net.Listen("tcp", listenAddr)
 
@@ -55,7 +55,7 @@ func AcceptConnFromUpperNodeIpTableReuse(report, localport string, nodeid string
 }
 
 //初始化节点监听操作
-func StartNodeListenIpTableReuse(report, localport string, NodeId string, key []byte) {
+func StartNodeListenIPTableReuse(report, localport string, NodeId string, key []byte) {
 	var NewNodeMessage []byte
 
 	if localport == "" { //如果没有port，直接退出

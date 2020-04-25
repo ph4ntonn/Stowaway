@@ -245,7 +245,7 @@ func HandleStartConn(startNodeConn net.Conn) {
 		case "COMMAND":
 			switch nodeResp.Command {
 			case "NEW":
-				nodeid := GenerateNodeId() //生成一个新的nodeid号进行分配
+				nodeid := GenerateNodeID() //生成一个新的nodeid号进行分配
 				log.Println("[*]New node join! Node Id is ", len(CurrentClient))
 				AdminStatus.NodesReadyToadd <- map[string]string{nodeid: nodeResp.Info} //将此节点加入detail命令所使用的NodeStatus.Nodes结构体
 				NodeStatus.Nodenote[nodeid] = ""                                        //初始的note置空
@@ -278,10 +278,10 @@ func HandleStartConn(startNodeConn net.Conn) {
 			case "SSHRESP":
 				switch nodeResp.Info {
 				case "SUCCESS":
-					AdminStatus.SshSuccess <- true
+					AdminStatus.SSHSuccess <- true
 					fmt.Println("[*]Node start ssh successfully!")
 				case "FAILED":
-					AdminStatus.SshSuccess <- false
+					AdminStatus.SSHSuccess <- false
 					fmt.Println("[*]Node start ssh failed!Check if target's ssh service is on or username and pass given are right")
 					AdminStatus.ReadyChange <- true
 					AdminStatus.IsShellMode <- true
@@ -299,7 +299,7 @@ func HandleStartConn(startNodeConn net.Conn) {
 				}
 			case "SSHCERTERROR":
 				fmt.Println("[*]Ssh certificate seems wrong")
-				AdminStatus.SshSuccess <- false
+				AdminStatus.SSHSuccess <- false
 				AdminStatus.ReadyChange <- true
 				AdminStatus.IsShellMode <- true
 			case "NAMECONFIRM":

@@ -340,7 +340,7 @@ func HandleSSHToNode(startNodeControlConn net.Conn, nodeID string) {
 
 	inputReader := bufio.NewReader(os.Stdin)
 	log.Println("[*]Waiting for response,please be patient")
-	if conrinueornot := <-AdminStatus.SshSuccess; conrinueornot {
+	if conrinueornot := <-AdminStatus.SSHSuccess; conrinueornot {
 		fmt.Print("(ssh mode)>>>")
 		for {
 			command, err := inputReader.ReadString('\n')

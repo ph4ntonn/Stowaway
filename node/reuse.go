@@ -88,7 +88,7 @@ func ConnectNextNodeReuse(target string, nodeid string, key []byte) bool {
 				return true
 			case "REONLINE":
 				//普通节点重连
-				NodeStuff.ReOnlineId <- command.CurrentId
+				NodeStuff.ReOnlineID <- command.CurrentId
 				NodeStuff.ReOnlineConn <- controlConnToNextNode
 				<-NodeStuff.PrepareForReOnlineNodeReady
 				NewNodeMessage, _ := utils.ConstructPayload(nodeid, "", "COMMAND", "REONLINESUC", " ", " ", 0, nodeid, key, false)

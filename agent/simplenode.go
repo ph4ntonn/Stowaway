@@ -81,7 +81,7 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 				case "SSHCOMMAND":
 					go WriteCommand(command.Info)
 				case "SSHTUNNEL":
-					err := SshTunnelNextNode(command.Info, NODEID)
+					err := SSHTunnelNextNode(command.Info, NODEID)
 					if err != nil {
 						fmt.Println("[*]", err)
 						break
@@ -271,7 +271,7 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 			}
 		} else {
 			if command.Route == "" && command.Command == "ID" {
-				AgentStatus.WaitForIdAllocate <- command.NodeId
+				AgentStatus.WaitForIDAllocate <- command.NodeId
 				node.NodeInfo.LowerNode.Lock()
 				node.NodeInfo.LowerNode.Payload[command.NodeId] = node.NodeInfo.LowerNode.Payload[utils.AdminId]
 				node.NodeInfo.LowerNode.Unlock()

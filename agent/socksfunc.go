@@ -62,18 +62,18 @@ func ConfirmTarget(conntoupper net.Conn, buffer []byte, checknum uint32, key []b
 	if buffer[0] == 0x05 {
 		switch buffer[1] {
 		case 0x01:
-			server, connected, serverflag = TcpConnect(conntoupper, buffer, len, checknum, key, currentid)
+			server, connected, serverflag = TCPConnect(conntoupper, buffer, len, checknum, key, currentid)
 		case 0x02:
-			connected = TcpBind(conntoupper, buffer, len, checknum, key)
+			connected = TCPBind(conntoupper, buffer, len, checknum, key)
 		case 0x03:
-			connected = UdpAssociate(conntoupper, buffer, len, checknum, key)
+			connected = UDPAssociate(conntoupper, buffer, len, checknum, key)
 		}
 	}
 	return server, connected, serverflag
 }
 
 //如果是代理tcp
-func TcpConnect(conntoupper net.Conn, buffer []byte, len int, checknum uint32, key []byte, currentid string) (net.Conn, bool, bool) {
+func TCPConnect(conntoupper net.Conn, buffer []byte, len int, checknum uint32, key []byte, currentid string) (net.Conn, bool, bool) {
 	host := ""
 	var server net.Conn
 	switch buffer[3] {
@@ -111,15 +111,14 @@ func Proxyhttp(conntoupper net.Conn, server net.Conn, checknum uint32, key []byt
 		respdata, _ := utils.ConstructPayload(utils.AdminId, "", "DATA", "SOCKSDATARESP", " ", string(serverbuffer[:len]), checknum, currentid, key, false)
 		conntoupper.Write(respdata)
 	}
-	return nil
 }
 
-func TcpBind(client net.Conn, buffer []byte, len int, checknum uint32, AESKey []byte) bool {
+func TCPBind(client net.Conn, buffer []byte, len int, checknum uint32, AESKey []byte) bool {
 	fmt.Println("Not ready") //limited use, add to Todo
 	return false
 }
 
-func UdpAssociate(client net.Conn, buffer []byte, len int, checknum uint32, AESKey []byte) bool {
+func UDPAssociate(client net.Conn, buffer []byte, len int, checknum uint32, AESKey []byte) bool {
 	fmt.Println("Not ready") //limited use, add to Todo
 	return false
 }

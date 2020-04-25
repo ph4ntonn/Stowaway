@@ -249,7 +249,7 @@ func CheckRange(nodes []int) {
 
 /*-------------------------nodeid生成、搜索相关代码--------------------------*/
 //生成一个nodeid
-func GenerateNodeId() string {
+func GenerateNodeID() string {
 	u2, _ := uuid.NewV4()
 	uu := strings.Replace(u2.String(), "-", "", -1)
 	uuid := uu[11:21] //取10位，尽量减少包头长度

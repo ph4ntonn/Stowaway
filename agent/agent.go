@@ -85,7 +85,7 @@ func StartNodeInit(monitor, listenPort, reConn string, passive bool) {
 			go HandleConnToLowerNode()
 		}
 		AgentStatus.NotLastOne = true
-		lowerid := <-AgentStatus.WaitForIdAllocate
+		lowerid := <-AgentStatus.WaitForIDAllocate
 		go HandleConnFromLowerNode(controlConnForLowerNode, AgentStatus.Nodeid, lowerid)
 	}
 }
@@ -116,7 +116,7 @@ func SimpleNodeInit(monitor, listenPort string, rhostreuse bool) {
 			go HandleConnToLowerNode()
 		}
 		AgentStatus.NotLastOne = true
-		lowerid := <-AgentStatus.WaitForIdAllocate
+		lowerid := <-AgentStatus.WaitForIDAllocate
 		go HandleConnFromLowerNode(controlConnForLowerNode, AgentStatus.Nodeid, lowerid)
 	}
 }
@@ -143,7 +143,7 @@ func StartNodeReversemodeInit(monitor, listenPort string, passive bool) {
 				go HandleConnToLowerNode()
 			}
 			AgentStatus.NotLastOne = true
-			lowerid := <-AgentStatus.WaitForIdAllocate
+			lowerid := <-AgentStatus.WaitForIDAllocate
 			go HandleConnFromLowerNode(controlConnForLowerNode, AgentStatus.Nodeid, lowerid)
 		}
 	}
@@ -167,7 +167,7 @@ func SimpleNodeReversemodeInit(monitor, listenPort string) {
 			go HandleConnToLowerNode()
 		}
 		AgentStatus.NotLastOne = true
-		lowerid := <-AgentStatus.WaitForIdAllocate
+		lowerid := <-AgentStatus.WaitForIDAllocate
 		go HandleConnFromLowerNode(controlConnForLowerNode, AgentStatus.Nodeid, lowerid)
 	}
 }
@@ -183,14 +183,14 @@ func StartNodeReuseInit(reusehost, reuseport, localport string, method int) {
 			fmt.Println("[*]Cannot set the iptable rules!")
 			os.Exit(0)
 		}
-		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeIpTableReuse(reuseport, localport, AgentStatus.Nodeid, AgentStatus.AESKey)
+		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeIPTableReuse(reuseport, localport, AgentStatus.Nodeid, AgentStatus.AESKey)
 	}
 	go share.SendHeartBeatControl(&ConnToAdmin, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go HandleStartNodeConn(&ConnToAdmin, "", "", "", true, AgentStatus.Nodeid)
 	if method == 1 {
 		go node.StartNodeListenReuse(reusehost, reuseport, AgentStatus.Nodeid, AgentStatus.AESKey)
 	} else {
-		go node.StartNodeListenIpTableReuse(reuseport, localport, AgentStatus.Nodeid, AgentStatus.AESKey)
+		go node.StartNodeListenIPTableReuse(reuseport, localport, AgentStatus.Nodeid, AgentStatus.AESKey)
 	}
 	go PrepareForReOnlineNode()
 	for {
@@ -207,7 +207,7 @@ func StartNodeReuseInit(reusehost, reuseport, localport string, method int) {
 				go HandleConnToLowerNode()
 			}
 			AgentStatus.NotLastOne = true
-			lowerid := <-AgentStatus.WaitForIdAllocate
+			lowerid := <-AgentStatus.WaitForIDAllocate
 			go HandleConnFromLowerNode(controlConnForLowerNode, AgentStatus.Nodeid, lowerid)
 		}
 	}
@@ -224,14 +224,14 @@ func SimpleNodeReuseInit(reusehost, reuseport, localport string, method int) {
 			fmt.Println("[*]Cannot set the iptable rules!")
 			os.Exit(0)
 		}
-		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeIpTableReuse(reuseport, localport, AgentStatus.Nodeid, AgentStatus.AESKey)
+		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeIPTableReuse(reuseport, localport, AgentStatus.Nodeid, AgentStatus.AESKey)
 	}
 	go share.SendHeartBeatControl(&ConnToAdmin, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go HandleSimpleNodeConn(&ConnToAdmin, AgentStatus.Nodeid)
 	if method == 1 {
 		go node.StartNodeListenReuse(reusehost, reuseport, AgentStatus.Nodeid, AgentStatus.AESKey)
 	} else {
-		go node.StartNodeListenIpTableReuse(reuseport, localport, AgentStatus.Nodeid, AgentStatus.AESKey)
+		go node.StartNodeListenIPTableReuse(reuseport, localport, AgentStatus.Nodeid, AgentStatus.AESKey)
 	}
 	go PrepareForReOnlineNode()
 	for {
@@ -244,7 +244,7 @@ func SimpleNodeReuseInit(reusehost, reuseport, localport string, method int) {
 			go HandleConnToLowerNode()
 		}
 		AgentStatus.NotLastOne = true
-		lowerid := <-AgentStatus.WaitForIdAllocate
+		lowerid := <-AgentStatus.WaitForIDAllocate
 		go HandleConnFromLowerNode(controlConnForLowerNode, AgentStatus.Nodeid, lowerid)
 	}
 }

@@ -11,7 +11,7 @@ import (
 )
 
 //利用sshtunnel来连接下一个节点，以此在防火墙限制流量时仍然可以进行穿透
-func SshTunnelNextNode(info string, nodeid string) error {
+func SSHTunnelNextNode(info string, nodeid string) error {
 	var authpayload ssh.AuthMethod
 	spiltedinfo := strings.Split(info, ":::")
 	host := spiltedinfo[0]
@@ -32,7 +32,7 @@ func SshTunnelNextNode(info string, nodeid string) error {
 		authpayload = ssh.PublicKeys(key)
 	}
 
-	SshClient, err := ssh.Dial("tcp", host, &ssh.ClientConfig{
+	SSHClient, err := ssh.Dial("tcp", host, &ssh.ClientConfig{
 		User:            username,
 		Auth:            []ssh.AuthMethod{authpayload},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
@@ -43,7 +43,7 @@ func SshTunnelNextNode(info string, nodeid string) error {
 		return err
 	}
 
-	nodeConn, err := SshClient.Dial("tcp", fmt.Sprintf("127.0.0.1:%s", lport))
+	nodeConn, err := SSHClient.Dial("tcp", fmt.Sprintf("127.0.0.1:%s", lport))
 
 	if err != nil {
 		sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
@@ -82,7 +82,7 @@ func SshTunnelNextNode(info string, nodeid string) error {
 			return nil
 		case "REONLINE":
 			//普通节点重连
-			node.NodeStuff.ReOnlineId <- command.CurrentId
+			node.NodeStuff.ReOnlineID <- command.CurrentId
 			node.NodeStuff.ReOnlineConn <- nodeConn
 			<-node.NodeStuff.PrepareForReOnlineNodeReady
 			NewNodeMessage, _ := utils.ConstructPayload(nodeid, "", "COMMAND", "REONLINESUC", " ", " ", 0, nodeid, AgentStatus.AESKey, false)

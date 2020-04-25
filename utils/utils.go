@@ -39,7 +39,7 @@ type AgentOptions struct {
 type AdminStatus struct {
 	ReadyChange      chan bool
 	IsShellMode      chan bool
-	SshSuccess       chan bool
+	SSHSuccess       chan bool
 	NodeSocksStarted chan bool
 	GetName          chan bool
 	CannotRead       chan bool
@@ -52,7 +52,7 @@ func NewAdminStatus() *AdminStatus {
 	nas := new(AdminStatus)
 	nas.ReadyChange = make(chan bool, 1)
 	nas.IsShellMode = make(chan bool, 1)
-	nas.SshSuccess = make(chan bool, 1)
+	nas.SSHSuccess = make(chan bool, 1)
 	nas.NodeSocksStarted = make(chan bool, 1)
 	nas.GetName = make(chan bool, 1)
 	nas.CannotRead = make(chan bool, 1)
@@ -89,7 +89,7 @@ type AgentStatus struct {
 	NotLastOne        bool
 	Waiting           bool
 	ReConnCome        chan bool
-	WaitForIdAllocate chan string
+	WaitForIDAllocate chan string
 	AESKey            []byte
 }
 
@@ -99,7 +99,7 @@ func NewAgentStatus() *AgentStatus {
 	nas.NotLastOne = false
 	nas.Waiting = false
 	nas.ReConnCome = make(chan bool, 1)
-	nas.WaitForIdAllocate = make(chan string, 1)
+	nas.WaitForIDAllocate = make(chan string, 1)
 	return nas
 }
 
@@ -137,7 +137,7 @@ type NodeStuff struct {
 	NewNodeMessageChan          chan []byte //新节点加入消息
 	IsAdmin                     chan bool   //分辨连接是属于admin还是agent
 	PrepareForReOnlineNodeReady chan bool
-	ReOnlineId                  chan string
+	ReOnlineID                  chan string
 	Offline                     bool //判断当前状态是否是掉线状态
 }
 
@@ -149,7 +149,7 @@ func NewNodeStuff() *NodeStuff {
 	nns.NewNodeMessageChan = make(chan []byte, 1)
 	nns.IsAdmin = make(chan bool, 1)
 	nns.PrepareForReOnlineNodeReady = make(chan bool, 1)
-	nns.ReOnlineId = make(chan string, 1)
+	nns.ReOnlineID = make(chan string, 1)
 	nns.Offline = false
 	return nns
 }

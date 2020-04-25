@@ -179,7 +179,7 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 				case "SSHCOMMAND":
 					go WriteCommand(AdminData.Info)
 				case "SSHTUNNEL":
-					err := SshTunnelNextNode(AdminData.Info, NODEID)
+					err := SSHTunnelNextNode(AdminData.Info, NODEID)
 					if err != nil {
 						fmt.Println("[*]", err)
 						break
@@ -269,7 +269,7 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 		} else {
 			// 检查是否是admin发来的，分配给自己子节点的ID命令，是的话将admin分配的序号记录
 			if AdminData.Route == "" && AdminData.Command == "ID" {
-				AgentStatus.WaitForIdAllocate <- AdminData.NodeId //将此节点序号递交，以便启动HandleConnFromLowerNode函数
+				AgentStatus.WaitForIDAllocate <- AdminData.NodeId //将此节点序号递交，以便启动HandleConnFromLowerNode函数
 				node.NodeInfo.LowerNode.Lock()
 				node.NodeInfo.LowerNode.Payload[AdminData.NodeId] = node.NodeInfo.LowerNode.Payload[utils.AdminId]
 				node.NodeInfo.LowerNode.Unlock()

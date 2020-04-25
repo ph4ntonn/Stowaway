@@ -88,7 +88,7 @@ func WaitingAdmin(nodeid string) {
 //等待重连时，用来供上一个节点起HandleConnFromLowerNode函数
 func PrepareForReOnlineNode() {
 	for {
-		nodeid := <-node.NodeStuff.ReOnlineId
+		nodeid := <-node.NodeStuff.ReOnlineID
 		conn := <-node.NodeStuff.ReOnlineConn
 		//如果此节点没有启动过HandleConnToLowerNode函数，启动之
 		if AgentStatus.NotLastOne == false {
