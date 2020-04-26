@@ -234,6 +234,8 @@ Startnode端：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/addnote.png)
 
+备忘在设置之后，只要被设置备忘的节点没有掉线，那么哪怕admin掉线，一旦admin成功重连回网络，所有备忘就可以自动恢复，不用担心丢失备忘的情况。
+
 为此节点删除备忘：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/delnote.png)

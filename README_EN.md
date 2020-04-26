@@ -216,6 +216,8 @@ Set note for this node：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/addnote.png)
 
+Once the node's note is set,unless the node down,the note can be recovered even when admin offline follow by reconnecting to the whole network.So you don't need to be worried about losing the notes.
+
 Delete note of this node：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/delnote.png)
