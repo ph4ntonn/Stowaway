@@ -388,11 +388,11 @@ func GetInfoViaSystem() string {
 	case "darwin":
 		temHostname, err := exec.Command("hostname").Output()
 		if err != nil {
-			return "Null"
+			temHostname = []byte("Null")
 		}
 		temUsername, err := exec.Command("whoami").Output()
 		if err != nil {
-			return "Null"
+			temUsername = []byte("Null")
 		}
 
 		hostname := strings.Replace(string(temHostname), "\n", "", -1)
@@ -400,7 +400,7 @@ func GetInfoViaSystem() string {
 
 		return hostname + ":::stowaway:::" + username
 	default:
-		return "Null"
+		return "Null" + ":::stowaway:::" + "Null"
 	}
 }
 
