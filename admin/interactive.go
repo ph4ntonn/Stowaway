@@ -16,6 +16,110 @@ import (
 
 var CurrentNode string
 
+/*-------------------------控制台相关代码--------------------------*/
+// 启动控制台
+func Controlpanel() {
+	inputReader := bufio.NewReader(os.Stdin)
+	var command string
+	platform := utils.CheckSystem()
+	for {
+		fmt.Printf("(%s) >> ", *CliStatus)
+		input, err := inputReader.ReadString('\n')
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		if platform == 0x01 {
+			command = strings.Replace(input, "\r\n", "", -1)
+		} else {
+			command = strings.Replace(input, "\n", "", -1)
+		}
+		execCommand := strings.Split(command, " ")
+		AdminStuff.AdminCommandChan <- execCommand
+
+		<-AdminStatus.ReadyChange
+		<-AdminStatus.IsShellMode
+	}
+}
+
+/*------------------------- admin模式下相关代码--------------------------*/
+// 处理admin模式下用户的输入及由admin发往startnode的控制信号
+func HandleCommandToControlConn(startNodeControlConn net.Conn) {
+	for {
+		AdminCommand := <-AdminStuff.AdminCommandChan
+		switch AdminCommand[0] {
+		case "use":
+			if len(AdminCommand) == 2 {
+				if AdminStuff.StartNode == "0.0.0.0" {
+					fmt.Println("[*]There are no nodes connected!")
+					AdminStatus.ReadyChange <- true
+					AdminStatus.IsShellMode <- true
+				} else if AdminCommand[1] == "1" {
+					*CliStatus = "startnode"
+					AdminStatus.ReadyChange <- true
+					AdminStatus.IsShellMode <- true
+					currentid, _ := FindNumByNodeid(AdminCommand[1])
+					AdminStatus.HandleNode = currentid
+					HandleNodeCommand(startNodeControlConn, currentid)
+				} else {
+					if len(NodeStatus.NodeIP) == 0 {
+						fmt.Println("[*]There is no node", AdminCommand[1])
+						AdminStatus.ReadyChange <- true
+						AdminStatus.IsShellMode <- true
+					} else {
+						currentid, err := FindNumByNodeid(AdminCommand[1])
+						if err != nil {
+							fmt.Println("[*]There is no node", AdminCommand[1])
+							AdminStatus.ReadyChange <- true
+							AdminStatus.IsShellMode <- true
+							continue
+						}
+						if _, ok := NodeStatus.NodeIP[currentid]; ok {
+							*CliStatus = "node " + AdminCommand[1]
+							AdminStatus.ReadyChange <- true
+							AdminStatus.IsShellMode <- true
+							AdminStatus.HandleNode = currentid
+							HandleNodeCommand(startNodeControlConn, currentid)
+						} else {
+							fmt.Println("[*]There is no node", AdminCommand[1])
+							AdminStatus.ReadyChange <- true
+							AdminStatus.IsShellMode <- true
+						}
+					}
+				}
+			} else {
+				fmt.Println("[*]Bad format!")
+				AdminStatus.ReadyChange <- true
+				AdminStatus.IsShellMode <- true
+			}
+		case "detail":
+			ShowDetail()
+			AdminStatus.ReadyChange <- true
+			AdminStatus.IsShellMode <- true
+		case "tree":
+			ShowTree()
+			AdminStatus.ReadyChange <- true
+			AdminStatus.IsShellMode <- true
+		case "help":
+			ShowMainHelp()
+			AdminStatus.ReadyChange <- true
+			AdminStatus.IsShellMode <- true
+		case "":
+			AdminStatus.ReadyChange <- true
+			AdminStatus.IsShellMode <- true
+			continue
+		case "exit":
+			log.Println("[*]BYE!")
+			os.Exit(0)
+			return
+		default:
+			fmt.Println("[*]Illegal command, enter help to get available commands")
+			AdminStatus.ReadyChange <- true
+			AdminStatus.IsShellMode <- true
+		}
+	}
+}
+
 /*-------------------------Node模式下相关代码--------------------------*/
 //处理node模式下用户的输入
 func HandleNodeCommand(startNodeConn net.Conn, nodeID string) {
@@ -369,83 +473,5 @@ func HandleSSHToNode(startNodeControlConn net.Conn, nodeID string) {
 		}
 	} else {
 		return
-	}
-}
-
-/*------------------------- admin模式下相关代码--------------------------*/
-// 处理admin模式下用户的输入及由admin发往startnode的控制信号
-func HandleCommandToControlConn(startNodeControlConn net.Conn) {
-	for {
-		AdminCommand := <-AdminStuff.AdminCommandChan
-		switch AdminCommand[0] {
-		case "use":
-			if len(AdminCommand) == 2 {
-				if AdminStuff.StartNode == "0.0.0.0" {
-					fmt.Println("[*]There are no nodes connected!")
-					AdminStatus.ReadyChange <- true
-					AdminStatus.IsShellMode <- true
-				} else if AdminCommand[1] == "1" {
-					*CliStatus = "startnode"
-					AdminStatus.ReadyChange <- true
-					AdminStatus.IsShellMode <- true
-					currentid, _ := FindNumByNodeid(AdminCommand[1])
-					AdminStatus.HandleNode = currentid
-					HandleNodeCommand(startNodeControlConn, currentid)
-				} else {
-					if len(NodeStatus.NodeIP) == 0 {
-						fmt.Println("[*]There is no node", AdminCommand[1])
-						AdminStatus.ReadyChange <- true
-						AdminStatus.IsShellMode <- true
-					} else {
-						currentid, err := FindNumByNodeid(AdminCommand[1])
-						if err != nil {
-							fmt.Println("[*]There is no node", AdminCommand[1])
-							AdminStatus.ReadyChange <- true
-							AdminStatus.IsShellMode <- true
-							continue
-						}
-						if _, ok := NodeStatus.NodeIP[currentid]; ok {
-							*CliStatus = "node " + AdminCommand[1]
-							AdminStatus.ReadyChange <- true
-							AdminStatus.IsShellMode <- true
-							AdminStatus.HandleNode = currentid
-							HandleNodeCommand(startNodeControlConn, currentid)
-						} else {
-							fmt.Println("[*]There is no node", AdminCommand[1])
-							AdminStatus.ReadyChange <- true
-							AdminStatus.IsShellMode <- true
-						}
-					}
-				}
-			} else {
-				fmt.Println("[*]Bad format!")
-				AdminStatus.ReadyChange <- true
-				AdminStatus.IsShellMode <- true
-			}
-		case "detail":
-			ShowDetail()
-			AdminStatus.ReadyChange <- true
-			AdminStatus.IsShellMode <- true
-		case "tree":
-			ShowTree()
-			AdminStatus.ReadyChange <- true
-			AdminStatus.IsShellMode <- true
-		case "help":
-			ShowMainHelp()
-			AdminStatus.ReadyChange <- true
-			AdminStatus.IsShellMode <- true
-		case "":
-			AdminStatus.ReadyChange <- true
-			AdminStatus.IsShellMode <- true
-			continue
-		case "exit":
-			log.Println("[*]BYE!")
-			os.Exit(0)
-			return
-		default:
-			fmt.Println("[*]Illegal command, enter help to get available commands")
-			AdminStatus.ReadyChange <- true
-			AdminStatus.IsShellMode <- true
-		}
 	}
 }

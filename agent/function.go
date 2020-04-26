@@ -16,7 +16,7 @@ import (
 	"Stowaway/utils"
 )
 
-//一些agent端共用的零碎功能代码
+//一些agent端的零碎功能代码
 
 /*-------------------------节点发送自身信息功能相关代码--------------------------*/
 //发送自身信息
@@ -182,6 +182,7 @@ func ClearAllConn() {
 
 }
 
+/*-------------------------路由相关代码--------------------------*/
 //查找需要递交的路由
 func ChangeRoute(AdminData *utils.Payload) string {
 	route := AdminData.Route
@@ -191,6 +192,7 @@ func ChangeRoute(AdminData *utils.Payload) string {
 	return selected
 }
 
+/*-------------------------广播相关代码--------------------------*/
 //广播消息
 func BroadCast(command string) {
 	var readyToBroadCast []string

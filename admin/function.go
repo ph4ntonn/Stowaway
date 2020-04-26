@@ -1,12 +1,10 @@
 package admin
 
 import (
-	"bufio"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
-	"os"
 	"runtime"
 	"strconv"
 	"strings"
@@ -32,34 +30,10 @@ func init() {
 	WaitForFindAll = make(chan bool, 1)
 }
 
+//admin端功能及零碎代码
 //admin端相关功能代码都比较简单一些，大多数功能实现都在agent端
 //所以admin端就写在一个文件里了，分太多文件也不好
 //agent端分文件写
-
-/*-------------------------控制台相关代码--------------------------*/
-// 启动控制台
-func Controlpanel() {
-	inputReader := bufio.NewReader(os.Stdin)
-	var command string
-	for {
-		fmt.Printf("(%s) >> ", *CliStatus)
-		input, err := inputReader.ReadString('\n')
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-		if runtime.GOOS == "windows" {
-			command = strings.Replace(input, "\r\n", "", -1)
-		} else {
-			command = strings.Replace(input, "\n", "", -1)
-		}
-		execCommand := strings.Split(command, " ")
-		AdminStuff.AdminCommandChan <- execCommand
-
-		<-AdminStatus.ReadyChange
-		<-AdminStatus.IsShellMode
-	}
-}
 
 /*-------------------------Socks5功能相关代码--------------------------*/
 // 启动socks5 for client
