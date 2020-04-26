@@ -37,26 +37,28 @@ func NewAgent(c *utils.AgentOptions) {
 	rhostreuse := c.RhostReuse
 
 	if isStartNode && passive == false && reusehost == "" && reuseport == "" {
-		go WaitForExit(AgentStatus.Nodeid)
+		go WaitForExit()
 		StartNodeInit(monitor, listenPort, reconn, passive)
 	} else if passive == false && reusehost == "" && reuseport == "" {
-		go WaitForExit(AgentStatus.Nodeid)
+		go WaitForExit()
 		SimpleNodeInit(monitor, listenPort, rhostreuse)
 	} else if isStartNode && passive && reusehost == "" && reuseport == "" {
-		go WaitForExit(AgentStatus.Nodeid)
+		go WaitForExit()
 		StartNodeReversemodeInit(monitor, listenPort, passive)
 	} else if passive && reusehost == "" && reuseport == "" {
-		go WaitForExit(AgentStatus.Nodeid)
+		go WaitForExit()
 		SimpleNodeReversemodeInit(monitor, listenPort)
 	} else if reusehost != "" && reuseport != "" && isStartNode {
-		go WaitForExit(AgentStatus.Nodeid)
+		go WaitForExit()
 		StartNodeReuseInit(reusehost, reuseport, listenPort, 1)
 	} else if reusehost != "" && reuseport != "" {
-		go WaitForExit(AgentStatus.Nodeid)
+		go WaitForExit()
 		SimpleNodeReuseInit(reusehost, reuseport, listenPort, 1)
 	} else if reuseport != "" && listenPort != "" && isStartNode {
+		go WaitForExit()
 		StartNodeReuseInit(reusehost, reuseport, listenPort, 2)
 	} else if reuseport != "" && listenPort != "" {
+		go WaitForExit()
 		SimpleNodeReuseInit(reusehost, reuseport, listenPort, 2)
 	}
 }
@@ -71,6 +73,7 @@ func StartNodeInit(monitor, listenPort, reConn string, passive bool) {
 	if err != nil {
 		os.Exit(0)
 	}
+	go SendInfo(AgentStatus.Nodeid) //发送自身信息
 	go share.SendHeartBeatControl(&ConnToAdmin, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go HandleStartNodeConn(&ConnToAdmin, monitor, listenPort, reConn, passive, AgentStatus.Nodeid)
 	go node.StartNodeListen(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
@@ -102,6 +105,7 @@ func SimpleNodeInit(monitor, listenPort string, rhostreuse bool) {
 	if err != nil {
 		os.Exit(0)
 	}
+	go SendInfo(AgentStatus.Nodeid)
 	go share.SendHeartBeatControl(&ConnToAdmin, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go HandleSimpleNodeConn(&ConnToAdmin, AgentStatus.Nodeid)
 	go node.StartNodeListen(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
@@ -125,6 +129,7 @@ func SimpleNodeInit(monitor, listenPort string, rhostreuse bool) {
 func StartNodeReversemodeInit(monitor, listenPort string, passive bool) {
 	AgentStatus.Nodeid = utils.StartNodeId
 	ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNode(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
+	go SendInfo(AgentStatus.Nodeid)
 	go share.SendHeartBeatControl(&ConnToAdmin, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go HandleStartNodeConn(&ConnToAdmin, monitor, listenPort, "", passive, AgentStatus.Nodeid)
 	go node.StartNodeListen(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
@@ -153,6 +158,7 @@ func StartNodeReversemodeInit(monitor, listenPort string, passive bool) {
 func SimpleNodeReversemodeInit(monitor, listenPort string) {
 	AgentStatus.Nodeid = utils.AdminId
 	ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNode(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
+	go SendInfo(AgentStatus.Nodeid)
 	go share.SendHeartBeatControl(&ConnToAdmin, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go HandleSimpleNodeConn(&ConnToAdmin, AgentStatus.Nodeid)
 	go node.StartNodeListen(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
@@ -185,6 +191,7 @@ func StartNodeReuseInit(reusehost, reuseport, localport string, method int) {
 		}
 		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeIPTableReuse(reuseport, localport, AgentStatus.Nodeid, AgentStatus.AESKey)
 	}
+	go SendInfo(AgentStatus.Nodeid)
 	go share.SendHeartBeatControl(&ConnToAdmin, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go HandleStartNodeConn(&ConnToAdmin, "", "", "", true, AgentStatus.Nodeid)
 	if method == 1 {
@@ -226,6 +233,7 @@ func SimpleNodeReuseInit(reusehost, reuseport, localport string, method int) {
 		}
 		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeIPTableReuse(reuseport, localport, AgentStatus.Nodeid, AgentStatus.AESKey)
 	}
+	go SendInfo(AgentStatus.Nodeid)
 	go share.SendHeartBeatControl(&ConnToAdmin, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go HandleSimpleNodeConn(&ConnToAdmin, AgentStatus.Nodeid)
 	if method == 1 {

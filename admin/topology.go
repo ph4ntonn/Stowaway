@@ -3,6 +3,7 @@ package admin
 import (
 	"errors"
 	"fmt"
+	"net"
 	"strings"
 
 	"Stowaway/utils"
@@ -51,7 +52,7 @@ func AddToChain() {
 	for {
 		newNode := <-AdminStatus.NodesReadyToadd
 		for key, value := range newNode {
-			NodeStatus.Nodes[key] = value
+			NodeStatus.NodeIP[key] = value
 		}
 	}
 }
@@ -71,7 +72,7 @@ func DelNodeFromTopology(nodeid string) {
 
 		for _, value := range readyToDel {
 			delete(Nooode.AllNode, value)
-			delete(NodeStatus.Nodes, value)
+			delete(NodeStatus.NodeIP, value)
 			delete(NodeStatus.Nodenote, value)
 		}
 		readyToDel = make([]string, 0)
@@ -143,13 +144,13 @@ func ShowDetail() {
 	if AdminStuff.StartNode != "0.0.0.0" {
 		var nodes []string
 
-		fmt.Printf("StartNode:[1] %s   note:%s\n", AdminStuff.StartNode, NodeStatus.Nodenote[utils.StartNodeId])
+		fmt.Printf("StartNode[1]: IP:%s  Hostname:%s  Username:%s\nNote:%s\n\n", AdminStuff.StartNode, NodeStatus.NodeHostname[utils.StartNodeId], NodeStatus.NodeUser[utils.StartNodeId], NodeStatus.Nodenote[utils.StartNodeId])
 
-		for Nodeid, _ := range NodeStatus.Nodes {
+		for Nodeid, _ := range NodeStatus.NodeIP {
 			nodes = append(nodes, Nodeid)
 		}
 		for _, value := range nodes {
-			fmt.Printf("Node[%s]: %s  note:%s\n", fmt.Sprint(FindIntByNodeid(value)+1), NodeStatus.Nodes[value], NodeStatus.Nodenote[value])
+			fmt.Printf("Node[%s]: IP:%s  Hostname:%s  Username:%s\nNote:%s\n\n", fmt.Sprint(FindIntByNodeid(value)+1), NodeStatus.NodeIP[value], NodeStatus.NodeHostname[utils.StartNodeId], NodeStatus.NodeUser[utils.StartNodeId], NodeStatus.Nodenote[value])
 		}
 	} else {
 		fmt.Println("There is no agent connected!")
@@ -205,7 +206,7 @@ func ShowTree() {
 }
 
 //为node添加note
-func AddNote(data []string, nodeid string) bool {
+func AddNote(startNodeConn net.Conn, data []string, nodeID string) bool {
 	var info string
 	data = data[1:len(data)]
 
@@ -213,17 +214,27 @@ func AddNote(data []string, nodeid string) bool {
 		info = info + " " + i
 	}
 
-	if _, ok := NodeStatus.Nodenote[nodeid]; ok {
-		NodeStatus.Nodenote[nodeid] = info
+	if _, ok := NodeStatus.Nodenote[nodeID]; ok {
+		NodeStatus.Nodenote[nodeID] = info
+		//发送备忘至节点储存，防止admin下线后丢失备忘
+		Route.Lock()
+		respComm, _ := utils.ConstructPayload(nodeID, Route.Route[nodeID], "COMMAND", "YOURINFO", " ", info, 0, utils.AdminId, AdminStatus.AESKey, false)
+		Route.Unlock()
+		startNodeConn.Write(respComm)
 		return true
 	}
 	return false
 }
 
 //为node删除note
-func DelNote(nodeid string) bool {
-	if _, ok := NodeStatus.Nodenote[nodeid]; ok {
-		NodeStatus.Nodenote[nodeid] = ""
+func DelNote(startNodeConn net.Conn, nodeID string) bool {
+	if _, ok := NodeStatus.Nodenote[nodeID]; ok {
+		NodeStatus.Nodenote[nodeID] = ""
+		//将节点储存的备忘同时清空
+		Route.Lock()
+		respComm, _ := utils.ConstructPayload(nodeID, Route.Route[nodeID], "COMMAND", "YOURINFO", " ", "", 0, utils.AdminId, AdminStatus.AESKey, false)
+		Route.Unlock()
+		startNodeConn.Write(respComm)
 		return true
 	}
 	return false

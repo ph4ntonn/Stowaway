@@ -257,7 +257,7 @@ func HandleNodeCommand(startNodeConn net.Conn, nodeID string) {
 			AdminStatus.ReadyChange <- true
 			AdminStatus.IsShellMode <- true
 		case "addnote":
-			ok := AddNote(AdminCommand, nodeID)
+			ok := AddNote(startNodeConn, AdminCommand, nodeID)
 			if ok {
 				log.Println("[*]Description added successfully!")
 			} else {
@@ -266,7 +266,7 @@ func HandleNodeCommand(startNodeConn net.Conn, nodeID string) {
 			AdminStatus.ReadyChange <- true
 			AdminStatus.IsShellMode <- true
 		case "delnote":
-			ok := DelNote(nodeID)
+			ok := DelNote(startNodeConn, nodeID)
 			if ok {
 				log.Println("[*]Description deleted successfully!")
 			} else {
@@ -392,7 +392,7 @@ func HandleCommandToControlConn(startNodeControlConn net.Conn) {
 					AdminStatus.HandleNode = currentid
 					HandleNodeCommand(startNodeControlConn, currentid)
 				} else {
-					if len(NodeStatus.Nodes) == 0 {
+					if len(NodeStatus.NodeIP) == 0 {
 						fmt.Println("[*]There is no node", AdminCommand[1])
 						AdminStatus.ReadyChange <- true
 						AdminStatus.IsShellMode <- true
@@ -404,7 +404,7 @@ func HandleCommandToControlConn(startNodeControlConn net.Conn) {
 							AdminStatus.IsShellMode <- true
 							continue
 						}
-						if _, ok := NodeStatus.Nodes[currentid]; ok {
+						if _, ok := NodeStatus.NodeIP[currentid]; ok {
 							*CliStatus = "node " + AdminCommand[1]
 							AdminStatus.ReadyChange <- true
 							AdminStatus.IsShellMode <- true

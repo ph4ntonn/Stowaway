@@ -4,8 +4,10 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"net"
+	"os/exec"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/cheggaaa/pb/v3"
@@ -86,6 +88,7 @@ func NewAdminStuff() *AdminStuff {
 /*-------------------------Agent相关状态变量代码--------------------------*/
 type AgentStatus struct {
 	Nodeid            string
+	NodeNote          string
 	NotLastOne        bool
 	Waiting           bool
 	ReConnCome        chan bool
@@ -96,6 +99,7 @@ type AgentStatus struct {
 func NewAgentStatus() *AgentStatus {
 	nas := new(AgentStatus)
 	nas.Nodeid = StartNodeId
+	nas.NodeNote = ""
 	nas.NotLastOne = false
 	nas.Waiting = false
 	nas.ReConnCome = make(chan bool, 1)
@@ -105,14 +109,18 @@ func NewAgentStatus() *AgentStatus {
 
 /*-------------------------Node状态代码--------------------------*/
 type NodeStatus struct {
-	Nodes    map[string]string
-	Nodenote map[string]string
+	NodeIP       map[string]string
+	Nodenote     map[string]string
+	NodeHostname map[string]string
+	NodeUser     map[string]string
 }
 
 func NewNodeStatus() *NodeStatus {
 	nns := new(NodeStatus)
-	nns.Nodes = make(map[string]string)
+	nns.NodeIP = make(map[string]string)
 	nns.Nodenote = make(map[string]string)
+	nns.NodeHostname = make(map[string]string)
+	nns.NodeUser = make(map[string]string)
 	return nns
 }
 
@@ -367,6 +375,33 @@ func CheckSystem() (sysType uint32) {
 		sysType = 0xff
 	}
 	return
+}
+
+/*-------------------------根据操作系统返回系统信息相关代码--------------------------*/
+func GetInfoViaSystem() string {
+	var os = runtime.GOOS
+	switch os {
+	case "windows":
+		fallthrough
+	case "linux":
+		fallthrough
+	case "darwin":
+		temHostname, err := exec.Command("hostname").Output()
+		if err != nil {
+			return "Null"
+		}
+		temUsername, err := exec.Command("whoami").Output()
+		if err != nil {
+			return "Null"
+		}
+
+		hostname := strings.Replace(string(temHostname), "\n", "", -1)
+		username := strings.Replace(string(temUsername), "\n", "", -1)
+
+		return hostname + ":::stowaway:::" + username
+	default:
+		return "Null"
+	}
 }
 
 /*-------------------------进度条生成相关代码--------------------------*/

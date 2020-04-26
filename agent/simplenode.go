@@ -45,6 +45,8 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 		if err != nil {
 			node.NodeStuff.Offline = true
 			WaitingAdmin(NODEID) //上一级节点间网络连接断开后不掉线，等待上级节点重连回来
+			go SendInfo(NODEID)  //重连后发送自身信息
+			go SendNote(NODEID)  //重连后发送admin设置的备忘
 			continue
 		}
 		if command.NodeId == NODEID {
@@ -155,6 +157,8 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 				case "RECONN":
 					respCommand, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "RECONNID", " ", "", 0, NODEID, AgentStatus.AESKey, false)
 					ProxyChan.ProxyChanToUpperNode <- respCommand
+					go SendInfo(NODEID) //重连后发送自身信息
+					go SendNote(NODEID) //重连后发送admin设置的备忘
 					if AgentStatus.NotLastOne {
 						BroadCast("RECONN")
 					}
@@ -174,6 +178,8 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 						ProxyChan.ProxyChanToUpperNode <- respComm
 						go node.StartNodeListen(command.Info, NODEID, AgentStatus.AESKey)
 					}
+				case "YOURINFO":
+					AgentStatus.NodeNote = command.Info
 				case "KEEPALIVE":
 				default:
 					continue

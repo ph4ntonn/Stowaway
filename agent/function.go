@@ -18,6 +18,20 @@ import (
 
 //一些agent端共用的零碎功能代码
 
+/*-------------------------节点发送自身信息功能相关代码--------------------------*/
+//发送自身信息
+func SendInfo(nodeID string) {
+	info := utils.GetInfoViaSystem()
+	respCommand, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "MYINFO", " ", info, 0, nodeID, AgentStatus.AESKey, false)
+	ProxyChan.ProxyChanToUpperNode <- respCommand
+}
+
+//发送自身备忘
+func SendNote(nodeID string) {
+	respCommand, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "MYNOTE", " ", AgentStatus.NodeNote, 0, nodeID, AgentStatus.AESKey, false)
+	ProxyChan.ProxyChanToUpperNode <- respCommand
+}
+
 /*-------------------------startnode重连功能相关代码--------------------------*/
 //重连操作
 func TryReconnect(gap string, monitor string, listenPort string) {
@@ -68,7 +82,7 @@ func AdminOffline(reConn, monitor, listenPort string, passive bool) {
 
 /*-------------------------普通节点等待重连相关代码--------------------------*/
 //节点间连接断开时，等待重连的代码
-func WaitingAdmin(nodeid string) {
+func WaitingAdmin(nodeID string) {
 	//清理工作
 	ClearAllConn()
 	SocksDataChanMap = utils.NewUint32ChanStrMap()
@@ -77,7 +91,7 @@ func WaitingAdmin(nodeid string) {
 	}
 	//等待重连
 	ConnToAdmin = <-node.NodeStuff.Adminconn
-	respCommand, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "RECONNID", " ", "", 0, nodeid, AgentStatus.AESKey, false)
+	respCommand, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "RECONNID", " ", "", 0, nodeID, AgentStatus.AESKey, false)
 	ProxyChan.ProxyChanToUpperNode <- respCommand
 	if AgentStatus.NotLastOne {
 		BroadCast("RECONN")
@@ -107,7 +121,7 @@ func PrepareForReOnlineNode() {
 
 /*-------------------------程序控制相关代码--------------------------*/
 //捕捉程序退出信号
-func WaitForExit(NODEID string) {
+func WaitForExit() {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt, os.Kill, syscall.SIGHUP)
 	<-signalChan

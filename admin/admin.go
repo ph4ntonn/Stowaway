@@ -266,6 +266,14 @@ func HandleStartConn(startNodeConn net.Conn) {
 					<-AdminStatus.ReadyChange
 					<-AdminStatus.IsShellMode
 				}
+			case "MYINFO": //拆分节点发送上来的节点自身信息
+				info := strings.Split(nodeResp.Info, ":::stowaway:::")
+				hostname := info[0]
+				username := info[1]
+				NodeStatus.NodeHostname[nodeResp.CurrentId] = hostname
+				NodeStatus.NodeUser[nodeResp.CurrentId] = username
+			case "MYNOTE":
+				NodeStatus.Nodenote[nodeResp.CurrentId] = nodeResp.Info
 			case "SOCKSRESP":
 				switch nodeResp.Info {
 				case "SUCCESS":

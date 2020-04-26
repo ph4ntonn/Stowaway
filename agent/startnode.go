@@ -47,6 +47,8 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 		AdminData, err := utils.ExtractPayload(*connToAdmin, AgentStatus.AESKey, NODEID, false)
 		if err != nil {
 			AdminOffline(reConn, monitor, listenPort, passive)
+			go SendInfo(NODEID) //重连后发送自身信息
+			go SendNote(NODEID) //重连后发送admin设置的备忘
 			continue
 		}
 		if AdminData.NodeId == NODEID {
@@ -261,6 +263,8 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 						ProxyChan.ProxyChanToUpperNode <- respComm
 						go node.StartNodeListen(AdminData.Info, NODEID, AgentStatus.AESKey)
 					}
+				case "YOURINFO": //接收note
+					AgentStatus.NodeNote = AdminData.Info
 				case "KEEPALIVE":
 				default:
 					continue
