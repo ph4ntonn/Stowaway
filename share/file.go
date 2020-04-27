@@ -41,7 +41,7 @@ func UploadFile(route, filename string, controlConn *net.Conn, nodeid string, ge
 	(*controlConn).Write(respData)
 
 	if <-getName {
-		buff := make([]byte, 10240)
+		buff := make([]byte, 20480)
 		fileHandle, _ := os.Open(filename) //打开文件
 		defer fileHandle.Close()           //关闭文件
 
@@ -55,7 +55,7 @@ func UploadFile(route, filename string, controlConn *net.Conn, nodeid string, ge
 			return
 		}
 
-		fileSliceNum := math.Ceil(float64(fileInfo.Size()) / 10240)
+		fileSliceNum := math.Ceil(float64(fileInfo.Size()) / 20480)
 		fileSliceStr := strconv.FormatInt(int64(fileSliceNum), 10) //计算文件需要被分多少包
 
 		respData, _ = utils.ConstructPayload(nodeid, route, "COMMAND", "FILESLICENUM", " ", fileSliceStr, 0, currentid, AESKey, false)
@@ -139,7 +139,7 @@ func ReceiveFile(route string, controlConnToAdmin *net.Conn, FileDataMap *utils.
 					break
 				} else {
 					FileDataMap.Unlock()
-					time.Sleep(5 * time.Millisecond) //如果暂时没有收到当前序号的包，先释放锁，等待5ms后继续检查
+					time.Sleep(1 * time.Millisecond) //如果暂时没有收到当前序号的包，先释放锁，等待1ms后继续检查
 				}
 			} else {
 				<-CannotRead
@@ -148,8 +148,6 @@ func ReceiveFile(route string, controlConnToAdmin *net.Conn, FileDataMap *utils.
 		}
 	}
 
-	runtime.GC() //进行一次gc
-
 	if Notagent {
 		Bar.Finish()
 		fmt.Println("[*]Transmission complete")
@@ -157,5 +155,8 @@ func ReceiveFile(route string, controlConnToAdmin *net.Conn, FileDataMap *utils.
 		respData, _ := utils.ConstructPayload(utils.AdminId, route, "COMMAND", "TRANSSUCCESS", " ", " ", 0, currentid, AESKey, false)
 		(*controlConnToAdmin).Write(respData)
 	}
+
+	runtime.GC() //进行一次gc
+
 	return
 }
