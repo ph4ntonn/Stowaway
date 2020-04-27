@@ -268,8 +268,8 @@ func HandleStartConn(startNodeConn net.Conn) {
 				}
 			case "MYINFO": //拆分节点发送上来的节点自身信息
 				info := strings.Split(nodeResp.Info, ":::stowaway:::")
-				hostname := info[0]
-				username := info[1]
+				hostname := strings.Replace(info[0], "\r", "", -1)
+				username := strings.Replace(info[1], "\r", "", -1)
 				NodeStatus.NodeHostname[nodeResp.CurrentId] = hostname
 				NodeStatus.NodeUser[nodeResp.CurrentId] = username
 			case "MYNOTE":
