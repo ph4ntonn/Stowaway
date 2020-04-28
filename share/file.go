@@ -41,7 +41,7 @@ func UploadFile(route, filename string, controlConn *net.Conn, nodeid string, ge
 	(*controlConn).Write(respData)
 
 	if <-getName {
-		buff := make([]byte, 20480)
+		buff := make([]byte, 30720)
 		fileHandle, _ := os.Open(filename) //打开文件
 		defer fileHandle.Close()           //关闭文件
 
@@ -55,7 +55,7 @@ func UploadFile(route, filename string, controlConn *net.Conn, nodeid string, ge
 			return
 		}
 
-		fileSliceNum := math.Ceil(float64(fileInfo.Size()) / 20480)
+		fileSliceNum := math.Ceil(float64(fileInfo.Size()) / 30720)
 		fileSliceStr := strconv.FormatInt(int64(fileSliceNum), 10) //计算文件需要被分多少包
 
 		respData, _ = utils.ConstructPayload(nodeid, route, "COMMAND", "FILESLICENUM", " ", fileSliceStr, 0, currentid, AESKey, false)
