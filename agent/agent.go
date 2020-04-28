@@ -25,7 +25,7 @@ func NewAgent(c *utils.AgentOptions) {
 	ProxyChan = utils.NewProxyChan()
 	SocksDataChanMap = utils.NewUint32ChanStrMap()
 	FileDataMap = utils.NewIntStrMap()
-
+	//解析参数
 	AgentStatus.AESKey = []byte(c.Secret)
 	listenPort := c.Listen
 	reconn := c.Reconnect
@@ -35,7 +35,7 @@ func NewAgent(c *utils.AgentOptions) {
 	reusehost := c.ReuseHost
 	reuseport := c.ReusePort
 	rhostreuse := c.RhostReuse
-
+	//根据选择确定启动方式
 	if isStartNode && passive == false && reusehost == "" && reuseport == "" {
 		go WaitForExit()
 		StartNodeInit(monitor, listenPort, reconn, passive)
@@ -73,11 +73,13 @@ func StartNodeInit(monitor, listenPort, reConn string, passive bool) {
 	if err != nil {
 		os.Exit(0)
 	}
+
 	go SendInfo(AgentStatus.Nodeid) //发送自身信息
 	go share.SendHeartBeatControl(&ConnToAdmin, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go HandleStartNodeConn(&ConnToAdmin, monitor, listenPort, reConn, passive, AgentStatus.Nodeid)
 	go node.StartNodeListen(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go PrepareForReOnlineNode()
+
 	for {
 		controlConnForLowerNode := <-node.NodeStuff.ControlConnForLowerNodeChan
 		NewNodeMessage := <-node.NodeStuff.NewNodeMessageChan
@@ -105,11 +107,13 @@ func SimpleNodeInit(monitor, listenPort string, rhostreuse bool) {
 	if err != nil {
 		os.Exit(0)
 	}
+	//与上级连接建立成功后的代码
 	go SendInfo(AgentStatus.Nodeid)
 	go share.SendHeartBeatControl(&ConnToAdmin, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go HandleSimpleNodeConn(&ConnToAdmin, AgentStatus.Nodeid)
 	go node.StartNodeListen(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go PrepareForReOnlineNode()
+	//等待下级节点的连接
 	for {
 		controlConnForLowerNode := <-node.NodeStuff.ControlConnForLowerNodeChan
 		NewNodeMessage := <-node.NodeStuff.NewNodeMessageChan
@@ -129,11 +133,13 @@ func SimpleNodeInit(monitor, listenPort string, rhostreuse bool) {
 func StartNodeReversemodeInit(monitor, listenPort string, passive bool) {
 	AgentStatus.Nodeid = utils.StartNodeId
 	ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNode(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
+
 	go SendInfo(AgentStatus.Nodeid)
 	go share.SendHeartBeatControl(&ConnToAdmin, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go HandleStartNodeConn(&ConnToAdmin, monitor, listenPort, "", passive, AgentStatus.Nodeid)
 	go node.StartNodeListen(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go PrepareForReOnlineNode()
+
 	for {
 		controlConnForLowerNode := <-node.NodeStuff.ControlConnForLowerNodeChan
 		NewNodeMessage := <-node.NodeStuff.NewNodeMessageChan
@@ -158,11 +164,13 @@ func StartNodeReversemodeInit(monitor, listenPort string, passive bool) {
 func SimpleNodeReversemodeInit(monitor, listenPort string) {
 	AgentStatus.Nodeid = utils.AdminId
 	ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNode(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
+
 	go SendInfo(AgentStatus.Nodeid)
 	go share.SendHeartBeatControl(&ConnToAdmin, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go HandleSimpleNodeConn(&ConnToAdmin, AgentStatus.Nodeid)
 	go node.StartNodeListen(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go PrepareForReOnlineNode()
+
 	for {
 		controlConnForLowerNode := <-node.NodeStuff.ControlConnForLowerNodeChan
 		NewNodeMessage := <-node.NodeStuff.NewNodeMessageChan
@@ -191,6 +199,7 @@ func StartNodeReuseInit(reusehost, reuseport, localport string, method int) {
 		}
 		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeIPTableReuse(reuseport, localport, AgentStatus.Nodeid, AgentStatus.AESKey)
 	}
+
 	go SendInfo(AgentStatus.Nodeid)
 	go share.SendHeartBeatControl(&ConnToAdmin, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go HandleStartNodeConn(&ConnToAdmin, "", "", "", true, AgentStatus.Nodeid)
@@ -200,6 +209,7 @@ func StartNodeReuseInit(reusehost, reuseport, localport string, method int) {
 		go node.StartNodeListenIPTableReuse(reuseport, localport, AgentStatus.Nodeid, AgentStatus.AESKey)
 	}
 	go PrepareForReOnlineNode()
+
 	for {
 		controlConnForLowerNode := <-node.NodeStuff.ControlConnForLowerNodeChan
 		NewNodeMessage := <-node.NodeStuff.NewNodeMessageChan
@@ -233,6 +243,7 @@ func SimpleNodeReuseInit(reusehost, reuseport, localport string, method int) {
 		}
 		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeIPTableReuse(reuseport, localport, AgentStatus.Nodeid, AgentStatus.AESKey)
 	}
+
 	go SendInfo(AgentStatus.Nodeid)
 	go share.SendHeartBeatControl(&ConnToAdmin, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go HandleSimpleNodeConn(&ConnToAdmin, AgentStatus.Nodeid)
@@ -242,6 +253,7 @@ func SimpleNodeReuseInit(reusehost, reuseport, localport string, method int) {
 		go node.StartNodeListenIPTableReuse(reuseport, localport, AgentStatus.Nodeid, AgentStatus.AESKey)
 	}
 	go PrepareForReOnlineNode()
+
 	for {
 		controlConnForLowerNode := <-node.NodeStuff.ControlConnForLowerNodeChan
 		NewNodeMessage := <-node.NodeStuff.NewNodeMessageChan

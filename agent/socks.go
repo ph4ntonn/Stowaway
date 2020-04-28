@@ -34,7 +34,9 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 			if !ok { //重连后原先引用失效，当chan释放后，若不捕捉，会无限循环
 				return
 			}
+
 			method = CheckMethod(ConnToAdmin, []byte(data), socksUsername, socksPass, checknum, AgentStatus.AESKey, AgentStatus.Nodeid)
+
 			if method == "NONE" {
 				isAuthed = true
 			}
@@ -43,20 +45,23 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 			if !ok {
 				return
 			}
+
 			isAuthed = AuthClient(ConnToAdmin, []byte(data), socksUsername, socksPass, checknum, AgentStatus.AESKey, AgentStatus.Nodeid)
 		} else if isAuthed == true && tcpconnected == false {
 			data, ok := <-info
 			if !ok {
 				return
 			}
+
 			server, tcpconnected, serverflag = ConfirmTarget(ConnToAdmin, []byte(data), checknum, AgentStatus.AESKey, AgentStatus.Nodeid)
 			if serverflag == false {
 				return
 			}
+
 			CurrentConn.Lock() //这个 “concurrent map writes” 错误调了好久，死活没看出来，控制台日志贼长看不见错哪儿，重定向到文件之后想让他报错又tm不报错了（笑）
 			CurrentConn.Payload[checknum] = server
 			CurrentConn.Unlock()
-		} else if isAuthed == true && tcpconnected == true && serverflag == true {
+		} else if isAuthed == true && tcpconnected == true && serverflag == true { //All done!
 			go func() {
 				for {
 					data, ok := <-info
@@ -76,11 +81,14 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 					}
 				}
 			}()
+
 			err := Proxyhttp(ConnToAdmin, server, checknum, AgentStatus.AESKey, currentid)
+
 			if err != nil {
 				go SendFin(checknum)
 				return
 			}
+
 		} else {
 			return
 		}

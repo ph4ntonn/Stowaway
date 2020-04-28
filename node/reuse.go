@@ -81,18 +81,23 @@ func ConnectNextNodeReuse(target string, nodeid string, key []byte) bool {
 			case "INIT":
 				//类似与上面
 				NewNodeMessage, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NEW", " ", controlConnToNextNode.RemoteAddr().String(), 0, nodeid, key, false)
+
 				NodeInfo.LowerNode.Payload[utils.AdminId] = controlConnToNextNode
 				NodeStuff.ControlConnForLowerNodeChan <- controlConnToNextNode
 				NodeStuff.NewNodeMessageChan <- NewNodeMessage
 				NodeStuff.IsAdmin <- false
+
 				return true
 			case "REONLINE":
 				//普通节点重连
 				NodeStuff.ReOnlineID <- command.CurrentId
 				NodeStuff.ReOnlineConn <- controlConnToNextNode
+
 				<-NodeStuff.PrepareForReOnlineNodeReady
+
 				NewNodeMessage, _ := utils.ConstructPayload(nodeid, "", "COMMAND", "REONLINESUC", " ", " ", 0, nodeid, key, false)
 				controlConnToNextNode.Write(NewNodeMessage)
+
 				return true
 			}
 		}
@@ -103,9 +108,12 @@ func ConnectNextNodeReuse(target string, nodeid string, key []byte) bool {
 //发送特征字段
 func IfValid(conn net.Conn) error {
 	var NOT_VALID = errors.New("Not valid")
+	//发送标志字段
 	conn.Write([]byte(config.VALIDMESSAGE))
+
 	returnMess := make([]byte, 13)
 	io.ReadFull(conn, returnMess)
+	//检查返回字段
 	if string(returnMess) != config.READYMESSAGE {
 		return NOT_VALID
 	} else {
@@ -116,11 +124,13 @@ func IfValid(conn net.Conn) error {
 //检查特征字符串
 func CheckValid(conn net.Conn, reuse bool, report string) error {
 	var NOT_VALID = errors.New("Not valid")
+
 	defer conn.SetReadDeadline(time.Time{})
 	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+
 	message := make([]byte, 8)
 	count, err := io.ReadFull(conn, message)
-
+	//防止如果复用的是mysql的情况，因为mysql是服务端先发送握手初始化消息
 	if timeouterr, ok := err.(net.Error); ok && timeouterr.Timeout() {
 		if reuse {
 			go ProxyStream(conn, message[:count], report)
@@ -142,12 +152,16 @@ func CheckValid(conn net.Conn, reuse bool, report string) error {
 //不是来自Stowaway的连接，进行代理
 func ProxyStream(conn net.Conn, message []byte, report string) {
 	reuseAddr := fmt.Sprintf("127.0.0.1:%s", report)
+
 	reuseConn, err := net.Dial("tcp", reuseAddr)
+
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+	//把读出来的字节“归还”回去
 	reuseConn.Write(message)
+
 	go CopyTraffic(conn, reuseConn)
 	CopyTraffic(reuseConn, conn)
 }
@@ -157,6 +171,7 @@ func CopyTraffic(input, output net.Conn) {
 	defer input.Close()
 
 	buf := make([]byte, 10240)
+
 	for {
 		count, err := input.Read(buf)
 		if err != nil {
@@ -169,5 +184,6 @@ func CopyTraffic(input, output net.Conn) {
 			output.Write(buf[:count])
 		}
 	}
+
 	return
 }

@@ -397,6 +397,8 @@ func GetInfoViaSystem() string {
 
 		hostname := strings.Replace(string(temHostname), "\n", "", -1)
 		username := strings.Replace(string(temUsername), "\n", "", -1)
+		hostname = strings.Replace(hostname, "\r", "", -1)
+		username = strings.Replace(username, "\r", "", -1)
 
 		return hostname + ":::stowaway:::" + username
 	default:
@@ -419,9 +421,28 @@ func Uint32Str(num uint32) string {
 	return b
 }
 
+//string转换至uint32
 func StrUint32(str string) uint32 {
 	num, _ := strconv.ParseInt(str, 10, 32)
 	return uint32(num)
+}
+
+//排序
+func CheckRange(nodes []int) {
+	for m := len(nodes) - 1; m > 0; m-- {
+		var flag bool = false
+		for n := 0; n < m; n++ {
+			if nodes[n] > nodes[n+1] {
+				temp := nodes[n]
+				nodes[n] = nodes[n+1]
+				nodes[n+1] = temp
+				flag = true
+			}
+		}
+		if !flag {
+			break
+		}
+	}
 }
 
 //倒置[]string

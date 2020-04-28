@@ -104,6 +104,7 @@ func StartNodeListenIPTableReuse(report, localport string, NodeId string, key []
 				}
 			case "INIT":
 				NewNodeMessage, _ = utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NEW", " ", ConnToLowerNode.RemoteAddr().String(), 0, NodeId, key, false)
+
 				NodeInfo.LowerNode.Payload[utils.AdminId] = ConnToLowerNode
 				NodeStuff.ControlConnForLowerNodeChan <- ConnToLowerNode
 				NodeStuff.NewNodeMessageChan <- NewNodeMessage
@@ -133,6 +134,7 @@ func DeletePortReuseRules(localPort string, reusedPort string) error {
 	}
 
 	fmt.Println("[*]All rules have been cleared successfully!")
+
 	return nil
 }
 
@@ -140,7 +142,7 @@ func DeletePortReuseRules(localPort string, reusedPort string) error {
 func SetPortReuseRules(localPort string, reusedPort string) error {
 	sigs := make(chan os.Signal, 1)
 
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM) //监听ctrl+c命令
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM) //监听ctrl+c、kill命令
 	go func() {
 		for {
 			<-sigs

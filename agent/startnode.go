@@ -278,14 +278,17 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 				node.NodeInfo.LowerNode.Payload[AdminData.NodeId] = node.NodeInfo.LowerNode.Payload[utils.AdminId]
 				node.NodeInfo.LowerNode.Unlock()
 			}
+
 			routeid := ChangeRoute(AdminData) //更改路由并返回下一个路由点
 			proxyData, _ := utils.ConstructPayload(AdminData.NodeId, AdminData.Route, AdminData.Type, AdminData.Command, AdminData.FileSliceNum, AdminData.Info, AdminData.Clientid, AdminData.CurrentId, AgentStatus.AESKey, true)
 			passToLowerData := utils.NewPassToLowerNodeData()
+
 			if routeid == "" { //当返回的路由点为0，说明就是自己的子节点
 				passToLowerData.Route = AdminData.NodeId
 			} else { //不是0，说明不是自己的子节点，还需要一定轮数的递送
 				passToLowerData.Route = routeid
 			}
+
 			passToLowerData.Data = proxyData //封装结构体，交给HandleConnToLowerNode处理
 			ProxyChan.ProxyChanToLowerNode <- passToLowerData
 		}

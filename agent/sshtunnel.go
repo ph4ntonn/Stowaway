@@ -44,7 +44,6 @@ func SSHTunnelNextNode(info string, nodeid string) error {
 	}
 
 	nodeConn, err := SSHClient.Dial("tcp", fmt.Sprintf("127.0.0.1:%s", lport))
-
 	if err != nil {
 		sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
 		ProxyChan.ProxyChanToUpperNode <- sshMess
@@ -62,6 +61,7 @@ func SSHTunnelNextNode(info string, nodeid string) error {
 
 	helloMess, _ := utils.ConstructPayload(nodeid, "", "COMMAND", "STOWAWAYAGENT", " ", " ", 0, utils.AdminId, AgentStatus.AESKey, false)
 	nodeConn.Write(helloMess)
+
 	for {
 		command, err := utils.ExtractPayload(nodeConn, AgentStatus.AESKey, utils.AdminId, true)
 		if err != nil {
@@ -73,22 +73,29 @@ func SSHTunnelNextNode(info string, nodeid string) error {
 		switch command.Command {
 		case "INIT":
 			NewNodeMessage, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NEW", " ", nodeConn.RemoteAddr().String(), 0, nodeid, AgentStatus.AESKey, false)
+
 			node.NodeInfo.LowerNode.Payload[utils.AdminId] = nodeConn
 			node.NodeStuff.ControlConnForLowerNodeChan <- nodeConn
 			node.NodeStuff.NewNodeMessageChan <- NewNodeMessage
 			node.NodeStuff.IsAdmin <- false
+
 			sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "SUCCESS", 0, nodeid, AgentStatus.AESKey, false)
 			ProxyChan.ProxyChanToUpperNode <- sshMess
+
 			return nil
 		case "REONLINE":
 			//普通节点重连
 			node.NodeStuff.ReOnlineID <- command.CurrentId
 			node.NodeStuff.ReOnlineConn <- nodeConn
+
 			<-node.NodeStuff.PrepareForReOnlineNodeReady
+
 			NewNodeMessage, _ := utils.ConstructPayload(nodeid, "", "COMMAND", "REONLINESUC", " ", " ", 0, nodeid, AgentStatus.AESKey, false)
 			nodeConn.Write(NewNodeMessage)
+
 			sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "SUCCESS", 0, nodeid, AgentStatus.AESKey, false)
 			ProxyChan.ProxyChanToUpperNode <- sshMess
+
 			return nil
 		}
 	}

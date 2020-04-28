@@ -47,27 +47,32 @@ func StartSSH(info string, nodeid string) error {
 		ProxyChan.ProxyChanToUpperNode <- sshMess
 		return err
 	}
-	Sshhost, err = sshdial.NewSession()
 
+	Sshhost, err = sshdial.NewSession()
 	if err != nil {
 		sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
 		ProxyChan.ProxyChanToUpperNode <- sshMess
 		return err
 	}
+
 	Stdout, err = Sshhost.StdoutPipe()
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
+
 	Stdin, err = Sshhost.StdinPipe()
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
+
 	Sshhost.Stderr = Sshhost.Stdout
 	Sshhost.Shell()
+
 	sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHRESP", " ", "SUCCESS", 0, nodeid, AgentStatus.AESKey, false)
 	ProxyChan.ProxyChanToUpperNode <- sshMess
+
 	return nil
 }
 
@@ -82,6 +87,7 @@ func ReadCommand() {
 		if err != nil {
 			break
 		}
+
 		sshRespMess, _ := utils.ConstructPayload(utils.AdminId, "", "DATA", "SSHMESS", " ", string(buffer[:len]), 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
 		ProxyChan.ProxyChanToUpperNode <- sshRespMess
 	}

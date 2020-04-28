@@ -171,12 +171,13 @@ func ShowTree() {
 			id := FindIntByNodeid(value)
 			nodesid = append(nodesid, id)
 		}
-
-		CheckRange(nodesid)
+		//排序，防止map顺序出错
+		utils.CheckRange(nodesid)
 
 		for _, value := range nodesid {
 			node := CurrentClient[value]
 			nodestatus := Nooode.AllNode[node]
+
 			if node == utils.StartNodeId {
 				fmt.Printf("StartNode[%s]'s child nodes:\n", fmt.Sprint(value+1))
 				if len(nodestatus.Lowernode) == 0 {
@@ -238,24 +239,6 @@ func DelNote(startNodeConn net.Conn, nodeID string) bool {
 		return true
 	}
 	return false
-}
-
-//排序
-func CheckRange(nodes []int) {
-	for m := len(nodes) - 1; m > 0; m-- {
-		var flag bool = false
-		for n := 0; n < m; n++ {
-			if nodes[n] > nodes[n+1] {
-				temp := nodes[n]
-				nodes[n] = nodes[n+1]
-				nodes[n+1] = temp
-				flag = true
-			}
-		}
-		if !flag {
-			break
-		}
-	}
 }
 
 /*-------------------------nodeid生成、搜索相关代码--------------------------*/

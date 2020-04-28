@@ -40,6 +40,7 @@ func AuthClient(conntoupper net.Conn, buffer []byte, username string, secret str
 	slen := int(buffer[2+ulen])
 	clientname := string(buffer[2 : 2+ulen])
 	clientpass := string(buffer[3+ulen : 3+ulen+slen])
+
 	if clientname != username || clientpass != secret {
 		log.Println("Illegal client!")
 		respdata, _ := utils.ConstructPayload(utils.AdminId, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x01, 0x01}), clientid, currentid, key, false)
@@ -69,6 +70,7 @@ func ConfirmTarget(conntoupper net.Conn, buffer []byte, checknum uint32, key []b
 			connected = UDPAssociate(conntoupper, buffer, len, checknum, key)
 		}
 	}
+
 	return server, connected, serverflag
 }
 
@@ -76,6 +78,7 @@ func ConfirmTarget(conntoupper net.Conn, buffer []byte, checknum uint32, key []b
 func TCPConnect(conntoupper net.Conn, buffer []byte, len int, checknum uint32, key []byte, currentid string) (net.Conn, bool, bool) {
 	host := ""
 	var server net.Conn
+
 	switch buffer[3] {
 	case 0x01:
 		host = net.IPv4(buffer[4], buffer[5], buffer[6], buffer[7]).String()
@@ -87,21 +90,27 @@ func TCPConnect(conntoupper net.Conn, buffer []byte, len int, checknum uint32, k
 			buffer[13], buffer[14], buffer[15], buffer[16], buffer[17],
 			buffer[18], buffer[19]}.String()
 	}
+
 	port := strconv.Itoa(int(buffer[len-2])<<8 | int(buffer[len-1]))
+
 	server, err := net.Dial("tcp", net.JoinHostPort(host, port))
+
 	if err != nil {
 		respdata, _ := utils.ConstructPayload(utils.AdminId, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}), checknum, currentid, key, false)
 		conntoupper.Write(respdata)
 		return server, false, false
 	}
+
 	respdata, _ := utils.ConstructPayload(utils.AdminId, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}), checknum, currentid, key, false)
 	conntoupper.Write(respdata)
+
 	return server, true, true
 }
 
 //转发流量
 func Proxyhttp(conntoupper net.Conn, server net.Conn, checknum uint32, key []byte, currentid string) error {
 	serverbuffer := make([]byte, 20480)
+
 	for {
 		len, err := server.Read(serverbuffer)
 		if err != nil {

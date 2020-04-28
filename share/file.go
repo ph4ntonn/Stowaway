@@ -83,9 +83,12 @@ func UploadFile(route, filename string, controlConn *net.Conn, nodeid string, ge
 				}
 				return
 			}
+
 			fileData, _ := utils.ConstructPayload(nodeid, route, "DATA", "FILEDATA", strconv.Itoa(slicenum), string(buff[:n]), 0, currentid, AESKey, false) //发送文件内容
 			(*controlConn).Write(fileData)
+			//文件封包id加一
 			slicenum++
+
 			if Notagent {
 				Bar.Add64(int64(n))
 			}
@@ -113,6 +116,7 @@ func DownloadFile(route, filename string, conn net.Conn, nodeid string, currenti
 //admin || agent接收文件
 func ReceiveFile(route string, controlConnToAdmin *net.Conn, FileDataMap *utils.IntStrMap, CannotRead chan bool, UploadFile *os.File, AESKey []byte, Notagent bool, currentid string) {
 	defer UploadFile.Close()
+
 	if Notagent {
 		fmt.Println("\n[*]Downloading file,please wait......")
 	}
@@ -130,9 +134,11 @@ func ReceiveFile(route string, controlConnToAdmin *net.Conn, FileDataMap *utils.
 			if len(CannotRead) != 1 { //检查不可读chan是否存在元素，存在即表示对端无法继续读，上传/下载终止
 				FileDataMap.Lock()
 				if _, ok := FileDataMap.Payload[num]; ok {
+
 					if Notagent {
 						Bar.Add64(int64(len(FileDataMap.Payload[num])))
 					}
+
 					UploadFile.Write([]byte(FileDataMap.Payload[num]))
 					delete(FileDataMap.Payload, num) //往文件里写完后立即清空，防止占用内存过大
 					FileDataMap.Unlock()

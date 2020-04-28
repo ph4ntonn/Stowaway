@@ -276,21 +276,27 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 				}
 			}
 		} else {
+			//判断是不是admin下发的ID包，是的话提取其中的id，将其记录至自己的子节点记录
 			if command.Route == "" && command.Command == "ID" {
 				AgentStatus.WaitForIDAllocate <- command.NodeId
 				node.NodeInfo.LowerNode.Lock()
 				node.NodeInfo.LowerNode.Payload[command.NodeId] = node.NodeInfo.LowerNode.Payload[utils.AdminId]
 				node.NodeInfo.LowerNode.Unlock()
 			}
+
 			routeid := ChangeRoute(command)
 			proxyData, _ := utils.ConstructPayload(command.NodeId, command.Route, command.Type, command.Command, command.FileSliceNum, command.Info, command.Clientid, command.CurrentId, AgentStatus.AESKey, true)
+			//新建包结构体
 			passToLowerData := utils.NewPassToLowerNodeData()
+			//如果返回的routeid是空，说明目标节点就是自身的子节点，不需要多轮递送
 			if routeid == "" {
 				passToLowerData.Route = command.NodeId
 			} else {
 				passToLowerData.Route = routeid
 			}
+			//组装包的数据部分
 			passToLowerData.Data = proxyData
+			//递交数据包
 			ProxyChan.ProxyChanToLowerNode <- passToLowerData
 		}
 	}

@@ -14,12 +14,14 @@ import (
 func HandleConnToLowerNode() {
 	for {
 		proxyData := <-ProxyChan.ProxyChanToLowerNode
+
 		node.NodeInfo.LowerNode.Lock()
 		if _, ok := node.NodeInfo.LowerNode.Payload[proxyData.Route]; ok { //检查此节点是否存活，防止admin误操作在已掉线的节点输入命令导致节点panic
 			node.NodeInfo.LowerNode.Payload[proxyData.Route].Write(proxyData.Data)
 		}
 		node.NodeInfo.LowerNode.Unlock()
 	}
+
 }
 
 //处理下级节点发往上级节点的信息

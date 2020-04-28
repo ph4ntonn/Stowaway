@@ -110,9 +110,11 @@ func StartNodeListen(listenPort string, NodeId string, key []byte) {
 			case "INIT":
 				//告知admin新节点消息
 				NewNodeMessage, _ = utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NEW", " ", ConnToLowerNode.RemoteAddr().String(), 0, NodeId, key, false)
+
 				NodeInfo.LowerNode.Payload[utils.AdminId] = ConnToLowerNode //将这个socket用0号位暂存，等待admin分配完id后再将其放入对应的位置
 				NodeStuff.ControlConnForLowerNodeChan <- ConnToLowerNode
 				NodeStuff.NewNodeMessageChan <- NewNodeMessage //被连接后不终止监听，继续等待可能的后续节点连接，以此组成树状结构
+
 				NodeStuff.IsAdmin <- false
 			}
 		}
@@ -148,18 +150,23 @@ func ConnectNextNode(target string, nodeid string, key []byte) bool {
 		case "INIT":
 			//类似与上面
 			NewNodeMessage, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NEW", " ", controlConnToNextNode.RemoteAddr().String(), 0, nodeid, key, false)
+
 			NodeInfo.LowerNode.Payload[utils.AdminId] = controlConnToNextNode
 			NodeStuff.ControlConnForLowerNodeChan <- controlConnToNextNode
 			NodeStuff.NewNodeMessageChan <- NewNodeMessage
 			NodeStuff.IsAdmin <- false
+
 			return true
 		case "REONLINE":
 			//普通节点重连
 			NodeStuff.ReOnlineID <- command.CurrentId
 			NodeStuff.ReOnlineConn <- controlConnToNextNode
+
 			<-NodeStuff.PrepareForReOnlineNodeReady
+
 			NewNodeMessage, _ := utils.ConstructPayload(nodeid, "", "COMMAND", "REONLINESUC", " ", " ", 0, nodeid, key, false)
 			controlConnToNextNode.Write(NewNodeMessage)
+
 			return true
 		}
 	}
@@ -207,8 +214,10 @@ func AcceptConnFromUpperNode(listenPort string, nodeid string, key []byte) (net.
 //发送secret值
 func SendSecret(conn net.Conn, key []byte) error {
 	var NOT_VALID = errors.New("not valid")
+
 	defer conn.SetReadDeadline(time.Time{})
 	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+
 	secret := utils.GetStringMd5(string(key))
 	conn.Write([]byte(secret[:16]))
 
@@ -228,15 +237,19 @@ func SendSecret(conn net.Conn, key []byte) error {
 	if string(buffer[:count]) == secret[:16] {
 		return nil
 	}
+	//不合法的连接，直接关闭
 	conn.Close()
+
 	return NOT_VALID
 }
 
 //检查secret值，在连接建立前测试合法性
 func CheckSecret(conn net.Conn, key []byte) error {
 	var NOT_VALID = errors.New("not valid")
+
 	defer conn.SetReadDeadline(time.Time{})
 	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+
 	secret := utils.GetStringMd5(string(key))
 
 	buffer := make([]byte, 16)
@@ -256,6 +269,8 @@ func CheckSecret(conn net.Conn, key []byte) error {
 		conn.Write([]byte(secret[:16]))
 		return nil
 	}
+
 	conn.Close()
+
 	return NOT_VALID
 }

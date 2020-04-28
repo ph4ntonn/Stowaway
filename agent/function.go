@@ -36,9 +36,11 @@ func SendNote(nodeID string) {
 //重连操作
 func TryReconnect(gap string, monitor string, listenPort string) {
 	lag, _ := strconv.Atoi(gap)
-	for {
-		time.Sleep(time.Duration(lag) * time.Second)
 
+	for {
+		//等待指定的时间
+		time.Sleep(time.Duration(lag) * time.Second)
+		//尝试连接admin端
 		controlConnToAdmin, _, err := node.StartNodeConn(monitor, listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
 		if err != nil {
 			fmt.Println("[*]Admin seems still down")
@@ -53,7 +55,7 @@ func TryReconnect(gap string, monitor string, listenPort string) {
 //admin下线后startnode操作
 func AdminOffline(reConn, monitor, listenPort string, passive bool) {
 	log.Println("[*]Admin seems offline!")
-	if reConn != "0" && reConn != "" && !passive {
+	if reConn != "0" && reConn != "" && !passive { //当是主动重连时
 		ClearAllConn()
 		time.Sleep(1 * time.Second)
 		SocksDataChanMap = utils.NewUint32ChanStrMap()
@@ -64,7 +66,7 @@ func AdminOffline(reConn, monitor, listenPort string, passive bool) {
 		if AgentStatus.NotLastOne {
 			BroadCast("RECONN")
 		}
-	} else if passive {
+	} else if passive { //被动时（包括被动以及端口复用下）
 		ClearAllConn()
 		time.Sleep(1 * time.Second)
 		SocksDataChanMap = utils.NewUint32ChanStrMap()
@@ -117,15 +119,6 @@ func PrepareForReOnlineNode() {
 		go HandleConnFromLowerNode(conn, AgentStatus.Nodeid, nodeid)
 		node.NodeStuff.PrepareForReOnlineNodeReady <- true
 	}
-}
-
-/*-------------------------程序控制相关代码--------------------------*/
-//捕捉程序退出信号
-func WaitForExit() {
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt, os.Kill, syscall.SIGHUP)
-	<-signalChan
-	os.Exit(0)
 }
 
 /*-------------------------清除现存连接及发送FIN信号相关代码--------------------------*/
@@ -186,9 +179,12 @@ func ClearAllConn() {
 //查找需要递交的路由
 func ChangeRoute(AdminData *utils.Payload) string {
 	route := AdminData.Route
+	//找到下一个节点id号
 	routes := strings.Split(route, ":")
 	selected := routes[0]
+	//修改route字段，向下一级递交
 	AdminData.Route = strings.Join(routes[1:], ":")
+	//返回下一个节点id
 	return selected
 }
 
@@ -196,6 +192,7 @@ func ChangeRoute(AdminData *utils.Payload) string {
 //广播消息
 func BroadCast(command string) {
 	var readyToBroadCast []string
+
 	node.NodeInfo.LowerNode.Lock()
 	for nodeid, _ := range node.NodeInfo.LowerNode.Payload {
 		if nodeid == utils.AdminId {
@@ -218,11 +215,24 @@ func BroadCast(command string) {
 //尝试监听
 func TestListen(port string) error {
 	var CAN_NOT_LISTEN = errors.New("cannot listen")
+
 	listenAddr := fmt.Sprintf("0.0.0.0:%s", port)
+	//admin下发listen命令时，尝试监听，不成功则返回错误
 	testListener, err := net.Listen("tcp", listenAddr)
 	if err != nil {
 		return CAN_NOT_LISTEN
 	}
+	//成功则关闭此listener
 	testListener.Close()
+	//返回nil，启动真正的listen程序
 	return nil
+}
+
+/*-------------------------程序控制相关代码--------------------------*/
+//捕捉程序退出信号
+func WaitForExit() {
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, os.Interrupt, os.Kill, syscall.SIGHUP)
+	<-signalChan
+	os.Exit(0)
 }

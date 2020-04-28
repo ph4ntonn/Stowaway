@@ -50,7 +50,7 @@ func StartSocksServiceForClient(command []string, startNodeConn net.Conn, nodeID
 		log.Println("[*]Port Illegal!")
 		return
 	}
-
+	//监听指定的socks5端口
 	socks5Addr := fmt.Sprintf("0.0.0.0:%s", socksPort)
 	socksListenerForClient, err := net.Listen("tcp", socks5Addr)
 	if err != nil {
@@ -62,23 +62,29 @@ func StartSocksServiceForClient(command []string, startNodeConn net.Conn, nodeID
 		log.Println("[*]Cannot listen this port!")
 		return
 	}
+	//把此监听地址记录
 	AdminStuff.Lock()
 	AdminStuff.SocksListenerForClient.Payload[nodeID] = append(AdminStuff.SocksListenerForClient.Payload[nodeID], socksListenerForClient)
 	AdminStuff.Unlock()
+
 	for {
+		//开始监听
 		conn, err := socksListenerForClient.Accept()
 		if err != nil {
 			log.Println("[*]Socks service stopped")
 			return
 		}
+		//有请求时记录此socket，并启动HandleNewSocksConn对此socket进行处理
 		ClientSockets.Lock()
 		ClientSockets.Payload[AdminStuff.SocksNum] = conn
 		go HandleNewSocksConn(startNodeConn, ClientSockets.Payload[AdminStuff.SocksNum], AdminStuff.SocksNum, nodeID)
 		ClientSockets.Unlock()
+
 		AdminStuff.Lock()
 		AdminStuff.SocksMapping.Payload[nodeID] = append(AdminStuff.SocksMapping.Payload[nodeID], AdminStuff.SocksNum)
 		AdminStuff.SocksNum++
 		AdminStuff.Unlock()
+
 	}
 }
 
@@ -89,6 +95,7 @@ func HandleNewSocksConn(startNodeConn net.Conn, clientsocks net.Conn, num uint32
 	Route.Unlock()
 
 	buffer := make([]byte, 10240)
+
 	for {
 		len, err := clientsocks.Read(buffer)
 		if err != nil {
@@ -103,11 +110,14 @@ func HandleNewSocksConn(startNodeConn net.Conn, clientsocks net.Conn, num uint32
 	}
 }
 
+//stopsocks命令执行代码
 func StopSocks() {
 	AdminStuff.Lock()
+	//检查是否启动过socks服务
 	if len(AdminStuff.SocksListenerForClient.Payload) == 0 {
 		log.Println("[*]You have never started socks service!")
 	} else {
+		//启动过则遍历，关闭所有listener
 		for nodeid, listeners := range AdminStuff.SocksListenerForClient.Payload {
 			for _, listener := range listeners {
 				err := listener.Close()
@@ -117,12 +127,16 @@ func StopSocks() {
 			}
 			delete(AdminStuff.SocksListenerForClient.Payload, nodeid)
 		}
+
 		log.Println("[*]All socks listeners are closed successfully!")
+		//关闭所有socks连接
 		for key, conn := range ClientSockets.Payload {
 			conn.Close()
 			delete(ClientSockets.Payload, key)
 		}
+
 		log.Println("[*]All socks sockets are closed successfully!")
+
 	}
 	AdminStuff.Unlock()
 }
@@ -186,7 +200,7 @@ func HandleForwardPort(forwardconn net.Conn, target string, startNodeConn net.Co
 
 func StartPortForwardForClient(info []string, startNodeConn net.Conn, nodeid string, AESKey []byte) {
 	TestIfValid("FORWARDTEST", startNodeConn, info[2], nodeid)
-
+	//如果指定的forward端口监听正常
 	if <-ForwardStatus.ForwardIsValid {
 	} else {
 		return
@@ -200,7 +214,7 @@ func StartPortForwardForClient(info []string, startNodeConn net.Conn, nodeid str
 		log.Println("[*]Cannot forward this local port!")
 		return
 	}
-
+	//记录监听的listener
 	ForwardStatus.Lock()
 	ForwardStatus.CurrentPortForwardListener.Payload[nodeid] = append(ForwardStatus.CurrentPortForwardListener.Payload[nodeid], forwardListenerForClient)
 	ForwardStatus.Unlock()
@@ -211,19 +225,23 @@ func StartPortForwardForClient(info []string, startNodeConn net.Conn, nodeid str
 			log.Println("[*]PortForward service stopped")
 			return
 		}
+
 		PortForWardMap.Lock()
 		PortForWardMap.Payload[ForwardStatus.ForwardNum] = conn
 		go HandleForwardPort(PortForWardMap.Payload[ForwardStatus.ForwardNum], info[2], startNodeConn, ForwardStatus.ForwardNum, nodeid)
 		PortForWardMap.Unlock()
+
 		ForwardStatus.Lock()
 		ForwardStatus.ForwardMapping.Payload[nodeid] = append(ForwardStatus.ForwardMapping.Payload[nodeid], ForwardStatus.ForwardNum)
 		ForwardStatus.ForwardNum++
 		ForwardStatus.Unlock()
+
 	}
 }
 
 func StopForward() {
 	ForwardStatus.Lock()
+	//逻辑同socks
 	if len(ForwardStatus.CurrentPortForwardListener.Payload) == 0 {
 		log.Println("[*]You have never started forward service!")
 	} else {
@@ -236,12 +254,16 @@ func StopForward() {
 			}
 			delete(ForwardStatus.CurrentPortForwardListener.Payload, nodeid)
 		}
+
 		log.Println("[*]All forward listeners are closed successfully!")
+
 		for key, conn := range PortForWardMap.Payload {
 			conn.Close()
 			delete(PortForWardMap.Payload, key)
 		}
+
 		log.Println("[*]All forward sockets are closed successfully!")
+
 	}
 	ForwardStatus.Unlock()
 }
@@ -256,6 +278,7 @@ func StartReflectForClient(info []string, startNodeConn net.Conn, nodeid string,
 func TryReflect(startNodeConn net.Conn, nodeid string, id uint32, port string) {
 	target := fmt.Sprintf("127.0.0.1:%s", port)
 	reflectConn, err := net.Dial("tcp", target)
+
 	if err == nil {
 		ReflectConnMap.Lock()
 		ReflectConnMap.Payload[id] = reflectConn
