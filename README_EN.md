@@ -12,7 +12,7 @@ PS: Thanks for everyone's star, i'm just an amateur, and the code still need be 
 ## Features
 
 - Obvious node topology
-- Clear information display of nodes
+- Clear information display of nodes and keep them permanently
 - Active/passive connect mode between nodes
 - Ssh tunnel mode
 - Can be used on multiple platforms
@@ -51,13 +51,13 @@ startnode： ./stowaway_agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 --re
 
   Meaning：
   
-  -m    It means Stowaway's monitor node's address (In this case,it's the node we started above)
+  -m    It means Stowaway's monitor node's listening address
   
   -l    It means Stowaway is listening on port 10000 and waiting for incoming connection (optional，you can also open the listening port via "listen" command)
 
-  -s    It means Stowaway has used 123 as the encrypt key during the communication 
+  -s    It means Stowaway has used 123 as the AES encrypt key during the communication 
 
-  --startnode  It means Stowaway is started as FIRST agent node(if the node is the first one , you MUST add this option!!! And there are two submode of agent mode,if you want to start the second, third one....., just remove this option)
+  --startnode  It means Stowaway is started as FIRST agent node(if the node is the first one , you MUST add this option!!! And there are two submodes of agent mode,if you want to start the second, third one....., just remove this option)
 
   --reconnect It means the startnode will automatically try to reconnect to admin node at 5 second intervals(in this example).PS:
   if you want to start the reconnect function, just add this option when you start the STARTNODE , there is no need to add this option when you start the other simple nodes.
