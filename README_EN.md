@@ -22,6 +22,7 @@ PS: Thanks for everyone's star, i'm just an amateur, and the code still need be 
 - Upload/download functions
 - Port Mapping(local to remote/remote to local)
 - Port Reuse
+- Open or Close all the services arbitrarily
 - Authenicate each other between nodes
 - Network traffic encryption with AES-256(CBC mode)
 
