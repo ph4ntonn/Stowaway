@@ -145,7 +145,7 @@ func ReceiveFile(route string, controlConnToAdmin *net.Conn, FileDataMap *utils.
 					break
 				} else {
 					FileDataMap.Unlock()
-					time.Sleep(1 * time.Millisecond) //如果暂时没有收到当前序号的包，先释放锁，等待1ms后继续检查
+					time.Sleep(5 * time.Millisecond) //如果暂时没有收到当前序号的包，先释放锁，等待5ms后继续检查(减少在网络传输过慢时cpu消耗)
 				}
 			} else {
 				<-CannotRead
