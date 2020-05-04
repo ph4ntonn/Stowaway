@@ -63,7 +63,7 @@ func HandleForward(forwardDataChan chan string, forwardNum uint32) {
 	}()
 
 	go func() {
-		serverbuffer := make([]byte, 10240)
+		serverbuffer := make([]byte, 20480)
 		for {
 			len, err := forwardConn.Read(serverbuffer)
 			if err != nil {

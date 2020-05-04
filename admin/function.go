@@ -94,7 +94,7 @@ func HandleNewSocksConn(startNodeConn net.Conn, clientsocks net.Conn, num uint32
 	route := Route.Route[nodeID]
 	Route.Unlock()
 
-	buffer := make([]byte, 10240)
+	buffer := make([]byte, 20480)
 
 	for {
 		len, err := clientsocks.Read(buffer)
@@ -184,7 +184,7 @@ func HandleForwardPort(forwardconn net.Conn, target string, startNodeConn net.Co
 	forwardCommand, _ := utils.ConstructPayload(nodeid, route, "DATA", "FORWARD", " ", target, num, utils.AdminId, AdminStatus.AESKey, false)
 	startNodeConn.Write(forwardCommand)
 
-	buffer := make([]byte, 10240)
+	buffer := make([]byte, 20480)
 	for {
 		len, err := forwardconn.Read(buffer)
 		if err != nil {
@@ -313,7 +313,7 @@ func HandleReflect(startNodeConn net.Conn, reflectDataChan chan string, num uint
 	}()
 
 	go func() {
-		serverBuffer := make([]byte, 10240)
+		serverBuffer := make([]byte, 20480)
 		for {
 			len, err := reflectConn.Read(serverBuffer)
 			if err != nil {

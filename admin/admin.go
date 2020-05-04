@@ -296,13 +296,11 @@ func HandleStartConn(startNodeConn net.Conn) {
 				switch nodeResp.Info {
 				case "SUCCESS":
 					fmt.Println("[*]Successfully connect to node by ssh tunnel!")
-					AdminStatus.ReadyChange <- true
-					AdminStatus.IsShellMode <- true
 				case "FAILED":
 					fmt.Println("[*]Fail to connect to node by ssh tunnel! Something wrong is happened!")
-					AdminStatus.ReadyChange <- true
-					AdminStatus.IsShellMode <- true
 				}
+				AdminStatus.ReadyChange <- true
+				AdminStatus.IsShellMode <- true
 			case "SSHCERTERROR":
 				fmt.Println("[*]Ssh certificate seems wrong")
 				AdminStatus.SSHSuccess <- false

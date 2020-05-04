@@ -81,7 +81,7 @@ func WriteCommand(command string) {
 }
 
 func ReadCommand() {
-	buffer := make([]byte, 10240)
+	buffer := make([]byte, 20480)
 	for {
 		len, err := Stdout.Read(buffer)
 		if err != nil {

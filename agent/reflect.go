@@ -62,7 +62,7 @@ func TestReflect(portCombine string) {
 
 //处理传入连接
 func HandleReflectPort(reflectconn net.Conn, num uint32, nodeid string) {
-	buffer := make([]byte, 10240)
+	buffer := make([]byte, 20480)
 
 	for {
 		len, err := reflectconn.Read(buffer)
