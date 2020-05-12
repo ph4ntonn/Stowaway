@@ -69,7 +69,7 @@ Stowaway一共分为三种角色：
 
    - **此时若后续的节点希望以passive模式启动**
 
-      后续节点启动命令为：./stowaway_agent -l 10001 -s 123 -r
+      后续节点启动命令为：```./stowaway_agent -l 10001 -s 123 -r```
     
             命令解析：
 
@@ -82,7 +82,7 @@ Stowaway一共分为三种角色：
 
    - **若后续节点希望以active模式启动**
 
-      后续节点启动命令改为：./stowaway_agent -m 127.0.0.1:10000 -s 123
+      后续节点启动命令改为：```./stowaway_agent -m 127.0.0.1:10000 -s 123```
 
 
      ***其余节点同理***
@@ -110,7 +110,7 @@ Stowaway一共分为三种角色：
 
     后续普通节点同第一种情况中的普通节点启动方法一致
 
-    下一次想要重连时，再次执行./stowaway_admin -s 123 -c 127.0.0.1:9999，即可重建网络
+    下一次想要重连时，再次执行```./stowaway_admin -s 123 -c 127.0.0.1:9999```，即可重建网络
 
 
 ## 端口复用机制：
@@ -148,7 +148,7 @@ Stowaway一共分为三种角色：
 
            --rehost 代表复用端口时需要监听的本机ip（不可用0.0.0.0）
 
-     **此时如果后续有节点想要连接startnode,则命令为: ./stowaway_agent -s 123 -m 192.168.0.105:80 --rhostreuse**
+     此时如果后续有节点想要连接startnode,则命令为: ```./stowaway_agent -s 123 -m 192.168.0.105:80 --rhostreuse```
 
 - iptables模式下示例：(若startnode端采用端口复用机制复用22端口)
 
@@ -166,7 +166,7 @@ Stowaway一共分为三种角色：
 
            -l 代表复用端口时需要监听的端口（渗透测试者所有访问report端口的流量将会导向这个端口）
 
-    在startnode启动后，使用script目录下的reuse.py打开复用：python reuse.py --start --rhost 192.168.0.105 --rport 22
+    在startnode启动后，使用script目录下的reuse.py打开复用：```python reuse.py --start --rhost 192.168.0.105 --rport 22```
 
   - **此时Admin端就可以连接：./stowaway_admin -c 192.168.0.105:22 -s 123 --rhostreuse**
 
@@ -176,14 +176,14 @@ Stowaway一共分为三种角色：
 
            --rhostreuse 此选项被设置时，代表需要连接的节点正在端口复用的模式下运行(如果被连接的节点处于端口复用模式，必须设置此选项)
 
-  - **此时如果后续有节点想要连接startnode: ./stowaway_agent -s 123 -m 192.168.0.105:22 --rhostreuse**
+  此时如果后续有节点想要连接startnode: ```./stowaway_agent -s 123 -m 192.168.0.105:22 --rhostreuse```
 
 ### 注意：
 - 如果startnode被ctrl-c或者kill命令杀死，程序将会自动清理iptables规则，但如果被kill -9 杀死，则无法自动清除
 
   故而为了防止startnode异常退出后，iptables规则没有被清理导致被复用的服务无法访问
 
-  **故而当需要关闭时，需运行：python reuse.py --stop --rhost 192.168.0.105 --rport 22**
+  故而当需要关闭时，需运行：```python reuse.py --stop --rhost 192.168.0.105 --rport 22```
 
   即可关闭转发规则，使得原服务能够被正常访问
 

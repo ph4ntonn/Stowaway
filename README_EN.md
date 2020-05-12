@@ -44,47 +44,47 @@ Stowaway can be excuted as three kinds of modes:
 - Example 1：Admin node waiting the connection from startnode
   - **Admin node：./stowaway_admin -l 9999 -s 123**
   ```
-     Meaning：
+    Meaning：
   
-        -l     It means Stowaway is listening on port 9999 and waiting for incoming connection
+       -l     It means Stowaway is listening on port 9999 and waiting for incoming connection
 
-        -s     It means Stowaway has used 123 as the encrypt key during the communication
+       -s     It means Stowaway has used 123 as the encrypt key during the communication
   
-        Be aware! -s option's value must be as same as the agents' 
+       Be aware! -s option's value must be as same as the agents' 
   ```
 
   - **startnode： ./stowaway_agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 --reconnect 5**
   ```
-     Meaning：
+    Meaning：
   
-        -m    It means Stowaway's monitor node's listening address
+       -m    It means Stowaway's monitor node's listening address
   
-        -l    It means Stowaway is listening on port 10000 and waiting for incoming connection (optional，you can also open the listening port via "listen" command)
+       -l    It means Stowaway is listening on port 10000 and waiting for incoming connection (optional，you can also open the listening port via "listen" command)
 
-        -s    It means Stowaway has used 123 as the AES encrypt key during the communication 
+       -s    It means Stowaway has used 123 as the AES encrypt key during the communication 
 
-        --startnode  It means Stowaway is started as FIRST agent node(if the node is the first one , you MUST add this option!!! And there are two submodes of agent mode,if you want to start the second, third one....., just remove this option)
+       --startnode  It means Stowaway is started as FIRST agent node(if the node is the first one , you MUST add this option!!! And there are two submodes of agent mode,if you want to start the second, third one....., just remove this option)
 
-        --reconnect It means the startnode will automatically try to reconnect to admin node at 5 second intervals(in this example).
+       --reconnect It means the startnode will automatically try to reconnect to admin node at 5 second intervals(in this example).
         PS:if you want to start the reconnect function, just add this option when you start the STARTNODE , there is no need to add this option when you start the other simple nodes.
   ```
 
-  - **Then, if you want to start the following simple node passively(means waiting for the connection from upper node instead of connecting to upper node actively)**
+  - **Then, if you want to start the following simple node passively**
 
-    The following simple node: ./stowaway_agent -l 10001 -s 123 -r
+    The following simple node: ```./stowaway_agent -l 10001 -s 123 -r```
 
   ```
-          Meaning：
+     Meaning：
 
-            -r   It means you want to start the node in passive mode
+        -r   It means you want to start the node in passive mode
 
-            -l   It means Stowaway is listening on port 10000 and waiting for incoming connection
+        -l   It means Stowaway is listening on port 10000 and waiting for incoming connection
   ```
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;And now, you can use admin,type in 'use 1' ---> 'connect 127.0.0.1:10001' to add this simple node into network
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;And now, you can use admin,type in 'use 1' ---> 'connect 127.0.0.1:10001' to add this simple node into network
 
-  - **But,if you want to start the following simple node actively(means connecting to upper node actively instead of waiting for the connection from upper node)**
+  - **But,if you want to start the following simple node actively**
 
-    The following simple node: ./stowaway_agent -m 127.0.0.1:10000 -s 123
+    The following simple node：```./stowaway_agent -m 127.0.0.1:10000 -s 123```
 
     And now ,you can add this simple node into network
 
@@ -106,7 +106,7 @@ Stowaway can be excuted as three kinds of modes:
   ```
   The following simple node can be started as Example 1's description
 
-  The next time you want to reconnect to the startnode and rebuild the whole network,just start the admin node like : ./stowaway_admin -s 123 -c 127.0.0.1:9999,and then whole network will be rebuilt
+  The next time you want to reconnect to the startnode and rebuild the whole network,just start the admin node like ```./stowaway_admin -s 123 -c 127.0.0.1:9999```,and then whole network will be rebuilt
 
 ## Port Reuse:
 
@@ -141,7 +141,7 @@ Stowaway can be excuted as three kinds of modes:
 
         --rehost it means the ip address you want to listen on(DO NOT set 0.0.0.0,it will make the reuse funtion lose its effect)
   ```
-  Now if there is a simple node followed by startnode and want to connect to startnode,the command can be like this: ./stowaway_agent -s 123 -m 192.168.0.105:80 --rhostreuse
+  Now if there is a simple node followed by startnode and want to connect to startnode,the command can be like this: ```./stowaway_agent -s 123 -m 192.168.0.105:80 --rhostreuse```
 
   All options's meanings are the same as i mentioned before
 
@@ -163,7 +163,7 @@ Stowaway can be excuted as three kinds of modes:
   ```
   when the startnode started,you can use the reuse.py in bolder "script"
 
-  Open the reusing function: python port_reuse.py --start --rhost 192.168.0.105 --rport 22
+  Open the reusing function: ```python port_reuse.py --start --rhost 192.168.0.105 --rport 22```
 
   - **And now admin can connect to startnode: ./stowaway_admin -c 192.168.0.105:22 -s 123 --rhostreuse** 
   ```
@@ -173,14 +173,14 @@ Stowaway can be excuted as three kinds of modes:
   ```
 
   Now if there is a simple node followed by startnode and want to connect to startnode,the command can be like this:
-./stowaway_agent -s 123 -m 192.168.0.105:22 --rhostreuse
+```./stowaway_agent -s 123 -m 192.168.0.105:22 --rhostreuse```
 
   All options's meanings are the same as i mentioned before
 
 ### Attention
 - If node is killed by ctrl-c or command "kill",it will clean up the iptables rules automatically,but if it is killed by command "kill -9",then it can't do that and it will lead to the service originally run on the reusing port cannot be reached,so in order to avoid this situation ,the reuse.py provide the function that can stop the "port reusing" function.
 
-  If you want to stop "port reusing",just run reuse.py like this: python reuse.py --stop --rhost 192.168.0.105 --rport 22
+  If you want to stop "port reusing",just run reuse.py like this: ```python reuse.py --stop --rhost 192.168.0.105 --rport 22```
 
   And then the "port reusing" will be closed,and the service originally run on the reusing port can be reached again
 
