@@ -74,11 +74,11 @@ Stowaway can be excuted as three kinds of modes:
     The following simple node: ```./stowaway_agent -l 10001 -s 123 -r```
 
   ```
-     Meaning：
+    Meaning：
 
-        -r   It means you want to start the node in passive mode
+       -r   It means you want to start the node in passive mode
 
-        -l   It means Stowaway is listening on port 10000 and waiting for incoming connection
+       -l   It means Stowaway is listening on port 10000 and waiting for incoming connection
   ```
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;And now, you can use admin,type in 'use 1' ---> 'connect 127.0.0.1:10001' to add this simple node into network
 
@@ -92,17 +92,17 @@ Stowaway can be excuted as three kinds of modes:
 
   - **Admin node: ./stowaway_admin -s 123 -c 127.0.0.1:9999**
   ```
-     Meaning:
+    Meaning:
 
-        -c  It means startnode's address
+       -c  It means startnode's address
   ```  
   - **startnode: ./stowaway_agent -l 9999 -s 123 --startnode -r**
   ```
-     Meaning:
+    Meaning:
 
-        -l,-s,--startnode is as the same as Example 1
+       -l,-s,--startnode is as the same as Example 1
 
-        -r   It means startnode is started passively
+       -r   It means startnode is started passively
   ```
   The following simple node can be started as Example 1's description
 
@@ -125,21 +125,21 @@ Stowaway can be excuted as three kinds of modes:
 
   - **Admin: ./stowaway_admin -c 192.168.0.105:80 -s 123 --rhostreuse**
   ```
-     Meaning:
+    Meaning:
 
-        -c/-s same as i mentioned before
+       -c/-s same as i mentioned before
 
-        --rhostreuse it means the node that admin want to connect is under port reusing mode(This option MUST be set if the node you want to connect is reusing port)
+       --rhostreuse it means the node that admin want to connect is under port reusing mode(This option MUST be set if the node you want to connect is reusing port)
   ```
   - **Startnode: ./stowaway_agent -s 123 --startnode --report 80 --rehost 192.168.0.105**
   ```
-     Meaning:
+    Meaning:
 
-        -s/--startnode the same as i mentioned before 
+       -s/--startnode the same as i mentioned before 
 
-        --report it means the port you want to reuse
+       --report it means the port you want to reuse
 
-        --rehost it means the ip address you want to listen on(DO NOT set 0.0.0.0,it will make the reuse funtion lose its effect)
+       --rehost it means the ip address you want to listen on(DO NOT set 0.0.0.0,it will make the reuse funtion lose its effect)
   ```
   Now if there is a simple node followed by startnode and want to connect to startnode,the command can be like this: ```./stowaway_agent -s 123 -m 192.168.0.105:80 --rhostreuse```
 
@@ -153,13 +153,13 @@ Stowaway can be excuted as three kinds of modes:
 
   - **Startnode: ./stowaway_agent -s 123 --startnode --report 22 -l 10000**
   ```
-     Meaning:
+    Meaning:
 
-        --startnode/-s same as i mentioned before 
+       --startnode/-s same as i mentioned before 
 
-        --report it means the port you want to reuse
+       --report it means the port you want to reuse
 
-        -l it means the port that will accept all redirect traffics(node will listen on it)
+       -l it means the port that will accept all redirect traffics(node will listen on it)
   ```
   when the startnode started,you can use the reuse.py in bolder "script"
 
@@ -167,9 +167,9 @@ Stowaway can be excuted as three kinds of modes:
 
   - **And now admin can connect to startnode: ./stowaway_admin -c 192.168.0.105:22 -s 123 --rhostreuse** 
   ```
-     Meaning:
+    Meaning:
 
-        -c/-s/--rhostreuse same as i mentioned before
+       -c/-s/--rhostreuse same as i mentioned before
   ```
 
   Now if there is a simple node followed by startnode and want to connect to startnode,the command can be like this:
