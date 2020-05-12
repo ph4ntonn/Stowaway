@@ -29,15 +29,20 @@ PS:谢谢大家的star，同时欢迎大家使用后提出问题 :kissing_heart:
 - 节点间相互认证
 - 节点间流量以AES-256(CBC模式)进行加密
 
+## 下载及演示
+
+- 不想编译的盆油可以直接用[release](https://github.com/ph4ntonn/Stowaway/releases)下编译完成的程序(同时提供未经压缩版及upx压缩版，可各取所需)
+-  演示视频：[Youtube](https://www.youtube.com/watch?v=O3DHQ1ESMhw)
+
 ## 使用方法
 
-Stowaway一共分为三种角色，admin，startnode和普通node，其中startnode和普通node的区别在于startnode是第一个节点（即所有普通节点里的第一个节点，相当于“入口”节点）
+### 角色
+Stowaway一共分为三种角色：
+- admin    渗透测试者使用的主控端
+- startnode    入口节点（即第一个被控端）
+- node    被控端，其中第一个node就是startnode
 
-
-不想编译的盆油可以直接用[release](https://github.com/ph4ntonn/Stowaway/releases)下编译完成的程序(同时提供未经压缩版及upx压缩版，可各取所需)
-
-演示视频：[Youtube](https://www.youtube.com/watch?v=O3DHQ1ESMhw)
-
+### 实例详解
 - **第一种情况： Admin端监听，等待startnode连接**
 
    - **Admin端：./stowaway_admin -l 9999 -s 123**
@@ -65,7 +70,7 @@ Stowaway一共分为三种角色，admin，startnode和普通node，其中startn
 
    - **此时若后续的节点希望以passive模式启动**
 
-      - **后续节点启动命令为：./stowaway_agent -l 10001 -s 123 -r**
+      - 后续节点启动命令为：./stowaway_agent -l 10001 -s 123 -r
     
             命令解析：
 
@@ -144,9 +149,7 @@ Stowaway一共分为三种角色，admin，startnode和普通node，其中startn
 
            --rehost 代表复用端口时需要监听的本机ip（不可用0.0.0.0）
 
-     **此时如果后续有节点想要连接startnode: ./stowaway_agent -s 123 -m 192.168.0.105:80 --rhostreuse**
-
-     **命令解析如admin，不再赘述**
+     **此时如果后续有节点想要连接startnode,则命令为: ./stowaway_agent -s 123 -m 192.168.0.105:80 --rhostreuse**
 
 - iptables模式下示例：(若startnode端采用端口复用机制复用22端口)
 
@@ -176,16 +179,16 @@ Stowaway一共分为三种角色，admin，startnode和普通node，其中startn
 
   - **此时如果后续有节点想要连接startnode: ./stowaway_agent -s 123 -m 192.168.0.105:22 --rhostreuse**
 
-#### 注意：
+### 注意：
 - 如果startnode被ctrl-c或者kill命令杀死，程序将会自动清理iptables规则，但如果被kill -9 杀死，则无法自动清除
 
-  故而为了防止startnode异常退出后，iptables规则没有被清理导致被复用的服务无法访问，script目录下的reuse.py提供了关闭iptables规则的功能
+  故而为了防止startnode异常退出后，iptables规则没有被清理导致被复用的服务无法访问
 
-  **当需要关闭时，运行：python reuse.py --stop --rhost 192.168.0.105 --rport 22**
+  **故而当需要关闭时，需运行：python reuse.py --stop --rhost 192.168.0.105 --rport 22**
 
   即可关闭转发规则，使得原服务能够被正常访问
 
-## **几个注意点：**
+## **几个值得注意的点：**
 
 1. **除了admin节点以外，普通的agent以及startnode节点可以被多个agent端连接，以组成树状网络**
 
