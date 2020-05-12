@@ -43,8 +43,7 @@ Stowaway一共分为三种角色：
 - node   被控端(其中第一个node就是startnode)
 
 ### 实例详解
-- **第一种情况： Admin端监听，等待startnode连接**
-
+- 第一种情况： Admin端监听，等待startnode连接
    - **Admin端：./stowaway_admin -l 9999 -s 123**
   
          命令解析：
@@ -70,7 +69,7 @@ Stowaway一共分为三种角色：
 
    - **此时若后续的节点希望以passive模式启动**
 
-      - 后续节点启动命令为：./stowaway_agent -l 10001 -s 123 -r
+      后续节点启动命令为：./stowaway_agent -l 10001 -s 123 -r
     
             命令解析：
 
@@ -78,18 +77,18 @@ Stowaway一共分为三种角色：
 
                -l 代表监听端口
 
-          此时在admin端进入startnode(use 1)，使用connect命令（connect 127.0.0.1:10001)即可将后续节点加入网络
+      此时在admin端进入startnode(use 1)，使用connect命令（connect 127.0.0.1:10001)即可将后续节点加入网络
 
 
    - **若后续节点希望以active模式启动**
 
-      - 后续节点启动命令改为：./stowaway_agent -m 127.0.0.1:10000 -s 123
+      后续节点启动命令改为：./stowaway_agent -m 127.0.0.1:10000 -s 123
 
 
      ***其余节点同理***
 
 
-- **第二种情况：Admin端主动连接startnode端**
+- 第二种情况：Admin端主动连接startnode端
 
   - **Admin端: ./stowaway_admin -s 123 -c 127.0.0.1:9999**
   
