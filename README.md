@@ -39,8 +39,8 @@ PS:谢谢大家的star，同时欢迎大家使用后提出问题 :kissing_heart:
 ### 角色
 Stowaway一共分为三种角色：
 - admin    渗透测试者使用的主控端
-- startnode    入口节点（即第一个被控端）
-- node    被控端，其中第一个node就是startnode
+- startnode   入口节点（即第一个被控端）
+- node   被控端(其中第一个node就是startnode)
 
 ### 实例详解
 - **第一种情况： Admin端监听，等待startnode连接**
@@ -196,68 +196,68 @@ Stowaway一共分为三种角色：
 
 3. **如因网络波动或中间节点掉线，导致某一个分支断开（举个例子，admin后接着startnode，startnode后分为两支，一支是startnode->node 2 -> node 3 -> node 4, 一支是startnode->node 5 ->node 6），那么如果node2掉线，node3及node4将不会掉线，而是继续保持存活。此时用户若想将node3及node4重新加入网络，那么用户有两种选择，一种是假如startnode可以直接访问node3，那么用户可随时在startnode将node3用connect或者sshtunnel命令重新加入网络（切记，就算startnode同时也可以访问node4，也请不要直接连接node4，请连接整个缺失链(node3->node4)的头节点node3），这样就可以将node3及node4重新加入网络；另一种选择是当startnode无法直接访问node3时（即必须经过node2），那么请先将node2重启并加入网络，之后再在node2上使用connect或者sshtunnel命令连接node3，从而将node3及node4加入网络（同样的，就算node2能直接访问node4，也请不要连接node4，连接node3即可）。**
 
-## Example
+## 示例
 
 一个简单的例子：
 
-Admin端：
+- Admin端：
 
 ![admin](https://github.com/ph4ntonn/Stowaway/blob/master/img/admin.png)
 
-Startnode端：
+- Startnode端：
 
 ![startnode](https://github.com/ph4ntonn/Stowaway/blob/master/img/startnode.png)
 
-第一个普通Node(设置为反向连接模式)：
+- 第一个普通Node(设置为反向连接模式)：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/node1.png)
 
-此时，进入(use命令，本例中为use 1）此节点的上级节点（即startnode），利用命令connect 127.0.0.1:10001 即可将此反向模式节点加入网络
+  此时，进入(use命令，本例中为use 1）此节点的上级节点（即startnode），利用命令connect 127.0.0.1:10001 即可将此反向模式节点加入网络
 
-第二个普通Node：
+- 第二个普通Node：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/node2.png)
 
-连入完成后，admin端查看节点拓扑：
+- admin端查看节点拓扑：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/tree.png)
 
-连入完成后，admin端查看节点详细信息：
+- admin端查看节点详细信息：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/detail.png)
 
-为此节点设置备忘：
+- 为此节点设置备忘：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/addnote.png)
 
 备忘在设置之后，只要被设置备忘的节点没有掉线，那么哪怕admin掉线，一旦admin成功重连回网络，所有备忘就可以自动恢复，不用担心丢失备忘的情况。
 
-为此节点删除备忘：
+- 为此节点删除备忘：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/delnote.png)
 
-此时在admin端操控第二个普通node节点：
+- 此时在admin端操控第二个普通node节点：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/manipulate.png)
 
-打开远程shell：
+- 打开远程shell：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/shell.png)
 
 此时就可以在admin端操纵第二个普通节点的shell
 
-打开socks5代理：
+- 打开socks5代理：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/socks5.png)
 
 此时用户即可以将admin端的7777端口作为socks5代理端口，将流量代理至第二个普通node节点(当想关闭socks服务时，在节点模式下输入stopsocks即可关闭与此节点相关的socks代理服务).
 如果需要设置socks5用户名密码（Firefox支持，Chrome不支持），例如需要设置用户名为ph4ntom，密码为11235，则可将输入命令改为:socks 7777 ph4ntom 11235 (PS：切勿在用户名以及密码中使用冒号(:))
 
-关闭socks5代理：
+- 关闭socks5代理：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/shutdownsocks5.png)
 
-打开ssh：
+- 打开ssh：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/ssh.png)
 
@@ -265,14 +265,14 @@ Startnode端：
 
 PS: 在ssh模式下，你可以用pwd来判断自己所处的文件夹（好吧，其实就是没法把banner传回来。。）
 
-此时若还有节点需要加入网络，可使用sshtunnel命令：
+- 此时若还有节点需要加入网络，可使用sshtunnel命令：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/waiting.png)
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/sshtunnel.png)
 
 此时将可以利用sshtunnel将节点加入网络，这一方法适用于当防火墙做了流量限制，只有ssh流量能够通过的情况（一般情况下推荐使用connect命令即可，不需要使用sshtunnel）。
 
-上传/下载文件：
+- 上传/下载文件：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/upload.png)
 
@@ -280,36 +280,34 @@ PS: 在ssh模式下，你可以用pwd来判断自己所处的文件夹（好吧�
 
 上传下载功能命令为 upload/download 后加文件路径（注意要在节点模式下使用）,此时就可以上传文件至指定节点/下载指定节点的文件(注意，同时只能传输一个文件，请务必等之前一个传输完成再进行下一步操作)
 
-端口本地/远程映射：
-
-本地端口映射至远程端口
+- 本地端口映射至远程端口
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/portforward.png)
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/connectforward.png)
 
 此时连接127.0.0.1的8888端口，就相当于连接至127.0.0.1的22端口（本地映射至远程）
 
-如果不想forward了，可以关闭
+- 如果不想forward了，可以关闭
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/shutdownforward.png)
 
-远程端口映射至本地
+- 远程端口映射至本地
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/portreflect.png)
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/connectreflect.png)
 
 此时外部访问127.0.0.1的80端口，就相当于访问127.0.0.1的22端口（远程映射至本地）
 
-如果不想reflect了，可以关闭
+- 如果不想reflect了，可以关闭
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/shutdownreflect.png)
 
-如果想在node3上新开一个监听端口来让后续节点连接（原来如果启动时设置过-l选项，则之前的监听不会因此停止）
+- 如果想在node3上新开一个监听端口来让后续节点连接（原来如果启动时设置过-l选项，则之前的监听不会因此停止）
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/listen.png)
-```
-具体命令使用可输入help查询
-```
+
+> 具体命令使用可输入help查询
+
 ## TODO
 
 - [x] 节点间通信流量加密
