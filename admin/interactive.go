@@ -83,7 +83,6 @@ func HandleCommandToControlConn(startNodeControlConn net.Conn) {
 						} else {
 							fmt.Println("[*]There is no node", AdminCommand[1])
 							CommandContinue()
-							AdminStatus.IsShellMode <- true
 						}
 					}
 				}

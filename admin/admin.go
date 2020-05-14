@@ -119,7 +119,6 @@ func HandleInitControlConn(startNodeConn net.Conn) error {
 		command, err := utils.ExtractPayload(startNodeConn, AdminStatus.AESKey, utils.AdminId, true)
 		if err != nil {
 			log.Fatal("[*]Startnode seems offline, control channel set up failed.Exiting...")
-			return err
 		}
 		switch command.Command {
 		case "STOWAWAYAGENT":

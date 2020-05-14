@@ -116,12 +116,11 @@ func Find(readyToDel *[]string, nodeid string) {
 
 // CalRoute 计算路由表
 func CalRoute() {
-	var temp []string
-
 	Topology.Lock()
 	defer Topology.Unlock()
 
 	for key, _ := range Topology.AllNode {
+		var temp []string = []string{}
 		count := key
 
 		if key == utils.AdminId {
