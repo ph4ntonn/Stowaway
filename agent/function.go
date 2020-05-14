@@ -19,21 +19,23 @@ import (
 //一些agent端的零碎功能代码
 
 /*-------------------------节点发送自身信息功能相关代码--------------------------*/
-//发送自身信息
+
+// SendInfo 发送自身信息
 func SendInfo(nodeID string) {
 	info := utils.GetInfoViaSystem()
 	respCommand, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "MYINFO", " ", info, 0, nodeID, AgentStatus.AESKey, false)
 	ProxyChan.ProxyChanToUpperNode <- respCommand
 }
 
-//发送自身备忘
+// SendNote 发送自身备忘
 func SendNote(nodeID string) {
 	respCommand, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "MYNOTE", " ", AgentStatus.NodeNote, 0, nodeID, AgentStatus.AESKey, false)
 	ProxyChan.ProxyChanToUpperNode <- respCommand
 }
 
 /*-------------------------startnode重连功能相关代码--------------------------*/
-//重连操作
+
+// TryReconnect 重连操作
 func TryReconnect(gap string, monitor string, listenPort string) {
 	lag, _ := strconv.Atoi(gap)
 
@@ -52,12 +54,11 @@ func TryReconnect(gap string, monitor string, listenPort string) {
 	}
 }
 
-//admin下线后startnode操作
+// AdminOffline admin下线后startnode操作
 func AdminOffline(reConn, monitor, listenPort string, passive bool) {
 	log.Println("[*]Admin seems offline!")
 	if reConn != "0" && reConn != "" && !passive { //当是主动重连时
 		ClearAllConn()
-		time.Sleep(1 * time.Second)
 		SocksDataChanMap = utils.NewUint32ChanStrMap()
 		if AgentStatus.NotLastOne {
 			BroadCast("CLEAR")
@@ -68,7 +69,6 @@ func AdminOffline(reConn, monitor, listenPort string, passive bool) {
 		}
 	} else if passive { //被动时（包括被动以及端口复用下）
 		ClearAllConn()
-		time.Sleep(1 * time.Second)
 		SocksDataChanMap = utils.NewUint32ChanStrMap()
 		if AgentStatus.NotLastOne {
 			BroadCast("CLEAR")
@@ -83,7 +83,8 @@ func AdminOffline(reConn, monitor, listenPort string, passive bool) {
 }
 
 /*-------------------------普通节点等待重连相关代码--------------------------*/
-//节点间连接断开时，等待重连的代码
+
+// WaitingAdmin 节点间连接断开时，等待重连的代码
 func WaitingAdmin(nodeID string) {
 	//清理工作
 	ClearAllConn()
@@ -101,7 +102,7 @@ func WaitingAdmin(nodeID string) {
 	node.NodeStuff.Offline = false
 }
 
-//等待重连时，用来供上一个节点起HandleConnFromLowerNode函数
+// PrepareForReOnlineNode 等待重连时，用来供上一个节点起HandleConnFromLowerNode函数
 func PrepareForReOnlineNode() {
 	for {
 		nodeid := <-node.NodeStuff.ReOnlineID
@@ -122,7 +123,8 @@ func PrepareForReOnlineNode() {
 }
 
 /*-------------------------清除现存连接及发送FIN信号相关代码--------------------------*/
-//当admin下线后，清除并关闭所有现存的socket
+
+// ClearAllConn 当admin下线后，清除并关闭所有现存的socket
 func ClearAllConn() {
 	CurrentConn.Lock()
 	for key, conn := range CurrentConn.Payload {
@@ -176,7 +178,8 @@ func ClearAllConn() {
 }
 
 /*-------------------------路由相关代码--------------------------*/
-//查找需要递交的路由
+
+// ChangeRoute 查找需要递交的路由
 func ChangeRoute(AdminData *utils.Payload) string {
 	route := AdminData.Route
 	//找到下一个节点id号
@@ -189,7 +192,8 @@ func ChangeRoute(AdminData *utils.Payload) string {
 }
 
 /*-------------------------广播相关代码--------------------------*/
-//广播消息
+
+// BroadCast 广播消息
 func BroadCast(command string) {
 	var readyToBroadCast []string
 
@@ -212,7 +216,8 @@ func BroadCast(command string) {
 }
 
 /*-------------------------监听相关代码--------------------------*/
-//尝试监听
+
+// TestListen 尝试监听
 func TestListen(port string) error {
 	var CAN_NOT_LISTEN = errors.New("cannot listen")
 
@@ -229,7 +234,8 @@ func TestListen(port string) error {
 }
 
 /*-------------------------程序控制相关代码--------------------------*/
-//捕捉程序退出信号
+
+// WaitForExit 捕捉程序退出信号
 func WaitForExit() {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt, os.Kill, syscall.SIGHUP)

@@ -15,13 +15,13 @@ import (
 
 //普通节点代码与startnode端代码绝大部分相同，这里仅是为了将角色代码独立开，方便修改，故而不复用代码，看起来清楚一点
 
-//启动普通节点
+// HandleSimpleNodeConn 启动普通节点
 func HandleSimpleNodeConn(connToUpperNode *net.Conn, NODEID string) {
 	go HandleConnFromUpperNode(connToUpperNode, NODEID)
 	go HandleConnToUpperNode(connToUpperNode)
 }
 
-// 处理发往上一级节点的控制信道
+// HandleConnToUpperNode 处理发往上一级节点的控制信道
 func HandleConnToUpperNode(connToUpperNode *net.Conn) {
 	for {
 		proxyData := <-ProxyChan.ProxyChanToUpperNode
@@ -32,7 +32,7 @@ func HandleConnToUpperNode(connToUpperNode *net.Conn) {
 	}
 }
 
-//处理来自上一级节点的控制信道
+// HandleConnFromUpperNode 处理来自上一级节点的控制信道
 func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 	var (
 		CannotRead = make(chan bool, 1)
@@ -103,7 +103,6 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 						ProxyChan.ProxyChanToUpperNode <- message
 					}
 				case "FILENAME":
-					var err error
 					UploadFile, err := os.Create(command.Info)
 					if err != nil {
 						respComm, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "CREATEFAIL", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
@@ -151,9 +150,11 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 					}
 					ReflectConnMap.Unlock()
 
-					for _, listener := range CurrentPortReflectListener {
-						listener.Close()
-					}
+					go func() {
+						for _, listener := range CurrentPortReflectListener {
+							listener.Close()
+						}
+					}()
 				case "RECONN":
 					respCommand, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "RECONNID", " ", "", 0, NODEID, AgentStatus.AESKey, false)
 					ProxyChan.ProxyChanToUpperNode <- respCommand
@@ -187,18 +188,15 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 			case "DATA":
 				switch command.Command {
 				case "SOCKSDATA":
-					SocksDataChanMap.RLock()
+					SocksDataChanMap.Lock()
 					if _, ok := SocksDataChanMap.Payload[command.Clientid]; ok {
 						SocksDataChanMap.Payload[command.Clientid] <- command.Info
-						SocksDataChanMap.RUnlock()
 					} else {
-						SocksDataChanMap.RUnlock()
-						SocksDataChanMap.Lock()
 						SocksDataChanMap.Payload[command.Clientid] = make(chan string, 1)
 						go HanleClientSocksConn(SocksDataChanMap.Payload[command.Clientid], SocksInfo.SocksUsername, SocksInfo.SocksPass, command.Clientid, NODEID)
 						SocksDataChanMap.Payload[command.Clientid] <- command.Info
-						SocksDataChanMap.Unlock()
 					}
+					SocksDataChanMap.Unlock()
 				case "FINOK":
 					SocksDataChanMap.Lock()
 					if _, ok := SocksDataChanMap.Payload[command.Clientid]; ok {

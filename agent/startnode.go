@@ -19,12 +19,13 @@ import (
 //防止异常断线是由于管理员发现节点引起的，并根据connection进行逐点反查从而顺藤摸瓜找到入口点startnode,使得渗透测试者失去内网的入口点
 //先暂时不加入，权当一个胡思乱想的idea，今后可视情况增加对startnode保护机制的处理代码，使得入口点更加稳固和隐蔽
 
+// HandleStartNodeConn 处理与startnode的连接
 func HandleStartNodeConn(connToAdmin *net.Conn, monitor, listenPort, reConn string, passive bool, NODEID string) {
 	go HandleConnFromAdmin(connToAdmin, monitor, listenPort, reConn, passive, NODEID)
 	go HandleConnToAdmin(connToAdmin)
 }
 
-//管理startnode发往admin的数据
+// HandleConnToAdmin 管理startnode发往admin的数据
 func HandleConnToAdmin(connToAdmin *net.Conn) {
 	for {
 		proxyData := <-ProxyChan.ProxyChanToUpperNode
@@ -35,7 +36,7 @@ func HandleConnToAdmin(connToAdmin *net.Conn) {
 	}
 }
 
-//管理admin端下发的数据
+// HandleConnFromAdmin 管理admin端下发的数据
 func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn string, passive bool, NODEID string) {
 	var (
 		CannotRead = make(chan bool, 1)
@@ -56,18 +57,15 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 			case "DATA":
 				switch AdminData.Command {
 				case "SOCKSDATA":
-					SocksDataChanMap.RLock()
+					SocksDataChanMap.Lock()
 					if _, ok := SocksDataChanMap.Payload[AdminData.Clientid]; ok {
 						SocksDataChanMap.Payload[AdminData.Clientid] <- AdminData.Info
-						SocksDataChanMap.RUnlock()
 					} else {
-						SocksDataChanMap.RUnlock()
-						SocksDataChanMap.Lock()
 						SocksDataChanMap.Payload[AdminData.Clientid] = make(chan string, 1)
 						go HanleClientSocksConn(SocksDataChanMap.Payload[AdminData.Clientid], SocksInfo.SocksUsername, SocksInfo.SocksPass, AdminData.Clientid, NODEID)
 						SocksDataChanMap.Payload[AdminData.Clientid] <- AdminData.Info
-						SocksDataChanMap.Unlock()
 					}
+					SocksDataChanMap.Unlock()
 				case "FILEDATA": //接收文件内容
 					slicenum, _ := strconv.Atoi(AdminData.FileSliceNum)
 					FileDataMap.Lock()
@@ -201,7 +199,6 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 						ProxyChan.ProxyChanToUpperNode <- message
 					}
 				case "FILENAME":
-					var err error
 					UploadFile, err := os.Create(AdminData.Info)
 					if err != nil {
 						respComm, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "CREATEFAIL", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
@@ -212,8 +209,7 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 						go share.ReceiveFile("", connToAdmin, FileDataMap, CannotRead, UploadFile, AgentStatus.AESKey, false, NODEID)
 					}
 				case "FILESIZE":
-					filesize, _ := strconv.ParseInt(AdminData.Info, 10, 64)
-					share.File.FileSize = filesize
+					share.File.FileSize, _ = strconv.ParseInt(AdminData.Info, 10, 64)
 					respComm, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "FILESIZECONFIRM", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
 					ProxyChan.ProxyChanToUpperNode <- respComm
 					share.File.ReceiveFileSize <- true
@@ -250,9 +246,11 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 					}
 					ReflectConnMap.Unlock()
 
-					for _, listener := range CurrentPortReflectListener {
-						listener.Close()
-					}
+					go func() {
+						for _, listener := range CurrentPortReflectListener {
+							listener.Close()
+						}
+					}()
 				case "LISTEN":
 					err := TestListen(AdminData.Info)
 					if err != nil {

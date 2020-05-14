@@ -39,6 +39,7 @@ type Payload struct {
 	CurrentId string //当前节点序号
 }
 
+// ConstructPayload 生成并返回payload
 func ConstructPayload(nodeid string, route string, ptype string, command string, fileSliceNum string, info string, clientid uint32, currentid string, key []byte, pass bool) ([]byte, error) {
 	var buffer bytes.Buffer
 
@@ -102,6 +103,7 @@ func ConstructPayload(nodeid string, route string, ptype string, command string,
 	return payload, nil
 }
 
+// ExtractPayload 解析并返回payload
 func ExtractPayload(conn net.Conn, key []byte, currentid string, isinit bool) (*Payload, error) {
 	var (
 		payload         = &Payload{}

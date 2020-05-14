@@ -15,7 +15,8 @@ import (
 //reuse模式下的共用代码
 
 /*-------------------------端口复用模式下节点主动连接功能代码--------------------------*/
-//初始化时的连接
+
+// StartNodeConnReuse 初始化时的连接
 func StartNodeConnReuse(monitor string, listenPort string, nodeID string, key []byte) (net.Conn, string, error) {
 	for {
 		controlConnToUpperNode, err := net.Dial("tcp", monitor)
@@ -30,13 +31,11 @@ func StartNodeConnReuse(monitor string, listenPort string, nodeID string, key []
 			continue
 		}
 
-		helloMess, _ := utils.ConstructPayload(nodeID, "", "COMMAND", "STOWAWAYAGENT", " ", " ", 0, utils.AdminId, key, false)
-		controlConnToUpperNode.Write(helloMess)
+		utils.ConstructPayloadAndSend(controlConnToUpperNode, nodeID, "", "COMMAND", "STOWAWAYAGENT", " ", " ", 0, utils.AdminId, key, false)
 
 		utils.ExtractPayload(controlConnToUpperNode, key, utils.AdminId, true)
 
-		respcommand, _ := utils.ConstructPayload(nodeID, "", "COMMAND", "INIT", " ", listenPort, 0, utils.AdminId, key, false) //主动向上级节点发送初始信息
-		_, err = controlConnToUpperNode.Write(respcommand)
+		err = utils.ConstructPayloadAndSend(controlConnToUpperNode, nodeID, "", "COMMAND", "INIT", " ", listenPort, 0, utils.AdminId, key, false)
 		if err != nil {
 			log.Printf("[*]Error occured: %s", err)
 			return controlConnToUpperNode, "", err
@@ -53,7 +52,7 @@ func StartNodeConnReuse(monitor string, listenPort string, nodeID string, key []
 	}
 }
 
-//connect命令时的连接
+// ConnectNextNodeReuse connect命令时的连接
 func ConnectNextNodeReuse(target string, nodeid string, key []byte) bool {
 	for {
 		controlConnToNextNode, err := net.Dial("tcp", target)
@@ -68,8 +67,7 @@ func ConnectNextNodeReuse(target string, nodeid string, key []byte) bool {
 			continue
 		}
 
-		helloMess, _ := utils.ConstructPayload(nodeid, "", "COMMAND", "STOWAWAYAGENT", " ", " ", 0, utils.AdminId, key, false)
-		controlConnToNextNode.Write(helloMess)
+		utils.ConstructPayloadAndSend(controlConnToNextNode, nodeid, "", "COMMAND", "STOWAWAYAGENT", " ", " ", 0, utils.AdminId, key, false)
 
 		for {
 			command, err := utils.ExtractPayload(controlConnToNextNode, key, utils.AdminId, true)
@@ -81,12 +79,10 @@ func ConnectNextNodeReuse(target string, nodeid string, key []byte) bool {
 			case "INIT":
 				//类似与上面
 				NewNodeMessage, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NEW", " ", controlConnToNextNode.RemoteAddr().String(), 0, nodeid, key, false)
-
 				NodeInfo.LowerNode.Payload[utils.AdminId] = controlConnToNextNode
 				NodeStuff.ControlConnForLowerNodeChan <- controlConnToNextNode
 				NodeStuff.NewNodeMessageChan <- NewNodeMessage
 				NodeStuff.IsAdmin <- false
-
 				return true
 			case "REONLINE":
 				//普通节点重连
@@ -95,9 +91,7 @@ func ConnectNextNodeReuse(target string, nodeid string, key []byte) bool {
 
 				<-NodeStuff.PrepareForReOnlineNodeReady
 
-				NewNodeMessage, _ := utils.ConstructPayload(nodeid, "", "COMMAND", "REONLINESUC", " ", " ", 0, nodeid, key, false)
-				controlConnToNextNode.Write(NewNodeMessage)
-
+				utils.ConstructPayloadAndSend(controlConnToNextNode, nodeid, "", "COMMAND", "REONLINESUC", " ", " ", 0, nodeid, key, false)
 				return true
 			}
 		}
@@ -105,7 +99,8 @@ func ConnectNextNodeReuse(target string, nodeid string, key []byte) bool {
 }
 
 /*-------------------------端口复用模式下判断流量、转发流量功能代码--------------------------*/
-//发送特征字段
+
+// IfValid 发送特征字段
 func IfValid(conn net.Conn) error {
 	var NOT_VALID = errors.New("Not valid")
 	//发送标志字段
@@ -121,7 +116,7 @@ func IfValid(conn net.Conn) error {
 	}
 }
 
-//检查特征字符串
+// CheckValid 检查特征字符串
 func CheckValid(conn net.Conn, reuse bool, report string) error {
 	var NOT_VALID = errors.New("Not valid")
 
@@ -149,7 +144,7 @@ func CheckValid(conn net.Conn, reuse bool, report string) error {
 	}
 }
 
-//不是来自Stowaway的连接，进行代理
+// ProxyStream 不是来自Stowaway的连接，进行代理
 func ProxyStream(conn net.Conn, message []byte, report string) {
 	reuseAddr := fmt.Sprintf("127.0.0.1:%s", report)
 
@@ -166,7 +161,7 @@ func ProxyStream(conn net.Conn, message []byte, report string) {
 	CopyTraffic(reuseConn, conn)
 }
 
-//将流量代理至正确的port
+// CopyTraffic 将流量代理至正确的port
 func CopyTraffic(input, output net.Conn) {
 	defer input.Close()
 

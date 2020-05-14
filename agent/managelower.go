@@ -10,7 +10,7 @@ import (
 
 //管理下行节点代码
 
-//管理发往下级节点的信道
+// HandleConnToLowerNode 管理发往下级节点的信道
 func HandleConnToLowerNode() {
 	for {
 		proxyData := <-ProxyChan.ProxyChanToLowerNode
@@ -24,7 +24,7 @@ func HandleConnToLowerNode() {
 
 }
 
-//处理下级节点发往上级节点的信息
+// HandleConnFromLowerNode 处理下级节点发往上级节点的信息
 func HandleConnFromLowerNode(connForLowerNode net.Conn, currentid, lowerid string) {
 	for {
 		command, err := utils.ExtractPayload(connForLowerNode, AgentStatus.AESKey, currentid, false)

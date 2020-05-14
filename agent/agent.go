@@ -1,7 +1,7 @@
 package agent
 
 import (
-	"fmt"
+	"log"
 	"net"
 	"os"
 
@@ -19,12 +19,16 @@ var (
 )
 var ConnToAdmin net.Conn
 
-func NewAgent(c *utils.AgentOptions) {
+func init() {
 	AgentStatus = utils.NewAgentStatus()
 	SocksInfo = utils.NewSocksSetting()
 	ProxyChan = utils.NewProxyChan()
 	SocksDataChanMap = utils.NewUint32ChanStrMap()
 	FileDataMap = utils.NewIntStrMap()
+}
+
+// NewAgent 启动agent
+func NewAgent(c *utils.AgentOptions) {
 	//解析参数
 	AgentStatus.AESKey = []byte(c.Secret)
 	listenPort := c.Listen
@@ -65,10 +69,11 @@ func NewAgent(c *utils.AgentOptions) {
 
 // 初始化代码开始
 
-// 后续想让startnode与simplenode实现不一样的功能，故将两种node实现代码分开写
+// StartNodeInit 后续想让startnode与simplenode实现不一样的功能，故将两种node实现代码分开写
 func StartNodeInit(monitor, listenPort, reConn string, passive bool) {
 	var err error
 	AgentStatus.Nodeid = utils.StartNodeId
+
 	ConnToAdmin, AgentStatus.Nodeid, err = node.StartNodeConn(monitor, listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
 	if err != nil {
 		os.Exit(0)
@@ -95,10 +100,11 @@ func StartNodeInit(monitor, listenPort, reConn string, passive bool) {
 	}
 }
 
-//普通的node节点
+// SimpleNodeInit 普通的node节点
 func SimpleNodeInit(monitor, listenPort string, rhostreuse bool) {
 	var err error
 	AgentStatus.Nodeid = utils.AdminId
+
 	if !rhostreuse { //连接的节点是否是在reuseport？
 		ConnToAdmin, AgentStatus.Nodeid, err = node.StartNodeConn(monitor, listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
 	} else {
@@ -129,9 +135,10 @@ func SimpleNodeInit(monitor, listenPort string, rhostreuse bool) {
 	}
 }
 
-//reverse mode下的startnode节点
+// StartNodeReversemodeInit reverse mode下的startnode节点
 func StartNodeReversemodeInit(monitor, listenPort string, passive bool) {
 	AgentStatus.Nodeid = utils.StartNodeId
+
 	ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNode(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
 
 	go SendInfo(AgentStatus.Nodeid)
@@ -160,9 +167,10 @@ func StartNodeReversemodeInit(monitor, listenPort string, passive bool) {
 	}
 }
 
-//reverse mode下的普通节点
+// SimpleNodeReversemodeInit reverse mode下的普通节点
 func SimpleNodeReversemodeInit(monitor, listenPort string) {
 	AgentStatus.Nodeid = utils.AdminId
+
 	ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNode(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
 
 	go SendInfo(AgentStatus.Nodeid)
@@ -186,16 +194,16 @@ func SimpleNodeReversemodeInit(monitor, listenPort string) {
 	}
 }
 
-//reuseport下的startnode节点
+// StartNodeReuseInit reuseport下的startnode节点
 func StartNodeReuseInit(reusehost, reuseport, localport string, method int) {
 	AgentStatus.Nodeid = utils.StartNodeId
+
 	if method == 1 {
 		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeReuse(reusehost, reuseport, AgentStatus.Nodeid, AgentStatus.AESKey)
 	} else {
 		err := node.SetPortReuseRules(localport, reuseport)
 		if err != nil {
-			fmt.Println("[*]Cannot set the iptable rules!")
-			os.Exit(0)
+			log.Fatal("[*]Cannot set the iptable rules!")
 		}
 		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeIPTableReuse(reuseport, localport, AgentStatus.Nodeid, AgentStatus.AESKey)
 	}
@@ -203,11 +211,13 @@ func StartNodeReuseInit(reusehost, reuseport, localport string, method int) {
 	go SendInfo(AgentStatus.Nodeid)
 	go share.SendHeartBeatControl(&ConnToAdmin, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go HandleStartNodeConn(&ConnToAdmin, "", "", "", true, AgentStatus.Nodeid)
+
 	if method == 1 {
 		go node.StartNodeListenReuse(reusehost, reuseport, AgentStatus.Nodeid, AgentStatus.AESKey)
 	} else {
 		go node.StartNodeListenIPTableReuse(reuseport, localport, AgentStatus.Nodeid, AgentStatus.AESKey)
 	}
+
 	go PrepareForReOnlineNode()
 
 	for {
@@ -230,16 +240,16 @@ func StartNodeReuseInit(reusehost, reuseport, localport string, method int) {
 	}
 }
 
-//reuseport下的普通节点
+// SimpleNodeReuseInit reuseport下的普通节点
 func SimpleNodeReuseInit(reusehost, reuseport, localport string, method int) {
 	AgentStatus.Nodeid = utils.AdminId
+
 	if method == 1 {
 		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeReuse(reusehost, reuseport, AgentStatus.Nodeid, AgentStatus.AESKey)
 	} else {
 		err := node.SetPortReuseRules(localport, reuseport)
 		if err != nil {
-			fmt.Println("[*]Cannot set the iptable rules!")
-			os.Exit(0)
+			log.Fatal("[*]Cannot set the iptable rules!")
 		}
 		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeIPTableReuse(reuseport, localport, AgentStatus.Nodeid, AgentStatus.AESKey)
 	}
@@ -247,11 +257,13 @@ func SimpleNodeReuseInit(reusehost, reuseport, localport string, method int) {
 	go SendInfo(AgentStatus.Nodeid)
 	go share.SendHeartBeatControl(&ConnToAdmin, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go HandleSimpleNodeConn(&ConnToAdmin, AgentStatus.Nodeid)
+
 	if method == 1 {
 		go node.StartNodeListenReuse(reusehost, reuseport, AgentStatus.Nodeid, AgentStatus.AESKey)
 	} else {
 		go node.StartNodeListenIPTableReuse(reuseport, localport, AgentStatus.Nodeid, AgentStatus.AESKey)
 	}
+
 	go PrepareForReOnlineNode()
 
 	for {

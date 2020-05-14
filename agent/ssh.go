@@ -16,10 +16,11 @@ var (
 	Sshhost *ssh.Session
 )
 
-//启动ssh
+// StartSSH 启动ssh
 func StartSSH(info string, nodeid string) error {
 	var authpayload ssh.AuthMethod
 	spiltedinfo := strings.Split(info, ":::")
+
 	host := spiltedinfo[0]
 	username := spiltedinfo[1]
 	authway := spiltedinfo[2]
@@ -68,7 +69,13 @@ func StartSSH(info string, nodeid string) error {
 	}
 
 	Sshhost.Stderr = Sshhost.Stdout
-	Sshhost.Shell()
+
+	err = Sshhost.Shell()
+	if err != nil {
+		sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
+		ProxyChan.ProxyChanToUpperNode <- sshMess
+		return err
+	}
 
 	sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHRESP", " ", "SUCCESS", 0, nodeid, AgentStatus.AESKey, false)
 	ProxyChan.ProxyChanToUpperNode <- sshMess
@@ -76,10 +83,12 @@ func StartSSH(info string, nodeid string) error {
 	return nil
 }
 
+// WriteCommand 写入command
 func WriteCommand(command string) {
 	Stdin.Write([]byte(command))
 }
 
+// ReadCommand 读出command运行结果
 func ReadCommand() {
 	buffer := make([]byte, 20480)
 	for {
@@ -87,7 +96,6 @@ func ReadCommand() {
 		if err != nil {
 			break
 		}
-
 		sshRespMess, _ := utils.ConstructPayload(utils.AdminId, "", "DATA", "SSHMESS", " ", string(buffer[:len]), 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
 		ProxyChan.ProxyChanToUpperNode <- sshRespMess
 	}

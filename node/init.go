@@ -23,7 +23,8 @@ func init() {
 }
 
 /*-------------------------一般模式下初始化节点代码--------------------------*/
-//初始化一个节点连接操作
+
+// StartNodeConn 初始化一个节点连接操作
 func StartNodeConn(monitor string, listenPort string, nodeID string, key []byte) (net.Conn, string, error) {
 	controlConnToUpperNode, err := net.Dial("tcp", monitor)
 	if err != nil {
@@ -37,13 +38,11 @@ func StartNodeConn(monitor string, listenPort string, nodeID string, key []byte)
 		return controlConnToUpperNode, "", err
 	}
 
-	helloMess, _ := utils.ConstructPayload(nodeID, "", "COMMAND", "STOWAWAYAGENT", " ", " ", 0, utils.AdminId, key, false)
-	controlConnToUpperNode.Write(helloMess)
+	utils.ConstructPayloadAndSend(controlConnToUpperNode, nodeID, "", "COMMAND", "STOWAWAYAGENT", " ", " ", 0, utils.AdminId, key, false)
 
 	utils.ExtractPayload(controlConnToUpperNode, key, utils.AdminId, true)
 
-	respcommand, _ := utils.ConstructPayload(nodeID, "", "COMMAND", "INIT", " ", listenPort, 0, utils.AdminId, key, false) //主动向上级节点发送初始信息
-	_, err = controlConnToUpperNode.Write(respcommand)
+	err = utils.ConstructPayloadAndSend(controlConnToUpperNode, nodeID, "", "COMMAND", "INIT", " ", listenPort, 0, utils.AdminId, key, false)
 	if err != nil {
 		log.Printf("[*]Error occured: %s", err)
 		return controlConnToUpperNode, "", err
@@ -59,7 +58,7 @@ func StartNodeConn(monitor string, listenPort string, nodeID string, key []byte)
 	}
 }
 
-//初始化节点监听操作
+// StartNodeListen 初始化节点监听操作
 func StartNodeListen(listenPort string, NodeId string, key []byte) {
 	var NewNodeMessage []byte
 
@@ -91,8 +90,7 @@ func StartNodeListen(listenPort string, NodeId string, key []byte) {
 			command, _ := utils.ExtractPayload(ConnToLowerNode, key, utils.AdminId, true)
 			switch command.Command {
 			case "STOWAWAYADMIN":
-				respcommand, _ := utils.ConstructPayload(NodeId, "", "COMMAND", "INIT", " ", listenPort, 0, utils.AdminId, key, false)
-				ConnToLowerNode.Write(respcommand)
+				utils.ConstructPayloadAndSend(ConnToLowerNode, NodeId, "", "COMMAND", "INIT", " ", listenPort, 0, utils.AdminId, key, false)
 			case "ID":
 				NodeStuff.ControlConnForLowerNodeChan <- ConnToLowerNode
 				NodeStuff.NewNodeMessageChan <- NewNodeMessage
@@ -101,11 +99,9 @@ func StartNodeListen(listenPort string, NodeId string, key []byte) {
 				NodeStuff.Adminconn <- ConnToLowerNode
 			case "STOWAWAYAGENT":
 				if !NodeStuff.Offline {
-					NewNodeMessage, _ = utils.ConstructPayload(NodeId, "", "COMMAND", "CONFIRM", " ", " ", 0, NodeId, key, false)
-					ConnToLowerNode.Write(NewNodeMessage)
+					utils.ConstructPayloadAndSend(ConnToLowerNode, NodeId, "", "COMMAND", "CONFIRM", " ", " ", 0, NodeId, key, false)
 				} else {
-					respcommand, _ := utils.ConstructPayload(NodeId, "", "COMMAND", "REONLINE", " ", listenPort, 0, NodeId, key, false)
-					ConnToLowerNode.Write(respcommand)
+					utils.ConstructPayloadAndSend(ConnToLowerNode, NodeId, "", "COMMAND", "REONLINE", " ", listenPort, 0, NodeId, key, false)
 				}
 			case "INIT":
 				//告知admin新节点消息
@@ -122,7 +118,8 @@ func StartNodeListen(listenPort string, NodeId string, key []byte) {
 }
 
 /*-------------------------节点主动connect模式代码--------------------------*/
-//connect命令代码
+
+// ConnectNextNode connect命令代码
 func ConnectNextNode(target string, nodeid string, key []byte) bool {
 	controlConnToNextNode, err := net.Dial("tcp", target)
 
@@ -136,8 +133,7 @@ func ConnectNextNode(target string, nodeid string, key []byte) bool {
 		return false
 	}
 
-	helloMess, _ := utils.ConstructPayload(nodeid, "", "COMMAND", "STOWAWAYAGENT", " ", " ", 0, utils.AdminId, key, false)
-	controlConnToNextNode.Write(helloMess)
+	utils.ConstructPayloadAndSend(controlConnToNextNode, nodeid, "", "COMMAND", "STOWAWAYAGENT", " ", " ", 0, utils.AdminId, key, false)
 
 	for {
 		command, err := utils.ExtractPayload(controlConnToNextNode, key, utils.AdminId, true)
@@ -164,8 +160,7 @@ func ConnectNextNode(target string, nodeid string, key []byte) bool {
 
 			<-NodeStuff.PrepareForReOnlineNodeReady
 
-			NewNodeMessage, _ := utils.ConstructPayload(nodeid, "", "COMMAND", "REONLINESUC", " ", " ", 0, nodeid, key, false)
-			controlConnToNextNode.Write(NewNodeMessage)
+			utils.ConstructPayloadAndSend(controlConnToNextNode, nodeid, "", "COMMAND", "REONLINESUC", " ", " ", 0, nodeid, key, false)
 
 			return true
 		}
@@ -173,15 +168,16 @@ func ConnectNextNode(target string, nodeid string, key []byte) bool {
 }
 
 /*-------------------------节点被动模式下功能代码--------------------------*/
-//被动模式下startnode接收admin重连 && 普通节点被动启动等待上级节点主动连接
+
+// AcceptConnFromUpperNode 被动模式下startnode接收admin重连 && 普通节点被动启动等待上级节点主动连接
 func AcceptConnFromUpperNode(listenPort string, nodeid string, key []byte) (net.Conn, string) {
 	listenAddr := fmt.Sprintf("0.0.0.0:%s", listenPort)
 	WaitingForConn, err := net.Listen("tcp", listenAddr)
 
 	if err != nil {
-		log.Printf("[*]Cannot listen on port %s", listenPort)
-		os.Exit(0)
+		log.Fatalf("[*]Cannot listen on port %s", listenPort)
 	}
+
 	for {
 		Comingconn, err := WaitingForConn.Accept()
 		if err != nil {
@@ -196,8 +192,7 @@ func AcceptConnFromUpperNode(listenPort string, nodeid string, key []byte) (net.
 
 		utils.ExtractPayload(Comingconn, key, utils.AdminId, true)
 
-		respcommand, _ := utils.ConstructPayload(nodeid, "", "COMMAND", "INIT", " ", listenPort, 0, utils.AdminId, key, false)
-		Comingconn.Write(respcommand)
+		utils.ConstructPayloadAndSend(Comingconn, nodeid, "", "COMMAND", "INIT", " ", listenPort, 0, utils.AdminId, key, false)
 
 		command, _ := utils.ExtractPayload(Comingconn, key, utils.AdminId, true) //等待分配id
 		if command.Command == "ID" {
@@ -211,7 +206,8 @@ func AcceptConnFromUpperNode(listenPort string, nodeid string, key []byte) (net.
 }
 
 /*-------------------------一般模式及被动模式下(除了reuse模式)节点互相校验代码--------------------------*/
-//发送secret值
+
+// SendSecret 发送secret值
 func SendSecret(conn net.Conn, key []byte) error {
 	var NOT_VALID = errors.New("not valid")
 
@@ -243,7 +239,7 @@ func SendSecret(conn net.Conn, key []byte) error {
 	return NOT_VALID
 }
 
-//检查secret值，在连接建立前测试合法性
+// CheckSecret 检查secret值，在连接建立前测试合法性
 func CheckSecret(conn net.Conn, key []byte) error {
 	var NOT_VALID = errors.New("not valid")
 

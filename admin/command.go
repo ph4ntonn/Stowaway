@@ -18,6 +18,7 @@ func init() {
 	flag.BoolVar(&Args.Rhostreuse, "rhostreuse", false, "If the startnode is reusing port")
 }
 
+// ParseCommand 解析命令行
 func ParseCommand() {
 
 	flag.Parse()

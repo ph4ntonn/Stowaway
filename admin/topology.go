@@ -11,33 +11,35 @@ import (
 	"github.com/gofrs/uuid"
 )
 
-var Nooode *utils.SafeNodeMap
+var Topology *utils.SafeNodeMap
 var Route *utils.SafeRouteMap
 var readyToDel []string
 
 func init() {
-	Nooode = utils.NewSafeNodeMap()
+	Topology = utils.NewSafeNodeMap()
 	Route = utils.NewSafeRouteMap()
 }
 
 /*-------------------------节点拓扑相关代码--------------------------*/
-//将节点加入拓扑
+
+// AddNodeToTopology 将节点加入拓扑
 func AddNodeToTopology(nodeid string, uppernodeid string) {
-	Nooode.Lock()
-	if _, ok := Nooode.AllNode[nodeid]; ok {
-		Nooode.AllNode[nodeid].Uppernode = uppernodeid
+	Topology.Lock()
+	defer Topology.Unlock()
+
+	if _, ok := Topology.AllNode[nodeid]; ok {
+		Topology.AllNode[nodeid].Uppernode = uppernodeid
 	} else {
 		tempnode := utils.NewNode()
-		Nooode.AllNode[nodeid] = tempnode
-		Nooode.AllNode[nodeid].Uppernode = uppernodeid
+		Topology.AllNode[nodeid] = tempnode
+		Topology.AllNode[nodeid].Uppernode = uppernodeid
 	}
 	if uppernodeid != utils.AdminId {
-		Nooode.AllNode[uppernodeid].Lowernode = append(Nooode.AllNode[uppernodeid].Lowernode, nodeid)
+		Topology.AllNode[uppernodeid].Lowernode = append(Topology.AllNode[uppernodeid].Lowernode, nodeid)
 	}
-	Nooode.Unlock()
 }
 
-//重连时对添加clientid的操作
+// ReconnAddCurrentClient 重连时对添加clientid的操作
 func ReconnAddCurrentClient(id string) {
 	for _, value := range CurrentClient {
 		if value == id {
@@ -47,7 +49,7 @@ func ReconnAddCurrentClient(id string) {
 	CurrentClient = append(CurrentClient, id)
 }
 
-// 将节点加入拓扑
+// AddToChain 将节点加入拓扑
 func AddToChain() {
 	for {
 		newNode := <-AdminStatus.NodesReadyToadd
@@ -57,63 +59,69 @@ func AddToChain() {
 	}
 }
 
-//将节点从拓扑中删除
+// DelNodeFromTopology 将节点从拓扑中删除
 func DelNodeFromTopology(nodeid string) {
-	Nooode.Lock()
-	if _, ok := Nooode.AllNode[nodeid]; ok {
-		uppernode := Nooode.AllNode[nodeid].Uppernode
-		if _, ok := Nooode.AllNode[uppernode]; ok {
-			index := utils.FindSpecFromSlice(nodeid, Nooode.AllNode[uppernode].Lowernode)
-			Nooode.AllNode[uppernode].Lowernode = append(Nooode.AllNode[uppernode].Lowernode[:index], Nooode.AllNode[uppernode].Lowernode[index+1:]...)
+	Topology.Lock()
+	defer Topology.Unlock()
+
+	if _, ok := Topology.AllNode[nodeid]; ok {
+		uppernode := Topology.AllNode[nodeid].Uppernode
+		if _, ok := Topology.AllNode[uppernode]; ok {
+			index := utils.FindSpecFromSlice(nodeid, Topology.AllNode[uppernode].Lowernode)
+			Topology.AllNode[uppernode].Lowernode = append(Topology.AllNode[uppernode].Lowernode[:index], Topology.AllNode[uppernode].Lowernode[index+1:]...)
 		}
 
 		Del(nodeid)
-		readyToDel = append(readyToDel, nodeid)
 
+		readyToDel = append(readyToDel, nodeid)
 		for _, value := range readyToDel {
-			delete(Nooode.AllNode, value)
+			delete(Topology.AllNode, value)
 			delete(NodeStatus.NodeIP, value)
 			delete(NodeStatus.Nodenote, value)
 		}
 		readyToDel = make([]string, 0)
 	}
-	Nooode.Unlock()
 }
 
-//收集需要删除的节点
+// Del 收集需要删除的节点
 func Del(nodeid string) {
-	for _, value := range Nooode.AllNode[nodeid].Lowernode {
+	for _, value := range Topology.AllNode[nodeid].Lowernode {
 		readyToDel = append(readyToDel, value)
 		Del(value)
 	}
 }
 
-//找到所有的子节点
+// FindAll 找到所有的子节点
 func FindAll(nodeid string) []string {
 	var readyToDel []string
-	Nooode.Lock()
+
+	Topology.Lock()
 	Find(&readyToDel, nodeid)
-	Nooode.Unlock()
+	Topology.Unlock()
 
 	readyToDel = append(readyToDel, nodeid)
 	WaitForFindAll <- true
 	return readyToDel
 }
 
-//收集所有的子节点
+// Find 收集所有的子节点
 func Find(readyToDel *[]string, nodeid string) {
-	for _, value := range Nooode.AllNode[nodeid].Lowernode {
+	for _, value := range Topology.AllNode[nodeid].Lowernode {
 		*readyToDel = append(*readyToDel, value)
 		Find(readyToDel, value)
 	}
 }
 
 /*-------------------------路由相关代码--------------------------*/
-//计算路由表
+
+// CalRoute 计算路由表
 func CalRoute() {
-	Nooode.Lock()
-	for key, _ := range Nooode.AllNode {
-		var temp []string = []string{}
+	var temp []string
+
+	Topology.Lock()
+	defer Topology.Unlock()
+
+	for key, _ := range Topology.AllNode {
 		count := key
 
 		if key == utils.AdminId {
@@ -121,10 +129,9 @@ func CalRoute() {
 		}
 
 		for {
-			if Nooode.AllNode[count].Uppernode != utils.AdminId && Nooode.AllNode[count].Uppernode != utils.StartNodeId {
-				count = Nooode.AllNode[count].Uppernode
-				node := count
-				temp = append(temp, node)
+			if Topology.AllNode[count].Uppernode != utils.AdminId && Topology.AllNode[count].Uppernode != utils.StartNodeId {
+				count = Topology.AllNode[count].Uppernode
+				temp = append(temp, count)
 			} else {
 				utils.StringReverse(temp)
 				route := strings.Join(temp, ":")
@@ -135,11 +142,11 @@ func CalRoute() {
 			}
 		}
 	}
-	Nooode.Unlock()
 }
 
 /*-------------------------节点拓扑信息相关代码--------------------------*/
-// 显示节点拓扑详细信息
+
+// ShowDetail 显示节点拓扑详细信息
 func ShowDetail() {
 	if AdminStuff.StartNode != "0.0.0.0" {
 		var nodes []string
@@ -157,16 +164,19 @@ func ShowDetail() {
 	}
 }
 
-//显示节点层级关系
+// ShowTree 显示节点层级关系
 func ShowTree() {
 	if AdminStuff.StartNode != "0.0.0.0" {
 		var nodes []string
 		var nodesid []int
 
-		Nooode.Lock()
-		for key, _ := range Nooode.AllNode {
+		Topology.Lock()
+		defer Topology.Unlock()
+
+		for key, _ := range Topology.AllNode {
 			nodes = append(nodes, key)
 		}
+
 		for _, value := range nodes {
 			id := FindIntByNodeid(value)
 			nodesid = append(nodesid, id)
@@ -176,7 +186,7 @@ func ShowTree() {
 
 		for _, value := range nodesid {
 			node := CurrentClient[value]
-			nodestatus := Nooode.AllNode[node]
+			nodestatus := Topology.AllNode[node]
 
 			if node == utils.StartNodeId {
 				fmt.Printf("StartNode[%s]'s child nodes:\n", fmt.Sprint(value+1))
@@ -200,49 +210,42 @@ func ShowTree() {
 				}
 			}
 		}
-		Nooode.Unlock()
 	} else {
 		fmt.Println("There is no agent connected!")
 	}
 }
 
-//为node添加note
+// AddNote 为node添加note
 func AddNote(startNodeConn net.Conn, data []string, nodeID string) bool {
 	var info string
-	data = data[1:len(data)]
 
-	for _, i := range data {
+	for _, i := range data[1:len(data)] {
 		info = info + " " + i
 	}
 
 	if _, ok := NodeStatus.Nodenote[nodeID]; ok {
 		NodeStatus.Nodenote[nodeID] = info
 		//发送备忘至节点储存，防止admin下线后丢失备忘
-		Route.Lock()
-		respComm, _ := utils.ConstructPayload(nodeID, Route.Route[nodeID], "COMMAND", "YOURINFO", " ", info, 0, utils.AdminId, AdminStatus.AESKey, false)
-		Route.Unlock()
-		startNodeConn.Write(respComm)
+		SendPayloadViaRoute(startNodeConn, nodeID, Route.Route[nodeID], "COMMAND", "YOURINFO", " ", info, 0, utils.AdminId, AdminStatus.AESKey, false)
 		return true
 	}
 	return false
 }
 
-//为node删除note
+// DelNote 为node删除note
 func DelNote(startNodeConn net.Conn, nodeID string) bool {
 	if _, ok := NodeStatus.Nodenote[nodeID]; ok {
 		NodeStatus.Nodenote[nodeID] = ""
 		//将节点储存的备忘同时清空
-		Route.Lock()
-		respComm, _ := utils.ConstructPayload(nodeID, Route.Route[nodeID], "COMMAND", "YOURINFO", " ", "", 0, utils.AdminId, AdminStatus.AESKey, false)
-		Route.Unlock()
-		startNodeConn.Write(respComm)
+		SendPayloadViaRoute(startNodeConn, nodeID, Route.Route[nodeID], "COMMAND", "YOURINFO", " ", "", 0, utils.AdminId, AdminStatus.AESKey, false)
 		return true
 	}
 	return false
 }
 
 /*-------------------------nodeid生成、搜索相关代码--------------------------*/
-//生成一个nodeid
+
+// GenerateNodeID 生成一个nodeid
 func GenerateNodeID() string {
 	u2, _ := uuid.NewV4()
 	uu := strings.Replace(u2.String(), "-", "", -1)
@@ -251,7 +254,7 @@ func GenerateNodeID() string {
 	return uuid
 }
 
-//将字符串型的nodeid转为对应的int
+// FindNumByNodeid 将字符串型的nodeid转为对应的int
 func FindNumByNodeid(id string) (string, error) {
 	var NO_NODE = errors.New("This node isn't exist")
 
@@ -259,17 +262,17 @@ func FindNumByNodeid(id string) (string, error) {
 		return "", NO_NODE
 	}
 
-	nodeid := utils.StrUint32(id)
-	currentid := int(nodeid) - 1
+	nodeid := int(utils.StrUint32(id))
+	currentid := nodeid - 1
 
-	if len(CurrentClient) < int(nodeid) {
+	if len(CurrentClient) < nodeid {
 		return "", NO_NODE
 	}
 
 	return CurrentClient[currentid], nil
 }
 
-//用int找到对应的nodeid
+// FindIntByNodeid 用int找到对应的nodeid
 func FindIntByNodeid(id string) int {
 	for key, value := range CurrentClient {
 		if value == id {

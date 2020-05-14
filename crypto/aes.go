@@ -7,19 +7,18 @@ import (
 	"errors"
 )
 
-// 补齐密钥长度至32字节
+// KeyPadding 补齐密钥长度至32字节
 func KeyPadding(key []byte) ([]byte, error) {
 	keylength := float32(len(key))
 	if keylength/8 >= 4 {
 		return nil, errors.New("Key too long! Should shorter than 32 bytes")
-	} else {
-		padding := 32 - len(key)
-		paddtext := bytes.Repeat([]byte{byte(0)}, padding)
-		return append(key, paddtext...), nil
 	}
+	padding := 32 - len(key)
+	paddtext := bytes.Repeat([]byte{byte(0)}, padding)
+	return append(key, paddtext...), nil
 }
 
-//解密
+// AESDecrypt 解密
 func AESDecrypt(crypted, key []byte) []byte {
 	block, _ := aes.NewCipher(key)
 	blockSize := block.BlockSize()
@@ -30,14 +29,14 @@ func AESDecrypt(crypted, key []byte) []byte {
 	return origData
 }
 
-//去补码
+// PKCS7UnPadding 去补码
 func PKCS7UnPadding(origData []byte) []byte {
 	length := len(origData)
 	unpadding := int(origData[length-1])
 	return origData[:length-unpadding]
 }
 
-//加密
+// AESEncrypt 加密
 func AESEncrypt(origData, key []byte) []byte {
 	//获取block块
 	block, _ := aes.NewCipher(key)
@@ -52,7 +51,7 @@ func AESEncrypt(origData, key []byte) []byte {
 	return crypted
 }
 
-//补码
+// PKCS7Padding 补码
 func PKCS7Padding(origData []byte, blockSize int) []byte {
 	//计算需要补几位数
 	padding := blockSize - len(origData)%blockSize

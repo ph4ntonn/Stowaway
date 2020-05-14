@@ -9,7 +9,7 @@ import (
 	"Stowaway/utils"
 )
 
-//创建交互式shell
+// CreatInteractiveShell 创建交互式shell
 func CreatInteractiveShell() (io.Reader, io.Writer) {
 	var cmd *exec.Cmd
 	sys := utils.CheckSystem()
@@ -40,7 +40,7 @@ func CreatInteractiveShell() (io.Reader, io.Writer) {
 	return stdout, stdin
 }
 
-//启动shell
+// StartShell 启动shell
 func StartShell(command string, stdin io.Writer, stdout io.Reader, currentid string) {
 	buf := make([]byte, 1024)
 	stdin.Write([]byte(command))

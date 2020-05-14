@@ -22,13 +22,18 @@ var (
 	PortForWardMap *utils.Uint32ConnMap
 )
 
-//启动admin
-func NewAdmin(c *utils.AdminOptions) {
-	var InitStatus string = "admin"
+func init() {
 	AdminStatus = utils.NewAdminStatus()
 	ClientSockets = utils.NewUint32ConnMap()
 	FileDataMap = utils.NewIntStrMap()
 	PortForWardMap = utils.NewUint32ConnMap()
+}
+
+// NewAdmin 启动admin
+func NewAdmin(c *utils.AdminOptions) {
+	var initStatus string = "admin"
+	CliStatus = &initStatus
+
 	AdminStatus.AESKey = []byte(c.Secret)
 	listenPort := c.Listen
 	startnodeaddr := c.Connect
@@ -41,23 +46,48 @@ func NewAdmin(c *utils.AdminOptions) {
 	} else {
 		log.Println("[*]Now Connection is maintianed without any encryption!")
 	}
+
 	if startnodeaddr == "" {
 		go StartListen(listenPort)
 	} else {
 		ConnectToStartNode(startnodeaddr, rhostreuse)
 	}
+
 	go AddToChain()
-	CliStatus = &InitStatus
+
 	Controlpanel()
 }
 
-//主动连接startnode端代码
+// StartListen 启动监听
+func StartListen(listenPort string) {
+	localAddr := fmt.Sprintf("0.0.0.0:%s", listenPort)
+	localListener, err := net.Listen("tcp", localAddr)
+	if err != nil {
+		log.Fatalf("[*]Cannot listen %s", localAddr)
+	}
+
+	for {
+		startNodeConn, _ := localListener.Accept() //一定要有连接进入才可继续操作，故没有连接时，admin端无法操作
+
+		err = node.CheckSecret(startNodeConn, AdminStatus.AESKey)
+		if err != nil {
+			continue
+		}
+
+		HandleInitControlConn(startNodeConn)
+
+		log.Printf("[*]StartNode connected from %s!\n", startNodeConn.RemoteAddr().String())
+
+		return
+	}
+}
+
+// ConnectToStartNode 主动连接startnode端代码
 func ConnectToStartNode(startnodeaddr string, rhostreuse bool) {
 	for {
 		startNodeConn, err := net.Dial("tcp", startnodeaddr)
 		if err != nil {
-			log.Println("[*]Connection refused!")
-			os.Exit(0)
+			log.Fatal("[*]Connection refused!")
 		}
 
 		if rhostreuse { //如果startnode在reuse状态下
@@ -69,83 +99,46 @@ func ConnectToStartNode(startnodeaddr string, rhostreuse bool) {
 		} else {
 			err := node.SendSecret(startNodeConn, AdminStatus.AESKey)
 			if err != nil {
-				log.Println("[*]Connection refused!")
-				os.Exit(0)
+				log.Fatal("[*]Connection refused!")
 			}
 		}
 
-		helloMess, _ := utils.ConstructPayload(utils.StartNodeId, "", "COMMAND", "STOWAWAYADMIN", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
-		startNodeConn.Write(helloMess)
-		for {
-			command, _ := utils.ExtractPayload(startNodeConn, AdminStatus.AESKey, utils.AdminId, true)
-			switch command.Command {
-			case "INIT":
-				respCommand, _ := utils.ConstructPayload(utils.StartNodeId, "", "COMMAND", "ID", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
-				startNodeConn.Write(respCommand)
-				AdminStuff.StartNode = strings.Split(startNodeConn.RemoteAddr().String(), ":")[0]
-				log.Printf("[*]Connect to startnode %s successfully!\n", startNodeConn.RemoteAddr().String())
-				NodeStatus.Nodenote[utils.StartNodeId] = ""
-				CurrentClient = append(CurrentClient, utils.StartNodeId) //记录startnode加入网络
-				AddNodeToTopology(utils.StartNodeId, utils.AdminId)
-				CalRoute()
-				go HandleStartConn(startNodeConn)
-				go HandleCommandToControlConn(startNodeConn)
-				return
-			}
-		}
+		utils.ConstructPayloadAndSend(startNodeConn, utils.StartNodeId, "", "COMMAND", "STOWAWAYADMIN", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
+
+		HandleInitControlConn(startNodeConn)
+
+		log.Printf("[*]Connect to startnode %s successfully!\n", startNodeConn.RemoteAddr().String())
+
+		return
 	}
 }
 
-//启动监听
-func StartListen(listenPort string) {
-	localAddr := fmt.Sprintf("0.0.0.0:%s", listenPort)
-	localListener, err := net.Listen("tcp", localAddr)
-	if err != nil {
-		log.Printf("[*]Cannot listen %s", localAddr)
-		os.Exit(0)
-	}
-	for {
-		startNodeConn, _ := localListener.Accept() //一定要有连接进入才可继续操作，故没有连接时，admin端无法操作
-
-		err = node.CheckSecret(startNodeConn, AdminStatus.AESKey)
-		if err != nil {
-			continue
-		}
-
-		log.Printf("[*]StartNode connected from %s!\n", startNodeConn.RemoteAddr().String())
-		AdminStuff.StartNode = strings.Split(startNodeConn.RemoteAddr().String(), ":")[0]
-		go HandleInitControlConn(startNodeConn)
-		break
-	}
-}
-
-// 初始化与startnode的连接
-func HandleInitControlConn(startNodeConn net.Conn) {
+// HandleInitControlConn 初始化与startnode的连接
+func HandleInitControlConn(startNodeConn net.Conn) error {
 	for {
 		command, err := utils.ExtractPayload(startNodeConn, AdminStatus.AESKey, utils.AdminId, true)
 		if err != nil {
-			log.Println("[*]Startnode seems offline, control channel set up failed.Exiting...")
-			return
+			log.Fatal("[*]Startnode seems offline, control channel set up failed.Exiting...")
+			return err
 		}
 		switch command.Command {
 		case "STOWAWAYAGENT":
-			Message, _ := utils.ConstructPayload(utils.StartNodeId, "", "COMMAND", "CONFIRM", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
-			startNodeConn.Write(Message)
+			utils.ConstructPayloadAndSend(startNodeConn, utils.StartNodeId, "", "COMMAND", "CONFIRM", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 		case "INIT":
-			respCommand, _ := utils.ConstructPayload(utils.StartNodeId, "", "COMMAND", "ID", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
-			startNodeConn.Write(respCommand)
+			utils.ConstructPayloadAndSend(startNodeConn, utils.StartNodeId, "", "COMMAND", "ID", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
+			AdminStuff.StartNode = strings.Split(startNodeConn.RemoteAddr().String(), ":")[0]
 			NodeStatus.Nodenote[utils.StartNodeId] = ""
 			CurrentClient = append(CurrentClient, utils.StartNodeId) //记录startnode加入网络
 			AddNodeToTopology(utils.StartNodeId, utils.AdminId)
 			CalRoute()
 			go HandleStartConn(startNodeConn)
 			go HandleCommandToControlConn(startNodeConn)
-			return
+			return nil
 		}
 	}
 }
 
-// 处理与startnode的信道
+// HandleStartConn 处理与startnode的信道
 func HandleStartConn(startNodeConn net.Conn) {
 	for {
 		nodeResp, err := utils.ExtractPayload(startNodeConn, AdminStatus.AESKey, utils.AdminId, true)
@@ -175,20 +168,15 @@ func HandleStartConn(startNodeConn net.Conn) {
 				}
 				ClientSockets.RUnlock()
 			case "FIN":
-				ClientSockets.RLock()
+				ClientSockets.Lock()
 				if _, ok := ClientSockets.Payload[nodeResp.Clientid]; ok {
 					ClientSockets.Payload[nodeResp.Clientid].Close()
 				}
-				ClientSockets.RUnlock()
-				ClientSockets.Lock()
 				if _, ok := ClientSockets.Payload[nodeResp.Clientid]; ok {
 					delete(ClientSockets.Payload, nodeResp.Clientid)
 				}
 				ClientSockets.Unlock()
-				Route.Lock()
-				respCommand, _ := utils.ConstructPayload(nodeResp.CurrentId, Route.Route[nodeResp.CurrentId], "DATA", "FINOK", " ", " ", nodeResp.Clientid, utils.AdminId, AdminStatus.AESKey, false)
-				Route.Unlock()
-				startNodeConn.Write(respCommand)
+				SendPayloadViaRoute(startNodeConn, nodeResp.CurrentId, Route.Route[nodeResp.CurrentId], "DATA", "FINOK", " ", " ", nodeResp.Clientid, utils.AdminId, AdminStatus.AESKey, false)
 			case "FILEDATA": //接收文件内容
 				slicenum, _ := strconv.Atoi(nodeResp.FileSliceNum)
 				FileDataMap.Lock()
@@ -251,10 +239,7 @@ func HandleStartConn(startNodeConn net.Conn) {
 				NodeStatus.Nodenote[nodeid] = ""                                        //初始的note置空
 				AddNodeToTopology(nodeid, nodeResp.CurrentId)                           //加入拓扑
 				CalRoute()                                                              //计算路由
-				Route.Lock()
-				respCommand, _ := utils.ConstructPayload(nodeid, Route.Route[nodeid], "COMMAND", "ID", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
-				Route.Unlock()
-				startNodeConn.Write(respCommand)
+				SendPayloadViaRoute(startNodeConn, nodeid, Route.Route[nodeid], "COMMAND", "ID", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 			case "AGENTOFFLINE":
 				log.Println("[*]Node ", FindIntByNodeid(nodeResp.Info)+1, " seems offline") //有节点掉线后，将此节点及其之后的节点删除
 				CloseAll(nodeResp.Info)                                                     //清除一切与此节点及其子节点有关的连接及功能
@@ -289,8 +274,7 @@ func HandleStartConn(startNodeConn net.Conn) {
 				case "FAILED":
 					AdminStatus.SSHSuccess <- false
 					fmt.Println("[*]Node start ssh failed!Check if target's ssh service is on or username and pass given are right")
-					AdminStatus.ReadyChange <- true
-					AdminStatus.IsShellMode <- true
+					CommandContinue()
 				}
 			case "SSHTUNNELRESP":
 				switch nodeResp.Info {
@@ -299,43 +283,30 @@ func HandleStartConn(startNodeConn net.Conn) {
 				case "FAILED":
 					fmt.Println("[*]Fail to connect to node by ssh tunnel! Something wrong is happened!")
 				}
-				AdminStatus.ReadyChange <- true
-				AdminStatus.IsShellMode <- true
+				CommandContinue()
 			case "SSHCERTERROR":
 				fmt.Println("[*]Ssh certificate seems wrong")
 				AdminStatus.SSHSuccess <- false
-				AdminStatus.ReadyChange <- true
-				AdminStatus.IsShellMode <- true
+				CommandContinue()
 			case "NAMECONFIRM":
 				AdminStatus.GetName <- true
 			case "CREATEFAIL":
 				AdminStatus.GetName <- false
 			case "FILENAME":
-				var err error
 				UploadFile, err := os.Create(nodeResp.Info)
-				Route.Lock()
 				if err != nil {
-					respComm, _ := utils.ConstructPayload(CurrentNode, Route.Route[CurrentNode], "COMMAND", "CREATEFAIL", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
-					startNodeConn.Write(respComm)
+					SendPayloadViaRoute(startNodeConn, CurrentNode, Route.Route[CurrentNode], "COMMAND", "CREATEFAIL", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 				} else {
-					respComm, _ := utils.ConstructPayload(CurrentNode, Route.Route[CurrentNode], "COMMAND", "NAMECONFIRM", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
-					startNodeConn.Write(respComm)
+					SendPayloadViaRoute(startNodeConn, CurrentNode, Route.Route[CurrentNode], "COMMAND", "NAMECONFIRM", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 					go share.ReceiveFile(Route.Route[CurrentNode], &startNodeConn, FileDataMap, AdminStatus.CannotRead, UploadFile, AdminStatus.AESKey, true, utils.AdminId)
 				}
-				Route.Unlock()
 			case "FILESIZE":
 				share.File.FileSize, _ = strconv.ParseInt(nodeResp.Info, 10, 64)
-				Route.Lock()
-				respComm, _ := utils.ConstructPayload(CurrentNode, Route.Route[CurrentNode], "COMMAND", "FILESIZECONFIRM", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
-				Route.Unlock()
-				startNodeConn.Write(respComm)
+				SendPayloadViaRoute(startNodeConn, CurrentNode, Route.Route[CurrentNode], "COMMAND", "FILESIZECONFIRM", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 				share.File.ReceiveFileSize <- true
 			case "FILESLICENUM":
 				share.File.TotalSilceNum, _ = strconv.Atoi(nodeResp.Info)
-				Route.Lock()
-				respComm, _ := utils.ConstructPayload(CurrentNode, Route.Route[CurrentNode], "COMMAND", "FILESLICENUMCONFIRM", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
-				Route.Unlock()
-				startNodeConn.Write(respComm)
+				SendPayloadViaRoute(startNodeConn, CurrentNode, Route.Route[CurrentNode], "COMMAND", "FILESLICENUMCONFIRM", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 				share.File.ReceiveFileSliceNum <- true
 			case "FILESLICENUMCONFIRM":
 				share.File.TotalConfirm <- true
@@ -351,13 +322,10 @@ func HandleStartConn(startNodeConn net.Conn) {
 			case "CANNOTUPLOAD":
 				fmt.Printf("[*]Agent cannot read file: %s\n", nodeResp.Info)
 			case "GETREFLECTNUM":
-				Route.Lock()
 				AdminStuff.Lock()
-				respComm, _ := utils.ConstructPayload(CurrentNode, Route.Route[CurrentNode], "COMMAND", "REFLECTNUM", " ", " ", AdminStuff.ReflectNum, utils.AdminId, AdminStatus.AESKey, false)
+				SendPayloadViaRoute(startNodeConn, CurrentNode, Route.Route[CurrentNode], "COMMAND", "REFLECTNUM", " ", " ", AdminStuff.ReflectNum, utils.AdminId, AdminStatus.AESKey, false)
 				AdminStuff.ReflectNum++
 				AdminStuff.Unlock()
-				Route.Unlock()
-				startNodeConn.Write(respComm)
 			case "RECONNID":
 				log.Println("[*]Node reconnect successfully!")
 				ipaddress, uppernode := AnalysisInfo(nodeResp.Info)
@@ -367,8 +335,7 @@ func HandleStartConn(startNodeConn net.Conn) {
 				AddNodeToTopology(nodeResp.CurrentId, uppernode)
 				CalRoute()
 			case "HEARTBEAT":
-				hbcommpack, _ := utils.ConstructPayload(utils.StartNodeId, "", "COMMAND", "KEEPALIVE", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
-				startNodeConn.Write(hbcommpack)
+				utils.ConstructPayloadAndSend(startNodeConn, utils.StartNodeId, "", "COMMAND", "KEEPALIVE", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 			case "TRANSSUCCESS":
 				fmt.Println("[*]File transmission complete!")
 			case "FORWARDFAIL":

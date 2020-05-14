@@ -17,15 +17,17 @@ const CHAIN_NAME = "STOWAWAY"
 const START_FORWARDING = "stowawaycoming"
 const STOP_FORWARDING = "stowawayleaving"
 
-/*-------------------------Iptable复用模式功能代码--------------------------*/
 //以下大致与SO_REUSEPORT,SO_REUSEADDR模式下相同
+
+/*-------------------------Iptable复用模式功能代码--------------------------*/
+
+// AcceptConnFromUpperNodeIPTableReuse 在iptable reuse状态下接收上一级节点的连接
 func AcceptConnFromUpperNodeIPTableReuse(report, localport string, nodeid string, key []byte) (net.Conn, string) {
 	listenAddr := fmt.Sprintf("0.0.0.0:%s", localport)
 	WaitingForConn, err := net.Listen("tcp", listenAddr)
 
 	if err != nil {
-		log.Printf("[*]Cannot reuse port %s", localport)
-		os.Exit(0)
+		log.Fatalf("[*]Cannot reuse port %s", localport)
 	}
 	for {
 		Comingconn, err := WaitingForConn.Accept()
@@ -41,8 +43,7 @@ func AcceptConnFromUpperNodeIPTableReuse(report, localport string, nodeid string
 
 		utils.ExtractPayload(Comingconn, key, utils.AdminId, true)
 
-		respcommand, _ := utils.ConstructPayload(nodeid, "", "COMMAND", "INIT", " ", report, 0, utils.AdminId, key, false)
-		Comingconn.Write(respcommand)
+		utils.ConstructPayloadAndSend(Comingconn, nodeid, "", "COMMAND", "INIT", " ", report, 0, utils.AdminId, key, false)
 
 		command, _ := utils.ExtractPayload(Comingconn, key, utils.AdminId, true) //等待分配id
 		if command.Command == "ID" {
@@ -54,7 +55,7 @@ func AcceptConnFromUpperNodeIPTableReuse(report, localport string, nodeid string
 	}
 }
 
-//初始化节点监听操作
+// StartNodeListenIPTableReuse 初始化节点监听操作
 func StartNodeListenIPTableReuse(report, localport string, NodeId string, key []byte) {
 	var NewNodeMessage []byte
 
@@ -66,8 +67,7 @@ func StartNodeListenIPTableReuse(report, localport string, NodeId string, key []
 	WaitingForLowerNode, err := net.Listen("tcp", listenAddr)
 
 	if err != nil {
-		log.Printf("[*]Cannot listen on port %s", localport)
-		os.Exit(0)
+		log.Fatalf("[*]Cannot listen on port %s", localport)
 	}
 
 	for {
@@ -86,8 +86,7 @@ func StartNodeListenIPTableReuse(report, localport string, NodeId string, key []
 			command, _ := utils.ExtractPayload(ConnToLowerNode, key, utils.AdminId, true)
 			switch command.Command {
 			case "STOWAWAYADMIN":
-				respcommand, _ := utils.ConstructPayload(NodeId, "", "COMMAND", "INIT", " ", report, 0, utils.AdminId, key, false)
-				ConnToLowerNode.Write(respcommand)
+				utils.ConstructPayloadAndSend(ConnToLowerNode, NodeId, "", "COMMAND", "INIT", " ", report, 0, utils.AdminId, key, false)
 			case "ID":
 				NodeStuff.ControlConnForLowerNodeChan <- ConnToLowerNode
 				NodeStuff.NewNodeMessageChan <- NewNodeMessage
@@ -96,15 +95,12 @@ func StartNodeListenIPTableReuse(report, localport string, NodeId string, key []
 				NodeStuff.Adminconn <- ConnToLowerNode
 			case "STOWAWAYAGENT":
 				if !NodeStuff.Offline {
-					NewNodeMessage, _ = utils.ConstructPayload(NodeId, "", "COMMAND", "CONFIRM", " ", " ", 0, NodeId, key, false)
-					ConnToLowerNode.Write(NewNodeMessage)
+					utils.ConstructPayloadAndSend(ConnToLowerNode, NodeId, "", "COMMAND", "CONFIRM", " ", " ", 0, NodeId, key, false)
 				} else {
-					respcommand, _ := utils.ConstructPayload(NodeId, "", "COMMAND", "REONLINE", " ", report, 0, NodeId, key, false)
-					ConnToLowerNode.Write(respcommand)
+					utils.ConstructPayloadAndSend(ConnToLowerNode, NodeId, "", "COMMAND", "REONLINE", " ", report, 0, NodeId, key, false)
 				}
 			case "INIT":
 				NewNodeMessage, _ = utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NEW", " ", ConnToLowerNode.RemoteAddr().String(), 0, NodeId, key, false)
-
 				NodeInfo.LowerNode.Payload[utils.AdminId] = ConnToLowerNode
 				NodeStuff.ControlConnForLowerNodeChan <- ConnToLowerNode
 				NodeStuff.NewNodeMessageChan <- NewNodeMessage
@@ -115,7 +111,8 @@ func StartNodeListenIPTableReuse(report, localport string, NodeId string, key []
 }
 
 /*-------------------------Iptable复用模式主要功能代码--------------------------*/
-//删除iptable规则
+
+// DeletePortReuseRules 删除iptable规则
 func DeletePortReuseRules(localPort string, reusedPort string) error {
 	var cmds []string
 
@@ -138,7 +135,7 @@ func DeletePortReuseRules(localPort string, reusedPort string) error {
 	return nil
 }
 
-//添加iptable规则
+// SetPortReuseRules 添加iptable规则
 func SetPortReuseRules(localPort string, reusedPort string) error {
 	sigs := make(chan os.Signal, 1)
 

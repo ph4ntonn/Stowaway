@@ -6,6 +6,7 @@ import (
 	"Stowaway/config"
 )
 
+// Banner 程序图标
 func Banner() {
 	fmt.Printf(`
 ▄▀▀▀▀▄  ▄▀▀▀█▀▀▄  ▄▀▀▀▀▄   ▄▀▀▄    ▄▀▀▄  ▄▀▀█▄   ▄▀▀▄    ▄▀▀▄  ▄▀▀█▄   ▄▀▀▄ ▀▀▄ 
@@ -20,6 +21,7 @@ func Banner() {
 `, config.VERSION)
 }
 
+// ShowMainHelp 打印admin模式下的帮助
 func ShowMainHelp() {
 	fmt.Println(`
 	help                                     		Show Help information.
@@ -30,6 +32,7 @@ func ShowMainHelp() {
   `)
 }
 
+// ShowNodeHelp 打印node模式下的帮助
 func ShowNodeHelp() {
 	fmt.Println(`
 	help                                     		Show Help information.

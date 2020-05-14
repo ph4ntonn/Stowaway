@@ -20,7 +20,8 @@ func init() {
 }
 
 /*-------------------------Port-reflect启动相关代码--------------------------*/
-//检查是否能够监听
+
+// TestReflect 检查是否能够监听
 func TestReflect(portCombine string) {
 	var num uint32
 	ports := strings.Split(portCombine, ":")
@@ -32,11 +33,13 @@ func TestReflect(portCombine string) {
 		respCommand, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "REFLECTFAIL", " ", " ", 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
 		ProxyChan.ProxyChanToUpperNode <- respCommand
 		return
-	} else {
-		defer reflectListenerForClient.Close()
-		respCommand, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "REFLECTOK", " ", " ", 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
-		ProxyChan.ProxyChanToUpperNode <- respCommand
 	}
+
+	defer reflectListenerForClient.Close()
+
+	respCommand, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "REFLECTOK", " ", " ", 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+	ProxyChan.ProxyChanToUpperNode <- respCommand
+
 	//记录此listener
 	CurrentPortReflectListener = append(CurrentPortReflectListener, reflectListenerForClient)
 	//等待连接
@@ -45,13 +48,15 @@ func TestReflect(portCombine string) {
 
 		if err != nil {
 			return
-		} else {
-			respCommand, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "GETREFLECTNUM", " ", ports[0], 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
-			ProxyChan.ProxyChanToUpperNode <- respCommand
-			num = <-ReflectStatus.ReflectNum
-			respCommand, _ = utils.ConstructPayload(utils.AdminId, "", "DATA", "REFLECT", " ", ports[0], num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
-			ProxyChan.ProxyChanToUpperNode <- respCommand
 		}
+
+		respCommand, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "GETREFLECTNUM", " ", ports[0], 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+		ProxyChan.ProxyChanToUpperNode <- respCommand
+
+		num = <-ReflectStatus.ReflectNum
+
+		respCommand, _ = utils.ConstructPayload(utils.AdminId, "", "DATA", "REFLECT", " ", ports[0], num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+		ProxyChan.ProxyChanToUpperNode <- respCommand
 
 		ReflectConnMap.Lock()
 		ReflectConnMap.Payload[num] = conn
@@ -60,7 +65,7 @@ func TestReflect(portCombine string) {
 	}
 }
 
-//处理传入连接
+// HandleReflectPort 处理传入连接
 func HandleReflectPort(reflectconn net.Conn, num uint32, nodeid string) {
 	buffer := make([]byte, 20480)
 
@@ -71,9 +76,9 @@ func HandleReflectPort(reflectconn net.Conn, num uint32, nodeid string) {
 			finMessage, _ := utils.ConstructPayload(utils.AdminId, "", "DATA", "REFLECTFIN", " ", " ", num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
 			ProxyChan.ProxyChanToUpperNode <- finMessage
 			return
-		} else {
-			respData, _ := utils.ConstructPayload(utils.AdminId, "", "DATA", "REFLECTDATA", " ", string(buffer[:len]), num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
-			ProxyChan.ProxyChanToUpperNode <- respData
 		}
+
+		respData, _ := utils.ConstructPayload(utils.AdminId, "", "DATA", "REFLECTDATA", " ", string(buffer[:len]), num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+		ProxyChan.ProxyChanToUpperNode <- respData
 	}
 }

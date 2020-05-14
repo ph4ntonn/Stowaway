@@ -17,6 +17,7 @@ var AdminId = "0000000000"
 var StartNodeId = "0000000001"
 
 /*-------------------------Admin命令参数结构代码--------------------------*/
+
 type AdminOptions struct {
 	Secret     string
 	Listen     string
@@ -25,6 +26,7 @@ type AdminOptions struct {
 }
 
 /*-------------------------Agent命令参数结构代码--------------------------*/
+
 type AgentOptions struct {
 	Secret      string
 	Listen      string
@@ -38,6 +40,7 @@ type AgentOptions struct {
 }
 
 /*-------------------------Admin相关状态变量代码--------------------------*/
+
 type AdminStatus struct {
 	ReadyChange      chan bool
 	IsShellMode      chan bool
@@ -64,6 +67,7 @@ func NewAdminStatus() *AdminStatus {
 }
 
 /*-------------------------Admin零散变量代码--------------------------*/
+
 type AdminStuff struct {
 	sync.RWMutex
 	StartNode              string
@@ -86,6 +90,7 @@ func NewAdminStuff() *AdminStuff {
 }
 
 /*-------------------------Agent相关状态变量代码--------------------------*/
+
 type AgentStatus struct {
 	Nodeid            string
 	NodeNote          string
@@ -108,6 +113,7 @@ func NewAgentStatus() *AgentStatus {
 }
 
 /*-------------------------Node状态代码--------------------------*/
+
 type NodeStatus struct {
 	NodeIP       map[string]string
 	Nodenote     map[string]string
@@ -125,6 +131,7 @@ func NewNodeStatus() *NodeStatus {
 }
 
 /*-------------------------Node信息代码--------------------------*/
+
 type NodeInfo struct {
 	UpperNode string
 	LowerNode *StrConnMap
@@ -138,6 +145,7 @@ func NewNodeInfo() *NodeInfo {
 }
 
 /*-------------------------Node上下级信息代码--------------------------*/
+
 type NodeStuff struct {
 	ControlConnForLowerNodeChan chan net.Conn //下级节点控制信道
 	Adminconn                   chan net.Conn
@@ -163,6 +171,7 @@ func NewNodeStuff() *NodeStuff {
 }
 
 /*-------------------------Node上下级信息代码--------------------------*/
+
 type Node struct {
 	Uppernode string
 	Lowernode []string
@@ -175,6 +184,7 @@ func NewNode() *Node {
 }
 
 /*-------------------------传递给下级节点结构代码--------------------------*/
+
 type PassToLowerNodeData struct {
 	Route string
 	Data  []byte
@@ -186,6 +196,7 @@ func NewPassToLowerNodeData() *PassToLowerNodeData {
 }
 
 /*-------------------------Forward配置相关代码--------------------------*/
+
 type ForwardStatus struct {
 	sync.RWMutex
 	ForwardIsValid             chan bool
@@ -204,6 +215,7 @@ func NewForwardStatus() *ForwardStatus {
 }
 
 /*-------------------------Reflect配置相关代码--------------------------*/
+
 type ReflectStatus struct {
 	ReflectNum chan uint32
 }
@@ -215,6 +227,7 @@ func NewReflectStatus() *ReflectStatus {
 }
 
 /*-------------------------Socks5配置相关代码--------------------------*/
+
 type SocksSetting struct {
 	SocksUsername string
 	SocksPass     string
@@ -226,6 +239,7 @@ func NewSocksSetting() *SocksSetting {
 }
 
 /*-------------------------File upload/download配置相关代码--------------------------*/
+
 type FileStatus struct {
 	TotalSilceNum       int
 	FileSize            int64
@@ -243,6 +257,7 @@ func NewFileStatus() *FileStatus {
 }
 
 /*-------------------------ProxyChan相关代码--------------------------*/
+
 type ProxyChan struct {
 	ProxyChanToLowerNode chan *PassToLowerNodeData
 	ProxyChanToUpperNode chan []byte
@@ -255,6 +270,7 @@ func NewProxyChan() *ProxyChan {
 }
 
 /*-------------------------加锁map相关代码--------------------------*/
+
 type Uint32ChanStrMap struct {
 	sync.RWMutex
 	Payload map[uint32]chan string
@@ -291,6 +307,7 @@ type SafeRouteMap struct {
 }
 
 /*-------------------------不加锁map相关代码--------------------------*/
+
 type StrListenerSliceMap struct {
 	Payload map[string][]net.Listener
 }
@@ -300,6 +317,7 @@ type StrUint32SliceMap struct {
 }
 
 /*-------------------------初始化各类map相关代码--------------------------*/
+
 func NewUint32ChanStrMap() *Uint32ChanStrMap {
 	sm := new(Uint32ChanStrMap)
 	sm.Payload = make(map[uint32]chan string, 10)
@@ -355,7 +373,8 @@ func NewSafeRouteMap() *SafeRouteMap {
 }
 
 /*-------------------------chan状态判断相关代码--------------------------*/
-//判断chan是否已经被释放
+
+// IsClosed 判断chan是否已经被释放
 func IsClosed(ch chan string) bool {
 	select {
 	case <-ch:
@@ -366,6 +385,8 @@ func IsClosed(ch chan string) bool {
 }
 
 /*-------------------------操作系统判断相关代码--------------------------*/
+
+// CheckSystem 检查所在的操作系统
 func CheckSystem() (sysType uint32) {
 	var os = runtime.GOOS
 	switch os {
@@ -378,6 +399,8 @@ func CheckSystem() (sysType uint32) {
 }
 
 /*-------------------------根据操作系统返回系统信息相关代码--------------------------*/
+
+// GetInfoViaSystem 获得系统信息
 func GetInfoViaSystem() string {
 	var os = runtime.GOOS
 	switch os {
@@ -407,6 +430,8 @@ func GetInfoViaSystem() string {
 }
 
 /*-------------------------进度条生成相关代码--------------------------*/
+
+// NewBar 生成新的进度条
 func NewBar(length int64) *pb.ProgressBar {
 	bar := pb.New64(int64(length))
 	bar.SetTemplate(pb.Full)
@@ -415,19 +440,20 @@ func NewBar(length int64) *pb.ProgressBar {
 }
 
 /*-------------------------操作功能性代码--------------------------*/
-//uint32转换至string类型
+
+// Uint32Str uint32转换至string类型
 func Uint32Str(num uint32) string {
 	b := strconv.Itoa(int(num))
 	return b
 }
 
-//string转换至uint32
+// StrUint32 string转换至uint32
 func StrUint32(str string) uint32 {
 	num, _ := strconv.ParseInt(str, 10, 32)
 	return uint32(num)
 }
 
-//排序
+// CheckRange 排序
 func CheckRange(nodes []int) {
 	for m := len(nodes) - 1; m > 0; m-- {
 		var flag bool = false
@@ -445,7 +471,7 @@ func CheckRange(nodes []int) {
 	}
 }
 
-//倒置[]string
+// StringReverse 倒置[]string
 func StringReverse(src []string) {
 	if src == nil {
 		return
@@ -460,7 +486,7 @@ func StringReverse(src []string) {
 	}
 }
 
-//获取slice中的特定值
+// FindSpecFromSlice 获取slice中的特定值
 func FindSpecFromSlice(nodeid string, nodes []string) int {
 	for key, value := range nodes {
 		if nodeid == value {
@@ -470,10 +496,38 @@ func FindSpecFromSlice(nodeid string, nodes []string) int {
 	return -1
 }
 
-//生成md5值
+// GetStringMd5 生成md5值
 func GetStringMd5(s string) string {
 	md5 := md5.New()
 	md5.Write([]byte(s))
 	md5Str := hex.EncodeToString(md5.Sum(nil))
 	return md5Str
+}
+
+// GetInfoViaLockMap 从加锁map中获取信息
+func GetInfoViaLockMap(LockMap, params interface{}) interface{} {
+	switch lockmap := LockMap.(type) {
+	case *Uint32ConnMap:
+		if num, err := params.(uint32); err {
+			lockmap.Lock()
+			reflectConn := lockmap.Payload[num]
+			lockmap.Unlock()
+			return reflectConn
+		}
+	case *SafeRouteMap:
+		if nodeid, err := params.(string); err {
+			lockmap.Lock()
+			route := lockmap.Route[nodeid]
+			lockmap.Unlock()
+			return route
+		}
+	}
+	return nil
+}
+
+// ConstructPayloadAndSend 生成payload并发送
+func ConstructPayloadAndSend(conn net.Conn, nodeid string, route string, ptype string, command string, fileSliceNum string, info string, clientid uint32, currentid string, key []byte, pass bool) error {
+	mess, _ := ConstructPayload(nodeid, route, ptype, command, fileSliceNum, info, clientid, currentid, key, pass)
+	_, err := conn.Write(mess)
+	return err
 }

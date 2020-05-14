@@ -25,6 +25,7 @@ func init() {
 	flag.Usage = func() {}
 }
 
+// ParseCommand 解析输入的命令
 func ParseCommand() {
 	flag.Parse()
 
