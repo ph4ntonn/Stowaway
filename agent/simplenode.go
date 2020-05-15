@@ -150,11 +150,10 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 					}
 					ReflectConnMap.Unlock()
 
-					go func() {
-						for _, listener := range CurrentPortReflectListener {
-							listener.Close()
-						}
-					}()
+					for _, listener := range CurrentPortReflectListener {
+						listener.Close()
+					}
+
 				case "RECONN":
 					respCommand, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "RECONNID", " ", "", 0, NODEID, AgentStatus.AESKey, false)
 					ProxyChan.ProxyChanToUpperNode <- respCommand

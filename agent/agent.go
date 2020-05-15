@@ -59,10 +59,8 @@ func NewAgent(c *utils.AgentOptions) {
 		go WaitForExit()
 		SimpleNodeReuseInit(reusehost, reuseport, listenPort, 1)
 	} else if reuseport != "" && listenPort != "" && isStartNode {
-		go WaitForExit()
 		StartNodeReuseInit(reusehost, reuseport, listenPort, 2)
 	} else if reuseport != "" && listenPort != "" {
-		go WaitForExit()
 		SimpleNodeReuseInit(reusehost, reuseport, listenPort, 2)
 	}
 }

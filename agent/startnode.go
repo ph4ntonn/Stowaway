@@ -246,11 +246,10 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 					}
 					ReflectConnMap.Unlock()
 
-					go func() {
-						for _, listener := range CurrentPortReflectListener {
-							listener.Close()
-						}
-					}()
+					for _, listener := range CurrentPortReflectListener {
+						listener.Close()
+					}
+
 				case "LISTEN":
 					err := TestListen(AdminData.Info)
 					if err != nil {
