@@ -80,7 +80,7 @@ func StartSocksServiceForClient(command []string, startNodeConn net.Conn, nodeID
 
 		AdminStuff.Lock()
 		AdminStuff.SocksMapping.Payload[nodeID] = append(AdminStuff.SocksMapping.Payload[nodeID], AdminStuff.SocksNum)
-		AdminStuff.SocksNum++
+		AdminStuff.SocksNum = (AdminStuff.SocksNum + 1) % 4294967295
 		AdminStuff.Unlock()
 
 	}
