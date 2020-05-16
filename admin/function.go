@@ -82,7 +82,6 @@ func StartSocksServiceForClient(command []string, startNodeConn net.Conn, nodeID
 		AdminStuff.SocksMapping.Payload[nodeID] = append(AdminStuff.SocksMapping.Payload[nodeID], AdminStuff.SocksNum)
 		AdminStuff.SocksNum = (AdminStuff.SocksNum + 1) % 4294967295
 		AdminStuff.Unlock()
-
 	}
 }
 
@@ -137,7 +136,7 @@ func StopSocks() {
 // StartSSHService 发送ssh开启命令
 func StartSSHService(startNodeConn net.Conn, info []string, nodeid string, method string) {
 	information := fmt.Sprintf("%s:::%s:::%s:::%s", info[0], info[1], info[2], method)
-	SendPayloadViaRoute(startNodeConn, nodeid, Route.Route[nodeid], "COMMAND", "SSH", " ", information, 0, utils.AdminId, AdminStatus.AESKey, false)
+	SendPayloadViaRoute(startNodeConn, nodeid, "COMMAND", "SSH", " ", information, 0, utils.AdminId, AdminStatus.AESKey, false)
 }
 
 // CheckKeyFile 检查私钥文件是否存在
@@ -154,7 +153,7 @@ func CheckKeyFile(file string) []byte {
 // SendSSHTunnel 发送SshTunnel开启命令
 func SendSSHTunnel(startNodeConn net.Conn, info []string, nodeid string, method string) {
 	information := fmt.Sprintf("%s:::%s:::%s:::%s:::%s", info[0], info[1], info[2], info[3], method)
-	SendPayloadViaRoute(startNodeConn, nodeid, Route.Route[nodeid], "COMMAND", "SSHTUNNEL", " ", information, 0, utils.AdminId, AdminStatus.AESKey, false)
+	SendPayloadViaRoute(startNodeConn, nodeid, "COMMAND", "SSHTUNNEL", " ", information, 0, utils.AdminId, AdminStatus.AESKey, false)
 }
 
 /*-------------------------Port Forward功能启动相关代码--------------------------*/
@@ -266,7 +265,7 @@ func TryReflect(startNodeConn net.Conn, nodeid string, id uint32, port string) {
 		ReflectConnMap.Payload[id] = reflectConn
 		ReflectConnMap.Unlock()
 	} else {
-		SendPayloadViaRoute(startNodeConn, nodeid, Route.Route[nodeid], "DATA", "REFLECTTIMEOUT", " ", " ", id, utils.AdminId, AdminStatus.AESKey, false)
+		SendPayloadViaRoute(startNodeConn, nodeid, "DATA", "REFLECTTIMEOUT", " ", " ", id, utils.AdminId, AdminStatus.AESKey, false)
 		return
 	}
 }
@@ -303,15 +302,15 @@ func HandleReflect(startNodeConn net.Conn, reflectDataChan chan string, num uint
 // StopReflect 停止所有reflect服务
 func StopReflect(startNodeConn net.Conn, nodeid string) {
 	fmt.Println("[*]Stop command has been sent")
-	SendPayloadViaRoute(startNodeConn, nodeid, Route.Route[nodeid], "COMMAND", "STOPREFLECT", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
+	SendPayloadViaRoute(startNodeConn, nodeid, "COMMAND", "STOPREFLECT", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 }
 
 /*-------------------------一些功能相关代码--------------------------*/
 
 // SendPayloadViaRoute 获取route后发送payload
-func SendPayloadViaRoute(conn net.Conn, nodeid string, route string, ptype string, command string, fileSliceNum string, info string, clientid uint32, currentid string, key []byte, pass bool) {
+func SendPayloadViaRoute(conn net.Conn, nodeid string, ptype string, command string, fileSliceNum string, info string, clientid uint32, currentid string, key []byte, pass bool) {
 	Route.Lock()
-	utils.ConstructPayloadAndSend(conn, nodeid, route, ptype, command, fileSliceNum, info, clientid, currentid, key, pass)
+	utils.ConstructPayloadAndSend(conn, nodeid, Route.Route[nodeid], ptype, command, fileSliceNum, info, clientid, currentid, key, pass)
 	Route.Unlock()
 }
 
@@ -331,7 +330,7 @@ func ReadChoice() string {
 
 // TestIfValid 测试是否端口可用
 func TestIfValid(commandtype string, startNodeConn net.Conn, target string, nodeid string) {
-	SendPayloadViaRoute(startNodeConn, nodeid, Route.Route[nodeid], "COMMAND", commandtype, " ", target, 0, utils.AdminId, AdminStatus.AESKey, false)
+	SendPayloadViaRoute(startNodeConn, nodeid, "COMMAND", commandtype, " ", target, 0, utils.AdminId, AdminStatus.AESKey, false)
 }
 
 // AnalysisInfo 拆分Info

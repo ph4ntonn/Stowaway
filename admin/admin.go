@@ -175,7 +175,7 @@ func HandleStartConn(startNodeConn net.Conn) {
 					delete(ClientSockets.Payload, nodeResp.Clientid)
 				}
 				ClientSockets.Unlock()
-				SendPayloadViaRoute(startNodeConn, nodeResp.CurrentId, Route.Route[nodeResp.CurrentId], "DATA", "FINOK", " ", " ", nodeResp.Clientid, utils.AdminId, AdminStatus.AESKey, false)
+				SendPayloadViaRoute(startNodeConn, nodeResp.CurrentId, "DATA", "FINOK", " ", " ", nodeResp.Clientid, utils.AdminId, AdminStatus.AESKey, false)
 			case "FILEDATA": //接收文件内容
 				slicenum, _ := strconv.Atoi(nodeResp.FileSliceNum)
 				FileDataMap.Lock()
@@ -238,7 +238,7 @@ func HandleStartConn(startNodeConn net.Conn) {
 				NodeStatus.Nodenote[nodeid] = ""                                        //初始的note置空
 				AddNodeToTopology(nodeid, nodeResp.CurrentId)                           //加入拓扑
 				CalRoute()                                                              //计算路由
-				SendPayloadViaRoute(startNodeConn, nodeid, Route.Route[nodeid], "COMMAND", "ID", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
+				SendPayloadViaRoute(startNodeConn, nodeid, "COMMAND", "ID", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 			case "AGENTOFFLINE":
 				log.Println("[*]Node ", FindIntByNodeid(nodeResp.Info)+1, " seems offline") //有节点掉线后，将此节点及其之后的节点删除
 				CloseAll(nodeResp.Info)                                                     //清除一切与此节点及其子节点有关的连接及功能
@@ -294,18 +294,18 @@ func HandleStartConn(startNodeConn net.Conn) {
 			case "FILENAME":
 				UploadFile, err := os.Create(nodeResp.Info)
 				if err != nil {
-					SendPayloadViaRoute(startNodeConn, CurrentNode, Route.Route[CurrentNode], "COMMAND", "CREATEFAIL", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
+					SendPayloadViaRoute(startNodeConn, CurrentNode, "COMMAND", "CREATEFAIL", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 				} else {
-					SendPayloadViaRoute(startNodeConn, CurrentNode, Route.Route[CurrentNode], "COMMAND", "NAMECONFIRM", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
+					SendPayloadViaRoute(startNodeConn, CurrentNode, "COMMAND", "NAMECONFIRM", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 					go share.ReceiveFile(Route.Route[CurrentNode], &startNodeConn, FileDataMap, AdminStatus.CannotRead, UploadFile, AdminStatus.AESKey, true, utils.AdminId)
 				}
 			case "FILESIZE":
 				share.File.FileSize, _ = strconv.ParseInt(nodeResp.Info, 10, 64)
-				SendPayloadViaRoute(startNodeConn, CurrentNode, Route.Route[CurrentNode], "COMMAND", "FILESIZECONFIRM", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
+				SendPayloadViaRoute(startNodeConn, CurrentNode, "COMMAND", "FILESIZECONFIRM", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 				share.File.ReceiveFileSize <- true
 			case "FILESLICENUM":
 				share.File.TotalSilceNum, _ = strconv.Atoi(nodeResp.Info)
-				SendPayloadViaRoute(startNodeConn, CurrentNode, Route.Route[CurrentNode], "COMMAND", "FILESLICENUMCONFIRM", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
+				SendPayloadViaRoute(startNodeConn, CurrentNode, "COMMAND", "FILESLICENUMCONFIRM", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 				share.File.ReceiveFileSliceNum <- true
 			case "FILESLICENUMCONFIRM":
 				share.File.TotalConfirm <- true
@@ -322,7 +322,7 @@ func HandleStartConn(startNodeConn net.Conn) {
 				fmt.Printf("[*]Agent cannot read file: %s\n", nodeResp.Info)
 			case "GETREFLECTNUM":
 				AdminStuff.Lock()
-				SendPayloadViaRoute(startNodeConn, CurrentNode, Route.Route[CurrentNode], "COMMAND", "REFLECTNUM", " ", " ", AdminStuff.ReflectNum, utils.AdminId, AdminStatus.AESKey, false)
+				SendPayloadViaRoute(startNodeConn, CurrentNode, "COMMAND", "REFLECTNUM", " ", " ", AdminStuff.ReflectNum, utils.AdminId, AdminStatus.AESKey, false)
 				AdminStuff.ReflectNum++
 				AdminStuff.Unlock()
 			case "RECONNID":

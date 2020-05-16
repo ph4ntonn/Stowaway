@@ -225,7 +225,7 @@ func AddNote(startNodeConn net.Conn, data []string, nodeID string) bool {
 	if _, ok := NodeStatus.Nodenote[nodeID]; ok {
 		NodeStatus.Nodenote[nodeID] = info
 		//发送备忘至节点储存，防止admin下线后丢失备忘
-		SendPayloadViaRoute(startNodeConn, nodeID, Route.Route[nodeID], "COMMAND", "YOURINFO", " ", info, 0, utils.AdminId, AdminStatus.AESKey, false)
+		SendPayloadViaRoute(startNodeConn, nodeID, "COMMAND", "YOURINFO", " ", info, 0, utils.AdminId, AdminStatus.AESKey, false)
 		return true
 	}
 	return false
@@ -236,7 +236,7 @@ func DelNote(startNodeConn net.Conn, nodeID string) bool {
 	if _, ok := NodeStatus.Nodenote[nodeID]; ok {
 		NodeStatus.Nodenote[nodeID] = ""
 		//将节点储存的备忘同时清空
-		SendPayloadViaRoute(startNodeConn, nodeID, Route.Route[nodeID], "COMMAND", "YOURINFO", " ", "", 0, utils.AdminId, AdminStatus.AESKey, false)
+		SendPayloadViaRoute(startNodeConn, nodeID, "COMMAND", "YOURINFO", " ", "", 0, utils.AdminId, AdminStatus.AESKey, false)
 		return true
 	}
 	return false
