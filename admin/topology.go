@@ -95,9 +95,7 @@ func Del(nodeid string) {
 func FindAll(nodeid string) []string {
 	var readyToDel []string
 
-	Topology.Lock()
 	Find(&readyToDel, nodeid)
-	Topology.Unlock()
 
 	readyToDel = append(readyToDel, nodeid)
 	WaitForFindAll <- true
@@ -106,10 +104,12 @@ func FindAll(nodeid string) []string {
 
 // Find 收集所有的子节点
 func Find(readyToDel *[]string, nodeid string) {
+	Topology.Lock()
 	for _, value := range Topology.AllNode[nodeid].Lowernode {
 		*readyToDel = append(*readyToDel, value)
 		Find(readyToDel, value)
 	}
+	Topology.Unlock()
 }
 
 /*-------------------------路由相关代码--------------------------*/
