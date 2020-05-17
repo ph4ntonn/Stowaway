@@ -13,18 +13,10 @@ import (
 	"Stowaway/utils"
 )
 
-var (
-	AdminStatus    *utils.AdminStatus
-	FileDataMap    *utils.IntStrMap
-	ClientSockets  *utils.Uint32ConnMap
-	PortForWardMap *utils.Uint32ConnMap
-)
+var AdminStatus *utils.AdminStatus
 
 func init() {
 	AdminStatus = utils.NewAdminStatus()
-	ClientSockets = utils.NewUint32ConnMap()
-	FileDataMap = utils.NewIntStrMap()
-	PortForWardMap = utils.NewUint32ConnMap()
 }
 
 // NewAdmin 启动admin
@@ -126,7 +118,7 @@ func HandleInitControlConn(startNodeConn net.Conn, adminCommandChan chan []strin
 		case "INIT":
 			utils.ConstructPayloadAndSend(startNodeConn, utils.StartNodeId, "", "COMMAND", "ID", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 			AdminStatus.StartNode = strings.Split(startNodeConn.RemoteAddr().String(), ":")[0]
-			NodeStatus.Nodenote[utils.StartNodeId] = ""
+			AdminStuff.NodeStatus.Nodenote[utils.StartNodeId] = ""
 			AdminStatus.CurrentClient = append(AdminStatus.CurrentClient, utils.StartNodeId) //记录startnode加入网络
 			AddNodeToTopology(utils.StartNodeId, utils.AdminId)
 			CalRoute()
@@ -139,6 +131,7 @@ func HandleInitControlConn(startNodeConn net.Conn, adminCommandChan chan []strin
 
 // HandleStartConn 处理与startnode的信道
 func HandleStartConn(startNodeConn net.Conn, adminCommandChan chan []string) {
+	fileDataMap := utils.NewIntStrMap()
 	for {
 		nodeResp, err := utils.ExtractPayload(startNodeConn, AdminStatus.AESKey, utils.AdminId, true)
 		if err != nil {
@@ -157,76 +150,76 @@ func HandleStartConn(startNodeConn net.Conn, adminCommandChan chan []string) {
 				fmt.Print(nodeResp.Info)
 				fmt.Print("(ssh mode)>>>")
 			case "SOCKSDATARESP":
-				ClientSockets.RLock()
-				if _, ok := ClientSockets.Payload[nodeResp.Clientid]; ok {
-					_, err := ClientSockets.Payload[nodeResp.Clientid].Write([]byte(nodeResp.Info))
+				AdminStuff.ClientSockets.RLock()
+				if _, ok := AdminStuff.ClientSockets.Payload[nodeResp.Clientid]; ok {
+					_, err := AdminStuff.ClientSockets.Payload[nodeResp.Clientid].Write([]byte(nodeResp.Info))
 					if err != nil {
-						ClientSockets.RUnlock()
+						AdminStuff.ClientSockets.RUnlock()
 						continue
 					}
 				}
-				ClientSockets.RUnlock()
+				AdminStuff.ClientSockets.RUnlock()
 			case "FIN":
-				ClientSockets.Lock()
-				if _, ok := ClientSockets.Payload[nodeResp.Clientid]; ok {
-					ClientSockets.Payload[nodeResp.Clientid].Close()
+				AdminStuff.ClientSockets.Lock()
+				if _, ok := AdminStuff.ClientSockets.Payload[nodeResp.Clientid]; ok {
+					AdminStuff.ClientSockets.Payload[nodeResp.Clientid].Close()
 				}
-				if _, ok := ClientSockets.Payload[nodeResp.Clientid]; ok {
-					delete(ClientSockets.Payload, nodeResp.Clientid)
+				if _, ok := AdminStuff.ClientSockets.Payload[nodeResp.Clientid]; ok {
+					delete(AdminStuff.ClientSockets.Payload, nodeResp.Clientid)
 				}
-				ClientSockets.Unlock()
+				AdminStuff.ClientSockets.Unlock()
 				SendPayloadViaRoute(startNodeConn, nodeResp.CurrentId, "DATA", "FINOK", " ", " ", nodeResp.Clientid, utils.AdminId, AdminStatus.AESKey, false)
 			case "FILEDATA": //接收文件内容
 				slicenum, _ := strconv.Atoi(nodeResp.FileSliceNum)
-				FileDataMap.Lock()
-				FileDataMap.Payload[slicenum] = nodeResp.Info
-				FileDataMap.Unlock()
+				fileDataMap.Lock()
+				fileDataMap.Payload[slicenum] = nodeResp.Info
+				fileDataMap.Unlock()
 			case "FORWARDDATARESP":
-				PortForWardMap.Lock()
-				if _, ok := PortForWardMap.Payload[nodeResp.Clientid]; ok {
-					PortForWardMap.Payload[nodeResp.Clientid].Write([]byte(nodeResp.Info))
+				AdminStuff.PortForWardMap.Lock()
+				if _, ok := AdminStuff.PortForWardMap.Payload[nodeResp.Clientid]; ok {
+					AdminStuff.PortForWardMap.Payload[nodeResp.Clientid].Write([]byte(nodeResp.Info))
 				}
-				PortForWardMap.Unlock()
+				AdminStuff.PortForWardMap.Unlock()
 			case "FORWARDTIMEOUT":
 				fallthrough
 			case "FORWARDOFFLINE":
-				PortForWardMap.Lock()
-				if _, ok := PortForWardMap.Payload[nodeResp.Clientid]; ok {
-					PortForWardMap.Payload[nodeResp.Clientid].Close()
-					delete(PortForWardMap.Payload, nodeResp.Clientid)
+				AdminStuff.PortForWardMap.Lock()
+				if _, ok := AdminStuff.PortForWardMap.Payload[nodeResp.Clientid]; ok {
+					AdminStuff.PortForWardMap.Payload[nodeResp.Clientid].Close()
+					delete(AdminStuff.PortForWardMap.Payload, nodeResp.Clientid)
 				}
-				PortForWardMap.Unlock()
+				AdminStuff.PortForWardMap.Unlock()
 			case "REFLECT":
 				TryReflect(startNodeConn, nodeResp.CurrentId, nodeResp.Clientid, nodeResp.Info)
 			case "REFLECTFIN":
-				ReflectConnMap.Lock()
-				if _, ok := ReflectConnMap.Payload[nodeResp.Clientid]; ok {
-					ReflectConnMap.Payload[nodeResp.Clientid].Close()
-					delete(ReflectConnMap.Payload, nodeResp.Clientid)
+				AdminStuff.ReflectConnMap.Lock()
+				if _, ok := AdminStuff.ReflectConnMap.Payload[nodeResp.Clientid]; ok {
+					AdminStuff.ReflectConnMap.Payload[nodeResp.Clientid].Close()
+					delete(AdminStuff.ReflectConnMap.Payload, nodeResp.Clientid)
 				}
-				ReflectConnMap.Unlock()
-				PortReflectMap.Lock()
-				if _, ok := PortReflectMap.Payload[nodeResp.Clientid]; ok {
-					if !utils.IsClosed(PortReflectMap.Payload[nodeResp.Clientid]) {
-						close(PortReflectMap.Payload[nodeResp.Clientid])
-						delete(PortReflectMap.Payload, nodeResp.Clientid)
+				AdminStuff.ReflectConnMap.Unlock()
+				AdminStuff.PortReflectMap.Lock()
+				if _, ok := AdminStuff.PortReflectMap.Payload[nodeResp.Clientid]; ok {
+					if !utils.IsClosed(AdminStuff.PortReflectMap.Payload[nodeResp.Clientid]) {
+						close(AdminStuff.PortReflectMap.Payload[nodeResp.Clientid])
+						delete(AdminStuff.PortReflectMap.Payload, nodeResp.Clientid)
 					}
 				}
-				PortReflectMap.Unlock()
+				AdminStuff.PortReflectMap.Unlock()
 			case "REFLECTDATA":
-				ReflectConnMap.RLock()
-				if _, ok := ReflectConnMap.Payload[nodeResp.Clientid]; ok {
-					PortReflectMap.Lock()
-					if _, ok := PortReflectMap.Payload[nodeResp.Clientid]; ok {
-						PortReflectMap.Payload[nodeResp.Clientid] <- nodeResp.Info
+				AdminStuff.ReflectConnMap.RLock()
+				if _, ok := AdminStuff.ReflectConnMap.Payload[nodeResp.Clientid]; ok {
+					AdminStuff.PortReflectMap.Lock()
+					if _, ok := AdminStuff.PortReflectMap.Payload[nodeResp.Clientid]; ok {
+						AdminStuff.PortReflectMap.Payload[nodeResp.Clientid] <- nodeResp.Info
 					} else {
-						PortReflectMap.Payload[nodeResp.Clientid] = make(chan string, 10)
-						go HandleReflect(startNodeConn, PortReflectMap.Payload[nodeResp.Clientid], nodeResp.Clientid, nodeResp.CurrentId)
-						PortReflectMap.Payload[nodeResp.Clientid] <- nodeResp.Info
+						AdminStuff.PortReflectMap.Payload[nodeResp.Clientid] = make(chan string, 10)
+						go HandleReflect(startNodeConn, AdminStuff.PortReflectMap.Payload[nodeResp.Clientid], nodeResp.Clientid, nodeResp.CurrentId)
+						AdminStuff.PortReflectMap.Payload[nodeResp.Clientid] <- nodeResp.Info
 					}
-					PortReflectMap.Unlock()
+					AdminStuff.PortReflectMap.Unlock()
 				}
-				ReflectConnMap.RUnlock()
+				AdminStuff.ReflectConnMap.RUnlock()
 			case "KEEPALIVE":
 			}
 		case "COMMAND":
@@ -235,7 +228,7 @@ func HandleStartConn(startNodeConn net.Conn, adminCommandChan chan []string) {
 				nodeid := GenerateNodeID() //生成一个新的nodeid号进行分配
 				log.Println("[*]New node join! Node Id is ", len(AdminStatus.CurrentClient))
 				AdminStatus.NodesReadyToadd <- map[string]string{nodeid: nodeResp.Info} //将此节点加入detail命令所使用的NodeStatus.Nodes结构体
-				NodeStatus.Nodenote[nodeid] = ""                                        //初始的note置空
+				AdminStuff.NodeStatus.Nodenote[nodeid] = ""                             //初始的note置空
 				AddNodeToTopology(nodeid, nodeResp.CurrentId)                           //加入拓扑
 				CalRoute()                                                              //计算路由
 				SendPayloadViaRoute(startNodeConn, nodeid, "COMMAND", "ID", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
@@ -252,10 +245,10 @@ func HandleStartConn(startNodeConn net.Conn, adminCommandChan chan []string) {
 				}
 			case "MYINFO": //拆分节点发送上来的节点自身信息
 				info := strings.Split(nodeResp.Info, ":::stowaway:::")
-				NodeStatus.NodeHostname[nodeResp.CurrentId] = info[0]
-				NodeStatus.NodeUser[nodeResp.CurrentId] = info[1]
+				AdminStuff.NodeStatus.NodeHostname[nodeResp.CurrentId] = info[0]
+				AdminStuff.NodeStatus.NodeUser[nodeResp.CurrentId] = info[1]
 			case "MYNOTE":
-				NodeStatus.Nodenote[nodeResp.CurrentId] = nodeResp.Info
+				AdminStuff.NodeStatus.Nodenote[nodeResp.CurrentId] = nodeResp.Info
 			case "SOCKSRESP":
 				switch nodeResp.Info {
 				case "SUCCESS":
@@ -297,7 +290,7 @@ func HandleStartConn(startNodeConn net.Conn, adminCommandChan chan []string) {
 					SendPayloadViaRoute(startNodeConn, AdminStatus.HandleNode, "COMMAND", "CREATEFAIL", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 				} else {
 					SendPayloadViaRoute(startNodeConn, AdminStatus.HandleNode, "COMMAND", "NAMECONFIRM", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
-					go share.ReceiveFile(Route.Route[AdminStatus.HandleNode], &startNodeConn, FileDataMap, AdminStatus.CannotRead, UploadFile, AdminStatus.AESKey, true, utils.AdminId)
+					go share.ReceiveFile(Route.Route[AdminStatus.HandleNode], &startNodeConn, fileDataMap, AdminStatus.CannotRead, UploadFile, AdminStatus.AESKey, true, utils.AdminId)
 				}
 			case "FILESIZE":
 				share.File.FileSize, _ = strconv.ParseInt(nodeResp.Info, 10, 64)
@@ -329,7 +322,7 @@ func HandleStartConn(startNodeConn net.Conn, adminCommandChan chan []string) {
 				log.Println("[*]Node reconnect successfully!")
 				ipaddress, uppernode := AnalysisInfo(nodeResp.Info)
 				AdminStatus.NodesReadyToadd <- map[string]string{nodeResp.CurrentId: ipaddress}
-				NodeStatus.Nodenote[nodeResp.CurrentId] = ""
+				AdminStuff.NodeStatus.Nodenote[nodeResp.CurrentId] = ""
 				ReconnAddCurrentClient(nodeResp.CurrentId) //在节点reconn回来的时候要考虑多种情况，若admin是掉线过，可以直接append，若admin没有掉线过，那么就需要判断重连回来的节点序号是否在CurrentClient中，如果已经存在就不需要append
 				AddNodeToTopology(nodeResp.CurrentId, uppernode)
 				CalRoute()
@@ -339,10 +332,10 @@ func HandleStartConn(startNodeConn net.Conn, adminCommandChan chan []string) {
 				fmt.Println("[*]File transmission complete!")
 			case "FORWARDFAIL":
 				fmt.Println("[*]Remote port seems down,port forward failed!")
-				ForwardStatus.ForwardIsValid <- false
+				AdminStuff.ForwardStatus.ForwardIsValid <- false
 			case "FORWARDOK":
 				fmt.Println("[*]Port forward successfully started!")
-				ForwardStatus.ForwardIsValid <- true
+				AdminStuff.ForwardStatus.ForwardIsValid <- true
 			case "REFLECTFAIL":
 				fmt.Println("[*]Agent seems cannot listen this port,port reflect failed!")
 			case "REFLECTOK":

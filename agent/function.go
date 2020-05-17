@@ -24,13 +24,13 @@ import (
 func SendInfo(nodeID string) {
 	info := utils.GetInfoViaSystem()
 	respCommand, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "MYINFO", " ", info, 0, nodeID, AgentStatus.AESKey, false)
-	ProxyChan.ProxyChanToUpperNode <- respCommand
+	AgentStuff.ProxyChan.ProxyChanToUpperNode <- respCommand
 }
 
 // SendNote 发送自身备忘
 func SendNote(nodeID string) {
 	respCommand, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "MYNOTE", " ", AgentStatus.NodeNote, 0, nodeID, AgentStatus.AESKey, false)
-	ProxyChan.ProxyChanToUpperNode <- respCommand
+	AgentStuff.ProxyChan.ProxyChanToUpperNode <- respCommand
 }
 
 /*-------------------------startnode重连功能相关代码--------------------------*/
@@ -59,7 +59,7 @@ func AdminOffline(reConn, monitor, listenPort string, passive bool) {
 	log.Println("[*]Admin seems offline!")
 	if reConn != "0" && reConn != "" && !passive { //当是主动重连时
 		ClearAllConn()
-		SocksDataChanMap = utils.NewUint32ChanStrMap()
+		AgentStuff.SocksDataChanMap = utils.NewUint32ChanStrMap()
 		if AgentStatus.NotLastOne {
 			BroadCast("CLEAR")
 		}
@@ -69,7 +69,7 @@ func AdminOffline(reConn, monitor, listenPort string, passive bool) {
 		}
 	} else if passive { //被动时（包括被动以及端口复用下）
 		ClearAllConn()
-		SocksDataChanMap = utils.NewUint32ChanStrMap()
+		AgentStuff.SocksDataChanMap = utils.NewUint32ChanStrMap()
 		if AgentStatus.NotLastOne {
 			BroadCast("CLEAR")
 		}
@@ -88,14 +88,14 @@ func AdminOffline(reConn, monitor, listenPort string, passive bool) {
 func WaitingAdmin(nodeID string) {
 	//清理工作
 	ClearAllConn()
-	SocksDataChanMap = utils.NewUint32ChanStrMap()
+	AgentStuff.SocksDataChanMap = utils.NewUint32ChanStrMap()
 	if AgentStatus.NotLastOne {
 		BroadCast("CLEAR")
 	}
 	//等待重连
 	ConnToAdmin = <-node.NodeStuff.Adminconn
 	respCommand, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "RECONNID", " ", "", 0, nodeID, AgentStatus.AESKey, false)
-	ProxyChan.ProxyChanToUpperNode <- respCommand
+	AgentStuff.ProxyChan.ProxyChanToUpperNode <- respCommand
 	if AgentStatus.NotLastOne {
 		BroadCast("RECONN")
 	}
@@ -109,7 +109,7 @@ func PrepareForReOnlineNode() {
 		conn := <-node.NodeStuff.ReOnlineConn
 		//如果此节点没有启动过HandleConnToLowerNode函数，启动之
 		if AgentStatus.NotLastOne == false {
-			ProxyChan.ProxyChanToLowerNode = make(chan *utils.PassToLowerNodeData)
+			AgentStuff.ProxyChan.ProxyChanToLowerNode = make(chan *utils.PassToLowerNodeData)
 			go HandleConnToLowerNode()
 		}
 		AgentStatus.NotLastOne = true
@@ -126,50 +126,50 @@ func PrepareForReOnlineNode() {
 
 // ClearAllConn 当admin下线后，清除并关闭所有现存的socket
 func ClearAllConn() {
-	CurrentSocks5Conn.Lock()
-	for key, conn := range CurrentSocks5Conn.Payload {
+	AgentStuff.CurrentSocks5Conn.Lock()
+	for key, conn := range AgentStuff.CurrentSocks5Conn.Payload {
 		err := conn.Close()
 		if err != nil {
 		}
-		delete(CurrentSocks5Conn.Payload, key)
+		delete(AgentStuff.CurrentSocks5Conn.Payload, key)
 	}
-	CurrentSocks5Conn.Unlock()
+	AgentStuff.CurrentSocks5Conn.Unlock()
 
-	SocksDataChanMap.Lock()
-	for key, _ := range SocksDataChanMap.Payload {
-		if !utils.IsClosed(SocksDataChanMap.Payload[key]) {
-			close(SocksDataChanMap.Payload[key])
+	AgentStuff.SocksDataChanMap.Lock()
+	for key, _ := range AgentStuff.SocksDataChanMap.Payload {
+		if !utils.IsClosed(AgentStuff.SocksDataChanMap.Payload[key]) {
+			close(AgentStuff.SocksDataChanMap.Payload[key])
 		}
-		delete(SocksDataChanMap.Payload, key)
+		delete(AgentStuff.SocksDataChanMap.Payload, key)
 	}
-	SocksDataChanMap.Unlock()
+	AgentStuff.SocksDataChanMap.Unlock()
 
-	PortFowardMap.Lock()
-	for key, _ := range PortFowardMap.Payload {
-		if !utils.IsClosed(PortFowardMap.Payload[key]) {
-			close(PortFowardMap.Payload[key])
+	AgentStuff.PortFowardMap.Lock()
+	for key, _ := range AgentStuff.PortFowardMap.Payload {
+		if !utils.IsClosed(AgentStuff.PortFowardMap.Payload[key]) {
+			close(AgentStuff.PortFowardMap.Payload[key])
 		}
-		delete(PortFowardMap.Payload, key)
+		delete(AgentStuff.PortFowardMap.Payload, key)
 	}
-	PortFowardMap.Unlock()
+	AgentStuff.PortFowardMap.Unlock()
 
-	ForwardConnMap.Lock()
-	for key, conn := range ForwardConnMap.Payload {
+	AgentStuff.ForwardConnMap.Lock()
+	for key, conn := range AgentStuff.ForwardConnMap.Payload {
 		err := conn.Close()
 		if err != nil {
 		}
-		delete(ForwardConnMap.Payload, key)
+		delete(AgentStuff.ForwardConnMap.Payload, key)
 	}
-	ForwardConnMap.Unlock()
+	AgentStuff.ForwardConnMap.Unlock()
 
-	ReflectConnMap.Lock()
-	for key, conn := range ReflectConnMap.Payload {
+	AgentStuff.ReflectConnMap.Lock()
+	for key, conn := range AgentStuff.ReflectConnMap.Payload {
 		err := conn.Close()
 		if err != nil {
 		}
-		delete(ReflectConnMap.Payload, key)
+		delete(AgentStuff.ReflectConnMap.Payload, key)
 	}
-	ReflectConnMap.Unlock()
+	AgentStuff.ReflectConnMap.Unlock()
 
 	for _, listener := range CurrentPortReflectListener {
 		listener.Close()
@@ -211,7 +211,7 @@ func BroadCast(command string) {
 		passToLowerData := utils.NewPassToLowerNodeData()
 		passToLowerData.Data = mess
 		passToLowerData.Route = nodeid
-		ProxyChan.ProxyChanToLowerNode <- passToLowerData
+		AgentStuff.ProxyChan.ProxyChanToLowerNode <- passToLowerData
 	}
 }
 

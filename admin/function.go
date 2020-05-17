@@ -14,20 +14,10 @@ import (
 	"Stowaway/utils"
 )
 
-var (
-	AdminStuff     *utils.AdminStuff
-	NodeStatus     *utils.NodeStatus
-	ForwardStatus  *utils.ForwardStatus
-	ReflectConnMap *utils.Uint32ConnMap
-	PortReflectMap *utils.Uint32ChanStrMap
-)
+var AdminStuff *utils.AdminStuff
 var WaitForFindAll chan bool
 
 func init() {
-	ReflectConnMap = utils.NewUint32ConnMap()
-	PortReflectMap = utils.NewUint32ChanStrMap()
-	NodeStatus = utils.NewNodeStatus()
-	ForwardStatus = utils.NewForwardStatus()
 	AdminStuff = utils.NewAdminStuff()
 	WaitForFindAll = make(chan bool, 1)
 }
@@ -73,13 +63,13 @@ func StartSocksServiceForClient(command []string, startNodeConn net.Conn, nodeID
 			return
 		}
 		//有请求时记录此socket，并启动HandleNewSocksConn对此socket进行处理
-		ClientSockets.Lock()
+		AdminStuff.ClientSockets.Lock()
 		AdminStuff.SocksNum.Lock()
 
-		ClientSockets.Payload[AdminStuff.SocksNum.Num] = conn
-		go HandleNewSocksConn(startNodeConn, ClientSockets.Payload[AdminStuff.SocksNum.Num], AdminStuff.SocksNum.Num, nodeID)
+		AdminStuff.ClientSockets.Payload[AdminStuff.SocksNum.Num] = conn
+		go HandleNewSocksConn(startNodeConn, AdminStuff.ClientSockets.Payload[AdminStuff.SocksNum.Num], AdminStuff.SocksNum.Num, nodeID)
 
-		ClientSockets.Unlock()
+		AdminStuff.ClientSockets.Unlock()
 		AdminStuff.SocksMapping.Lock()
 
 		AdminStuff.SocksMapping.Payload[nodeID] = append(AdminStuff.SocksMapping.Payload[nodeID], AdminStuff.SocksNum.Num)
@@ -126,9 +116,9 @@ func StopSocks() {
 
 		log.Println("[*]All socks listeners are closed successfully!")
 		//关闭所有socks连接
-		for key, conn := range ClientSockets.Payload {
+		for key, conn := range AdminStuff.ClientSockets.Payload {
 			conn.Close()
-			delete(ClientSockets.Payload, key)
+			delete(AdminStuff.ClientSockets.Payload, key)
 		}
 
 		log.Println("[*]All socks sockets are closed successfully!")
@@ -184,7 +174,7 @@ func HandleForwardPort(forwardconn net.Conn, target string, startNodeConn net.Co
 func StartPortForwardForClient(info []string, startNodeConn net.Conn, nodeid string, AESKey []byte) {
 	TestIfValid("FORWARDTEST", startNodeConn, info[2], nodeid)
 	//如果指定的forward端口监听正常
-	if <-ForwardStatus.ForwardIsValid {
+	if <-AdminStuff.ForwardStatus.ForwardIsValid {
 	} else {
 		return
 	}
@@ -198,9 +188,9 @@ func StartPortForwardForClient(info []string, startNodeConn net.Conn, nodeid str
 		return
 	}
 	//记录监听的listener
-	ForwardStatus.CurrentPortForwardListener.Lock()
-	ForwardStatus.CurrentPortForwardListener.Payload[nodeid] = append(ForwardStatus.CurrentPortForwardListener.Payload[nodeid], forwardListenerForClient)
-	ForwardStatus.CurrentPortForwardListener.Unlock()
+	AdminStuff.ForwardStatus.CurrentPortForwardListener.Lock()
+	AdminStuff.ForwardStatus.CurrentPortForwardListener.Payload[nodeid] = append(AdminStuff.ForwardStatus.CurrentPortForwardListener.Payload[nodeid], forwardListenerForClient)
+	AdminStuff.ForwardStatus.CurrentPortForwardListener.Unlock()
 
 	for {
 		conn, err := forwardListenerForClient.Accept()
@@ -209,47 +199,47 @@ func StartPortForwardForClient(info []string, startNodeConn net.Conn, nodeid str
 			return
 		}
 
-		PortForWardMap.Lock()
-		ForwardStatus.ForwardNum.Lock()
+		AdminStuff.PortForWardMap.Lock()
+		AdminStuff.ForwardStatus.ForwardNum.Lock()
 
-		PortForWardMap.Payload[ForwardStatus.ForwardNum.Num] = conn
-		go HandleForwardPort(PortForWardMap.Payload[ForwardStatus.ForwardNum.Num], info[2], startNodeConn, ForwardStatus.ForwardNum.Num, nodeid)
+		AdminStuff.PortForWardMap.Payload[AdminStuff.ForwardStatus.ForwardNum.Num] = conn
+		go HandleForwardPort(AdminStuff.PortForWardMap.Payload[AdminStuff.ForwardStatus.ForwardNum.Num], info[2], startNodeConn, AdminStuff.ForwardStatus.ForwardNum.Num, nodeid)
 
-		PortForWardMap.Unlock()
-		ForwardStatus.ForwardMapping.Lock()
+		AdminStuff.PortForWardMap.Unlock()
+		AdminStuff.ForwardStatus.ForwardMapping.Lock()
 
-		ForwardStatus.ForwardMapping.Payload[nodeid] = append(ForwardStatus.ForwardMapping.Payload[nodeid], ForwardStatus.ForwardNum.Num)
-		ForwardStatus.ForwardNum.Num++
+		AdminStuff.ForwardStatus.ForwardMapping.Payload[nodeid] = append(AdminStuff.ForwardStatus.ForwardMapping.Payload[nodeid], AdminStuff.ForwardStatus.ForwardNum.Num)
+		AdminStuff.ForwardStatus.ForwardNum.Num++
 
-		ForwardStatus.ForwardMapping.Unlock()
-		ForwardStatus.ForwardNum.Unlock()
+		AdminStuff.ForwardStatus.ForwardMapping.Unlock()
+		AdminStuff.ForwardStatus.ForwardNum.Unlock()
 
 	}
 }
 
 // StopForward 停止所有forward功能
 func StopForward() {
-	ForwardStatus.CurrentPortForwardListener.Lock()
-	defer ForwardStatus.CurrentPortForwardListener.Unlock()
+	AdminStuff.ForwardStatus.CurrentPortForwardListener.Lock()
+	defer AdminStuff.ForwardStatus.CurrentPortForwardListener.Unlock()
 	//逻辑同socks
-	if len(ForwardStatus.CurrentPortForwardListener.Payload) == 0 {
+	if len(AdminStuff.ForwardStatus.CurrentPortForwardListener.Payload) == 0 {
 		log.Println("[*]You have never started forward service!")
 	} else {
-		for nodeid, listeners := range ForwardStatus.CurrentPortForwardListener.Payload {
+		for nodeid, listeners := range AdminStuff.ForwardStatus.CurrentPortForwardListener.Payload {
 			for _, listener := range listeners {
 				err := listener.Close()
 				if err != nil {
 					log.Println("[*]One forward listener seems already closed.Won't close it again...")
 				}
 			}
-			delete(ForwardStatus.CurrentPortForwardListener.Payload, nodeid)
+			delete(AdminStuff.ForwardStatus.CurrentPortForwardListener.Payload, nodeid)
 		}
 
 		log.Println("[*]All forward listeners are closed successfully!")
 
-		for key, conn := range PortForWardMap.Payload {
+		for key, conn := range AdminStuff.PortForWardMap.Payload {
 			conn.Close()
-			delete(PortForWardMap.Payload, key)
+			delete(AdminStuff.PortForWardMap.Payload, key)
 		}
 
 		log.Println("[*]All forward sockets are closed successfully!")
@@ -271,9 +261,9 @@ func TryReflect(startNodeConn net.Conn, nodeid string, id uint32, port string) {
 	reflectConn, err := net.Dial("tcp", target)
 
 	if err == nil {
-		ReflectConnMap.Lock()
-		ReflectConnMap.Payload[id] = reflectConn
-		ReflectConnMap.Unlock()
+		AdminStuff.ReflectConnMap.Lock()
+		AdminStuff.ReflectConnMap.Payload[id] = reflectConn
+		AdminStuff.ReflectConnMap.Unlock()
 	} else {
 		SendPayloadViaRoute(startNodeConn, nodeid, "DATA", "REFLECTTIMEOUT", " ", " ", id, utils.AdminId, AdminStatus.AESKey, false)
 		return
@@ -282,7 +272,7 @@ func TryReflect(startNodeConn net.Conn, nodeid string, id uint32, port string) {
 
 // HandleReflect 处理每一个reflect连接
 func HandleReflect(startNodeConn net.Conn, reflectDataChan chan string, num uint32, nodeid string) {
-	reflectConn := utils.GetInfoViaLockMap(ReflectConnMap, num).(net.Conn)
+	reflectConn := utils.GetInfoViaLockMap(AdminStuff.ReflectConnMap, num).(net.Conn)
 	route := utils.GetInfoViaLockMap(Route, nodeid).(string)
 
 	go func() {
@@ -382,26 +372,26 @@ func CloseAll(id string) {
 	}
 
 	AdminStuff.SocksListenerForClient.Unlock()
-	ClientSockets.Lock()
+	AdminStuff.ClientSockets.Lock()
 	AdminStuff.SocksMapping.Lock()
 
 	for _, nodeid := range readyToDel {
 		for _, connid := range AdminStuff.SocksMapping.Payload[nodeid] {
-			if _, ok := ClientSockets.Payload[connid]; ok {
-				ClientSockets.Payload[connid].Close()
-				delete(ClientSockets.Payload, connid)
+			if _, ok := AdminStuff.ClientSockets.Payload[connid]; ok {
+				AdminStuff.ClientSockets.Payload[connid].Close()
+				delete(AdminStuff.ClientSockets.Payload, connid)
 			}
 		}
 		AdminStuff.SocksMapping.Payload[nodeid] = make([]uint32, 0)
 	}
 
-	ClientSockets.Unlock()
+	AdminStuff.ClientSockets.Unlock()
 	AdminStuff.SocksMapping.Unlock()
 
-	ForwardStatus.CurrentPortForwardListener.Lock()
+	AdminStuff.ForwardStatus.CurrentPortForwardListener.Lock()
 	for _, nodeid := range readyToDel {
-		if _, ok := ForwardStatus.CurrentPortForwardListener.Payload[nodeid]; ok {
-			for _, listener := range ForwardStatus.CurrentPortForwardListener.Payload[nodeid] {
+		if _, ok := AdminStuff.ForwardStatus.CurrentPortForwardListener.Payload[nodeid]; ok {
+			for _, listener := range AdminStuff.ForwardStatus.CurrentPortForwardListener.Payload[nodeid] {
 				err := listener.Close()
 				if err != nil {
 				}
@@ -409,20 +399,20 @@ func CloseAll(id string) {
 		}
 	}
 
-	ForwardStatus.CurrentPortForwardListener.Unlock()
-	PortForWardMap.Lock()
-	ForwardStatus.ForwardMapping.Lock()
+	AdminStuff.ForwardStatus.CurrentPortForwardListener.Unlock()
+	AdminStuff.PortForWardMap.Lock()
+	AdminStuff.ForwardStatus.ForwardMapping.Lock()
 
 	for _, nodeid := range readyToDel {
-		for _, connid := range ForwardStatus.ForwardMapping.Payload[nodeid] {
-			if _, ok := PortForWardMap.Payload[connid]; ok {
-				PortForWardMap.Payload[connid].Close()
-				delete(PortForWardMap.Payload, connid)
+		for _, connid := range AdminStuff.ForwardStatus.ForwardMapping.Payload[nodeid] {
+			if _, ok := AdminStuff.PortForWardMap.Payload[connid]; ok {
+				AdminStuff.PortForWardMap.Payload[connid].Close()
+				delete(AdminStuff.PortForWardMap.Payload, connid)
 			}
 		}
-		ForwardStatus.ForwardMapping.Payload[nodeid] = make([]uint32, 0)
+		AdminStuff.ForwardStatus.ForwardMapping.Payload[nodeid] = make([]uint32, 0)
 	}
 
-	PortForWardMap.Unlock()
-	ForwardStatus.ForwardMapping.Unlock()
+	AdminStuff.PortForWardMap.Unlock()
+	AdminStuff.ForwardStatus.ForwardMapping.Unlock()
 }

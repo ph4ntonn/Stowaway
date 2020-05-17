@@ -63,7 +63,7 @@ func HandleCommandToControlConn(startNodeControlConn net.Conn, adminCommandChan 
 					AdminStatus.HandleNode = currentid
 					HandleNodeCommand(startNodeControlConn, currentid, adminCommandChan)
 				} else {
-					if len(NodeStatus.NodeIP) == 0 {
+					if len(AdminStuff.NodeStatus.NodeIP) == 0 {
 						fmt.Println("[*]There is no node", AdminCommand[1])
 						CommandContinue()
 					} else {
@@ -73,7 +73,7 @@ func HandleCommandToControlConn(startNodeControlConn net.Conn, adminCommandChan 
 							CommandContinue()
 							continue
 						}
-						if _, ok := NodeStatus.NodeIP[currentid]; ok {
+						if _, ok := AdminStuff.NodeStatus.NodeIP[currentid]; ok {
 							*AdminStatus.CliStatus = "node " + AdminCommand[1]
 							CommandContinue()
 							AdminStatus.HandleNode = currentid

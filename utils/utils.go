@@ -70,13 +70,19 @@ func NewAdminStatus() *AdminStatus {
 	return nas
 }
 
-/*-------------------------Admin零散变量代码--------------------------*/
+/*-------------------------Admin结构体变量代码--------------------------*/
 
 type AdminStuff struct {
 	SocksNum               *SafeUint32
 	ReflectNum             *SafeUint32
 	SocksListenerForClient *StrListenerSliceMap
 	SocksMapping           *StrUint32SliceMap
+	ClientSockets          *Uint32ConnMap
+	PortForWardMap         *Uint32ConnMap
+	NodeStatus             *NodeStatus
+	ForwardStatus          *ForwardStatus
+	ReflectConnMap         *Uint32ConnMap
+	PortReflectMap         *Uint32ChanStrMap
 }
 
 func NewAdminStuff() *AdminStuff {
@@ -85,6 +91,12 @@ func NewAdminStuff() *AdminStuff {
 	nas.ReflectNum = NewSafeUint32()
 	nas.SocksListenerForClient = NewStrListenerSliceMap()
 	nas.SocksMapping = NewStrUint32SliceMap()
+	nas.ClientSockets = NewUint32ConnMap()
+	nas.PortForWardMap = NewUint32ConnMap()
+	nas.ReflectConnMap = NewUint32ConnMap()
+	nas.PortReflectMap = NewUint32ChanStrMap()
+	nas.NodeStatus = NewNodeStatus()
+	nas.ForwardStatus = NewForwardStatus()
 	return nas
 }
 
@@ -108,6 +120,32 @@ func NewAgentStatus() *AgentStatus {
 	nas.Waiting = false
 	nas.ReConnCome = make(chan bool, 1)
 	nas.WaitForIDAllocate = make(chan string, 1)
+	return nas
+}
+
+/*-------------------------Agent结构体变量代码--------------------------*/
+
+type AgentStuff struct {
+	ProxyChan         *ProxyChan
+	SocksInfo         *SocksSetting
+	SocksDataChanMap  *Uint32ChanStrMap
+	PortFowardMap     *Uint32ChanStrMap
+	ForwardConnMap    *Uint32ConnMap
+	ReflectConnMap    *Uint32ConnMap
+	ReflectStatus     *ReflectStatus
+	CurrentSocks5Conn *Uint32ConnMap
+}
+
+func NewAgentStuff() *AgentStuff {
+	nas := new(AgentStuff)
+	nas.SocksInfo = NewSocksSetting()
+	nas.ProxyChan = NewProxyChan()
+	nas.SocksDataChanMap = NewUint32ChanStrMap()
+	nas.PortFowardMap = NewUint32ChanStrMap()
+	nas.ForwardConnMap = NewUint32ConnMap()
+	nas.ReflectStatus = NewReflectStatus()
+	nas.ReflectConnMap = NewUint32ConnMap()
+	nas.CurrentSocks5Conn = NewUint32ConnMap()
 	return nas
 }
 

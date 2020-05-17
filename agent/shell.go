@@ -53,6 +53,6 @@ func StartShell(command string, stdin io.Writer, stdout io.Reader, currentid str
 		}
 
 		respShell, _ := utils.ConstructPayload(utils.AdminId, "", "DATA", "SHELLRESP", " ", string(buf[:count]), 0, currentid, AgentStatus.AESKey, false)
-		ProxyChan.ProxyChanToUpperNode <- respShell
+		AgentStuff.ProxyChan.ProxyChanToUpperNode <- respShell
 	}
 }

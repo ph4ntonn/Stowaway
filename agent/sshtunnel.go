@@ -27,7 +27,7 @@ func SSHTunnelNextNode(info string, nodeid string) error {
 		key, err := ssh.ParsePrivateKey([]byte(authway))
 		if err != nil {
 			sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHCERTERROR", " ", " ", 0, nodeid, AgentStatus.AESKey, false)
-			ProxyChan.ProxyChanToUpperNode <- sshMess
+			AgentStuff.ProxyChan.ProxyChanToUpperNode <- sshMess
 			return err
 		}
 		authpayload = ssh.PublicKeys(key)
@@ -40,14 +40,14 @@ func SSHTunnelNextNode(info string, nodeid string) error {
 	})
 	if err != nil {
 		sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
-		ProxyChan.ProxyChanToUpperNode <- sshMess
+		AgentStuff.ProxyChan.ProxyChanToUpperNode <- sshMess
 		return err
 	}
 
 	nodeConn, err := SSHClient.Dial("tcp", fmt.Sprintf("127.0.0.1:%s", lport))
 	if err != nil {
 		sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
-		ProxyChan.ProxyChanToUpperNode <- sshMess
+		AgentStuff.ProxyChan.ProxyChanToUpperNode <- sshMess
 		nodeConn.Close()
 		return err
 	}
@@ -55,7 +55,7 @@ func SSHTunnelNextNode(info string, nodeid string) error {
 	err = node.SendSecret(nodeConn, AgentStatus.AESKey)
 	if err != nil {
 		sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
-		ProxyChan.ProxyChanToUpperNode <- sshMess
+		AgentStuff.ProxyChan.ProxyChanToUpperNode <- sshMess
 		nodeConn.Close()
 		return err
 	}
@@ -66,7 +66,7 @@ func SSHTunnelNextNode(info string, nodeid string) error {
 		command, err := utils.ExtractPayload(nodeConn, AgentStatus.AESKey, utils.AdminId, true)
 		if err != nil {
 			sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
-			ProxyChan.ProxyChanToUpperNode <- sshMess
+			AgentStuff.ProxyChan.ProxyChanToUpperNode <- sshMess
 			nodeConn.Close()
 			return err
 		}
@@ -79,7 +79,7 @@ func SSHTunnelNextNode(info string, nodeid string) error {
 			node.NodeStuff.IsAdmin <- false
 
 			sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "SUCCESS", 0, nodeid, AgentStatus.AESKey, false)
-			ProxyChan.ProxyChanToUpperNode <- sshMess
+			AgentStuff.ProxyChan.ProxyChanToUpperNode <- sshMess
 
 			return nil
 		case "REONLINE":
@@ -92,7 +92,7 @@ func SSHTunnelNextNode(info string, nodeid string) error {
 			utils.ConstructPayloadAndSend(nodeConn, nodeid, "", "COMMAND", "REONLINESUC", " ", " ", 0, nodeid, AgentStatus.AESKey, false)
 
 			sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "SUCCESS", 0, nodeid, AgentStatus.AESKey, false)
-			ProxyChan.ProxyChanToUpperNode <- sshMess
+			AgentStuff.ProxyChan.ProxyChanToUpperNode <- sshMess
 
 			return nil
 		}

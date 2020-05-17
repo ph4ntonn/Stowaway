@@ -10,21 +10,12 @@ import (
 	"Stowaway/utils"
 )
 
-var (
-	ProxyChan        *utils.ProxyChan
-	SocksInfo        *utils.SocksSetting
-	AgentStatus      *utils.AgentStatus
-	FileDataMap      *utils.IntStrMap
-	SocksDataChanMap *utils.Uint32ChanStrMap
-)
+var AgentStuff *utils.AgentStuff
+var AgentStatus *utils.AgentStatus
 var ConnToAdmin net.Conn
 
 func init() {
 	AgentStatus = utils.NewAgentStatus()
-	SocksInfo = utils.NewSocksSetting()
-	ProxyChan = utils.NewProxyChan()
-	SocksDataChanMap = utils.NewUint32ChanStrMap()
-	FileDataMap = utils.NewIntStrMap()
 }
 
 // NewAgent 启动agent
@@ -87,9 +78,9 @@ func StartNodeInit(monitor, listenPort, reConn string, passive bool) {
 		controlConnForLowerNode := <-node.NodeStuff.ControlConnForLowerNodeChan
 		NewNodeMessage := <-node.NodeStuff.NewNodeMessageChan
 		<-node.NodeStuff.IsAdmin //正常模式启动的节点被连接一定是agent来连接，所以这里不需要判断是否是admin连接
-		ProxyChan.ProxyChanToUpperNode <- NewNodeMessage
+		AgentStuff.ProxyChan.ProxyChanToUpperNode <- NewNodeMessage
 		if AgentStatus.NotLastOne == false {
-			ProxyChan.ProxyChanToLowerNode = make(chan *utils.PassToLowerNodeData)
+			AgentStuff.ProxyChan.ProxyChanToLowerNode = make(chan *utils.PassToLowerNodeData)
 			go HandleConnToLowerNode()
 		}
 		AgentStatus.NotLastOne = true
@@ -122,9 +113,9 @@ func SimpleNodeInit(monitor, listenPort string, rhostreuse bool) {
 		controlConnForLowerNode := <-node.NodeStuff.ControlConnForLowerNodeChan
 		NewNodeMessage := <-node.NodeStuff.NewNodeMessageChan
 		<-node.NodeStuff.IsAdmin //正常模式启动的节点被连接一定是agent来连接，所以这里不需要判断是否是admin连接
-		ProxyChan.ProxyChanToUpperNode <- NewNodeMessage
+		AgentStuff.ProxyChan.ProxyChanToUpperNode <- NewNodeMessage
 		if AgentStatus.NotLastOne == false {
-			ProxyChan.ProxyChanToLowerNode = make(chan *utils.PassToLowerNodeData)
+			AgentStuff.ProxyChan.ProxyChanToLowerNode = make(chan *utils.PassToLowerNodeData)
 			go HandleConnToLowerNode()
 		}
 		AgentStatus.NotLastOne = true
@@ -153,9 +144,9 @@ func StartNodeReversemodeInit(monitor, listenPort string, passive bool) {
 			ConnToAdmin = controlConnForLowerNode
 			AgentStatus.ReConnCome <- true
 		} else {
-			ProxyChan.ProxyChanToUpperNode <- NewNodeMessage
+			AgentStuff.ProxyChan.ProxyChanToUpperNode <- NewNodeMessage
 			if AgentStatus.NotLastOne == false {
-				ProxyChan.ProxyChanToLowerNode = make(chan *utils.PassToLowerNodeData)
+				AgentStuff.ProxyChan.ProxyChanToLowerNode = make(chan *utils.PassToLowerNodeData)
 				go HandleConnToLowerNode()
 			}
 			AgentStatus.NotLastOne = true
@@ -181,9 +172,9 @@ func SimpleNodeReversemodeInit(monitor, listenPort string) {
 		controlConnForLowerNode := <-node.NodeStuff.ControlConnForLowerNodeChan
 		NewNodeMessage := <-node.NodeStuff.NewNodeMessageChan
 		<-node.NodeStuff.IsAdmin //被动模式启动的节点被连接一定是agent来连接，所以这里不需要判断是否是admin连接
-		ProxyChan.ProxyChanToUpperNode <- NewNodeMessage
+		AgentStuff.ProxyChan.ProxyChanToUpperNode <- NewNodeMessage
 		if AgentStatus.NotLastOne == false {
-			ProxyChan.ProxyChanToLowerNode = make(chan *utils.PassToLowerNodeData)
+			AgentStuff.ProxyChan.ProxyChanToLowerNode = make(chan *utils.PassToLowerNodeData)
 			go HandleConnToLowerNode()
 		}
 		AgentStatus.NotLastOne = true
@@ -226,9 +217,9 @@ func StartNodeReuseInit(reusehost, reuseport, localport string, method int) {
 			ConnToAdmin = controlConnForLowerNode
 			AgentStatus.ReConnCome <- true
 		} else {
-			ProxyChan.ProxyChanToUpperNode <- NewNodeMessage
+			AgentStuff.ProxyChan.ProxyChanToUpperNode <- NewNodeMessage
 			if AgentStatus.NotLastOne == false {
-				ProxyChan.ProxyChanToLowerNode = make(chan *utils.PassToLowerNodeData)
+				AgentStuff.ProxyChan.ProxyChanToLowerNode = make(chan *utils.PassToLowerNodeData)
 				go HandleConnToLowerNode()
 			}
 			AgentStatus.NotLastOne = true
@@ -268,9 +259,9 @@ func SimpleNodeReuseInit(reusehost, reuseport, localport string, method int) {
 		controlConnForLowerNode := <-node.NodeStuff.ControlConnForLowerNodeChan
 		NewNodeMessage := <-node.NodeStuff.NewNodeMessageChan
 		<-node.NodeStuff.IsAdmin
-		ProxyChan.ProxyChanToUpperNode <- NewNodeMessage
+		AgentStuff.ProxyChan.ProxyChanToUpperNode <- NewNodeMessage
 		if AgentStatus.NotLastOne == false {
-			ProxyChan.ProxyChanToLowerNode = make(chan *utils.PassToLowerNodeData)
+			AgentStuff.ProxyChan.ProxyChanToLowerNode = make(chan *utils.PassToLowerNodeData)
 			go HandleConnToLowerNode()
 		}
 		AgentStatus.NotLastOne = true

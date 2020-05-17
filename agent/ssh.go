@@ -32,7 +32,7 @@ func StartSSH(info string, nodeid string) error {
 		key, err := ssh.ParsePrivateKey([]byte(authway))
 		if err != nil {
 			sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHCERTERROR", " ", " ", 0, nodeid, AgentStatus.AESKey, false)
-			ProxyChan.ProxyChanToUpperNode <- sshMess
+			AgentStuff.ProxyChan.ProxyChanToUpperNode <- sshMess
 			return err
 		}
 		authpayload = ssh.PublicKeys(key)
@@ -45,14 +45,14 @@ func StartSSH(info string, nodeid string) error {
 	})
 	if err != nil {
 		sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
-		ProxyChan.ProxyChanToUpperNode <- sshMess
+		AgentStuff.ProxyChan.ProxyChanToUpperNode <- sshMess
 		return err
 	}
 
 	Sshhost, err = sshdial.NewSession()
 	if err != nil {
 		sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
-		ProxyChan.ProxyChanToUpperNode <- sshMess
+		AgentStuff.ProxyChan.ProxyChanToUpperNode <- sshMess
 		return err
 	}
 
@@ -73,12 +73,12 @@ func StartSSH(info string, nodeid string) error {
 	err = Sshhost.Shell()
 	if err != nil {
 		sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
-		ProxyChan.ProxyChanToUpperNode <- sshMess
+		AgentStuff.ProxyChan.ProxyChanToUpperNode <- sshMess
 		return err
 	}
 
 	sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHRESP", " ", "SUCCESS", 0, nodeid, AgentStatus.AESKey, false)
-	ProxyChan.ProxyChanToUpperNode <- sshMess
+	AgentStuff.ProxyChan.ProxyChanToUpperNode <- sshMess
 
 	return nil
 }
@@ -97,6 +97,6 @@ func ReadCommand() {
 			break
 		}
 		sshRespMess, _ := utils.ConstructPayload(utils.AdminId, "", "DATA", "SSHMESS", " ", string(buffer[:len]), 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
-		ProxyChan.ProxyChanToUpperNode <- sshRespMess
+		AgentStuff.ProxyChan.ProxyChanToUpperNode <- sshRespMess
 	}
 }

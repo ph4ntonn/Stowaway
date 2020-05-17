@@ -24,7 +24,7 @@ func HandleSimpleNodeConn(connToUpperNode *net.Conn, NODEID string) {
 // HandleConnToUpperNode 处理发往上一级节点的控制信道
 func HandleConnToUpperNode(connToUpperNode *net.Conn) {
 	for {
-		proxyData := <-ProxyChan.ProxyChanToUpperNode
+		proxyData := <-AgentStuff.ProxyChan.ProxyChanToUpperNode
 		_, err := (*connToUpperNode).Write(proxyData)
 		if err != nil {
 			continue
@@ -35,10 +35,11 @@ func HandleConnToUpperNode(connToUpperNode *net.Conn) {
 // HandleConnFromUpperNode 处理来自上一级节点的控制信道
 func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 	var (
-		CannotRead = make(chan bool, 1)
-		GetName    = make(chan bool, 1)
-		stdin      io.Writer
-		stdout     io.Reader
+		cannotRead  = make(chan bool, 1)
+		getName     = make(chan bool, 1)
+		fileDataMap = utils.NewIntStrMap()
+		stdin       io.Writer
+		stdout      io.Reader
 	)
 	for {
 		command, err := utils.ExtractPayload(*connToUpperNode, AgentStatus.AESKey, NODEID, false)
@@ -69,8 +70,8 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 					}
 				case "SOCKS":
 					socksinfo := strings.Split(command.Info, ":::")
-					SocksInfo.SocksUsername = socksinfo[1]
-					SocksInfo.SocksPass = socksinfo[2]
+					AgentStuff.SocksInfo.SocksUsername = socksinfo[1]
+					AgentStuff.SocksInfo.SocksPass = socksinfo[2]
 					StartSocks()
 				case "SOCKSOFF":
 				case "SSH":
@@ -100,40 +101,40 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 					}
 					if !status {
 						message, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NODECONNECTFAIL", " ", "", 0, NODEID, AgentStatus.AESKey, false)
-						ProxyChan.ProxyChanToUpperNode <- message
+						AgentStuff.ProxyChan.ProxyChanToUpperNode <- message
 					}
 				case "FILENAME":
 					UploadFile, err := os.Create(command.Info)
 					if err != nil {
 						respComm, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "CREATEFAIL", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
-						ProxyChan.ProxyChanToUpperNode <- respComm
+						AgentStuff.ProxyChan.ProxyChanToUpperNode <- respComm
 					} else {
 						respComm, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NAMECONFIRM", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
-						ProxyChan.ProxyChanToUpperNode <- respComm
-						go share.ReceiveFile("", connToUpperNode, FileDataMap, CannotRead, UploadFile, AgentStatus.AESKey, false, NODEID)
+						AgentStuff.ProxyChan.ProxyChanToUpperNode <- respComm
+						go share.ReceiveFile("", connToUpperNode, fileDataMap, cannotRead, UploadFile, AgentStatus.AESKey, false, NODEID)
 					}
 				case "FILESIZE":
 					share.File.FileSize, _ = strconv.ParseInt(command.Info, 10, 64)
 					respComm, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "FILESIZECONFIRM", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
-					ProxyChan.ProxyChanToUpperNode <- respComm
+					AgentStuff.ProxyChan.ProxyChanToUpperNode <- respComm
 					share.File.ReceiveFileSize <- true
 				case "FILESLICENUM":
 					share.File.TotalSilceNum, _ = strconv.Atoi(command.Info)
 					respComm, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "FILESLICENUMCONFIRM", " ", " ", 0, NODEID, AgentStatus.AESKey, false)
-					ProxyChan.ProxyChanToUpperNode <- respComm
+					AgentStuff.ProxyChan.ProxyChanToUpperNode <- respComm
 					share.File.ReceiveFileSliceNum <- true
 				case "FILESLICENUMCONFIRM":
 					share.File.TotalConfirm <- true
 				case "FILESIZECONFIRM":
 					share.File.TotalConfirm <- true
 				case "DOWNLOADFILE":
-					go share.UploadFile("", command.Info, connToUpperNode, utils.AdminId, GetName, AgentStatus.AESKey, NODEID, false)
+					go share.UploadFile("", command.Info, connToUpperNode, utils.AdminId, getName, AgentStatus.AESKey, NODEID, false)
 				case "NAMECONFIRM":
-					GetName <- true
+					getName <- true
 				case "CREATEFAIL":
-					GetName <- false
+					getName <- false
 				case "CANNOTREAD":
-					CannotRead <- true
+					cannotRead <- true
 					share.File.ReceiveFileSliceNum <- false
 					os.Remove(command.Info)
 				case "FORWARDTEST":
@@ -141,14 +142,14 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 				case "REFLECTTEST":
 					go TestReflect(command.Info)
 				case "REFLECTNUM":
-					ReflectStatus.ReflectNum <- command.Clientid
+					AgentStuff.ReflectStatus.ReflectNum <- command.Clientid
 				case "STOPREFLECT":
-					ReflectConnMap.Lock()
-					for key, conn := range ReflectConnMap.Payload {
+					AgentStuff.ReflectConnMap.Lock()
+					for key, conn := range AgentStuff.ReflectConnMap.Payload {
 						conn.Close()
-						delete(ForwardConnMap.Payload, key)
+						delete(AgentStuff.ForwardConnMap.Payload, key)
 					}
-					ReflectConnMap.Unlock()
+					AgentStuff.ReflectConnMap.Unlock()
 
 					for _, listener := range CurrentPortReflectListener {
 						listener.Close()
@@ -156,7 +157,7 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 
 				case "RECONN":
 					respCommand, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "RECONNID", " ", "", 0, NODEID, AgentStatus.AESKey, false)
-					ProxyChan.ProxyChanToUpperNode <- respCommand
+					AgentStuff.ProxyChan.ProxyChanToUpperNode <- respCommand
 					go SendInfo(NODEID) //重连后发送自身信息
 					go SendNote(NODEID) //重连后发送admin设置的备忘
 					if AgentStatus.NotLastOne {
@@ -164,7 +165,7 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 					}
 				case "CLEAR":
 					ClearAllConn()
-					SocksDataChanMap = utils.NewUint32ChanStrMap()
+					AgentStuff.SocksDataChanMap = utils.NewUint32ChanStrMap()
 					if AgentStatus.NotLastOne {
 						BroadCast("CLEAR")
 					}
@@ -172,10 +173,10 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 					err := TestListen(command.Info)
 					if err != nil {
 						respComm, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "LISTENRESP", " ", "FAILED", 0, NODEID, AgentStatus.AESKey, false)
-						ProxyChan.ProxyChanToUpperNode <- respComm
+						AgentStuff.ProxyChan.ProxyChanToUpperNode <- respComm
 					} else {
 						respComm, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "LISTENRESP", " ", "SUCCESS", 0, NODEID, AgentStatus.AESKey, false)
-						ProxyChan.ProxyChanToUpperNode <- respComm
+						AgentStuff.ProxyChan.ProxyChanToUpperNode <- respComm
 						go node.StartNodeListen(command.Info, NODEID, AgentStatus.AESKey)
 					}
 				case "YOURINFO":
@@ -187,87 +188,87 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 			case "DATA":
 				switch command.Command {
 				case "SOCKSDATA":
-					SocksDataChanMap.Lock()
-					if _, ok := SocksDataChanMap.Payload[command.Clientid]; ok {
-						SocksDataChanMap.Payload[command.Clientid] <- command.Info
+					AgentStuff.SocksDataChanMap.Lock()
+					if _, ok := AgentStuff.SocksDataChanMap.Payload[command.Clientid]; ok {
+						AgentStuff.SocksDataChanMap.Payload[command.Clientid] <- command.Info
 					} else {
-						SocksDataChanMap.Payload[command.Clientid] = make(chan string, 1)
-						go HanleClientSocksConn(SocksDataChanMap.Payload[command.Clientid], SocksInfo.SocksUsername, SocksInfo.SocksPass, command.Clientid, NODEID)
-						SocksDataChanMap.Payload[command.Clientid] <- command.Info
+						AgentStuff.SocksDataChanMap.Payload[command.Clientid] = make(chan string, 1)
+						go HanleClientSocksConn(AgentStuff.SocksDataChanMap.Payload[command.Clientid], AgentStuff.SocksInfo.SocksUsername, AgentStuff.SocksInfo.SocksPass, command.Clientid, NODEID)
+						AgentStuff.SocksDataChanMap.Payload[command.Clientid] <- command.Info
 					}
-					SocksDataChanMap.Unlock()
+					AgentStuff.SocksDataChanMap.Unlock()
 				case "FINOK":
-					SocksDataChanMap.Lock()
-					if _, ok := SocksDataChanMap.Payload[command.Clientid]; ok {
-						if !utils.IsClosed(SocksDataChanMap.Payload[command.Clientid]) {
-							close(SocksDataChanMap.Payload[command.Clientid])
+					AgentStuff.SocksDataChanMap.Lock()
+					if _, ok := AgentStuff.SocksDataChanMap.Payload[command.Clientid]; ok {
+						if !utils.IsClosed(AgentStuff.SocksDataChanMap.Payload[command.Clientid]) {
+							close(AgentStuff.SocksDataChanMap.Payload[command.Clientid])
 						}
-						delete(SocksDataChanMap.Payload, command.Clientid)
+						delete(AgentStuff.SocksDataChanMap.Payload, command.Clientid)
 					}
-					SocksDataChanMap.Unlock()
+					AgentStuff.SocksDataChanMap.Unlock()
 				case "FILEDATA": //接收文件内容
 					slicenum, _ := strconv.Atoi(command.FileSliceNum)
-					FileDataMap.Lock()
-					FileDataMap.Payload[slicenum] = command.Info
-					FileDataMap.Unlock()
+					fileDataMap.Lock()
+					fileDataMap.Payload[slicenum] = command.Info
+					fileDataMap.Unlock()
 				case "FIN":
-					CurrentSocks5Conn.Lock()
-					if _, ok := CurrentSocks5Conn.Payload[command.Clientid]; ok {
-						CurrentSocks5Conn.Payload[command.Clientid].Close()
-						delete(CurrentSocks5Conn.Payload, command.Clientid)
+					AgentStuff.CurrentSocks5Conn.Lock()
+					if _, ok := AgentStuff.CurrentSocks5Conn.Payload[command.Clientid]; ok {
+						AgentStuff.CurrentSocks5Conn.Payload[command.Clientid].Close()
+						delete(AgentStuff.CurrentSocks5Conn.Payload, command.Clientid)
 					}
-					CurrentSocks5Conn.Unlock()
-					SocksDataChanMap.Lock()
-					if _, ok := SocksDataChanMap.Payload[command.Clientid]; ok {
-						if !utils.IsClosed(SocksDataChanMap.Payload[command.Clientid]) {
-							close(SocksDataChanMap.Payload[command.Clientid])
+					AgentStuff.CurrentSocks5Conn.Unlock()
+					AgentStuff.SocksDataChanMap.Lock()
+					if _, ok := AgentStuff.SocksDataChanMap.Payload[command.Clientid]; ok {
+						if !utils.IsClosed(AgentStuff.SocksDataChanMap.Payload[command.Clientid]) {
+							close(AgentStuff.SocksDataChanMap.Payload[command.Clientid])
 						}
-						delete(SocksDataChanMap.Payload, command.Clientid)
+						delete(AgentStuff.SocksDataChanMap.Payload, command.Clientid)
 					}
-					SocksDataChanMap.Unlock()
+					AgentStuff.SocksDataChanMap.Unlock()
 				case "FORWARD": //连接指定需要映射的端口
 					TryForward(command.Info, command.Clientid)
 				case "FORWARDDATA":
-					ForwardConnMap.RLock()
-					if _, ok := ForwardConnMap.Payload[command.Clientid]; ok {
-						PortFowardMap.Lock()
-						if _, ok := PortFowardMap.Payload[command.Clientid]; ok {
-							PortFowardMap.Payload[command.Clientid] <- command.Info
+					AgentStuff.ForwardConnMap.RLock()
+					if _, ok := AgentStuff.ForwardConnMap.Payload[command.Clientid]; ok {
+						AgentStuff.PortFowardMap.Lock()
+						if _, ok := AgentStuff.PortFowardMap.Payload[command.Clientid]; ok {
+							AgentStuff.PortFowardMap.Payload[command.Clientid] <- command.Info
 						} else {
-							PortFowardMap.Payload[command.Clientid] = make(chan string, 1)
-							go HandleForward(PortFowardMap.Payload[command.Clientid], command.Clientid)
-							PortFowardMap.Payload[command.Clientid] <- command.Info
+							AgentStuff.PortFowardMap.Payload[command.Clientid] = make(chan string, 1)
+							go HandleForward(AgentStuff.PortFowardMap.Payload[command.Clientid], command.Clientid)
+							AgentStuff.PortFowardMap.Payload[command.Clientid] <- command.Info
 						}
-						PortFowardMap.Unlock()
+						AgentStuff.PortFowardMap.Unlock()
 					}
-					ForwardConnMap.RUnlock()
+					AgentStuff.ForwardConnMap.RUnlock()
 				case "FORWARDFIN":
-					ForwardConnMap.Lock()
-					if _, ok := ForwardConnMap.Payload[command.Clientid]; ok {
-						ForwardConnMap.Payload[command.Clientid].Close()
-						delete(ForwardConnMap.Payload, command.Clientid)
+					AgentStuff.ForwardConnMap.Lock()
+					if _, ok := AgentStuff.ForwardConnMap.Payload[command.Clientid]; ok {
+						AgentStuff.ForwardConnMap.Payload[command.Clientid].Close()
+						delete(AgentStuff.ForwardConnMap.Payload, command.Clientid)
 					}
-					ForwardConnMap.Unlock()
-					PortFowardMap.Lock()
-					if _, ok := PortFowardMap.Payload[command.Clientid]; ok {
-						if !utils.IsClosed(PortFowardMap.Payload[command.Clientid]) {
-							close(PortFowardMap.Payload[command.Clientid])
+					AgentStuff.ForwardConnMap.Unlock()
+					AgentStuff.PortFowardMap.Lock()
+					if _, ok := AgentStuff.PortFowardMap.Payload[command.Clientid]; ok {
+						if !utils.IsClosed(AgentStuff.PortFowardMap.Payload[command.Clientid]) {
+							close(AgentStuff.PortFowardMap.Payload[command.Clientid])
 						}
 					}
-					PortFowardMap.Unlock()
+					AgentStuff.PortFowardMap.Unlock()
 				case "REFLECTDATARESP":
-					ReflectConnMap.Lock()
-					ReflectConnMap.Payload[command.Clientid].Write([]byte(command.Info))
-					ReflectConnMap.Unlock()
+					AgentStuff.ReflectConnMap.Lock()
+					AgentStuff.ReflectConnMap.Payload[command.Clientid].Write([]byte(command.Info))
+					AgentStuff.ReflectConnMap.Unlock()
 				case "REFLECTTIMEOUT":
 					fallthrough
 				case "REFLECTOFFLINE":
-					ReflectConnMap.Lock()
-					if _, ok := ReflectConnMap.Payload[command.Clientid]; ok {
-						ReflectConnMap.Payload[command.Clientid].Close()
-						delete(ReflectConnMap.Payload, command.Clientid)
+					AgentStuff.ReflectConnMap.Lock()
+					if _, ok := AgentStuff.ReflectConnMap.Payload[command.Clientid]; ok {
+						AgentStuff.ReflectConnMap.Payload[command.Clientid].Close()
+						delete(AgentStuff.ReflectConnMap.Payload, command.Clientid)
 					}
-					ReflectConnMap.Unlock()
+					AgentStuff.ReflectConnMap.Unlock()
 				default:
 					continue
 				}
@@ -294,7 +295,7 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 			//组装包的数据部分
 			passToLowerData.Data = proxyData
 			//递交数据包
-			ProxyChan.ProxyChanToLowerNode <- passToLowerData
+			AgentStuff.ProxyChan.ProxyChanToLowerNode <- passToLowerData
 		}
 	}
 }

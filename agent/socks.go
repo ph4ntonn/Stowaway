@@ -6,18 +6,12 @@ import (
 	"Stowaway/utils"
 )
 
-var CurrentSocks5Conn *utils.Uint32ConnMap
-
-func init() {
-	CurrentSocks5Conn = utils.NewUint32ConnMap()
-}
-
 /*-------------------------Socks启动相关代码--------------------------*/
 
 // StartSocks 暂时没啥用，仅做回复socks开启命令之用
 func StartSocks() {
 	socksstartmess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SOCKSRESP", " ", "SUCCESS", 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
-	ProxyChan.ProxyChanToUpperNode <- socksstartmess
+	AgentStuff.ProxyChan.ProxyChanToUpperNode <- socksstartmess
 }
 
 // HanleClientSocksConn 处理socks请求
@@ -59,9 +53,9 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 				return
 			}
 
-			CurrentSocks5Conn.Lock() //这个 “concurrent map writes” 错误调了好久，死活没看出来，控制台日志贼长看不见错哪儿，重定向到文件之后想让他报错又tm不报错了（笑）
-			CurrentSocks5Conn.Payload[checknum] = server
-			CurrentSocks5Conn.Unlock()
+			AgentStuff.CurrentSocks5Conn.Lock() //这个 “concurrent map writes” 错误调了好久，死活没看出来，控制台日志贼长看不见错哪儿，重定向到文件之后想让他报错又tm不报错了（笑）
+			AgentStuff.CurrentSocks5Conn.Payload[checknum] = server
+			AgentStuff.CurrentSocks5Conn.Unlock()
 		} else if isAuthed == true && tcpconnected == true && serverflag == true { //All done!
 			go func() {
 				for {
@@ -71,12 +65,12 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 					}
 					_, err := server.Write([]byte(data))
 					if err != nil {
-						SocksDataChanMap.RLock()
-						if _, ok := SocksDataChanMap.Payload[checknum]; ok {
-							SocksDataChanMap.RUnlock()
+						AgentStuff.SocksDataChanMap.RLock()
+						if _, ok := AgentStuff.SocksDataChanMap.Payload[checknum]; ok {
+							AgentStuff.SocksDataChanMap.RUnlock()
 							continue
 						} else {
-							SocksDataChanMap.RUnlock()
+							AgentStuff.SocksDataChanMap.RUnlock()
 							return
 						}
 					}
@@ -98,11 +92,11 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 
 // SendFin 发送server offline通知
 func SendFin(num uint32) {
-	SocksDataChanMap.RLock()
-	if _, ok := SocksDataChanMap.Payload[num]; ok {
+	AgentStuff.SocksDataChanMap.RLock()
+	if _, ok := AgentStuff.SocksDataChanMap.Payload[num]; ok {
 		respData, _ := utils.ConstructPayload(utils.AdminId, "", "DATA", "FIN", " ", " ", num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
-		ProxyChan.ProxyChanToUpperNode <- respData
+		AgentStuff.ProxyChan.ProxyChanToUpperNode <- respData
 	}
-	SocksDataChanMap.RUnlock()
+	AgentStuff.SocksDataChanMap.RUnlock()
 	return
 }
