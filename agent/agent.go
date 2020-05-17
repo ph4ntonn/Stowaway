@@ -16,6 +16,7 @@ var ConnToAdmin net.Conn
 
 func init() {
 	AgentStatus = utils.NewAgentStatus()
+	AgentStuff = utils.NewAgentStuff()
 }
 
 // NewAgent 启动agent
