@@ -211,12 +211,12 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 					FileDataMap.Payload[slicenum] = command.Info
 					FileDataMap.Unlock()
 				case "FIN":
-					CurrentConn.Lock()
-					if _, ok := CurrentConn.Payload[command.Clientid]; ok {
-						CurrentConn.Payload[command.Clientid].Close()
-						delete(CurrentConn.Payload, command.Clientid)
+					CurrentSocks5Conn.Lock()
+					if _, ok := CurrentSocks5Conn.Payload[command.Clientid]; ok {
+						CurrentSocks5Conn.Payload[command.Clientid].Close()
+						delete(CurrentSocks5Conn.Payload, command.Clientid)
 					}
-					CurrentConn.Unlock()
+					CurrentSocks5Conn.Unlock()
 					SocksDataChanMap.Lock()
 					if _, ok := SocksDataChanMap.Payload[command.Clientid]; ok {
 						if !utils.IsClosed(SocksDataChanMap.Payload[command.Clientid]) {

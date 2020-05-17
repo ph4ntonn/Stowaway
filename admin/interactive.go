@@ -14,19 +14,17 @@ import (
 	"Stowaway/utils"
 )
 
-var CurrentNode string
-
 /*-------------------------控制台相关代码--------------------------*/
 
 // Controlpanel 启动控制台
-func Controlpanel() {
+func Controlpanel(adminCommandChan chan []string) {
 	var command string
 
 	inputReader := bufio.NewReader(os.Stdin)
 	platform := utils.CheckSystem()
 
 	for {
-		fmt.Printf("(%s) >> ", *CliStatus)
+		fmt.Printf("(%s) >> ", *AdminStatus.CliStatus)
 		input, err := inputReader.ReadString('\n')
 		if err != nil {
 			fmt.Println(err)
@@ -39,7 +37,7 @@ func Controlpanel() {
 		}
 
 		execCommand := strings.Split(command, " ")
-		AdminStuff.AdminCommandChan <- execCommand
+		adminCommandChan <- execCommand
 
 		<-AdminStatus.ReadyChange
 		<-AdminStatus.IsShellMode
@@ -49,21 +47,21 @@ func Controlpanel() {
 /*------------------------- admin模式下相关代码--------------------------*/
 
 // HandleCommandToControlConn 处理admin模式下用户的输入及由admin发往startnode的控制信号
-func HandleCommandToControlConn(startNodeControlConn net.Conn) {
+func HandleCommandToControlConn(startNodeControlConn net.Conn, adminCommandChan chan []string) {
 	for {
-		AdminCommand := <-AdminStuff.AdminCommandChan
+		AdminCommand := <-adminCommandChan
 		switch AdminCommand[0] {
 		case "use":
 			if len(AdminCommand) == 2 {
-				if AdminStuff.StartNode == "0.0.0.0" {
+				if AdminStatus.StartNode == "0.0.0.0" {
 					fmt.Println("[*]There are no nodes connected!")
 					CommandContinue()
 				} else if AdminCommand[1] == "1" {
-					*CliStatus = "startnode"
+					*AdminStatus.CliStatus = "startnode"
 					CommandContinue()
 					currentid, _ := FindNumByNodeid(AdminCommand[1])
 					AdminStatus.HandleNode = currentid
-					HandleNodeCommand(startNodeControlConn, currentid)
+					HandleNodeCommand(startNodeControlConn, currentid, adminCommandChan)
 				} else {
 					if len(NodeStatus.NodeIP) == 0 {
 						fmt.Println("[*]There is no node", AdminCommand[1])
@@ -76,10 +74,10 @@ func HandleCommandToControlConn(startNodeControlConn net.Conn) {
 							continue
 						}
 						if _, ok := NodeStatus.NodeIP[currentid]; ok {
-							*CliStatus = "node " + AdminCommand[1]
+							*AdminStatus.CliStatus = "node " + AdminCommand[1]
 							CommandContinue()
 							AdminStatus.HandleNode = currentid
-							HandleNodeCommand(startNodeControlConn, currentid)
+							HandleNodeCommand(startNodeControlConn, currentid, adminCommandChan)
 						} else {
 							fmt.Println("[*]There is no node", AdminCommand[1])
 							CommandContinue()
@@ -116,13 +114,11 @@ func HandleCommandToControlConn(startNodeControlConn net.Conn) {
 /*-------------------------Node模式下相关代码--------------------------*/
 
 // HandleNodeCommand 处理node模式下用户的输入
-func HandleNodeCommand(startNodeConn net.Conn, nodeID string) {
-	CurrentNode = nodeID //把nodeid提取出来，以供上传/下载文件功能使用
-
+func HandleNodeCommand(startNodeConn net.Conn, nodeID string, adminCommandChan chan []string) {
 	route := utils.GetInfoViaLockMap(Route, nodeID).(string)
 
 	for {
-		AdminCommand := <-AdminStuff.AdminCommandChan
+		AdminCommand := <-adminCommandChan
 		switch AdminCommand[0] {
 		case "shell":
 			err := utils.ConstructPayloadAndSend(startNodeConn, nodeID, route, "COMMAND", "SHELL", " ", "", 0, utils.AdminId, AdminStatus.AESKey, false)
@@ -149,7 +145,7 @@ func HandleNodeCommand(startNodeConn net.Conn, nodeID string) {
 			err := utils.ConstructPayloadAndSend(startNodeConn, nodeID, route, "COMMAND", "SOCKS", " ", socksStartData, 0, utils.AdminId, AdminStatus.AESKey, false)
 			if err != nil {
 				log.Println("[*]StartNode seems offline")
-				*CliStatus = "admin"
+				*AdminStatus.CliStatus = "admin"
 				CommandContinue()
 				return
 			}
@@ -333,7 +329,7 @@ func HandleNodeCommand(startNodeConn net.Conn, nodeID string) {
 			CommandContinue()
 			continue
 		case "exit":
-			*CliStatus = "admin"
+			*AdminStatus.CliStatus = "admin"
 			CommandContinue()
 			return
 		default:
@@ -362,9 +358,9 @@ func HandleShellToNode(startNodeControlConn net.Conn, nodeID string) {
 		switch command {
 		case "exit\n":
 			if nodeID == utils.StartNodeId {
-				*CliStatus = "startnode"
+				*AdminStatus.CliStatus = "startnode"
 			} else {
-				*CliStatus = "node " + fmt.Sprint(FindIntByNodeid(nodeID)+1)
+				*AdminStatus.CliStatus = "node " + fmt.Sprint(FindIntByNodeid(nodeID)+1)
 			}
 			utils.ConstructPayloadAndSend(startNodeControlConn, nodeID, route, "COMMAND", "SHELL", " ", command, 0, utils.AdminId, AdminStatus.AESKey, false)
 			CommandContinue()
@@ -395,9 +391,9 @@ func HandleSSHToNode(startNodeControlConn net.Conn, nodeID string) {
 			switch command {
 			case "exit\n":
 				if nodeID == utils.StartNodeId {
-					*CliStatus = "startnode"
+					*AdminStatus.CliStatus = "startnode"
 				} else {
-					*CliStatus = "node " + fmt.Sprint(FindIntByNodeid(nodeID)+1)
+					*AdminStatus.CliStatus = "node " + fmt.Sprint(FindIntByNodeid(nodeID)+1)
 				}
 				utils.ConstructPayloadAndSend(startNodeControlConn, nodeID, route, "COMMAND", "SSHCOMMAND", " ", command, 0, utils.AdminId, AdminStatus.AESKey, false)
 				CommandContinue()

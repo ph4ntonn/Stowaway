@@ -50,6 +50,9 @@ type AdminStatus struct {
 	CannotRead       chan bool
 	NodesReadyToadd  chan map[string]string //等待加入的node
 	HandleNode       string                 //正在操作的节点编号
+	StartNode        string
+	CliStatus        *string
+	CurrentClient    []string //记录当前网络中的节点，主要用来将string型的id对照至int型的序号，方便用户理解
 	AESKey           []byte
 }
 
@@ -62,6 +65,7 @@ func NewAdminStatus() *AdminStatus {
 	nas.GetName = make(chan bool, 1)
 	nas.CannotRead = make(chan bool, 1)
 	nas.NodesReadyToadd = make(chan map[string]string)
+	nas.StartNode = "0.0.0.0"
 	nas.HandleNode = AdminId
 	return nas
 }
@@ -69,21 +73,16 @@ func NewAdminStatus() *AdminStatus {
 /*-------------------------Admin零散变量代码--------------------------*/
 
 type AdminStuff struct {
-	sync.RWMutex
-	StartNode              string
-	AdminCommandChan       chan []string
-	SocksNum               uint32
-	ReflectNum             uint32
+	SocksNum               *SafeUint32
+	ReflectNum             *SafeUint32
 	SocksListenerForClient *StrListenerSliceMap
 	SocksMapping           *StrUint32SliceMap
 }
 
 func NewAdminStuff() *AdminStuff {
 	nas := new(AdminStuff)
-	nas.StartNode = "0.0.0.0"
-	nas.SocksNum = 0
-	nas.ReflectNum = 0
-	nas.AdminCommandChan = make(chan []string, 1)
+	nas.SocksNum = NewSafeUint32()
+	nas.ReflectNum = NewSafeUint32()
 	nas.SocksListenerForClient = NewStrListenerSliceMap()
 	nas.SocksMapping = NewStrUint32SliceMap()
 	return nas
@@ -198,16 +197,15 @@ func NewPassToLowerNodeData() *PassToLowerNodeData {
 /*-------------------------Forward配置相关代码--------------------------*/
 
 type ForwardStatus struct {
-	sync.RWMutex
 	ForwardIsValid             chan bool
-	ForwardNum                 uint32
+	ForwardNum                 *SafeUint32
 	CurrentPortForwardListener *StrListenerSliceMap
 	ForwardMapping             *StrUint32SliceMap
 }
 
 func NewForwardStatus() *ForwardStatus {
 	nfs := new(ForwardStatus)
-	nfs.ForwardNum = 0
+	nfs.ForwardNum = NewSafeUint32()
 	nfs.ForwardIsValid = make(chan bool, 1)
 	nfs.CurrentPortForwardListener = NewStrListenerSliceMap()
 	nfs.ForwardMapping = NewStrUint32SliceMap()
@@ -306,13 +304,18 @@ type SafeRouteMap struct {
 	Route map[string]string
 }
 
-/*-------------------------不加锁map相关代码--------------------------*/
+type SafeUint32 struct {
+	sync.RWMutex
+	Num uint32
+}
 
 type StrListenerSliceMap struct {
+	sync.RWMutex
 	Payload map[string][]net.Listener
 }
 
 type StrUint32SliceMap struct {
+	sync.RWMutex
 	Payload map[string][]uint32
 }
 
@@ -370,6 +373,12 @@ func NewSafeRouteMap() *SafeRouteMap {
 	nsrm := new(SafeRouteMap)
 	nsrm.Route = make(map[string]string)
 	return nsrm
+}
+
+func NewSafeUint32() *SafeUint32 {
+	nsu := new(SafeUint32)
+	nsu.Num = 0
+	return nsu
 }
 
 /*-------------------------chan状态判断相关代码--------------------------*/

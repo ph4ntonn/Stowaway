@@ -13,7 +13,6 @@ import (
 
 var Topology *utils.SafeNodeMap
 var Route *utils.SafeRouteMap
-var readyToDel []string
 
 func init() {
 	Topology = utils.NewSafeNodeMap()
@@ -41,12 +40,12 @@ func AddNodeToTopology(nodeid string, uppernodeid string) {
 
 // ReconnAddCurrentClient 重连时对添加clientid的操作
 func ReconnAddCurrentClient(id string) {
-	for _, value := range CurrentClient {
+	for _, value := range AdminStatus.CurrentClient {
 		if value == id {
 			return
 		}
 	}
-	CurrentClient = append(CurrentClient, id)
+	AdminStatus.CurrentClient = append(AdminStatus.CurrentClient, id)
 }
 
 // AddToChain 将节点加入拓扑
@@ -61,6 +60,8 @@ func AddToChain() {
 
 // DelNodeFromTopology 将节点从拓扑中删除
 func DelNodeFromTopology(nodeid string) {
+	var readyToDel []string
+
 	Topology.Lock()
 	defer Topology.Unlock()
 
@@ -71,7 +72,7 @@ func DelNodeFromTopology(nodeid string) {
 			Topology.AllNode[uppernode].Lowernode = append(Topology.AllNode[uppernode].Lowernode[:index], Topology.AllNode[uppernode].Lowernode[index+1:]...)
 		}
 
-		Del(nodeid)
+		Del(nodeid, readyToDel)
 
 		readyToDel = append(readyToDel, nodeid)
 		for _, value := range readyToDel {
@@ -84,10 +85,10 @@ func DelNodeFromTopology(nodeid string) {
 }
 
 // Del 收集需要删除的节点
-func Del(nodeid string) {
+func Del(nodeid string, readyToDel []string) {
 	for _, value := range Topology.AllNode[nodeid].Lowernode {
 		readyToDel = append(readyToDel, value)
-		Del(value)
+		Del(value, readyToDel)
 	}
 }
 
@@ -147,10 +148,10 @@ func CalRoute() {
 
 // ShowDetail 显示节点拓扑详细信息
 func ShowDetail() {
-	if AdminStuff.StartNode != "0.0.0.0" {
+	if AdminStatus.StartNode != "0.0.0.0" {
 		var nodes []string
 
-		fmt.Printf("StartNode[1]: IP:%s  Hostname:%s  Username:%s\nNote:%s\n\n", AdminStuff.StartNode, NodeStatus.NodeHostname[utils.StartNodeId], NodeStatus.NodeUser[utils.StartNodeId], NodeStatus.Nodenote[utils.StartNodeId])
+		fmt.Printf("StartNode[1]: IP:%s  Hostname:%s  Username:%s\nNote:%s\n\n", AdminStatus.StartNode, NodeStatus.NodeHostname[utils.StartNodeId], NodeStatus.NodeUser[utils.StartNodeId], NodeStatus.Nodenote[utils.StartNodeId])
 
 		for Nodeid, _ := range NodeStatus.NodeIP {
 			nodes = append(nodes, Nodeid)
@@ -165,7 +166,7 @@ func ShowDetail() {
 
 // ShowTree 显示节点层级关系
 func ShowTree() {
-	if AdminStuff.StartNode != "0.0.0.0" {
+	if AdminStatus.StartNode != "0.0.0.0" {
 		var nodes []string
 		var nodesid []int
 
@@ -184,7 +185,7 @@ func ShowTree() {
 		utils.CheckRange(nodesid)
 
 		for _, value := range nodesid {
-			node := CurrentClient[value]
+			node := AdminStatus.CurrentClient[value]
 			nodestatus := Topology.AllNode[node]
 
 			if node == utils.StartNodeId {
@@ -249,7 +250,7 @@ func GenerateNodeID() string {
 	u2, _ := uuid.NewV4()
 	uu := strings.Replace(u2.String(), "-", "", -1)
 	uuid := uu[11:21] //取10位，尽量减少包头长度
-	CurrentClient = append(CurrentClient, uuid)
+	AdminStatus.CurrentClient = append(AdminStatus.CurrentClient, uuid)
 	return uuid
 }
 
@@ -264,16 +265,16 @@ func FindNumByNodeid(id string) (string, error) {
 	nodeid := int(utils.StrUint32(id))
 	currentid := nodeid - 1
 
-	if len(CurrentClient) < nodeid {
+	if len(AdminStatus.CurrentClient) < nodeid {
 		return "", NO_NODE
 	}
 
-	return CurrentClient[currentid], nil
+	return AdminStatus.CurrentClient[currentid], nil
 }
 
 // FindIntByNodeid 用int找到对应的nodeid
 func FindIntByNodeid(id string) int {
-	for key, value := range CurrentClient {
+	for key, value := range AdminStatus.CurrentClient {
 		if value == id {
 			return key
 		}

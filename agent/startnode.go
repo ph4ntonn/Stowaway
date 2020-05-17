@@ -127,12 +127,12 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 					}
 					SocksDataChanMap.Unlock()
 				case "FIN":
-					CurrentConn.Lock()
-					if _, ok := CurrentConn.Payload[AdminData.Clientid]; ok {
-						CurrentConn.Payload[AdminData.Clientid].Close()
-						delete(CurrentConn.Payload, AdminData.Clientid)
+					CurrentSocks5Conn.Lock()
+					if _, ok := CurrentSocks5Conn.Payload[AdminData.Clientid]; ok {
+						CurrentSocks5Conn.Payload[AdminData.Clientid].Close()
+						delete(CurrentSocks5Conn.Payload, AdminData.Clientid)
 					}
-					CurrentConn.Unlock()
+					CurrentSocks5Conn.Unlock()
 					SocksDataChanMap.Lock()
 					if _, ok := SocksDataChanMap.Payload[AdminData.Clientid]; ok {
 						if !utils.IsClosed(SocksDataChanMap.Payload[AdminData.Clientid]) {

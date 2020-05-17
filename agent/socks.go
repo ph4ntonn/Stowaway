@@ -6,10 +6,10 @@ import (
 	"Stowaway/utils"
 )
 
-var CurrentConn *utils.Uint32ConnMap
+var CurrentSocks5Conn *utils.Uint32ConnMap
 
 func init() {
-	CurrentConn = utils.NewUint32ConnMap()
+	CurrentSocks5Conn = utils.NewUint32ConnMap()
 }
 
 /*-------------------------Socks启动相关代码--------------------------*/
@@ -59,9 +59,9 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 				return
 			}
 
-			CurrentConn.Lock() //这个 “concurrent map writes” 错误调了好久，死活没看出来，控制台日志贼长看不见错哪儿，重定向到文件之后想让他报错又tm不报错了（笑）
-			CurrentConn.Payload[checknum] = server
-			CurrentConn.Unlock()
+			CurrentSocks5Conn.Lock() //这个 “concurrent map writes” 错误调了好久，死活没看出来，控制台日志贼长看不见错哪儿，重定向到文件之后想让他报错又tm不报错了（笑）
+			CurrentSocks5Conn.Payload[checknum] = server
+			CurrentSocks5Conn.Unlock()
 		} else if isAuthed == true && tcpconnected == true && serverflag == true { //All done!
 			go func() {
 				for {

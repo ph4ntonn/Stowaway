@@ -126,14 +126,14 @@ func PrepareForReOnlineNode() {
 
 // ClearAllConn 当admin下线后，清除并关闭所有现存的socket
 func ClearAllConn() {
-	CurrentConn.Lock()
-	for key, conn := range CurrentConn.Payload {
+	CurrentSocks5Conn.Lock()
+	for key, conn := range CurrentSocks5Conn.Payload {
 		err := conn.Close()
 		if err != nil {
 		}
-		delete(CurrentConn.Payload, key)
+		delete(CurrentSocks5Conn.Payload, key)
 	}
-	CurrentConn.Unlock()
+	CurrentSocks5Conn.Unlock()
 
 	SocksDataChanMap.Lock()
 	for key, _ := range SocksDataChanMap.Payload {

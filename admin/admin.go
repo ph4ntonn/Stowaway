@@ -14,8 +14,6 @@ import (
 )
 
 var (
-	CliStatus      *string
-	CurrentClient  []string //记录当前网络中的节点，主要用来将string型的id对照至int型的序号，方便用户理解
 	AdminStatus    *utils.AdminStatus
 	FileDataMap    *utils.IntStrMap
 	ClientSockets  *utils.Uint32ConnMap
@@ -32,7 +30,9 @@ func init() {
 // NewAdmin 启动admin
 func NewAdmin(c *utils.AdminOptions) {
 	var initStatus string = "admin"
-	CliStatus = &initStatus
+	AdminStatus.CliStatus = &initStatus
+
+	adminCommandChan := make(chan []string)
 
 	AdminStatus.AESKey = []byte(c.Secret)
 	listenPort := c.Listen
@@ -48,18 +48,18 @@ func NewAdmin(c *utils.AdminOptions) {
 	}
 
 	if startnodeaddr == "" {
-		go StartListen(listenPort)
+		go StartListen(listenPort, adminCommandChan)
 	} else {
-		ConnectToStartNode(startnodeaddr, rhostreuse)
+		ConnectToStartNode(startnodeaddr, rhostreuse, adminCommandChan)
 	}
 
 	go AddToChain()
 
-	Controlpanel()
+	Controlpanel(adminCommandChan)
 }
 
 // StartListen 启动监听
-func StartListen(listenPort string) {
+func StartListen(listenPort string, adminCommandChan chan []string) {
 	localAddr := fmt.Sprintf("0.0.0.0:%s", listenPort)
 	localListener, err := net.Listen("tcp", localAddr)
 	if err != nil {
@@ -74,7 +74,7 @@ func StartListen(listenPort string) {
 			continue
 		}
 
-		HandleInitControlConn(startNodeConn)
+		HandleInitControlConn(startNodeConn, adminCommandChan)
 
 		log.Printf("[*]StartNode connected from %s!\n", startNodeConn.RemoteAddr().String())
 
@@ -83,7 +83,7 @@ func StartListen(listenPort string) {
 }
 
 // ConnectToStartNode 主动连接startnode端代码
-func ConnectToStartNode(startnodeaddr string, rhostreuse bool) {
+func ConnectToStartNode(startnodeaddr string, rhostreuse bool, adminCommandChan chan []string) {
 	for {
 		startNodeConn, err := net.Dial("tcp", startnodeaddr)
 		if err != nil {
@@ -105,7 +105,7 @@ func ConnectToStartNode(startnodeaddr string, rhostreuse bool) {
 
 		utils.ConstructPayloadAndSend(startNodeConn, utils.StartNodeId, "", "COMMAND", "STOWAWAYADMIN", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 
-		HandleInitControlConn(startNodeConn)
+		HandleInitControlConn(startNodeConn, adminCommandChan)
 
 		log.Printf("[*]Connect to startnode %s successfully!\n", startNodeConn.RemoteAddr().String())
 
@@ -114,7 +114,7 @@ func ConnectToStartNode(startnodeaddr string, rhostreuse bool) {
 }
 
 // HandleInitControlConn 初始化与startnode的连接
-func HandleInitControlConn(startNodeConn net.Conn) error {
+func HandleInitControlConn(startNodeConn net.Conn, adminCommandChan chan []string) error {
 	for {
 		command, err := utils.ExtractPayload(startNodeConn, AdminStatus.AESKey, utils.AdminId, true)
 		if err != nil {
@@ -125,26 +125,26 @@ func HandleInitControlConn(startNodeConn net.Conn) error {
 			utils.ConstructPayloadAndSend(startNodeConn, utils.StartNodeId, "", "COMMAND", "CONFIRM", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 		case "INIT":
 			utils.ConstructPayloadAndSend(startNodeConn, utils.StartNodeId, "", "COMMAND", "ID", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
-			AdminStuff.StartNode = strings.Split(startNodeConn.RemoteAddr().String(), ":")[0]
+			AdminStatus.StartNode = strings.Split(startNodeConn.RemoteAddr().String(), ":")[0]
 			NodeStatus.Nodenote[utils.StartNodeId] = ""
-			CurrentClient = append(CurrentClient, utils.StartNodeId) //记录startnode加入网络
+			AdminStatus.CurrentClient = append(AdminStatus.CurrentClient, utils.StartNodeId) //记录startnode加入网络
 			AddNodeToTopology(utils.StartNodeId, utils.AdminId)
 			CalRoute()
-			go HandleStartConn(startNodeConn)
-			go HandleCommandToControlConn(startNodeConn)
+			go HandleStartConn(startNodeConn, adminCommandChan)
+			go HandleCommandToControlConn(startNodeConn, adminCommandChan)
 			return nil
 		}
 	}
 }
 
 // HandleStartConn 处理与startnode的信道
-func HandleStartConn(startNodeConn net.Conn) {
+func HandleStartConn(startNodeConn net.Conn, adminCommandChan chan []string) {
 	for {
 		nodeResp, err := utils.ExtractPayload(startNodeConn, AdminStatus.AESKey, utils.AdminId, true)
 		if err != nil {
 			log.Println("[*]StartNode seems offline")
 			DelNodeFromTopology(utils.StartNodeId)
-			AdminStuff.StartNode = "offline"
+			AdminStatus.StartNode = "offline"
 			startNodeConn.Close()
 			break
 		}
@@ -233,7 +233,7 @@ func HandleStartConn(startNodeConn net.Conn) {
 			switch nodeResp.Command {
 			case "NEW":
 				nodeid := GenerateNodeID() //生成一个新的nodeid号进行分配
-				log.Println("[*]New node join! Node Id is ", len(CurrentClient))
+				log.Println("[*]New node join! Node Id is ", len(AdminStatus.CurrentClient))
 				AdminStatus.NodesReadyToadd <- map[string]string{nodeid: nodeResp.Info} //将此节点加入detail命令所使用的NodeStatus.Nodes结构体
 				NodeStatus.Nodenote[nodeid] = ""                                        //初始的note置空
 				AddNodeToTopology(nodeid, nodeResp.CurrentId)                           //加入拓扑
@@ -245,8 +245,8 @@ func HandleStartConn(startNodeConn net.Conn) {
 				<-WaitForFindAll
 				DelNodeFromTopology(nodeResp.Info) //从拓扑中删除
 				//这里不用重新计算路由，因为控制端已经不会允许已掉线的节点及其子节点的流量流通
-				if AdminStatus.HandleNode == nodeResp.Info && *CliStatus != "admin" { //如果admin端正好操控此节点
-					AdminStuff.AdminCommandChan <- []string{"exit"}
+				if AdminStatus.HandleNode == nodeResp.Info && *AdminStatus.CliStatus != "admin" { //如果admin端正好操控此节点
+					adminCommandChan <- []string{"exit"}
 					<-AdminStatus.ReadyChange
 					<-AdminStatus.IsShellMode
 				}
@@ -294,18 +294,18 @@ func HandleStartConn(startNodeConn net.Conn) {
 			case "FILENAME":
 				UploadFile, err := os.Create(nodeResp.Info)
 				if err != nil {
-					SendPayloadViaRoute(startNodeConn, CurrentNode, "COMMAND", "CREATEFAIL", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
+					SendPayloadViaRoute(startNodeConn, AdminStatus.HandleNode, "COMMAND", "CREATEFAIL", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 				} else {
-					SendPayloadViaRoute(startNodeConn, CurrentNode, "COMMAND", "NAMECONFIRM", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
-					go share.ReceiveFile(Route.Route[CurrentNode], &startNodeConn, FileDataMap, AdminStatus.CannotRead, UploadFile, AdminStatus.AESKey, true, utils.AdminId)
+					SendPayloadViaRoute(startNodeConn, AdminStatus.HandleNode, "COMMAND", "NAMECONFIRM", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
+					go share.ReceiveFile(Route.Route[AdminStatus.HandleNode], &startNodeConn, FileDataMap, AdminStatus.CannotRead, UploadFile, AdminStatus.AESKey, true, utils.AdminId)
 				}
 			case "FILESIZE":
 				share.File.FileSize, _ = strconv.ParseInt(nodeResp.Info, 10, 64)
-				SendPayloadViaRoute(startNodeConn, CurrentNode, "COMMAND", "FILESIZECONFIRM", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
+				SendPayloadViaRoute(startNodeConn, AdminStatus.HandleNode, "COMMAND", "FILESIZECONFIRM", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 				share.File.ReceiveFileSize <- true
 			case "FILESLICENUM":
 				share.File.TotalSilceNum, _ = strconv.Atoi(nodeResp.Info)
-				SendPayloadViaRoute(startNodeConn, CurrentNode, "COMMAND", "FILESLICENUMCONFIRM", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
+				SendPayloadViaRoute(startNodeConn, AdminStatus.HandleNode, "COMMAND", "FILESLICENUMCONFIRM", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 				share.File.ReceiveFileSliceNum <- true
 			case "FILESLICENUMCONFIRM":
 				share.File.TotalConfirm <- true
@@ -321,10 +321,10 @@ func HandleStartConn(startNodeConn net.Conn) {
 			case "CANNOTUPLOAD":
 				fmt.Printf("[*]Agent cannot read file: %s\n", nodeResp.Info)
 			case "GETREFLECTNUM":
-				AdminStuff.Lock()
-				SendPayloadViaRoute(startNodeConn, CurrentNode, "COMMAND", "REFLECTNUM", " ", " ", AdminStuff.ReflectNum, utils.AdminId, AdminStatus.AESKey, false)
-				AdminStuff.ReflectNum++
-				AdminStuff.Unlock()
+				AdminStuff.ReflectNum.Lock()
+				SendPayloadViaRoute(startNodeConn, AdminStatus.HandleNode, "COMMAND", "REFLECTNUM", " ", " ", AdminStuff.ReflectNum.Num, utils.AdminId, AdminStatus.AESKey, false)
+				AdminStuff.ReflectNum.Num++
+				AdminStuff.ReflectNum.Unlock()
 			case "RECONNID":
 				log.Println("[*]Node reconnect successfully!")
 				ipaddress, uppernode := AnalysisInfo(nodeResp.Info)
