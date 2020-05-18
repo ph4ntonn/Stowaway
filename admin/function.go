@@ -354,8 +354,8 @@ func CheckInput(input string) string {
 /*-------------------------控制相关代码--------------------------*/
 
 // CloseAll 当有一个节点下线，强制关闭该节点及其子节点对应的服务
-func CloseAll(id string, waitForFindAll chan bool) {
-	readyToDel := FindAll(id, waitForFindAll)
+func CloseAll(id string) {
+	readyToDel := FindAll(id)
 
 	AdminStuff.SocksListenerForClient.Lock()
 
