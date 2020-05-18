@@ -93,13 +93,13 @@ func Del(nodeid string, readyToDel []string) {
 }
 
 // FindAll 找到所有的子节点
-func FindAll(nodeid string) []string {
+func FindAll(nodeid string, waitForFindAll chan bool) []string {
 	var readyToDel []string
 
 	Find(&readyToDel, nodeid)
 
 	readyToDel = append(readyToDel, nodeid)
-	WaitForFindAll <- true
+	waitForFindAll <- true
 	return readyToDel
 }
 

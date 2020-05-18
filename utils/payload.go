@@ -11,6 +11,9 @@ import (
 	"Stowaway/crypto"
 )
 
+// payload 结构设计时考虑的不是很好，会存在浪费头长度的问题
+// 平均差不多是0.02%的浪费
+
 type Payload struct {
 	NodeId string //接收节点序号
 

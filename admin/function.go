@@ -15,11 +15,9 @@ import (
 )
 
 var AdminStuff *utils.AdminStuff
-var WaitForFindAll chan bool
 
 func init() {
 	AdminStuff = utils.NewAdminStuff()
-	WaitForFindAll = make(chan bool, 1)
 }
 
 //admin端功能及零碎代码
@@ -356,8 +354,8 @@ func CheckInput(input string) string {
 /*-------------------------控制相关代码--------------------------*/
 
 // CloseAll 当有一个节点下线，强制关闭该节点及其子节点对应的服务
-func CloseAll(id string) {
-	readyToDel := FindAll(id)
+func CloseAll(id string, waitForFindAll chan bool) {
+	readyToDel := FindAll(id, waitForFindAll)
 
 	AdminStuff.SocksListenerForClient.Lock()
 

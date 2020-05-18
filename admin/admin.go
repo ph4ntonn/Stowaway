@@ -132,6 +132,8 @@ func HandleInitControlConn(startNodeConn net.Conn, adminCommandChan chan []strin
 // HandleStartConn 处理与startnode的信道
 func HandleStartConn(startNodeConn net.Conn, adminCommandChan chan []string) {
 	fileDataMap := utils.NewIntStrMap()
+	waitForFindAll := make(chan bool, 1)
+
 	for {
 		nodeResp, err := utils.ExtractPayload(startNodeConn, AdminStatus.AESKey, utils.AdminId, true)
 		if err != nil {
@@ -234,8 +236,8 @@ func HandleStartConn(startNodeConn net.Conn, adminCommandChan chan []string) {
 				SendPayloadViaRoute(startNodeConn, nodeid, "COMMAND", "ID", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 			case "AGENTOFFLINE":
 				log.Println("[*]Node ", FindIntByNodeid(nodeResp.Info)+1, " seems offline") //有节点掉线后，将此节点及其之后的节点删除
-				CloseAll(nodeResp.Info)                                                     //清除一切与此节点及其子节点有关的连接及功能
-				<-WaitForFindAll
+				CloseAll(nodeResp.Info, waitForFindAll)                                     //清除一切与此节点及其子节点有关的连接及功能
+				<-waitForFindAll
 				DelNodeFromTopology(nodeResp.Info) //从拓扑中删除
 				//这里不用重新计算路由，因为控制端已经不会允许已掉线的节点及其子节点的流量流通
 				if AdminStatus.HandleNode == nodeResp.Info && *AdminStatus.CliStatus != "admin" { //如果admin端正好操控此节点
