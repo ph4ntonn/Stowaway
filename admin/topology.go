@@ -151,13 +151,24 @@ func ShowDetail() {
 	if AdminStatus.StartNode != "0.0.0.0" {
 		var nodes []string
 
-		fmt.Printf("StartNode[1]: IP:%s  Hostname:%s  Username:%s\nNote:%s\n\n", AdminStatus.StartNode, AdminStuff.NodeStatus.NodeHostname[utils.StartNodeId], AdminStuff.NodeStatus.NodeUser[utils.StartNodeId], AdminStuff.NodeStatus.Nodenote[utils.StartNodeId])
+		fmt.Printf("StartNode[1]: IP:%s  Hostname:%s  Username:%s\nNote:%s\n\n",
+			AdminStatus.StartNode,
+			AdminStuff.NodeStatus.NodeHostname[utils.StartNodeId],
+			AdminStuff.NodeStatus.NodeUser[utils.StartNodeId],
+			AdminStuff.NodeStatus.Nodenote[utils.StartNodeId],
+		)
 
 		for Nodeid, _ := range AdminStuff.NodeStatus.NodeIP {
 			nodes = append(nodes, Nodeid)
 		}
 		for _, value := range nodes {
-			fmt.Printf("Node[%s]: IP:%s  Hostname:%s  Username:%s\nNote:%s\n\n", fmt.Sprint(FindIntByNodeid(value)+1), AdminStuff.NodeStatus.NodeIP[value], AdminStuff.NodeStatus.NodeHostname[utils.StartNodeId], AdminStuff.NodeStatus.NodeUser[utils.StartNodeId], AdminStuff.NodeStatus.Nodenote[value])
+			fmt.Printf("Node[%s]: IP:%s  Hostname:%s  Username:%s\nNote:%s\n\n",
+				fmt.Sprint(FindIntByNodeid(value)+1),
+				AdminStuff.NodeStatus.NodeIP[value],
+				AdminStuff.NodeStatus.NodeHostname[utils.StartNodeId],
+				AdminStuff.NodeStatus.NodeUser[utils.StartNodeId],
+				AdminStuff.NodeStatus.Nodenote[value],
+			)
 		}
 	} else {
 		fmt.Println("There is no agent connected!")

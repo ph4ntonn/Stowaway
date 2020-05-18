@@ -385,8 +385,8 @@ func CloseAll(id string) {
 
 	AdminStuff.ClientSockets.Unlock()
 	AdminStuff.SocksMapping.Unlock()
-
 	AdminStuff.ForwardStatus.CurrentPortForwardListener.Lock()
+
 	for _, nodeid := range readyToDel {
 		if _, ok := AdminStuff.ForwardStatus.CurrentPortForwardListener.Payload[nodeid]; ok {
 			for _, listener := range AdminStuff.ForwardStatus.CurrentPortForwardListener.Payload[nodeid] {

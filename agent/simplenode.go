@@ -283,7 +283,18 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, NODEID string) {
 			}
 
 			routeid := ChangeRoute(command)
-			proxyData, _ := utils.ConstructPayload(command.NodeId, command.Route, command.Type, command.Command, command.FileSliceNum, command.Info, command.Clientid, command.CurrentId, AgentStatus.AESKey, true)
+			proxyData, _ := utils.ConstructPayload(
+				command.NodeId,
+				command.Route,
+				command.Type,
+				command.Command,
+				command.FileSliceNum,
+				command.Info,
+				command.Clientid,
+				command.CurrentId,
+				AgentStatus.AESKey,
+				true,
+			)
 			//新建包结构体
 			passToLowerData := utils.NewPassToLowerNodeData()
 			//如果返回的routeid是空，说明目标节点就是自身的子节点，不需要多轮递送
