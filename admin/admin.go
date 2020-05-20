@@ -143,86 +143,6 @@ func HandleStartConn(startNodeConn net.Conn, adminCommandChan chan []string) {
 			break
 		}
 		switch nodeResp.Type {
-		case "DATA":
-			switch nodeResp.Command {
-			case "SHELLRESP":
-				fmt.Print(nodeResp.Info)
-			case "SSHMESS":
-				fmt.Print(nodeResp.Info)
-				fmt.Print("(ssh mode)>>>")
-			case "SOCKSDATARESP":
-				AdminStuff.ClientSockets.RLock()
-				if _, ok := AdminStuff.ClientSockets.Payload[nodeResp.Clientid]; ok {
-					_, err := AdminStuff.ClientSockets.Payload[nodeResp.Clientid].Write([]byte(nodeResp.Info))
-					if err != nil {
-						AdminStuff.ClientSockets.RUnlock()
-						continue
-					}
-				}
-				AdminStuff.ClientSockets.RUnlock()
-			case "FIN":
-				AdminStuff.ClientSockets.Lock()
-				if _, ok := AdminStuff.ClientSockets.Payload[nodeResp.Clientid]; ok {
-					AdminStuff.ClientSockets.Payload[nodeResp.Clientid].Close()
-				}
-				if _, ok := AdminStuff.ClientSockets.Payload[nodeResp.Clientid]; ok {
-					delete(AdminStuff.ClientSockets.Payload, nodeResp.Clientid)
-				}
-				AdminStuff.ClientSockets.Unlock()
-				SendPayloadViaRoute(startNodeConn, nodeResp.CurrentId, "DATA", "FINOK", " ", " ", nodeResp.Clientid, utils.AdminId, AdminStatus.AESKey, false)
-			case "FILEDATA": //接收文件内容
-				slicenum, _ := strconv.Atoi(nodeResp.FileSliceNum)
-				fileDataMap.Lock()
-				fileDataMap.Payload[slicenum] = nodeResp.Info
-				fileDataMap.Unlock()
-			case "FORWARDDATARESP":
-				AdminStuff.PortForWardMap.Lock()
-				if _, ok := AdminStuff.PortForWardMap.Payload[nodeResp.Clientid]; ok {
-					AdminStuff.PortForWardMap.Payload[nodeResp.Clientid].Write([]byte(nodeResp.Info))
-				}
-				AdminStuff.PortForWardMap.Unlock()
-			case "FORWARDTIMEOUT":
-				fallthrough
-			case "FORWARDOFFLINE":
-				AdminStuff.PortForWardMap.Lock()
-				if _, ok := AdminStuff.PortForWardMap.Payload[nodeResp.Clientid]; ok {
-					AdminStuff.PortForWardMap.Payload[nodeResp.Clientid].Close()
-					delete(AdminStuff.PortForWardMap.Payload, nodeResp.Clientid)
-				}
-				AdminStuff.PortForWardMap.Unlock()
-			case "REFLECT":
-				TryReflect(startNodeConn, nodeResp.CurrentId, nodeResp.Clientid, nodeResp.Info)
-			case "REFLECTFIN":
-				AdminStuff.ReflectConnMap.Lock()
-				if _, ok := AdminStuff.ReflectConnMap.Payload[nodeResp.Clientid]; ok {
-					AdminStuff.ReflectConnMap.Payload[nodeResp.Clientid].Close()
-					delete(AdminStuff.ReflectConnMap.Payload, nodeResp.Clientid)
-				}
-				AdminStuff.ReflectConnMap.Unlock()
-				AdminStuff.PortReflectMap.Lock()
-				if _, ok := AdminStuff.PortReflectMap.Payload[nodeResp.Clientid]; ok {
-					if !utils.IsClosed(AdminStuff.PortReflectMap.Payload[nodeResp.Clientid]) {
-						close(AdminStuff.PortReflectMap.Payload[nodeResp.Clientid])
-						delete(AdminStuff.PortReflectMap.Payload, nodeResp.Clientid)
-					}
-				}
-				AdminStuff.PortReflectMap.Unlock()
-			case "REFLECTDATA":
-				AdminStuff.ReflectConnMap.RLock()
-				if _, ok := AdminStuff.ReflectConnMap.Payload[nodeResp.Clientid]; ok {
-					AdminStuff.PortReflectMap.Lock()
-					if _, ok := AdminStuff.PortReflectMap.Payload[nodeResp.Clientid]; ok {
-						AdminStuff.PortReflectMap.Payload[nodeResp.Clientid] <- nodeResp.Info
-					} else {
-						AdminStuff.PortReflectMap.Payload[nodeResp.Clientid] = make(chan string, 10)
-						go HandleReflect(startNodeConn, AdminStuff.PortReflectMap.Payload[nodeResp.Clientid], nodeResp.Clientid, nodeResp.CurrentId)
-						AdminStuff.PortReflectMap.Payload[nodeResp.Clientid] <- nodeResp.Info
-					}
-					AdminStuff.PortReflectMap.Unlock()
-				}
-				AdminStuff.ReflectConnMap.RUnlock()
-			case "KEEPALIVE":
-			}
 		case "COMMAND":
 			switch nodeResp.Command {
 			case "NEW":
@@ -249,6 +169,10 @@ func HandleStartConn(startNodeConn net.Conn, adminCommandChan chan []string) {
 				AdminStuff.NodeStatus.NodeUser[nodeResp.CurrentId] = info[1]
 			case "MYNOTE":
 				AdminStuff.NodeStatus.Nodenote[nodeResp.CurrentId] = nodeResp.Info
+			case "SHELLSUCCESS":
+				AdminStatus.ShellSuccess <- true
+			case "SHELLFAIL":
+				AdminStatus.ShellSuccess <- false
 			case "SOCKSRESP":
 				switch nodeResp.Info {
 				case "SUCCESS":
@@ -318,6 +242,16 @@ func HandleStartConn(startNodeConn net.Conn, adminCommandChan chan []string) {
 				SendPayloadViaRoute(startNodeConn, AdminStatus.HandleNode, "COMMAND", "REFLECTNUM", " ", " ", AdminStuff.ReflectNum.Num, utils.AdminId, AdminStatus.AESKey, false)
 				AdminStuff.ReflectNum.Num++
 				AdminStuff.ReflectNum.Unlock()
+			case "FIN":
+				AdminStuff.ClientSockets.Lock()
+				if _, ok := AdminStuff.ClientSockets.Payload[nodeResp.Clientid]; ok {
+					AdminStuff.ClientSockets.Payload[nodeResp.Clientid].Close()
+				}
+				if _, ok := AdminStuff.ClientSockets.Payload[nodeResp.Clientid]; ok {
+					delete(AdminStuff.ClientSockets.Payload, nodeResp.Clientid)
+				}
+				AdminStuff.ClientSockets.Unlock()
+				SendPayloadViaRoute(startNodeConn, nodeResp.CurrentId, "COMMAND", "FINOK", " ", " ", nodeResp.Clientid, utils.AdminId, AdminStatus.AESKey, false)
 			case "RECONNID":
 				log.Println("[*]Node reconnect successfully!")
 				ipaddress, uppernode := AnalysisInfo(nodeResp.Info)
@@ -336,10 +270,36 @@ func HandleStartConn(startNodeConn net.Conn, adminCommandChan chan []string) {
 			case "FORWARDOK":
 				fmt.Println("[*]Port forward successfully started!")
 				AdminStuff.ForwardStatus.ForwardIsValid <- true
+			case "FORWARDTIMEOUT":
+				fallthrough
+			case "FORWARDOFFLINE":
+				AdminStuff.PortForWardMap.Lock()
+				if _, ok := AdminStuff.PortForWardMap.Payload[nodeResp.Clientid]; ok {
+					AdminStuff.PortForWardMap.Payload[nodeResp.Clientid].Close()
+					delete(AdminStuff.PortForWardMap.Payload, nodeResp.Clientid)
+				}
+				AdminStuff.PortForWardMap.Unlock()
 			case "REFLECTFAIL":
 				fmt.Println("[*]Agent seems cannot listen this port,port reflect failed!")
 			case "REFLECTOK":
 				fmt.Println("[*]Port reflect successfully started!")
+			case "REFLECT":
+				TryReflect(startNodeConn, nodeResp.CurrentId, nodeResp.Clientid, nodeResp.Info)
+			case "REFLECTFIN":
+				AdminStuff.ReflectConnMap.Lock()
+				if _, ok := AdminStuff.ReflectConnMap.Payload[nodeResp.Clientid]; ok {
+					AdminStuff.ReflectConnMap.Payload[nodeResp.Clientid].Close()
+					delete(AdminStuff.ReflectConnMap.Payload, nodeResp.Clientid)
+				}
+				AdminStuff.ReflectConnMap.Unlock()
+				AdminStuff.PortReflectMap.Lock()
+				if _, ok := AdminStuff.PortReflectMap.Payload[nodeResp.Clientid]; ok {
+					if !utils.IsClosed(AdminStuff.PortReflectMap.Payload[nodeResp.Clientid]) {
+						close(AdminStuff.PortReflectMap.Payload[nodeResp.Clientid])
+						delete(AdminStuff.PortReflectMap.Payload, nodeResp.Clientid)
+					}
+				}
+				AdminStuff.PortReflectMap.Unlock()
 			case "NODECONNECTFAIL":
 				fmt.Println("[*]Target seems down! Fail to connect")
 			case "LISTENRESP":
@@ -350,7 +310,51 @@ func HandleStartConn(startNodeConn net.Conn, adminCommandChan chan []string) {
 					fmt.Println("[*]Listen successfully!")
 				}
 			default:
-				log.Println("[*]Unknown Command")
+				continue
+			}
+		case "DATA":
+			switch nodeResp.Command {
+			case "SHELLRESP":
+				fmt.Print(nodeResp.Info)
+			case "SSHMESS":
+				fmt.Print(nodeResp.Info)
+				fmt.Print("(ssh mode)>>>")
+			case "SOCKSDATARESP":
+				AdminStuff.ClientSockets.RLock()
+				if _, ok := AdminStuff.ClientSockets.Payload[nodeResp.Clientid]; ok {
+					_, err := AdminStuff.ClientSockets.Payload[nodeResp.Clientid].Write([]byte(nodeResp.Info))
+					if err != nil {
+						AdminStuff.ClientSockets.RUnlock()
+						continue
+					}
+				}
+				AdminStuff.ClientSockets.RUnlock()
+			case "FILEDATA": //接收文件内容
+				slicenum, _ := strconv.Atoi(nodeResp.FileSliceNum)
+				fileDataMap.Lock()
+				fileDataMap.Payload[slicenum] = nodeResp.Info
+				fileDataMap.Unlock()
+			case "FORWARDDATARESP":
+				AdminStuff.PortForWardMap.Lock()
+				if _, ok := AdminStuff.PortForWardMap.Payload[nodeResp.Clientid]; ok {
+					AdminStuff.PortForWardMap.Payload[nodeResp.Clientid].Write([]byte(nodeResp.Info))
+				}
+				AdminStuff.PortForWardMap.Unlock()
+			case "REFLECTDATA":
+				AdminStuff.ReflectConnMap.RLock()
+				if _, ok := AdminStuff.ReflectConnMap.Payload[nodeResp.Clientid]; ok {
+					AdminStuff.PortReflectMap.Lock()
+					if _, ok := AdminStuff.PortReflectMap.Payload[nodeResp.Clientid]; ok {
+						AdminStuff.PortReflectMap.Payload[nodeResp.Clientid] <- nodeResp.Info
+					} else {
+						AdminStuff.PortReflectMap.Payload[nodeResp.Clientid] = make(chan string, 10)
+						go HandleReflect(startNodeConn, AdminStuff.PortReflectMap.Payload[nodeResp.Clientid], nodeResp.Clientid, nodeResp.CurrentId)
+						AdminStuff.PortReflectMap.Payload[nodeResp.Clientid] <- nodeResp.Info
+					}
+					AdminStuff.PortReflectMap.Unlock()
+				}
+				AdminStuff.ReflectConnMap.RUnlock()
+			default:
 				continue
 			}
 		}

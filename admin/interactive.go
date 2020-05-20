@@ -125,7 +125,11 @@ func HandleNodeCommand(startNodeConn net.Conn, nodeID string, adminCommandChan c
 			if err != nil {
 				log.Printf("[*]ERROR OCCURED!: %s", err)
 			}
-			HandleShellToNode(startNodeConn, nodeID)
+			if suc := <-AdminStatus.ShellSuccess; suc {
+				HandleShellToNode(startNodeConn, nodeID)
+			} else {
+				log.Println("[*]Cannot start the shell!")
+			}
 		case "socks":
 			var socksStartData string
 			switch len(AdminCommand) {

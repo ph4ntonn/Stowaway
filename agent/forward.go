@@ -29,7 +29,7 @@ func TryForward(target string, num uint32) {
 		AgentStuff.ForwardConnMap.Payload[num] = forwardConn
 		AgentStuff.ForwardConnMap.Unlock()
 	} else {
-		respdata, _ := utils.ConstructPayload(utils.AdminId, "", "DATA", "FORWARDTIMEOUT", " ", " ", num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+		respdata, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "FORWARDTIMEOUT", " ", " ", num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
 		AgentStuff.ProxyChan.ProxyChanToUpperNode <- respdata
 		return
 	}
@@ -55,7 +55,7 @@ func HandleForward(forwardDataChan chan string, forwardNum uint32) {
 		for {
 			len, err := forwardConn.Read(serverbuffer)
 			if err != nil {
-				respdata, _ := utils.ConstructPayload(utils.AdminId, "", "DATA", "FORWARDOFFLINE", " ", " ", forwardNum, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+				respdata, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "FORWARDOFFLINE", " ", " ", forwardNum, AgentStatus.Nodeid, AgentStatus.AESKey, false)
 				AgentStuff.ProxyChan.ProxyChanToUpperNode <- respdata
 				return
 			}

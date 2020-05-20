@@ -48,7 +48,7 @@ func TestReflect(portCombine string) {
 
 		num = <-AgentStuff.ReflectStatus.ReflectNum
 
-		respCommand, _ = utils.ConstructPayload(utils.AdminId, "", "DATA", "REFLECT", " ", ports[0], num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+		respCommand, _ = utils.ConstructPayload(utils.AdminId, "", "COMMAND", "REFLECT", " ", ports[0], num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
 		AgentStuff.ProxyChan.ProxyChanToUpperNode <- respCommand
 
 		AgentStuff.ReflectConnMap.Lock()
@@ -66,7 +66,7 @@ func HandleReflectPort(reflectconn net.Conn, num uint32, nodeid string) {
 		len, err := reflectconn.Read(buffer)
 
 		if err != nil {
-			finMessage, _ := utils.ConstructPayload(utils.AdminId, "", "DATA", "REFLECTFIN", " ", " ", num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+			finMessage, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "REFLECTFIN", " ", " ", num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
 			AgentStuff.ProxyChan.ProxyChanToUpperNode <- finMessage
 			return
 		}

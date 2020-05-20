@@ -47,18 +47,7 @@ func HandleConnFromLowerNode(connForLowerNode net.Conn, currentid, lowerid strin
 					AgentStuff.ProxyChan.ProxyChanToUpperNode <- proxyCommand
 					continue
 				} else {
-					proxyCommand, _ := utils.ConstructPayload(
-						command.NodeId,
-						command.Route,
-						command.Type,
-						command.Command,
-						command.FileSliceNum,
-						command.Info,
-						command.Clientid,
-						command.CurrentId,
-						AgentStatus.AESKey,
-						true,
-					)
+					proxyCommand, _ := utils.ConstructPayload(command.NodeId, command.Route, command.Type, command.Command, command.FileSliceNum, command.Info, command.Clientid, command.CurrentId, AgentStatus.AESKey, true)
 					AgentStuff.ProxyChan.ProxyChanToUpperNode <- proxyCommand
 					continue
 				}
@@ -70,33 +59,11 @@ func HandleConnFromLowerNode(connForLowerNode net.Conn, currentid, lowerid strin
 				AgentStuff.ProxyChan.ProxyChanToLowerNode <- passToLowerData
 				continue
 			default:
-				proxyData, _ := utils.ConstructPayload(
-					command.NodeId,
-					command.Route,
-					command.Type,
-					command.Command,
-					command.FileSliceNum,
-					command.Info,
-					command.Clientid,
-					command.CurrentId,
-					AgentStatus.AESKey,
-					true,
-				)
+				proxyData, _ := utils.ConstructPayload(command.NodeId, command.Route, command.Type, command.Command, command.FileSliceNum, command.Info, command.Clientid, command.CurrentId, AgentStatus.AESKey, true)
 				AgentStuff.ProxyChan.ProxyChanToUpperNode <- proxyData
 			}
 		case "DATA":
-			proxyData, _ := utils.ConstructPayload(
-				command.NodeId,
-				command.Route,
-				command.Type,
-				command.Command,
-				command.FileSliceNum,
-				command.Info,
-				command.Clientid,
-				command.CurrentId,
-				AgentStatus.AESKey,
-				true,
-			)
+			proxyData, _ := utils.ConstructPayload(command.NodeId, command.Route, command.Type, command.Command, command.FileSliceNum, command.Info, command.Clientid, command.CurrentId, AgentStatus.AESKey, true)
 			AgentStuff.ProxyChan.ProxyChanToUpperNode <- proxyData
 		}
 	}

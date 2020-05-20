@@ -88,7 +88,7 @@ func HandleNewSocksConn(startNodeConn net.Conn, clientsocks net.Conn, num uint32
 		len, err := clientsocks.Read(buffer)
 		if err != nil {
 			clientsocks.Close()
-			utils.ConstructPayloadAndSend(startNodeConn, nodeID, route, "DATA", "FIN", " ", " ", num, utils.AdminId, AdminStatus.AESKey, false)
+			utils.ConstructPayloadAndSend(startNodeConn, nodeID, route, "COMMAND", "FIN", " ", " ", num, utils.AdminId, AdminStatus.AESKey, false)
 			return
 		}
 		utils.ConstructPayloadAndSend(startNodeConn, nodeID, route, "DATA", "SOCKSDATA", " ", string(buffer[:len]), num, utils.AdminId, AdminStatus.AESKey, false)
@@ -155,13 +155,13 @@ func SendSSHTunnel(startNodeConn net.Conn, info []string, nodeid string, method 
 func HandleForwardPort(forwardconn net.Conn, target string, startNodeConn net.Conn, num uint32, nodeid string) {
 	route := utils.GetInfoViaLockMap(Route, nodeid).(string)
 
-	utils.ConstructPayloadAndSend(startNodeConn, nodeid, route, "DATA", "FORWARD", " ", target, num, utils.AdminId, AdminStatus.AESKey, false)
+	utils.ConstructPayloadAndSend(startNodeConn, nodeid, route, "COMMAND", "FORWARD", " ", target, num, utils.AdminId, AdminStatus.AESKey, false)
 
 	buffer := make([]byte, 20480)
 	for {
 		len, err := forwardconn.Read(buffer)
 		if err != nil {
-			utils.ConstructPayloadAndSend(startNodeConn, nodeid, route, "DATA", "FORWARDFIN", " ", " ", num, utils.AdminId, AdminStatus.AESKey, false)
+			utils.ConstructPayloadAndSend(startNodeConn, nodeid, route, "COMMAND", "FORWARDFIN", " ", " ", num, utils.AdminId, AdminStatus.AESKey, false)
 			return
 		}
 		utils.ConstructPayloadAndSend(startNodeConn, nodeid, route, "DATA", "FORWARDDATA", " ", string(buffer[:len]), num, utils.AdminId, AdminStatus.AESKey, false)
@@ -211,7 +211,6 @@ func StartPortForwardForClient(info []string, startNodeConn net.Conn, nodeid str
 
 		AdminStuff.ForwardStatus.ForwardMapping.Unlock()
 		AdminStuff.ForwardStatus.ForwardNum.Unlock()
-
 	}
 }
 
@@ -263,7 +262,7 @@ func TryReflect(startNodeConn net.Conn, nodeid string, id uint32, port string) {
 		AdminStuff.ReflectConnMap.Payload[id] = reflectConn
 		AdminStuff.ReflectConnMap.Unlock()
 	} else {
-		SendPayloadViaRoute(startNodeConn, nodeid, "DATA", "REFLECTTIMEOUT", " ", " ", id, utils.AdminId, AdminStatus.AESKey, false)
+		SendPayloadViaRoute(startNodeConn, nodeid, "COMMAND", "REFLECTTIMEOUT", " ", " ", id, utils.AdminId, AdminStatus.AESKey, false)
 		return
 	}
 }
@@ -289,7 +288,7 @@ func HandleReflect(startNodeConn net.Conn, reflectDataChan chan string, num uint
 		for {
 			len, err := reflectConn.Read(serverBuffer)
 			if err != nil {
-				utils.ConstructPayloadAndSend(startNodeConn, nodeid, route, "DATA", "REFLECTOFFLINE", " ", " ", num, utils.AdminId, AdminStatus.AESKey, false)
+				utils.ConstructPayloadAndSend(startNodeConn, nodeid, route, "COMMAND", "REFLECTOFFLINE", " ", " ", num, utils.AdminId, AdminStatus.AESKey, false)
 				return
 			}
 			utils.ConstructPayloadAndSend(startNodeConn, nodeid, route, "DATA", "REFLECTDATARESP", " ", string(serverBuffer[:len]), num, utils.AdminId, AdminStatus.AESKey, false)

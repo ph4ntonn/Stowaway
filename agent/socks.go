@@ -57,6 +57,8 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 			AgentStuff.CurrentSocks5Conn.Payload[checknum] = server
 			AgentStuff.CurrentSocks5Conn.Unlock()
 		} else if isAuthed == true && tcpconnected == true && serverflag == true { //All done!
+			defer SendFin(checknum)
+
 			go func() {
 				for {
 					data, ok := <-info
@@ -80,10 +82,8 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 			err := Proxyhttp(ConnToAdmin, server, checknum, AgentStatus.AESKey, currentid)
 
 			if err != nil {
-				go SendFin(checknum)
 				return
 			}
-
 		} else {
 			return
 		}
@@ -94,7 +94,7 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 func SendFin(num uint32) {
 	AgentStuff.SocksDataChanMap.RLock()
 	if _, ok := AgentStuff.SocksDataChanMap.Payload[num]; ok {
-		respData, _ := utils.ConstructPayload(utils.AdminId, "", "DATA", "FIN", " ", " ", num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+		respData, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "FIN", " ", " ", num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
 		AgentStuff.ProxyChan.ProxyChanToUpperNode <- respData
 	}
 	AgentStuff.SocksDataChanMap.RUnlock()

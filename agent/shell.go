@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"fmt"
 	"io"
 	"os/exec"
 	"runtime"
@@ -10,7 +9,7 @@ import (
 )
 
 // CreatInteractiveShell 创建交互式shell
-func CreatInteractiveShell() (io.Reader, io.Writer) {
+func CreatInteractiveShell() (io.Reader, io.Writer, error) {
 	var cmd *exec.Cmd
 	sys := utils.CheckSystem()
 	//判断操作系统后决定启动哪一种shell
@@ -24,20 +23,14 @@ func CreatInteractiveShell() (io.Reader, io.Writer) {
 		}
 	}
 
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		fmt.Println(err)
-	}
+	stdout, _ := cmd.StdoutPipe()
 
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		fmt.Println(err)
-	}
+	stdin, _ := cmd.StdinPipe()
 
 	cmd.Stderr = cmd.Stdout //将stderr重定向至stdout
-	cmd.Start()
+	err := cmd.Start()
 
-	return stdout, stdin
+	return stdout, stdin, err
 }
 
 // StartShell 启动shell

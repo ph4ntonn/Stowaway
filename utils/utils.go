@@ -48,6 +48,7 @@ type AdminStatus struct {
 	NodeSocksStarted chan bool
 	GetName          chan bool
 	CannotRead       chan bool
+	ShellSuccess     chan bool
 	NodesReadyToadd  chan map[string]string //等待加入的node
 	HandleNode       string                 //正在操作的节点编号
 	StartNode        string
@@ -64,6 +65,7 @@ func NewAdminStatus() *AdminStatus {
 	nas.NodeSocksStarted = make(chan bool, 1)
 	nas.GetName = make(chan bool, 1)
 	nas.CannotRead = make(chan bool, 1)
+	nas.ShellSuccess = make(chan bool, 1)
 	nas.NodesReadyToadd = make(chan map[string]string)
 	nas.StartNode = "0.0.0.0"
 	nas.HandleNode = AdminId
