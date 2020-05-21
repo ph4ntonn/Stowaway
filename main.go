@@ -16,7 +16,7 @@ import (
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	//admin.ParseCommand()
+	// admin.ParseCommand()
 
 	agent.ParseCommand()
 

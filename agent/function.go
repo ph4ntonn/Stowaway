@@ -21,15 +21,15 @@ import (
 /*-------------------------节点发送自身信息功能相关代码--------------------------*/
 
 // SendInfo 发送自身信息
-func SendInfo(nodeID string) {
+func SendInfo(nodeid string) {
 	info := utils.GetInfoViaSystem()
-	respCommand, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "MYINFO", " ", info, 0, nodeID, AgentStatus.AESKey, false)
+	respCommand, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "MYINFO", " ", info, 0, nodeid, AgentStatus.AESKey, false)
 	AgentStuff.ProxyChan.ProxyChanToUpperNode <- respCommand
 }
 
 // SendNote 发送自身备忘
-func SendNote(nodeID string) {
-	respCommand, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "MYNOTE", " ", AgentStatus.NodeNote, 0, nodeID, AgentStatus.AESKey, false)
+func SendNote(nodeid string) {
+	respCommand, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "MYNOTE", " ", AgentStatus.NodeNote, 0, nodeid, AgentStatus.AESKey, false)
 	AgentStuff.ProxyChan.ProxyChanToUpperNode <- respCommand
 }
 
@@ -85,7 +85,7 @@ func AdminOffline(reConn, monitor, listenPort string, passive bool) {
 /*-------------------------普通节点等待重连相关代码--------------------------*/
 
 // WaitingAdmin 节点间连接断开时，等待重连的代码
-func WaitingAdmin(nodeID string) {
+func WaitingAdmin(nodeid string) {
 	//清理工作
 	ClearAllConn()
 	AgentStuff.SocksDataChanMap = utils.NewUint32ChanStrMap()
@@ -94,7 +94,7 @@ func WaitingAdmin(nodeID string) {
 	}
 	//等待重连
 	ConnToAdmin = <-node.NodeStuff.Adminconn
-	respCommand, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "RECONNID", " ", "", 0, nodeID, AgentStatus.AESKey, false)
+	respCommand, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "RECONNID", " ", "", 0, nodeid, AgentStatus.AESKey, false)
 	AgentStuff.ProxyChan.ProxyChanToUpperNode <- respCommand
 	if AgentStatus.NotLastOne {
 		BroadCast("RECONN")
@@ -180,13 +180,13 @@ func ClearAllConn() {
 /*-------------------------路由相关代码--------------------------*/
 
 // ChangeRoute 查找需要递交的路由
-func ChangeRoute(AdminData *utils.Payload) string {
-	route := AdminData.Route
+func ChangeRoute(adminData *utils.Payload) string {
+	route := adminData.Route
 	//找到下一个节点id号
 	routes := strings.Split(route, ":")
 	selected := routes[0]
 	//修改route字段，向下一级递交
-	AdminData.Route = strings.Join(routes[1:], ":")
+	adminData.Route = strings.Join(routes[1:], ":")
 	//返回下一个节点id
 	return selected
 }

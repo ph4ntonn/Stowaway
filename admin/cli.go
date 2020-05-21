@@ -47,9 +47,9 @@ func ShowNodeHelp() {
 	stopsocks                                		Shut down all socks services
 	upload     [filename]                    		Upload file to current agent node
 	download   [filename]                   		Download file from current agent node
-	forward    [lport] [ip:port]             		Forward local port to remote (eg:forward 8888 192.168.0.100:22)
+	forward    [rport] [ip:port]             		Forward remote port (admin)to specific ip:port (eg:forward 8888 192.168.0.100:22)
 	stopforward                                		Shut down all forward services
-	reflect    [rport] [lport]               		Reflect remote port to local port (eg:reflect 22 80)
+	reflect    [rport] [lport]               		Reflect local port(agent) to remote port(admin) (eg:reflect 22 80)
 	stopreflect                                		Shut down all reflect services
 	exit                                     		Back to upper panel
   `)

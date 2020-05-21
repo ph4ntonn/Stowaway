@@ -59,11 +59,11 @@ func TestReflect(portCombine string) {
 }
 
 // HandleReflectPort 处理传入连接
-func HandleReflectPort(reflectconn net.Conn, num uint32, nodeid string) {
+func HandleReflectPort(reflectConn net.Conn, num uint32, nodeid string) {
 	buffer := make([]byte, 20480)
 
 	for {
-		len, err := reflectconn.Read(buffer)
+		len, err := reflectConn.Read(buffer)
 
 		if err != nil {
 			finMessage, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "REFLECTFIN", " ", " ", num, AgentStatus.Nodeid, AgentStatus.AESKey, false)

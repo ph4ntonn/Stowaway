@@ -24,12 +24,12 @@ func init() {
 /*-------------------------上传/下载文件相关代码--------------------------*/
 
 // UploadFile admin || agent上传文件
-func UploadFile(route, filename string, controlConn *net.Conn, nodeid string, getName chan bool, AESKey []byte, currentid string, Notagent bool) {
+func UploadFile(route, filename string, controlConn *net.Conn, nodeid string, getName chan bool, AESKey []byte, currentid string, notAgent bool) {
 	var slicenum int = 0
 
 	info, err := os.Stat(filename)
 	if err != nil {
-		if Notagent {
+		if notAgent {
 			fmt.Println("[*]File not found!")
 		} else {
 			utils.ConstructPayloadAndSend(*controlConn, nodeid, route, "COMMAND", "FILENOTEXIST", " ", filename, 0, currentid, AESKey, false) //发送文件是否存在的情况
@@ -46,7 +46,7 @@ func UploadFile(route, filename string, controlConn *net.Conn, nodeid string, ge
 
 		fileInfo, _ := fileHandle.Stat()
 		if fileInfo == nil {
-			if Notagent {
+			if notAgent {
 				fmt.Println("[*]Cannot read the file")
 			}
 			utils.ConstructPayloadAndSend(*controlConn, nodeid, route, "COMMAND", "CANNOTREAD", " ", info.Name(), 0, currentid, AESKey, false) //检查是否能读
@@ -58,7 +58,7 @@ func UploadFile(route, filename string, controlConn *net.Conn, nodeid string, ge
 
 		utils.ConstructPayloadAndSend(*controlConn, nodeid, route, "COMMAND", "FILESLICENUM", " ", fileSliceStr, 0, currentid, AESKey, false) //告知包数量
 
-		if Notagent {
+		if notAgent {
 			fmt.Println("\n[*]File transmitting, please wait...")
 			Bar = utils.NewBar(fileInfo.Size())
 			Bar.Start()
@@ -74,7 +74,7 @@ func UploadFile(route, filename string, controlConn *net.Conn, nodeid string, ge
 		for {
 			n, err := fileHandle.Read(buff) //读取文件内容
 			if err != nil {
-				if Notagent {
+				if notAgent {
 					Bar.Finish()
 				}
 				return
@@ -84,12 +84,12 @@ func UploadFile(route, filename string, controlConn *net.Conn, nodeid string, ge
 			//文件封包id加一
 			slicenum++
 
-			if Notagent {
+			if notAgent {
 				Bar.Add64(int64(n))
 			}
 		}
 	} else {
-		if !Notagent {
+		if !notAgent {
 			utils.ConstructPayloadAndSend(*controlConn, utils.AdminId, route, "COMMAND", "CANNOTUPLOAD", " ", info.Name(), 0, currentid, AESKey, false)
 		} else {
 			fmt.Println("[*]File cannot be uploaded!")
@@ -99,55 +99,55 @@ func UploadFile(route, filename string, controlConn *net.Conn, nodeid string, ge
 }
 
 // DownloadFile admin下载文件
-func DownloadFile(route, filename string, conn net.Conn, nodeid string, currentid string, AESKey []byte) {
-	err := utils.ConstructPayloadAndSend(conn, nodeid, route, "COMMAND", "DOWNLOADFILE", " ", filename, 0, currentid, AESKey, false)
+func DownloadFile(route, fileName string, conn net.Conn, nodeid string, currentid string, AESKey []byte) {
+	err := utils.ConstructPayloadAndSend(conn, nodeid, route, "COMMAND", "DOWNLOADFILE", " ", fileName, 0, currentid, AESKey, false)
 	if err != nil {
 		return
 	}
 }
 
 // ReceiveFile admin || agent接收文件
-func ReceiveFile(route string, controlConnToAdmin *net.Conn, FileDataMap *utils.IntStrMap, CannotRead chan bool, UploadFile *os.File, AESKey []byte, Notagent bool, currentid string) {
-	defer UploadFile.Close()
+func ReceiveFile(route string, controlConnToAdmin *net.Conn, fileDataMap *utils.IntStrMap, cannotRead chan bool, uploadFile *os.File, AESKey []byte, notAgent bool, currentid string) {
+	defer uploadFile.Close()
 
-	if Notagent {
+	if notAgent {
 		fmt.Println("\n[*]Downloading file,please wait......")
 	}
 
 	<-File.ReceiveFileSliceNum //确认收到分包数量
 	<-File.ReceiveFileSize     //确认收到文件大小
 
-	if Notagent {
+	if notAgent {
 		Bar = utils.NewBar(File.FileSize)
 		Bar.Start()
 	}
 
 	for num := 0; num < File.TotalSilceNum; num++ { //根据对端传输过来的文件分包数进行循环
 		for {
-			if len(CannotRead) != 1 { //检查不可读chan是否存在元素，存在即表示对端无法继续读，上传/下载终止
-				FileDataMap.Lock()
-				if _, ok := FileDataMap.Payload[num]; ok {
+			if len(cannotRead) != 1 { //检查不可读chan是否存在元素，存在即表示对端无法继续读，上传/下载终止
+				fileDataMap.Lock()
+				if _, ok := fileDataMap.Payload[num]; ok {
 
-					if Notagent {
-						Bar.Add64(int64(len(FileDataMap.Payload[num])))
+					if notAgent {
+						Bar.Add64(int64(len(fileDataMap.Payload[num])))
 					}
 
-					UploadFile.Write([]byte(FileDataMap.Payload[num]))
-					delete(FileDataMap.Payload, num) //往文件里写完后立即清空，防止占用内存过大
-					FileDataMap.Unlock()
+					uploadFile.Write([]byte(fileDataMap.Payload[num]))
+					delete(fileDataMap.Payload, num) //往文件里写完后立即清空，防止占用内存过大
+					fileDataMap.Unlock()
 					break
 				} else {
-					FileDataMap.Unlock()
+					fileDataMap.Unlock()
 					time.Sleep(5 * time.Millisecond) //如果暂时没有收到当前序号的包，先释放锁，等待5ms后继续检查(减少在网络传输过慢时cpu消耗)
 				}
 			} else {
-				<-CannotRead
+				<-cannotRead
 				return
 			}
 		}
 	}
 
-	if Notagent {
+	if notAgent {
 		Bar.Finish()
 		fmt.Println("[*]Transmission complete")
 	} else {

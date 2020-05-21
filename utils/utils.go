@@ -47,7 +47,6 @@ type AdminStatus struct {
 	SSHSuccess       chan bool
 	NodeSocksStarted chan bool
 	GetName          chan bool
-	CannotRead       chan bool
 	ShellSuccess     chan bool
 	NodesReadyToadd  chan map[string]string //等待加入的node
 	HandleNode       string                 //正在操作的节点编号
@@ -57,19 +56,16 @@ type AdminStatus struct {
 	AESKey           []byte
 }
 
-func NewAdminStatus() *AdminStatus {
-	nas := new(AdminStatus)
+func (nas *AdminStatus) NewAdminStatus() {
 	nas.ReadyChange = make(chan bool, 1)
 	nas.IsShellMode = make(chan bool, 1)
 	nas.SSHSuccess = make(chan bool, 1)
 	nas.NodeSocksStarted = make(chan bool, 1)
 	nas.GetName = make(chan bool, 1)
-	nas.CannotRead = make(chan bool, 1)
 	nas.ShellSuccess = make(chan bool, 1)
 	nas.NodesReadyToadd = make(chan map[string]string)
 	nas.StartNode = "0.0.0.0"
 	nas.HandleNode = AdminId
-	return nas
 }
 
 /*-------------------------Admin结构体变量代码--------------------------*/
@@ -87,8 +83,7 @@ type AdminStuff struct {
 	PortReflectMap         *Uint32ChanStrMap
 }
 
-func NewAdminStuff() *AdminStuff {
-	nas := new(AdminStuff)
+func (nas *AdminStuff) NewAdminStuff() {
 	nas.SocksNum = NewSafeUint32()
 	nas.ReflectNum = NewSafeUint32()
 	nas.SocksListenerForClient = NewStrListenerSliceMap()
@@ -99,30 +94,27 @@ func NewAdminStuff() *AdminStuff {
 	nas.PortReflectMap = NewUint32ChanStrMap()
 	nas.NodeStatus = NewNodeStatus()
 	nas.ForwardStatus = NewForwardStatus()
-	return nas
 }
 
 /*-------------------------Agent相关状态变量代码--------------------------*/
 
 type AgentStatus struct {
+	ReConnCome        chan bool
+	WaitForIDAllocate chan string
 	Nodeid            string
 	NodeNote          string
 	NotLastOne        bool
 	Waiting           bool
-	ReConnCome        chan bool
-	WaitForIDAllocate chan string
 	AESKey            []byte
 }
 
-func NewAgentStatus() *AgentStatus {
-	nas := new(AgentStatus)
+func (nas *AgentStatus) NewAgentStatus() {
+	nas.ReConnCome = make(chan bool, 1)
+	nas.WaitForIDAllocate = make(chan string, 1)
 	nas.Nodeid = StartNodeId
 	nas.NodeNote = ""
 	nas.NotLastOne = false
 	nas.Waiting = false
-	nas.ReConnCome = make(chan bool, 1)
-	nas.WaitForIDAllocate = make(chan string, 1)
-	return nas
 }
 
 /*-------------------------Agent结构体变量代码--------------------------*/
@@ -138,8 +130,7 @@ type AgentStuff struct {
 	CurrentSocks5Conn *Uint32ConnMap
 }
 
-func NewAgentStuff() *AgentStuff {
-	nas := new(AgentStuff)
+func (nas *AgentStuff) NewAgentStuff() {
 	nas.SocksInfo = NewSocksSetting()
 	nas.ProxyChan = NewProxyChan()
 	nas.SocksDataChanMap = NewUint32ChanStrMap()
@@ -148,7 +139,6 @@ func NewAgentStuff() *AgentStuff {
 	nas.ReflectStatus = NewReflectStatus()
 	nas.ReflectConnMap = NewUint32ConnMap()
 	nas.CurrentSocks5Conn = NewUint32ConnMap()
-	return nas
 }
 
 /*-------------------------Node状态代码--------------------------*/
@@ -183,7 +173,7 @@ func NewNodeInfo() *NodeInfo {
 	return nni
 }
 
-/*-------------------------Node上下级信息代码--------------------------*/
+/*-------------------------Node控制变量代码--------------------------*/
 
 type NodeStuff struct {
 	ControlConnForLowerNodeChan chan net.Conn //下级节点控制信道

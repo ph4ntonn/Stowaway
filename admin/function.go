@@ -17,7 +17,8 @@ import (
 var AdminStuff *utils.AdminStuff
 
 func init() {
-	AdminStuff = utils.NewAdminStuff()
+	AdminStuff = new(utils.AdminStuff)
+	AdminStuff.NewAdminStuff()
 }
 
 //admin端功能及零碎代码
@@ -28,8 +29,8 @@ func init() {
 /*-------------------------Socks5功能相关代码--------------------------*/
 
 // StartSocksServiceForClient 启动socks5 for client
-func StartSocksServiceForClient(command []string, startNodeConn net.Conn, nodeID string) {
-	route := utils.GetInfoViaLockMap(Route, nodeID).(string)
+func StartSocksServiceForClient(command []string, startNodeConn net.Conn, nodeid string) {
+	route := utils.GetInfoViaLockMap(Route, nodeid).(string)
 
 	socksPort := command[1]
 	checkPort, _ := strconv.Atoi(socksPort)
@@ -41,7 +42,7 @@ func StartSocksServiceForClient(command []string, startNodeConn net.Conn, nodeID
 	socks5Addr := fmt.Sprintf("0.0.0.0:%s", socksPort)
 	socksListenerForClient, err := net.Listen("tcp", socks5Addr)
 	if err != nil {
-		err = utils.ConstructPayloadAndSend(startNodeConn, nodeID, route, "COMMAND", "SOCKSOFF", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
+		err = utils.ConstructPayloadAndSend(startNodeConn, nodeid, route, "COMMAND", "SOCKSOFF", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 		if err != nil {
 			log.Println("[*]Cannot stop agent's socks service,check the connection!")
 		}
@@ -50,7 +51,7 @@ func StartSocksServiceForClient(command []string, startNodeConn net.Conn, nodeID
 	}
 	//把此监听地址记录
 	AdminStuff.SocksListenerForClient.Lock()
-	AdminStuff.SocksListenerForClient.Payload[nodeID] = append(AdminStuff.SocksListenerForClient.Payload[nodeID], socksListenerForClient)
+	AdminStuff.SocksListenerForClient.Payload[nodeid] = append(AdminStuff.SocksListenerForClient.Payload[nodeid], socksListenerForClient)
 	AdminStuff.SocksListenerForClient.Unlock()
 
 	for {
@@ -65,12 +66,12 @@ func StartSocksServiceForClient(command []string, startNodeConn net.Conn, nodeID
 		AdminStuff.SocksNum.Lock()
 
 		AdminStuff.ClientSockets.Payload[AdminStuff.SocksNum.Num] = conn
-		go HandleNewSocksConn(startNodeConn, AdminStuff.ClientSockets.Payload[AdminStuff.SocksNum.Num], AdminStuff.SocksNum.Num, nodeID)
+		go HandleNewSocksConn(startNodeConn, AdminStuff.ClientSockets.Payload[AdminStuff.SocksNum.Num], AdminStuff.SocksNum.Num, nodeid)
 
 		AdminStuff.ClientSockets.Unlock()
 		AdminStuff.SocksMapping.Lock()
 
-		AdminStuff.SocksMapping.Payload[nodeID] = append(AdminStuff.SocksMapping.Payload[nodeID], AdminStuff.SocksNum.Num)
+		AdminStuff.SocksMapping.Payload[nodeid] = append(AdminStuff.SocksMapping.Payload[nodeid], AdminStuff.SocksNum.Num)
 		AdminStuff.SocksNum.Num = (AdminStuff.SocksNum.Num + 1) % 4294967295
 
 		AdminStuff.SocksMapping.Unlock()
@@ -79,19 +80,19 @@ func StartSocksServiceForClient(command []string, startNodeConn net.Conn, nodeID
 }
 
 // HandleNewSocksConn 处理每一个单个的socks socket
-func HandleNewSocksConn(startNodeConn net.Conn, clientsocks net.Conn, num uint32, nodeID string) {
-	route := utils.GetInfoViaLockMap(Route, nodeID).(string)
+func HandleNewSocksConn(startNodeConn net.Conn, clientSocks net.Conn, num uint32, nodeid string) {
+	route := utils.GetInfoViaLockMap(Route, nodeid).(string)
 
 	buffer := make([]byte, 20480)
 
 	for {
-		len, err := clientsocks.Read(buffer)
+		len, err := clientSocks.Read(buffer)
 		if err != nil {
-			clientsocks.Close()
-			utils.ConstructPayloadAndSend(startNodeConn, nodeID, route, "COMMAND", "FIN", " ", " ", num, utils.AdminId, AdminStatus.AESKey, false)
+			clientSocks.Close()
+			utils.ConstructPayloadAndSend(startNodeConn, nodeid, route, "COMMAND", "FIN", " ", " ", num, utils.AdminId, AdminStatus.AESKey, false)
 			return
 		}
-		utils.ConstructPayloadAndSend(startNodeConn, nodeID, route, "DATA", "SOCKSDATA", " ", string(buffer[:len]), num, utils.AdminId, AdminStatus.AESKey, false)
+		utils.ConstructPayloadAndSend(startNodeConn, nodeid, route, "DATA", "SOCKSDATA", " ", string(buffer[:len]), num, utils.AdminId, AdminStatus.AESKey, false)
 	}
 }
 
@@ -152,14 +153,14 @@ func SendSSHTunnel(startNodeConn net.Conn, info []string, nodeid string, method 
 /*-------------------------Port Forward功能启动相关代码--------------------------*/
 
 // HandleForwardPort 发送forward开启命令
-func HandleForwardPort(forwardconn net.Conn, target string, startNodeConn net.Conn, num uint32, nodeid string) {
+func HandleForwardPort(forwardConn net.Conn, target string, startNodeConn net.Conn, num uint32, nodeid string) {
 	route := utils.GetInfoViaLockMap(Route, nodeid).(string)
 
 	utils.ConstructPayloadAndSend(startNodeConn, nodeid, route, "COMMAND", "FORWARD", " ", target, num, utils.AdminId, AdminStatus.AESKey, false)
 
 	buffer := make([]byte, 20480)
 	for {
-		len, err := forwardconn.Read(buffer)
+		len, err := forwardConn.Read(buffer)
 		if err != nil {
 			utils.ConstructPayloadAndSend(startNodeConn, nodeid, route, "COMMAND", "FORWARDFIN", " ", " ", num, utils.AdminId, AdminStatus.AESKey, false)
 			return
@@ -326,8 +327,8 @@ func ReadChoice() string {
 }
 
 // TestIfValid 测试是否端口可用
-func TestIfValid(commandtype string, startNodeConn net.Conn, target string, nodeid string) {
-	SendPayloadViaRoute(startNodeConn, nodeid, "COMMAND", commandtype, " ", target, 0, utils.AdminId, AdminStatus.AESKey, false)
+func TestIfValid(commandType string, startNodeConn net.Conn, target string, nodeid string) {
+	SendPayloadViaRoute(startNodeConn, nodeid, "COMMAND", commandType, " ", target, 0, utils.AdminId, AdminStatus.AESKey, false)
 }
 
 // AnalysisInfo 拆分Info

@@ -15,7 +15,7 @@ func StartSocks() {
 }
 
 // HanleClientSocksConn 处理socks请求
-func HanleClientSocksConn(info chan string, socksUsername, socksPass string, checknum uint32, currentid string) {
+func HanleClientSocksConn(info chan string, socksUsername, socksPass string, checkNum uint32, currentid string) {
 	var (
 		server       net.Conn
 		serverflag   bool
@@ -30,7 +30,7 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 				return
 			}
 
-			method = CheckMethod(ConnToAdmin, []byte(data), socksUsername, socksPass, checknum, AgentStatus.AESKey, AgentStatus.Nodeid)
+			method = CheckMethod(ConnToAdmin, []byte(data), socksUsername, socksPass, checkNum, AgentStatus.AESKey, AgentStatus.Nodeid)
 
 			if method == "NONE" {
 				isAuthed = true
@@ -41,23 +41,23 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 				return
 			}
 
-			isAuthed = AuthClient(ConnToAdmin, []byte(data), socksUsername, socksPass, checknum, AgentStatus.AESKey, AgentStatus.Nodeid)
+			isAuthed = AuthClient(ConnToAdmin, []byte(data), socksUsername, socksPass, checkNum, AgentStatus.AESKey, AgentStatus.Nodeid)
 		} else if isAuthed == true && tcpconnected == false {
 			data, ok := <-info
 			if !ok {
 				return
 			}
 
-			server, tcpconnected, serverflag = ConfirmTarget(ConnToAdmin, []byte(data), checknum, AgentStatus.AESKey, AgentStatus.Nodeid)
+			server, tcpconnected, serverflag = ConfirmTarget(ConnToAdmin, []byte(data), checkNum, AgentStatus.AESKey, AgentStatus.Nodeid)
 			if serverflag == false {
 				return
 			}
 
 			AgentStuff.CurrentSocks5Conn.Lock() //这个 “concurrent map writes” 错误调了好久，死活没看出来，控制台日志贼长看不见错哪儿，重定向到文件之后想让他报错又tm不报错了（笑）
-			AgentStuff.CurrentSocks5Conn.Payload[checknum] = server
+			AgentStuff.CurrentSocks5Conn.Payload[checkNum] = server
 			AgentStuff.CurrentSocks5Conn.Unlock()
 		} else if isAuthed == true && tcpconnected == true && serverflag == true { //All done!
-			defer SendFin(checknum)
+			defer SendFin(checkNum)
 
 			go func() {
 				for {
@@ -68,7 +68,7 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 					_, err := server.Write([]byte(data))
 					if err != nil {
 						AgentStuff.SocksDataChanMap.RLock()
-						if _, ok := AgentStuff.SocksDataChanMap.Payload[checknum]; ok {
+						if _, ok := AgentStuff.SocksDataChanMap.Payload[checkNum]; ok {
 							AgentStuff.SocksDataChanMap.RUnlock()
 							continue
 						} else {
@@ -79,7 +79,7 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 				}
 			}()
 
-			err := Proxyhttp(ConnToAdmin, server, checknum, AgentStatus.AESKey, currentid)
+			err := Proxyhttp(ConnToAdmin, server, checkNum, AgentStatus.AESKey, currentid)
 
 			if err != nil {
 				return

@@ -17,7 +17,7 @@ import (
 /*-------------------------端口复用模式下节点主动连接功能代码--------------------------*/
 
 // StartNodeConnReuse 初始化时的连接
-func StartNodeConnReuse(monitor string, listenPort string, nodeID string, key []byte) (net.Conn, string, error) {
+func StartNodeConnReuse(monitor string, listenPort string, nodeid string, key []byte) (net.Conn, string, error) {
 	for {
 		controlConnToUpperNode, err := net.Dial("tcp", monitor)
 		if err != nil {
@@ -31,11 +31,11 @@ func StartNodeConnReuse(monitor string, listenPort string, nodeID string, key []
 			continue
 		}
 
-		utils.ConstructPayloadAndSend(controlConnToUpperNode, nodeID, "", "COMMAND", "STOWAWAYAGENT", " ", " ", 0, utils.AdminId, key, false)
+		utils.ConstructPayloadAndSend(controlConnToUpperNode, nodeid, "", "COMMAND", "STOWAWAYAGENT", " ", " ", 0, utils.AdminId, key, false)
 
 		utils.ExtractPayload(controlConnToUpperNode, key, utils.AdminId, true)
 
-		err = utils.ConstructPayloadAndSend(controlConnToUpperNode, nodeID, "", "COMMAND", "INIT", " ", listenPort, 0, utils.AdminId, key, false)
+		err = utils.ConstructPayloadAndSend(controlConnToUpperNode, nodeid, "", "COMMAND", "INIT", " ", listenPort, 0, utils.AdminId, key, false)
 		if err != nil {
 			log.Printf("[*]Error occured: %s", err)
 			return controlConnToUpperNode, "", err
@@ -45,8 +45,8 @@ func StartNodeConnReuse(monitor string, listenPort string, nodeID string, key []
 			command, _ := utils.ExtractPayload(controlConnToUpperNode, key, utils.AdminId, true)
 			switch command.Command {
 			case "ID":
-				nodeID = command.NodeId
-				return controlConnToUpperNode, nodeID, nil
+				nodeid = command.NodeId
+				return controlConnToUpperNode, nodeid, nil
 			}
 		}
 	}

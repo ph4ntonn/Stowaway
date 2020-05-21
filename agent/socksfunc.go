@@ -12,19 +12,19 @@ import (
 /*-------------------------Socks5功能代码-------------------------*/
 
 // CheckMethod 判断是否需要用户名/密码
-func CheckMethod(conntoupper net.Conn, buffer []byte, username string, secret string, clientid uint32, key []byte, currentid string) string {
+func CheckMethod(connToUpper net.Conn, buffer []byte, userName string, secret string, clientid uint32, key []byte, currentid string) string {
 	if buffer[0] == 0x05 {
-		if buffer[2] == 0x02 && (username != "") {
-			utils.ConstructPayloadAndSend(conntoupper, utils.AdminId, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x02}), clientid, currentid, key, false)
+		if buffer[2] == 0x02 && (userName != "") {
+			utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x02}), clientid, currentid, key, false)
 			return "PASSWORD"
-		} else if buffer[2] == 0x00 && (username == "" && secret == "") {
-			utils.ConstructPayloadAndSend(conntoupper, utils.AdminId, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x00}), clientid, currentid, key, false)
+		} else if buffer[2] == 0x00 && (userName == "" && secret == "") {
+			utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x00}), clientid, currentid, key, false)
 			return "NONE"
-		} else if buffer[2] == 0x00 && (username != "") {
-			utils.ConstructPayloadAndSend(conntoupper, utils.AdminId, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x02}), clientid, currentid, key, false)
+		} else if buffer[2] == 0x00 && (userName != "") {
+			utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x02}), clientid, currentid, key, false)
 			return "ILLEGAL"
-		} else if buffer[2] == 0x02 && (username == "") {
-			utils.ConstructPayloadAndSend(conntoupper, utils.AdminId, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x00}), clientid, currentid, key, false)
+		} else if buffer[2] == 0x02 && (userName == "") {
+			utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x00}), clientid, currentid, key, false)
 			return "ILLEGAL"
 		}
 	}
@@ -32,23 +32,23 @@ func CheckMethod(conntoupper net.Conn, buffer []byte, username string, secret st
 }
 
 // AuthClient 如果需要用户名/密码，验证用户合法性
-func AuthClient(conntoupper net.Conn, buffer []byte, username string, secret string, clientid uint32, key []byte, currentid string) bool {
+func AuthClient(connToUpper net.Conn, buffer []byte, userName string, secret string, clientid uint32, key []byte, currentid string) bool {
 	ulen := int(buffer[1])
 	slen := int(buffer[2+ulen])
 	clientname := string(buffer[2 : 2+ulen])
 	clientpass := string(buffer[3+ulen : 3+ulen+slen])
 
-	if clientname != username || clientpass != secret {
+	if clientname != userName || clientpass != secret {
 		log.Println("Illegal client!")
-		utils.ConstructPayloadAndSend(conntoupper, utils.AdminId, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x01, 0x01}), clientid, currentid, key, false)
+		utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x01, 0x01}), clientid, currentid, key, false)
 		return false
 	}
-	utils.ConstructPayloadAndSend(conntoupper, utils.AdminId, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x01, 0x00}), clientid, currentid, key, false)
+	utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x01, 0x00}), clientid, currentid, key, false)
 	return true
 }
 
 // ConfirmTarget 判断代理方式
-func ConfirmTarget(conntoupper net.Conn, buffer []byte, checknum uint32, key []byte, currentid string) (net.Conn, bool, bool) {
+func ConfirmTarget(connToUpper net.Conn, buffer []byte, checkNum uint32, key []byte, currentid string) (net.Conn, bool, bool) {
 	len := len(buffer)
 	connected := false
 	var server net.Conn
@@ -57,11 +57,11 @@ func ConfirmTarget(conntoupper net.Conn, buffer []byte, checknum uint32, key []b
 	if buffer[0] == 0x05 {
 		switch buffer[1] {
 		case 0x01:
-			server, connected, serverflag = TCPConnect(conntoupper, buffer, len, checknum, key, currentid)
+			server, connected, serverflag = TCPConnect(connToUpper, buffer, len, checkNum, key, currentid)
 		case 0x02:
-			connected = TCPBind(conntoupper, buffer, len, checknum, key)
+			connected = TCPBind(connToUpper, buffer, len, checkNum, key)
 		case 0x03:
-			connected = UDPAssociate(conntoupper, buffer, len, checknum, key)
+			connected = UDPAssociate(connToUpper, buffer, len, checkNum, key)
 		}
 	}
 
@@ -69,7 +69,7 @@ func ConfirmTarget(conntoupper net.Conn, buffer []byte, checknum uint32, key []b
 }
 
 // TCPConnect 如果是代理tcp
-func TCPConnect(conntoupper net.Conn, buffer []byte, len int, checknum uint32, key []byte, currentid string) (net.Conn, bool, bool) {
+func TCPConnect(connToUpper net.Conn, buffer []byte, len int, checkNum uint32, key []byte, currentid string) (net.Conn, bool, bool) {
 	host := ""
 	var server net.Conn
 
@@ -90,17 +90,17 @@ func TCPConnect(conntoupper net.Conn, buffer []byte, len int, checknum uint32, k
 	server, err := net.Dial("tcp", net.JoinHostPort(host, port))
 
 	if err != nil {
-		utils.ConstructPayloadAndSend(conntoupper, utils.AdminId, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}), checknum, currentid, key, false)
+		utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}), checkNum, currentid, key, false)
 		return server, false, false
 	}
 
-	utils.ConstructPayloadAndSend(conntoupper, utils.AdminId, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}), checknum, currentid, key, false)
+	utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}), checkNum, currentid, key, false)
 
 	return server, true, true
 }
 
 // Proxyhttp 转发流量
-func Proxyhttp(conntoupper net.Conn, server net.Conn, checknum uint32, key []byte, currentid string) error {
+func Proxyhttp(connToUpper net.Conn, server net.Conn, checkNum uint32, key []byte, currentid string) error {
 	serverbuffer := make([]byte, 20480)
 
 	for {
@@ -109,18 +109,18 @@ func Proxyhttp(conntoupper net.Conn, server net.Conn, checknum uint32, key []byt
 			server.Close()
 			return err
 		}
-		utils.ConstructPayloadAndSend(conntoupper, utils.AdminId, "", "DATA", "SOCKSDATARESP", " ", string(serverbuffer[:len]), checknum, currentid, key, false)
+		utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "SOCKSDATARESP", " ", string(serverbuffer[:len]), checkNum, currentid, key, false)
 	}
 }
 
 // TCPBind TCPBind方式
-func TCPBind(client net.Conn, buffer []byte, len int, checknum uint32, AESKey []byte) bool {
+func TCPBind(client net.Conn, buffer []byte, len int, checkNum uint32, AESKey []byte) bool {
 	fmt.Println("Not ready") //limited use, add to Todo
 	return false
 }
 
 // UDPAssociate UDPAssociate方式
-func UDPAssociate(client net.Conn, buffer []byte, len int, checknum uint32, AESKey []byte) bool {
+func UDPAssociate(client net.Conn, buffer []byte, len int, checkNum uint32, AESKey []byte) bool {
 	fmt.Println("Not ready") //limited use, add to Todo
 	return false
 }

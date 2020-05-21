@@ -25,7 +25,7 @@ func init() {
 /*-------------------------一般模式下初始化节点代码--------------------------*/
 
 // StartNodeConn 初始化一个节点连接操作
-func StartNodeConn(monitor string, listenPort string, nodeID string, key []byte) (net.Conn, string, error) {
+func StartNodeConn(monitor string, listenPort string, nodeid string, key []byte) (net.Conn, string, error) {
 	controlConnToUpperNode, err := net.Dial("tcp", monitor)
 	if err != nil {
 		log.Println("[*]Connection refused!")
@@ -38,11 +38,11 @@ func StartNodeConn(monitor string, listenPort string, nodeID string, key []byte)
 		return controlConnToUpperNode, "", err
 	}
 
-	utils.ConstructPayloadAndSend(controlConnToUpperNode, nodeID, "", "COMMAND", "STOWAWAYAGENT", " ", " ", 0, utils.AdminId, key, false)
+	utils.ConstructPayloadAndSend(controlConnToUpperNode, nodeid, "", "COMMAND", "STOWAWAYAGENT", " ", " ", 0, utils.AdminId, key, false)
 
 	utils.ExtractPayload(controlConnToUpperNode, key, utils.AdminId, true)
 
-	err = utils.ConstructPayloadAndSend(controlConnToUpperNode, nodeID, "", "COMMAND", "INIT", " ", listenPort, 0, utils.AdminId, key, false)
+	err = utils.ConstructPayloadAndSend(controlConnToUpperNode, nodeid, "", "COMMAND", "INIT", " ", listenPort, 0, utils.AdminId, key, false)
 	if err != nil {
 		log.Printf("[*]Error occured: %s", err)
 		return controlConnToUpperNode, "", err
@@ -52,14 +52,14 @@ func StartNodeConn(monitor string, listenPort string, nodeID string, key []byte)
 		command, _ := utils.ExtractPayload(controlConnToUpperNode, key, utils.AdminId, true)
 		switch command.Command {
 		case "ID":
-			nodeID = command.NodeId
-			return controlConnToUpperNode, nodeID, nil
+			nodeid = command.NodeId
+			return controlConnToUpperNode, nodeid, nil
 		}
 	}
 }
 
 // StartNodeListen 初始化节点监听操作
-func StartNodeListen(listenPort string, NodeId string, key []byte) {
+func StartNodeListen(listenPort string, nodeid string, key []byte) {
 	var NewNodeMessage []byte
 
 	if listenPort == "" { //如果没有port，直接退出
@@ -90,7 +90,7 @@ func StartNodeListen(listenPort string, NodeId string, key []byte) {
 			command, _ := utils.ExtractPayload(ConnToLowerNode, key, utils.AdminId, true)
 			switch command.Command {
 			case "STOWAWAYADMIN":
-				utils.ConstructPayloadAndSend(ConnToLowerNode, NodeId, "", "COMMAND", "INIT", " ", listenPort, 0, utils.AdminId, key, false)
+				utils.ConstructPayloadAndSend(ConnToLowerNode, nodeid, "", "COMMAND", "INIT", " ", listenPort, 0, utils.AdminId, key, false)
 			case "ID":
 				NodeStuff.ControlConnForLowerNodeChan <- ConnToLowerNode
 				NodeStuff.NewNodeMessageChan <- NewNodeMessage
@@ -99,13 +99,13 @@ func StartNodeListen(listenPort string, NodeId string, key []byte) {
 				NodeStuff.Adminconn <- ConnToLowerNode
 			case "STOWAWAYAGENT":
 				if !NodeStuff.Offline {
-					utils.ConstructPayloadAndSend(ConnToLowerNode, NodeId, "", "COMMAND", "CONFIRM", " ", " ", 0, NodeId, key, false)
+					utils.ConstructPayloadAndSend(ConnToLowerNode, nodeid, "", "COMMAND", "CONFIRM", " ", " ", 0, nodeid, key, false)
 				} else {
-					utils.ConstructPayloadAndSend(ConnToLowerNode, NodeId, "", "COMMAND", "REONLINE", " ", listenPort, 0, NodeId, key, false)
+					utils.ConstructPayloadAndSend(ConnToLowerNode, nodeid, "", "COMMAND", "REONLINE", " ", listenPort, 0, nodeid, key, false)
 				}
 			case "INIT":
 				//告知admin新节点消息
-				NewNodeMessage, _ = utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NEW", " ", ConnToLowerNode.RemoteAddr().String(), 0, NodeId, key, false)
+				NewNodeMessage, _ = utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NEW", " ", ConnToLowerNode.RemoteAddr().String(), 0, nodeid, key, false)
 
 				NodeInfo.LowerNode.Payload[utils.AdminId] = ConnToLowerNode //将这个socket用0号位暂存，等待admin分配完id后再将其放入对应的位置
 				NodeStuff.ControlConnForLowerNodeChan <- ConnToLowerNode

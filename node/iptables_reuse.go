@@ -22,12 +22,12 @@ const STOP_FORWARDING = "stowawayleaving"
 /*-------------------------Iptable复用模式功能代码--------------------------*/
 
 // AcceptConnFromUpperNodeIPTableReuse 在iptable reuse状态下接收上一级节点的连接
-func AcceptConnFromUpperNodeIPTableReuse(report, localport string, nodeid string, key []byte) (net.Conn, string) {
-	listenAddr := fmt.Sprintf("0.0.0.0:%s", localport)
+func AcceptConnFromUpperNodeIPTableReuse(report, localPort string, nodeid string, key []byte) (net.Conn, string) {
+	listenAddr := fmt.Sprintf("0.0.0.0:%s", localPort)
 	WaitingForConn, err := net.Listen("tcp", listenAddr)
 
 	if err != nil {
-		log.Fatalf("[*]Cannot reuse port %s", localport)
+		log.Fatalf("[*]Cannot reuse port %s", localPort)
 	}
 	for {
 		Comingconn, err := WaitingForConn.Accept()
@@ -56,18 +56,18 @@ func AcceptConnFromUpperNodeIPTableReuse(report, localport string, nodeid string
 }
 
 // StartNodeListenIPTableReuse 初始化节点监听操作
-func StartNodeListenIPTableReuse(report, localport string, NodeId string, key []byte) {
+func StartNodeListenIPTableReuse(report, localPort string, nodeid string, key []byte) {
 	var NewNodeMessage []byte
 
-	if localport == "" { //如果没有port，直接退出
+	if localPort == "" { //如果没有port，直接退出
 		return
 	}
 
-	listenAddr := fmt.Sprintf("0.0.0.0:%s", localport)
+	listenAddr := fmt.Sprintf("0.0.0.0:%s", localPort)
 	WaitingForLowerNode, err := net.Listen("tcp", listenAddr)
 
 	if err != nil {
-		log.Fatalf("[*]Cannot listen on port %s", localport)
+		log.Fatalf("[*]Cannot listen on port %s", localPort)
 	}
 
 	for {
@@ -86,7 +86,7 @@ func StartNodeListenIPTableReuse(report, localport string, NodeId string, key []
 			command, _ := utils.ExtractPayload(ConnToLowerNode, key, utils.AdminId, true)
 			switch command.Command {
 			case "STOWAWAYADMIN":
-				utils.ConstructPayloadAndSend(ConnToLowerNode, NodeId, "", "COMMAND", "INIT", " ", report, 0, utils.AdminId, key, false)
+				utils.ConstructPayloadAndSend(ConnToLowerNode, nodeid, "", "COMMAND", "INIT", " ", report, 0, utils.AdminId, key, false)
 			case "ID":
 				NodeStuff.ControlConnForLowerNodeChan <- ConnToLowerNode
 				NodeStuff.NewNodeMessageChan <- NewNodeMessage
@@ -95,12 +95,12 @@ func StartNodeListenIPTableReuse(report, localport string, NodeId string, key []
 				NodeStuff.Adminconn <- ConnToLowerNode
 			case "STOWAWAYAGENT":
 				if !NodeStuff.Offline {
-					utils.ConstructPayloadAndSend(ConnToLowerNode, NodeId, "", "COMMAND", "CONFIRM", " ", " ", 0, NodeId, key, false)
+					utils.ConstructPayloadAndSend(ConnToLowerNode, nodeid, "", "COMMAND", "CONFIRM", " ", " ", 0, nodeid, key, false)
 				} else {
-					utils.ConstructPayloadAndSend(ConnToLowerNode, NodeId, "", "COMMAND", "REONLINE", " ", report, 0, NodeId, key, false)
+					utils.ConstructPayloadAndSend(ConnToLowerNode, nodeid, "", "COMMAND", "REONLINE", " ", report, 0, nodeid, key, false)
 				}
 			case "INIT":
-				NewNodeMessage, _ = utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NEW", " ", ConnToLowerNode.RemoteAddr().String(), 0, NodeId, key, false)
+				NewNodeMessage, _ = utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NEW", " ", ConnToLowerNode.RemoteAddr().String(), 0, nodeid, key, false)
 				NodeInfo.LowerNode.Payload[utils.AdminId] = ConnToLowerNode
 				NodeStuff.ControlConnForLowerNodeChan <- ConnToLowerNode
 				NodeStuff.NewNodeMessageChan <- NewNodeMessage

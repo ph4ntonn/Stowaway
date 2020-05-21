@@ -15,7 +15,7 @@ import (
 /*-------------------------SO_REUSEPORT,SO_REUSEADDR复用模式功能代码--------------------------*/
 
 // StartNodeListenReuse 初始化节点监听操作
-func StartNodeListenReuse(rehost, report string, NodeID string, key []byte) {
+func StartNodeListenReuse(rehost, report string, nodeid string, key []byte) {
 	var NewNodeMessage []byte
 
 	if report == "" { //如果没有port，直接退出
@@ -45,7 +45,7 @@ func StartNodeListenReuse(rehost, report string, NodeID string, key []byte) {
 			command, _ := utils.ExtractPayload(ConnToLowerNode, key, utils.AdminId, true)
 			switch command.Command {
 			case "STOWAWAYADMIN":
-				utils.ConstructPayloadAndSend(ConnToLowerNode, NodeID, "", "COMMAND", "INIT", " ", report, 0, utils.AdminId, key, false)
+				utils.ConstructPayloadAndSend(ConnToLowerNode, nodeid, "", "COMMAND", "INIT", " ", report, 0, utils.AdminId, key, false)
 			case "ID":
 				NodeStuff.ControlConnForLowerNodeChan <- ConnToLowerNode
 				NodeStuff.NewNodeMessageChan <- NewNodeMessage
@@ -54,13 +54,13 @@ func StartNodeListenReuse(rehost, report string, NodeID string, key []byte) {
 				NodeStuff.Adminconn <- ConnToLowerNode
 			case "STOWAWAYAGENT":
 				if !NodeStuff.Offline {
-					utils.ConstructPayloadAndSend(ConnToLowerNode, NodeID, "", "COMMAND", "CONFIRM", " ", " ", 0, NodeID, key, false)
+					utils.ConstructPayloadAndSend(ConnToLowerNode, nodeid, "", "COMMAND", "CONFIRM", " ", " ", 0, nodeid, key, false)
 				} else {
-					utils.ConstructPayloadAndSend(ConnToLowerNode, NodeID, "", "COMMAND", "REONLINE", " ", report, 0, NodeID, key, false)
+					utils.ConstructPayloadAndSend(ConnToLowerNode, nodeid, "", "COMMAND", "REONLINE", " ", report, 0, nodeid, key, false)
 				}
 			case "INIT":
 				//告知admin新节点消息
-				NewNodeMessage, _ = utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NEW", " ", ConnToLowerNode.RemoteAddr().String(), 0, NodeID, key, false)
+				NewNodeMessage, _ = utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NEW", " ", ConnToLowerNode.RemoteAddr().String(), 0, nodeid, key, false)
 				NodeInfo.LowerNode.Payload[utils.AdminId] = ConnToLowerNode //将这个socket用0号位暂存，等待admin分配完id后再将其放入对应的位置
 				NodeStuff.ControlConnForLowerNodeChan <- ConnToLowerNode
 				NodeStuff.NewNodeMessageChan <- NewNodeMessage //被连接后不终止监听，继续等待可能的后续节点连接，以此组成树状结构

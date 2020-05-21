@@ -22,19 +22,19 @@ func init() {
 /*-------------------------节点拓扑相关代码--------------------------*/
 
 // AddNodeToTopology 将节点加入拓扑
-func AddNodeToTopology(nodeid string, uppernodeid string) {
+func AddNodeToTopology(nodeid, upperNodeId string) {
 	Topology.Lock()
 	defer Topology.Unlock()
 
 	if _, ok := Topology.AllNode[nodeid]; ok {
-		Topology.AllNode[nodeid].Uppernode = uppernodeid
+		Topology.AllNode[nodeid].Uppernode = upperNodeId
 	} else {
 		tempnode := utils.NewNode()
 		Topology.AllNode[nodeid] = tempnode
-		Topology.AllNode[nodeid].Uppernode = uppernodeid
+		Topology.AllNode[nodeid].Uppernode = upperNodeId
 	}
-	if uppernodeid != utils.AdminId {
-		Topology.AllNode[uppernodeid].Lowernode = append(Topology.AllNode[uppernodeid].Lowernode, nodeid)
+	if upperNodeId != utils.AdminId {
+		Topology.AllNode[upperNodeId].Lowernode = append(Topology.AllNode[upperNodeId].Lowernode, nodeid)
 	}
 }
 
@@ -227,28 +227,28 @@ func ShowTree() {
 }
 
 // AddNote 为node添加note
-func AddNote(startNodeConn net.Conn, data []string, nodeID string) bool {
+func AddNote(startNodeConn net.Conn, data []string, nodeid string) bool {
 	var info string
 
 	for _, i := range data[1:len(data)] {
 		info = info + " " + i
 	}
 
-	if _, ok := AdminStuff.NodeStatus.Nodenote[nodeID]; ok {
-		AdminStuff.NodeStatus.Nodenote[nodeID] = info
+	if _, ok := AdminStuff.NodeStatus.Nodenote[nodeid]; ok {
+		AdminStuff.NodeStatus.Nodenote[nodeid] = info
 		//发送备忘至节点储存，防止admin下线后丢失备忘
-		SendPayloadViaRoute(startNodeConn, nodeID, "COMMAND", "YOURINFO", " ", info, 0, utils.AdminId, AdminStatus.AESKey, false)
+		SendPayloadViaRoute(startNodeConn, nodeid, "COMMAND", "YOURINFO", " ", info, 0, utils.AdminId, AdminStatus.AESKey, false)
 		return true
 	}
 	return false
 }
 
 // DelNote 为node删除note
-func DelNote(startNodeConn net.Conn, nodeID string) bool {
-	if _, ok := AdminStuff.NodeStatus.Nodenote[nodeID]; ok {
-		AdminStuff.NodeStatus.Nodenote[nodeID] = ""
+func DelNote(startNodeConn net.Conn, nodeid string) bool {
+	if _, ok := AdminStuff.NodeStatus.Nodenote[nodeid]; ok {
+		AdminStuff.NodeStatus.Nodenote[nodeid] = ""
 		//将节点储存的备忘同时清空
-		SendPayloadViaRoute(startNodeConn, nodeID, "COMMAND", "YOURINFO", " ", "", 0, utils.AdminId, AdminStatus.AESKey, false)
+		SendPayloadViaRoute(startNodeConn, nodeid, "COMMAND", "YOURINFO", " ", "", 0, utils.AdminId, AdminStatus.AESKey, false)
 		return true
 	}
 	return false

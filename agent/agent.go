@@ -15,8 +15,10 @@ var AgentStatus *utils.AgentStatus
 var ConnToAdmin net.Conn
 
 func init() {
-	AgentStatus = utils.NewAgentStatus()
-	AgentStuff = utils.NewAgentStuff()
+	AgentStatus = new(utils.AgentStatus)
+	AgentStuff = new(utils.AgentStuff)
+	AgentStatus.NewAgentStatus()
+	AgentStuff.NewAgentStuff()
 }
 
 // NewAgent 启动agent
@@ -91,11 +93,11 @@ func StartNodeInit(monitor, listenPort, reConn string, passive bool) {
 }
 
 // SimpleNodeInit 普通的node节点
-func SimpleNodeInit(monitor, listenPort string, rhostreuse bool) {
+func SimpleNodeInit(monitor, listenPort string, rhostReuse bool) {
 	var err error
 	AgentStatus.Nodeid = utils.AdminId
 
-	if !rhostreuse { //连接的节点是否是在reuseport？
+	if !rhostReuse { //连接的节点是否是在reuseport？
 		ConnToAdmin, AgentStatus.Nodeid, err = node.StartNodeConn(monitor, listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
 	} else {
 		ConnToAdmin, AgentStatus.Nodeid, err = node.StartNodeConnReuse(monitor, listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
@@ -185,17 +187,17 @@ func SimpleNodeReversemodeInit(monitor, listenPort string) {
 }
 
 // StartNodeReuseInit reuseport下的startnode节点
-func StartNodeReuseInit(reusehost, reuseport, localport string, method int) {
+func StartNodeReuseInit(reuseHost, reusePort, localPort string, method int) {
 	AgentStatus.Nodeid = utils.StartNodeId
 
 	if method == 1 {
-		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeReuse(reusehost, reuseport, AgentStatus.Nodeid, AgentStatus.AESKey)
+		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeReuse(reuseHost, reusePort, AgentStatus.Nodeid, AgentStatus.AESKey)
 	} else {
-		err := node.SetPortReuseRules(localport, reuseport)
+		err := node.SetPortReuseRules(localPort, reusePort)
 		if err != nil {
 			log.Fatal("[*]Cannot set the iptable rules!")
 		}
-		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeIPTableReuse(reuseport, localport, AgentStatus.Nodeid, AgentStatus.AESKey)
+		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeIPTableReuse(reusePort, localPort, AgentStatus.Nodeid, AgentStatus.AESKey)
 	}
 
 	go SendInfo(AgentStatus.Nodeid)
@@ -203,9 +205,9 @@ func StartNodeReuseInit(reusehost, reuseport, localport string, method int) {
 	go HandleStartNodeConn(&ConnToAdmin, "", "", "", true, AgentStatus.Nodeid)
 
 	if method == 1 {
-		go node.StartNodeListenReuse(reusehost, reuseport, AgentStatus.Nodeid, AgentStatus.AESKey)
+		go node.StartNodeListenReuse(reuseHost, reusePort, AgentStatus.Nodeid, AgentStatus.AESKey)
 	} else {
-		go node.StartNodeListenIPTableReuse(reuseport, localport, AgentStatus.Nodeid, AgentStatus.AESKey)
+		go node.StartNodeListenIPTableReuse(reusePort, localPort, AgentStatus.Nodeid, AgentStatus.AESKey)
 	}
 
 	go PrepareForReOnlineNode()
@@ -231,17 +233,17 @@ func StartNodeReuseInit(reusehost, reuseport, localport string, method int) {
 }
 
 // SimpleNodeReuseInit reuseport下的普通节点
-func SimpleNodeReuseInit(reusehost, reuseport, localport string, method int) {
+func SimpleNodeReuseInit(reuseHost, reusePort, localPort string, method int) {
 	AgentStatus.Nodeid = utils.AdminId
 
 	if method == 1 {
-		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeReuse(reusehost, reuseport, AgentStatus.Nodeid, AgentStatus.AESKey)
+		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeReuse(reuseHost, reusePort, AgentStatus.Nodeid, AgentStatus.AESKey)
 	} else {
-		err := node.SetPortReuseRules(localport, reuseport)
+		err := node.SetPortReuseRules(localPort, reusePort)
 		if err != nil {
 			log.Fatal("[*]Cannot set the iptable rules!")
 		}
-		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeIPTableReuse(reuseport, localport, AgentStatus.Nodeid, AgentStatus.AESKey)
+		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeIPTableReuse(reusePort, localPort, AgentStatus.Nodeid, AgentStatus.AESKey)
 	}
 
 	go SendInfo(AgentStatus.Nodeid)
@@ -249,9 +251,9 @@ func SimpleNodeReuseInit(reusehost, reuseport, localport string, method int) {
 	go HandleSimpleNodeConn(&ConnToAdmin, AgentStatus.Nodeid)
 
 	if method == 1 {
-		go node.StartNodeListenReuse(reusehost, reuseport, AgentStatus.Nodeid, AgentStatus.AESKey)
+		go node.StartNodeListenReuse(reuseHost, reusePort, AgentStatus.Nodeid, AgentStatus.AESKey)
 	} else {
-		go node.StartNodeListenIPTableReuse(reuseport, localport, AgentStatus.Nodeid, AgentStatus.AESKey)
+		go node.StartNodeListenIPTableReuse(reusePort, localPort, AgentStatus.Nodeid, AgentStatus.AESKey)
 	}
 
 	go PrepareForReOnlineNode()

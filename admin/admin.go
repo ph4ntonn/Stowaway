@@ -16,7 +16,8 @@ import (
 var AdminStatus *utils.AdminStatus
 
 func init() {
-	AdminStatus = utils.NewAdminStatus()
+	AdminStatus = new(utils.AdminStatus)
+	AdminStatus.NewAdminStatus()
 }
 
 // NewAdmin 启动admin
@@ -75,14 +76,14 @@ func StartListen(listenPort string, adminCommandChan chan []string) {
 }
 
 // ConnectToStartNode 主动连接startnode端代码
-func ConnectToStartNode(startnodeaddr string, rhostreuse bool, adminCommandChan chan []string) {
+func ConnectToStartNode(startNodeAddr string, rhostReuse bool, adminCommandChan chan []string) {
 	for {
-		startNodeConn, err := net.Dial("tcp", startnodeaddr)
+		startNodeConn, err := net.Dial("tcp", startNodeAddr)
 		if err != nil {
 			log.Fatal("[*]Connection refused!")
 		}
 
-		if rhostreuse { //如果startnode在reuse状态下
+		if rhostReuse { //如果startnode在reuse状态下
 			err = node.IfValid(startNodeConn)
 			if err != nil {
 				startNodeConn.Close()
@@ -132,6 +133,7 @@ func HandleInitControlConn(startNodeConn net.Conn, adminCommandChan chan []strin
 // HandleStartConn 处理与startnode的信道
 func HandleStartConn(startNodeConn net.Conn, adminCommandChan chan []string) {
 	fileDataMap := utils.NewIntStrMap()
+	cannotRead := make(chan bool, 1)
 
 	for {
 		nodeResp, err := utils.ExtractPayload(startNodeConn, AdminStatus.AESKey, utils.AdminId, true)
@@ -214,7 +216,7 @@ func HandleStartConn(startNodeConn net.Conn, adminCommandChan chan []string) {
 					SendPayloadViaRoute(startNodeConn, AdminStatus.HandleNode, "COMMAND", "CREATEFAIL", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 				} else {
 					SendPayloadViaRoute(startNodeConn, AdminStatus.HandleNode, "COMMAND", "NAMECONFIRM", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
-					go share.ReceiveFile(Route.Route[AdminStatus.HandleNode], &startNodeConn, fileDataMap, AdminStatus.CannotRead, UploadFile, AdminStatus.AESKey, true, utils.AdminId)
+					go share.ReceiveFile(Route.Route[AdminStatus.HandleNode], &startNodeConn, fileDataMap, cannotRead, UploadFile, AdminStatus.AESKey, true, utils.AdminId)
 				}
 			case "FILESIZE":
 				share.File.FileSize, _ = strconv.ParseInt(nodeResp.Info, 10, 64)
@@ -232,7 +234,7 @@ func HandleStartConn(startNodeConn net.Conn, adminCommandChan chan []string) {
 				fmt.Printf("[*]File %s not exist!\n", nodeResp.Info)
 			case "CANNOTREAD":
 				fmt.Printf("[*]File %s cannot be read!\n", nodeResp.Info)
-				AdminStatus.CannotRead <- true
+				cannotRead <- true
 				share.File.ReceiveFileSliceNum <- false
 				os.Remove(nodeResp.Info)
 			case "CANNOTUPLOAD":
