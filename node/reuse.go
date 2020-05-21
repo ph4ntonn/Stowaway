@@ -78,10 +78,10 @@ func ConnectNextNodeReuse(target string, nodeid string, key []byte) bool {
 			switch command.Command {
 			case "INIT":
 				//类似与上面
-				NewNodeMessage, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NEW", " ", controlConnToNextNode.RemoteAddr().String(), 0, nodeid, key, false)
+				newNodeMessage, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NEW", " ", controlConnToNextNode.RemoteAddr().String(), 0, nodeid, key, false)
 				NodeInfo.LowerNode.Payload[utils.AdminId] = controlConnToNextNode
 				NodeStuff.ControlConnForLowerNodeChan <- controlConnToNextNode
-				NodeStuff.NewNodeMessageChan <- NewNodeMessage
+				NodeStuff.NewNodeMessageChan <- newNodeMessage
 				NodeStuff.IsAdmin <- false
 				return true
 			case "REONLINE":
@@ -126,7 +126,7 @@ func CheckValid(conn net.Conn, reuse bool, report string) error {
 	message := make([]byte, 8)
 	count, err := io.ReadFull(conn, message)
 	//防止如果复用的是mysql的情况，因为mysql是服务端先发送握手初始化消息
-	if timeouterr, ok := err.(net.Error); ok && timeouterr.Timeout() {
+	if timeoutErr, ok := err.(net.Error); ok && timeoutErr.Timeout() {
 		if reuse {
 			go ProxyStream(conn, message[:count], report)
 		}

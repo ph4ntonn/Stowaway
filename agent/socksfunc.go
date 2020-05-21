@@ -12,18 +12,18 @@ import (
 /*-------------------------Socks5功能代码-------------------------*/
 
 // CheckMethod 判断是否需要用户名/密码
-func CheckMethod(connToUpper net.Conn, buffer []byte, userName string, secret string, clientid uint32, key []byte, currentid string) string {
+func CheckMethod(connToUpper net.Conn, buffer []byte, username string, secret string, clientid uint32, key []byte, currentid string) string {
 	if buffer[0] == 0x05 {
-		if buffer[2] == 0x02 && (userName != "") {
+		if buffer[2] == 0x02 && (username != "") {
 			utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x02}), clientid, currentid, key, false)
 			return "PASSWORD"
-		} else if buffer[2] == 0x00 && (userName == "" && secret == "") {
+		} else if buffer[2] == 0x00 && (username == "" && secret == "") {
 			utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x00}), clientid, currentid, key, false)
 			return "NONE"
-		} else if buffer[2] == 0x00 && (userName != "") {
+		} else if buffer[2] == 0x00 && (username != "") {
 			utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x02}), clientid, currentid, key, false)
 			return "ILLEGAL"
-		} else if buffer[2] == 0x02 && (userName == "") {
+		} else if buffer[2] == 0x02 && (username == "") {
 			utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x05, 0x00}), clientid, currentid, key, false)
 			return "ILLEGAL"
 		}
@@ -32,13 +32,13 @@ func CheckMethod(connToUpper net.Conn, buffer []byte, userName string, secret st
 }
 
 // AuthClient 如果需要用户名/密码，验证用户合法性
-func AuthClient(connToUpper net.Conn, buffer []byte, userName string, secret string, clientid uint32, key []byte, currentid string) bool {
+func AuthClient(connToUpper net.Conn, buffer []byte, username string, secret string, clientid uint32, key []byte, currentid string) bool {
 	ulen := int(buffer[1])
 	slen := int(buffer[2+ulen])
-	clientname := string(buffer[2 : 2+ulen])
-	clientpass := string(buffer[3+ulen : 3+ulen+slen])
+	clientName := string(buffer[2 : 2+ulen])
+	clientPass := string(buffer[3+ulen : 3+ulen+slen])
 
-	if clientname != userName || clientpass != secret {
+	if clientName != username || clientPass != secret {
 		log.Println("Illegal client!")
 		utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "SOCKSDATARESP", " ", string([]byte{0x01, 0x01}), clientid, currentid, key, false)
 		return false
@@ -52,12 +52,12 @@ func ConfirmTarget(connToUpper net.Conn, buffer []byte, checkNum uint32, key []b
 	len := len(buffer)
 	connected := false
 	var server net.Conn
-	var serverflag bool
+	var serverFlag bool
 
 	if buffer[0] == 0x05 {
 		switch buffer[1] {
 		case 0x01:
-			server, connected, serverflag = TCPConnect(connToUpper, buffer, len, checkNum, key, currentid)
+			server, connected, serverFlag = TCPConnect(connToUpper, buffer, len, checkNum, key, currentid)
 		case 0x02:
 			connected = TCPBind(connToUpper, buffer, len, checkNum, key)
 		case 0x03:
@@ -65,7 +65,7 @@ func ConfirmTarget(connToUpper net.Conn, buffer []byte, checkNum uint32, key []b
 		}
 	}
 
-	return server, connected, serverflag
+	return server, connected, serverFlag
 }
 
 // TCPConnect 如果是代理tcp
@@ -101,15 +101,15 @@ func TCPConnect(connToUpper net.Conn, buffer []byte, len int, checkNum uint32, k
 
 // Proxyhttp 转发流量
 func Proxyhttp(connToUpper net.Conn, server net.Conn, checkNum uint32, key []byte, currentid string) error {
-	serverbuffer := make([]byte, 20480)
+	serverBuffer := make([]byte, 20480)
 
 	for {
-		len, err := server.Read(serverbuffer)
+		len, err := server.Read(serverBuffer)
 		if err != nil {
 			server.Close()
 			return err
 		}
-		utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "SOCKSDATARESP", " ", string(serverbuffer[:len]), checkNum, currentid, key, false)
+		utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "SOCKSDATARESP", " ", string(serverBuffer[:len]), checkNum, currentid, key, false)
 	}
 }
 

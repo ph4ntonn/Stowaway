@@ -25,7 +25,7 @@ func init() {
 
 // UploadFile admin || agent上传文件
 func UploadFile(route, filename string, controlConn *net.Conn, nodeid string, getName chan bool, AESKey []byte, currentid string, notAgent bool) {
-	var slicenum int = 0
+	var sliceNum int = 0
 
 	info, err := os.Stat(filename)
 	if err != nil {
@@ -80,9 +80,9 @@ func UploadFile(route, filename string, controlConn *net.Conn, nodeid string, ge
 				return
 			}
 
-			utils.ConstructPayloadAndSend(*controlConn, nodeid, route, "DATA", "FILEDATA", strconv.Itoa(slicenum), string(buff[:n]), 0, currentid, AESKey, false)
+			utils.ConstructPayloadAndSend(*controlConn, nodeid, route, "DATA", "FILEDATA", strconv.Itoa(sliceNum), string(buff[:n]), 0, currentid, AESKey, false)
 			//文件封包id加一
-			slicenum++
+			sliceNum++
 
 			if notAgent {
 				Bar.Add64(int64(n))

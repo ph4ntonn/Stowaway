@@ -384,7 +384,7 @@ func HandleSSHToNode(startNodeControlConn net.Conn, nodeid string) {
 
 	log.Println("[*]Waiting for response,please be patient")
 
-	if conrinueornot := <-AdminStatus.SSHSuccess; conrinueornot {
+	if continueOrNot := <-AdminStatus.SSHSuccess; continueOrNot {
 		fmt.Print("(ssh mode)>>>")
 		for {
 			command, err := inputReader.ReadString('\n')

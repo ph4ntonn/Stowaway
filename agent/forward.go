@@ -29,8 +29,8 @@ func TryForward(target string, num uint32) {
 		AgentStuff.ForwardConnMap.Payload[num] = forwardConn
 		AgentStuff.ForwardConnMap.Unlock()
 	} else {
-		respdata, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "FORWARDTIMEOUT", " ", " ", num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
-		AgentStuff.ProxyChan.ProxyChanToUpperNode <- respdata
+		respData, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "FORWARDTIMEOUT", " ", " ", num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+		AgentStuff.ProxyChan.ProxyChanToUpperNode <- respData
 		return
 	}
 }
@@ -51,16 +51,16 @@ func HandleForward(forwardDataChan chan string, forwardNum uint32) {
 	}()
 
 	go func() {
-		serverbuffer := make([]byte, 20480)
+		serverBuffer := make([]byte, 20480)
 		for {
-			len, err := forwardConn.Read(serverbuffer)
+			len, err := forwardConn.Read(serverBuffer)
 			if err != nil {
-				respdata, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "FORWARDOFFLINE", " ", " ", forwardNum, AgentStatus.Nodeid, AgentStatus.AESKey, false)
-				AgentStuff.ProxyChan.ProxyChanToUpperNode <- respdata
+				respData, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "FORWARDOFFLINE", " ", " ", forwardNum, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+				AgentStuff.ProxyChan.ProxyChanToUpperNode <- respData
 				return
 			}
-			respdata, _ := utils.ConstructPayload(utils.AdminId, "", "DATA", "FORWARDDATARESP", " ", string(serverbuffer[:len]), forwardNum, AgentStatus.Nodeid, AgentStatus.AESKey, false)
-			AgentStuff.ProxyChan.ProxyChanToUpperNode <- respdata
+			respData, _ := utils.ConstructPayload(utils.AdminId, "", "DATA", "FORWARDDATARESP", " ", string(serverBuffer[:len]), forwardNum, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+			AgentStuff.ProxyChan.ProxyChanToUpperNode <- respData
 		}
 	}()
 }

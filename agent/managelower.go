@@ -52,9 +52,9 @@ func HandleConnFromLowerNode(connForLowerNode net.Conn, currentid, lowerid strin
 					continue
 				}
 			case "HEARTBEAT":
-				hbcommpack, _ := utils.ConstructPayload(command.CurrentId, "", "COMMAND", "KEEPALIVE", " ", " ", 0, currentid, AgentStatus.AESKey, false)
+				hbCommPack, _ := utils.ConstructPayload(command.CurrentId, "", "COMMAND", "KEEPALIVE", " ", " ", 0, currentid, AgentStatus.AESKey, false)
 				passToLowerData := utils.NewPassToLowerNodeData()
-				passToLowerData.Data = hbcommpack
+				passToLowerData.Data = hbCommPack
 				passToLowerData.Route = command.CurrentId
 				AgentStuff.ProxyChan.ProxyChanToLowerNode <- passToLowerData
 				continue

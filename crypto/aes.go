@@ -9,13 +9,13 @@ import (
 
 // KeyPadding 补齐密钥长度至32字节
 func KeyPadding(key []byte) ([]byte, error) {
-	keylength := float32(len(key))
-	if keylength/8 >= 4 {
+	keyLength := float32(len(key))
+	if keyLength/8 >= 4 {
 		return nil, errors.New("Key too long! Should shorter than 32 bytes")
 	}
 	padding := 32 - len(key)
-	paddtext := bytes.Repeat([]byte{byte(0)}, padding)
-	return append(key, paddtext...), nil
+	padText := bytes.Repeat([]byte{byte(0)}, padding)
+	return append(key, padText...), nil
 }
 
 // AESDecrypt 解密
@@ -56,6 +56,6 @@ func PKCS7Padding(origData []byte, blockSize int) []byte {
 	//计算需要补几位数
 	padding := blockSize - len(origData)%blockSize
 	//在切片后面追加char数量的byte(char)
-	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
-	return append(origData, padtext...)
+	padText := bytes.Repeat([]byte{byte(padding)}, padding)
+	return append(origData, padText...)
 }

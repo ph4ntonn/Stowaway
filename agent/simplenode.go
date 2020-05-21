@@ -70,9 +70,9 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, nodeid string) {
 						stdin.Write([]byte(command.Info))
 					}
 				case "SOCKS":
-					socksinfo := strings.Split(command.Info, ":::")
-					AgentStuff.SocksInfo.SocksUsername = socksinfo[1]
-					AgentStuff.SocksInfo.SocksPass = socksinfo[2]
+					socksInfo := strings.Split(command.Info, ":::")
+					AgentStuff.SocksInfo.SocksUsername = socksInfo[1]
+					AgentStuff.SocksInfo.SocksPass = socksInfo[2]
 					StartSocks()
 				case "SOCKSOFF":
 				case "SSH":
@@ -108,14 +108,14 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, nodeid string) {
 						}
 					}()
 				case "FILENAME":
-					UploadFile, err := os.Create(command.Info)
+					uploadFile, err := os.Create(command.Info)
 					if err != nil {
 						respComm, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "CREATEFAIL", " ", " ", 0, nodeid, AgentStatus.AESKey, false)
 						AgentStuff.ProxyChan.ProxyChanToUpperNode <- respComm
 					} else {
 						respComm, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NAMECONFIRM", " ", " ", 0, nodeid, AgentStatus.AESKey, false)
 						AgentStuff.ProxyChan.ProxyChanToUpperNode <- respComm
-						go share.ReceiveFile("", connToUpperNode, fileDataMap, cannotRead, UploadFile, AgentStatus.AESKey, false, nodeid)
+						go share.ReceiveFile("", connToUpperNode, fileDataMap, cannotRead, uploadFile, AgentStatus.AESKey, false, nodeid)
 					}
 				case "FILESIZE":
 					share.File.FileSize, _ = strconv.ParseInt(command.Info, 10, 64)
@@ -252,9 +252,9 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, nodeid string) {
 					}
 					AgentStuff.SocksDataChanMap.Unlock()
 				case "FILEDATA": //接收文件内容
-					slicenum, _ := strconv.Atoi(command.FileSliceNum)
+					sliceNum, _ := strconv.Atoi(command.FileSliceNum)
 					fileDataMap.Lock()
-					fileDataMap.Payload[slicenum] = command.Info
+					fileDataMap.Payload[sliceNum] = command.Info
 					fileDataMap.Unlock()
 				case "FORWARDDATA":
 					AgentStuff.ForwardConnMap.RLock()

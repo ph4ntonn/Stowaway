@@ -29,8 +29,8 @@ func NewAdmin(c *utils.AdminOptions) {
 
 	AdminStatus.AESKey = []byte(c.Secret)
 	listenPort := c.Listen
-	startnodeaddr := c.Connect
-	rhostreuse := c.Rhostreuse
+	startNodeAddr := c.Connect
+	rhostReuse := c.Rhostreuse
 
 	Banner()
 
@@ -40,10 +40,10 @@ func NewAdmin(c *utils.AdminOptions) {
 		log.Println("[*]Now Connection is maintianed without any encryption!")
 	}
 
-	if startnodeaddr == "" {
+	if startNodeAddr == "" {
 		go StartListen(listenPort, adminCommandChan)
 	} else {
-		ConnectToStartNode(startnodeaddr, rhostreuse, adminCommandChan)
+		ConnectToStartNode(startNodeAddr, rhostReuse, adminCommandChan)
 	}
 
 	go AddToChain()
@@ -211,12 +211,12 @@ func HandleStartConn(startNodeConn net.Conn, adminCommandChan chan []string) {
 			case "CREATEFAIL":
 				AdminStatus.GetName <- false
 			case "FILENAME":
-				UploadFile, err := os.Create(nodeResp.Info)
+				uploadFile, err := os.Create(nodeResp.Info)
 				if err != nil {
 					SendPayloadViaRoute(startNodeConn, AdminStatus.HandleNode, "COMMAND", "CREATEFAIL", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 				} else {
 					SendPayloadViaRoute(startNodeConn, AdminStatus.HandleNode, "COMMAND", "NAMECONFIRM", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
-					go share.ReceiveFile(Route.Route[AdminStatus.HandleNode], &startNodeConn, fileDataMap, cannotRead, UploadFile, AdminStatus.AESKey, true, utils.AdminId)
+					go share.ReceiveFile(Route.Route[AdminStatus.HandleNode], &startNodeConn, fileDataMap, cannotRead, uploadFile, AdminStatus.AESKey, true, utils.AdminId)
 				}
 			case "FILESIZE":
 				share.File.FileSize, _ = strconv.ParseInt(nodeResp.Info, 10, 64)
@@ -256,11 +256,11 @@ func HandleStartConn(startNodeConn net.Conn, adminCommandChan chan []string) {
 				SendPayloadViaRoute(startNodeConn, nodeResp.CurrentId, "COMMAND", "FINOK", " ", " ", nodeResp.Clientid, utils.AdminId, AdminStatus.AESKey, false)
 			case "RECONNID":
 				log.Println("[*]Node reconnect successfully!")
-				ipaddress, uppernode := AnalysisInfo(nodeResp.Info)
-				AdminStatus.NodesReadyToadd <- map[string]string{nodeResp.CurrentId: ipaddress}
+				ipAddress, upperNode := AnalysisInfo(nodeResp.Info)
+				AdminStatus.NodesReadyToadd <- map[string]string{nodeResp.CurrentId: ipAddress}
 				AdminStuff.NodeStatus.Nodenote[nodeResp.CurrentId] = ""
 				ReconnAddCurrentClient(nodeResp.CurrentId) //在节点reconn回来的时候要考虑多种情况，若admin是掉线过，可以直接append，若admin没有掉线过，那么就需要判断重连回来的节点序号是否在CurrentClient中，如果已经存在就不需要append
-				AddNodeToTopology(nodeResp.CurrentId, uppernode)
+				AddNodeToTopology(nodeResp.CurrentId, upperNode)
 				CalRoute()
 			case "HEARTBEAT":
 				utils.ConstructPayloadAndSend(startNodeConn, utils.StartNodeId, "", "COMMAND", "KEEPALIVE", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
@@ -332,9 +332,9 @@ func HandleStartConn(startNodeConn net.Conn, adminCommandChan chan []string) {
 				}
 				AdminStuff.ClientSockets.RUnlock()
 			case "FILEDATA": //接收文件内容
-				slicenum, _ := strconv.Atoi(nodeResp.FileSliceNum)
+				sliceNum, _ := strconv.Atoi(nodeResp.FileSliceNum)
 				fileDataMap.Lock()
-				fileDataMap.Payload[slicenum] = nodeResp.Info
+				fileDataMap.Payload[sliceNum] = nodeResp.Info
 				fileDataMap.Unlock()
 			case "FORWARDDATARESP":
 				AdminStuff.PortForWardMap.Lock()

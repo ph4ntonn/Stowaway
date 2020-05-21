@@ -545,19 +545,19 @@ func GetStringMd5(s string) string {
 
 // GetInfoViaLockMap 从加锁map中获取信息
 func GetInfoViaLockMap(LockMap, params interface{}) interface{} {
-	switch lockmap := LockMap.(type) {
+	switch lockMap := LockMap.(type) {
 	case *Uint32ConnMap:
 		if num, err := params.(uint32); err {
-			lockmap.Lock()
-			reflectConn := lockmap.Payload[num]
-			lockmap.Unlock()
+			lockMap.Lock()
+			reflectConn := lockMap.Payload[num]
+			lockMap.Unlock()
 			return reflectConn
 		}
 	case *SafeRouteMap:
 		if nodeid, err := params.(string); err {
-			lockmap.Lock()
-			route := lockmap.Route[nodeid]
-			lockmap.Unlock()
+			lockMap.Lock()
+			route := lockMap.Route[nodeid]
+			lockMap.Unlock()
 			return route
 		}
 	}

@@ -30,32 +30,32 @@ func NewAgent(c *utils.AgentOptions) {
 	passive := c.Reverse
 	monitor := c.Monitor
 	isStartNode := c.IsStartNode
-	reusehost := c.ReuseHost
-	reuseport := c.ReusePort
-	rhostreuse := c.RhostReuse
+	reuseHost := c.ReuseHost
+	reusePort := c.ReusePort
+	rhostReuse := c.RhostReuse
 	//根据选择确定启动方式
-	if isStartNode && passive == false && reusehost == "" && reuseport == "" {
+	if isStartNode && passive == false && reuseHost == "" && reusePort == "" {
 		go WaitForExit()
 		StartNodeInit(monitor, listenPort, reconn, passive)
-	} else if passive == false && reusehost == "" && reuseport == "" {
+	} else if passive == false && reuseHost == "" && reusePort == "" {
 		go WaitForExit()
-		SimpleNodeInit(monitor, listenPort, rhostreuse)
-	} else if isStartNode && passive && reusehost == "" && reuseport == "" {
+		SimpleNodeInit(monitor, listenPort, rhostReuse)
+	} else if isStartNode && passive && reuseHost == "" && reusePort == "" {
 		go WaitForExit()
 		StartNodeReversemodeInit(monitor, listenPort, passive)
-	} else if passive && reusehost == "" && reuseport == "" {
+	} else if passive && reuseHost == "" && reusePort == "" {
 		go WaitForExit()
 		SimpleNodeReversemodeInit(monitor, listenPort)
-	} else if reusehost != "" && reuseport != "" && isStartNode {
+	} else if reuseHost != "" && reusePort != "" && isStartNode {
 		go WaitForExit()
-		StartNodeReuseInit(reusehost, reuseport, listenPort, 1)
-	} else if reusehost != "" && reuseport != "" {
+		StartNodeReuseInit(reuseHost, reusePort, listenPort, 1)
+	} else if reuseHost != "" && reusePort != "" {
 		go WaitForExit()
-		SimpleNodeReuseInit(reusehost, reuseport, listenPort, 1)
-	} else if reuseport != "" && listenPort != "" && isStartNode {
-		StartNodeReuseInit(reusehost, reuseport, listenPort, 2)
-	} else if reuseport != "" && listenPort != "" {
-		SimpleNodeReuseInit(reusehost, reuseport, listenPort, 2)
+		SimpleNodeReuseInit(reuseHost, reusePort, listenPort, 1)
+	} else if reusePort != "" && listenPort != "" && isStartNode {
+		StartNodeReuseInit(reuseHost, reusePort, listenPort, 2)
+	} else if reusePort != "" && listenPort != "" {
+		SimpleNodeReuseInit(reuseHost, reusePort, listenPort, 2)
 	}
 }
 
@@ -79,9 +79,9 @@ func StartNodeInit(monitor, listenPort, reConn string, passive bool) {
 
 	for {
 		controlConnForLowerNode := <-node.NodeStuff.ControlConnForLowerNodeChan
-		NewNodeMessage := <-node.NodeStuff.NewNodeMessageChan
+		newNodeMessage := <-node.NodeStuff.NewNodeMessageChan
 		<-node.NodeStuff.IsAdmin //正常模式启动的节点被连接一定是agent来连接，所以这里不需要判断是否是admin连接
-		AgentStuff.ProxyChan.ProxyChanToUpperNode <- NewNodeMessage
+		AgentStuff.ProxyChan.ProxyChanToUpperNode <- newNodeMessage
 		if AgentStatus.NotLastOne == false {
 			AgentStuff.ProxyChan.ProxyChanToLowerNode = make(chan *utils.PassToLowerNodeData)
 			go HandleConnToLowerNode()
@@ -114,9 +114,9 @@ func SimpleNodeInit(monitor, listenPort string, rhostReuse bool) {
 	//等待下级节点的连接
 	for {
 		controlConnForLowerNode := <-node.NodeStuff.ControlConnForLowerNodeChan
-		NewNodeMessage := <-node.NodeStuff.NewNodeMessageChan
+		newNodeMessage := <-node.NodeStuff.NewNodeMessageChan
 		<-node.NodeStuff.IsAdmin //正常模式启动的节点被连接一定是agent来连接，所以这里不需要判断是否是admin连接
-		AgentStuff.ProxyChan.ProxyChanToUpperNode <- NewNodeMessage
+		AgentStuff.ProxyChan.ProxyChanToUpperNode <- newNodeMessage
 		if AgentStatus.NotLastOne == false {
 			AgentStuff.ProxyChan.ProxyChanToLowerNode = make(chan *utils.PassToLowerNodeData)
 			go HandleConnToLowerNode()
@@ -141,13 +141,13 @@ func StartNodeReversemodeInit(monitor, listenPort string, passive bool) {
 
 	for {
 		controlConnForLowerNode := <-node.NodeStuff.ControlConnForLowerNodeChan
-		NewNodeMessage := <-node.NodeStuff.NewNodeMessageChan
+		newNodeMessage := <-node.NodeStuff.NewNodeMessageChan
 		isAdmin := <-node.NodeStuff.IsAdmin
 		if isAdmin {
 			ConnToAdmin = controlConnForLowerNode
 			AgentStatus.ReConnCome <- true
 		} else {
-			AgentStuff.ProxyChan.ProxyChanToUpperNode <- NewNodeMessage
+			AgentStuff.ProxyChan.ProxyChanToUpperNode <- newNodeMessage
 			if AgentStatus.NotLastOne == false {
 				AgentStuff.ProxyChan.ProxyChanToLowerNode = make(chan *utils.PassToLowerNodeData)
 				go HandleConnToLowerNode()
@@ -173,9 +173,9 @@ func SimpleNodeReversemodeInit(monitor, listenPort string) {
 
 	for {
 		controlConnForLowerNode := <-node.NodeStuff.ControlConnForLowerNodeChan
-		NewNodeMessage := <-node.NodeStuff.NewNodeMessageChan
+		newNodeMessage := <-node.NodeStuff.NewNodeMessageChan
 		<-node.NodeStuff.IsAdmin //被动模式启动的节点被连接一定是agent来连接，所以这里不需要判断是否是admin连接
-		AgentStuff.ProxyChan.ProxyChanToUpperNode <- NewNodeMessage
+		AgentStuff.ProxyChan.ProxyChanToUpperNode <- newNodeMessage
 		if AgentStatus.NotLastOne == false {
 			AgentStuff.ProxyChan.ProxyChanToLowerNode = make(chan *utils.PassToLowerNodeData)
 			go HandleConnToLowerNode()
@@ -214,13 +214,13 @@ func StartNodeReuseInit(reuseHost, reusePort, localPort string, method int) {
 
 	for {
 		controlConnForLowerNode := <-node.NodeStuff.ControlConnForLowerNodeChan
-		NewNodeMessage := <-node.NodeStuff.NewNodeMessageChan
+		newNodeMessage := <-node.NodeStuff.NewNodeMessageChan
 		isAdmin := <-node.NodeStuff.IsAdmin
 		if isAdmin {
 			ConnToAdmin = controlConnForLowerNode
 			AgentStatus.ReConnCome <- true
 		} else {
-			AgentStuff.ProxyChan.ProxyChanToUpperNode <- NewNodeMessage
+			AgentStuff.ProxyChan.ProxyChanToUpperNode <- newNodeMessage
 			if AgentStatus.NotLastOne == false {
 				AgentStuff.ProxyChan.ProxyChanToLowerNode = make(chan *utils.PassToLowerNodeData)
 				go HandleConnToLowerNode()
@@ -260,9 +260,9 @@ func SimpleNodeReuseInit(reuseHost, reusePort, localPort string, method int) {
 
 	for {
 		controlConnForLowerNode := <-node.NodeStuff.ControlConnForLowerNodeChan
-		NewNodeMessage := <-node.NodeStuff.NewNodeMessageChan
+		newNodeMessage := <-node.NodeStuff.NewNodeMessageChan
 		<-node.NodeStuff.IsAdmin
-		AgentStuff.ProxyChan.ProxyChanToUpperNode <- NewNodeMessage
+		AgentStuff.ProxyChan.ProxyChanToUpperNode <- newNodeMessage
 		if AgentStatus.NotLastOne == false {
 			AgentStuff.ProxyChan.ProxyChanToLowerNode = make(chan *utils.PassToLowerNodeData)
 			go HandleConnToLowerNode()

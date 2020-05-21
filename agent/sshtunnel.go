@@ -12,30 +12,30 @@ import (
 
 // SSHTunnelNextNode 利用sshtunnel来连接下一个节点，以此在防火墙限制流量时仍然可以进行穿透
 func SSHTunnelNextNode(info string, nodeid string) error {
-	var authpayload ssh.AuthMethod
-	spiltedinfo := strings.Split(info, ":::")
+	var authPayload ssh.AuthMethod
+	spiltedInfo := strings.Split(info, ":::")
 
-	host := spiltedinfo[0]
-	username := spiltedinfo[1]
-	authway := spiltedinfo[2]
-	lport := spiltedinfo[3]
-	method := spiltedinfo[4]
+	host := spiltedInfo[0]
+	username := spiltedInfo[1]
+	authWay := spiltedInfo[2]
+	lport := spiltedInfo[3]
+	method := spiltedInfo[4]
 
 	if method == "1" {
-		authpayload = ssh.Password(authway)
+		authPayload = ssh.Password(authWay)
 	} else if method == "2" {
-		key, err := ssh.ParsePrivateKey([]byte(authway))
+		key, err := ssh.ParsePrivateKey([]byte(authWay))
 		if err != nil {
 			sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHCERTERROR", " ", " ", 0, nodeid, AgentStatus.AESKey, false)
 			AgentStuff.ProxyChan.ProxyChanToUpperNode <- sshMess
 			return err
 		}
-		authpayload = ssh.PublicKeys(key)
+		authPayload = ssh.PublicKeys(key)
 	}
 
-	SSHClient, err := ssh.Dial("tcp", host, &ssh.ClientConfig{
+	sshClient, err := ssh.Dial("tcp", host, &ssh.ClientConfig{
 		User:            username,
-		Auth:            []ssh.AuthMethod{authpayload},
+		Auth:            []ssh.AuthMethod{authPayload},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	})
 	if err != nil {
@@ -44,7 +44,7 @@ func SSHTunnelNextNode(info string, nodeid string) error {
 		return err
 	}
 
-	nodeConn, err := SSHClient.Dial("tcp", fmt.Sprintf("127.0.0.1:%s", lport))
+	nodeConn, err := sshClient.Dial("tcp", fmt.Sprintf("127.0.0.1:%s", lport))
 	if err != nil {
 		sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
 		AgentStuff.ProxyChan.ProxyChanToUpperNode <- sshMess
@@ -72,10 +72,10 @@ func SSHTunnelNextNode(info string, nodeid string) error {
 		}
 		switch command.Command {
 		case "INIT":
-			NewNodeMessage, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NEW", " ", nodeConn.RemoteAddr().String(), 0, nodeid, AgentStatus.AESKey, false)
+			newNodeMessage, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NEW", " ", nodeConn.RemoteAddr().String(), 0, nodeid, AgentStatus.AESKey, false)
 			node.NodeInfo.LowerNode.Payload[utils.AdminId] = nodeConn
 			node.NodeStuff.ControlConnForLowerNodeChan <- nodeConn
-			node.NodeStuff.NewNodeMessageChan <- NewNodeMessage
+			node.NodeStuff.NewNodeMessageChan <- newNodeMessage
 			node.NodeStuff.IsAdmin <- false
 
 			sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHTUNNELRESP", " ", "SUCCESS", 0, nodeid, AgentStatus.AESKey, false)

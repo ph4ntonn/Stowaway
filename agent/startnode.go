@@ -73,9 +73,9 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 						stdin.Write([]byte(AdminData.Info))
 					}
 				case "SOCKS":
-					socksinfo := strings.Split(AdminData.Info, ":::")
-					AgentStuff.SocksInfo.SocksUsername = socksinfo[1]
-					AgentStuff.SocksInfo.SocksPass = socksinfo[2]
+					socksInfo := strings.Split(AdminData.Info, ":::")
+					AgentStuff.SocksInfo.SocksUsername = socksInfo[1]
+					AgentStuff.SocksInfo.SocksPass = socksInfo[2]
 					StartSocks()
 				case "SOCKSOFF":
 				case "SSH":
@@ -111,14 +111,14 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 						}
 					}()
 				case "FILENAME":
-					UploadFile, err := os.Create(AdminData.Info)
+					uploadFile, err := os.Create(AdminData.Info)
 					if err != nil {
 						respComm, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "CREATEFAIL", " ", " ", 0, nodeid, AgentStatus.AESKey, false)
 						AgentStuff.ProxyChan.ProxyChanToUpperNode <- respComm
 					} else {
 						respComm, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NAMECONFIRM", " ", " ", 0, nodeid, AgentStatus.AESKey, false)
 						AgentStuff.ProxyChan.ProxyChanToUpperNode <- respComm
-						go share.ReceiveFile("", connToAdmin, fileDataMap, cannotRead, UploadFile, AgentStatus.AESKey, false, nodeid)
+						go share.ReceiveFile("", connToAdmin, fileDataMap, cannotRead, uploadFile, AgentStatus.AESKey, false, nodeid)
 					}
 				case "FILESIZE":
 					share.File.FileSize, _ = strconv.ParseInt(AdminData.Info, 10, 64)
@@ -244,9 +244,9 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 					}
 					AgentStuff.SocksDataChanMap.Unlock()
 				case "FILEDATA": //接收文件内容
-					slicenum, _ := strconv.Atoi(AdminData.FileSliceNum)
+					sliceNum, _ := strconv.Atoi(AdminData.FileSliceNum)
 					fileDataMap.Lock()
-					fileDataMap.Payload[slicenum] = AdminData.Info
+					fileDataMap.Payload[sliceNum] = AdminData.Info
 					fileDataMap.Unlock()
 				case "FORWARDDATA":
 					AgentStuff.ForwardConnMap.RLock()

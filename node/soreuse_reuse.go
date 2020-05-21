@@ -16,54 +16,54 @@ import (
 
 // StartNodeListenReuse 初始化节点监听操作
 func StartNodeListenReuse(rehost, report string, nodeid string, key []byte) {
-	var NewNodeMessage []byte
+	var newNodeMessage []byte
 
 	if report == "" { //如果没有port，直接退出
 		return
 	}
 
 	listenAddr := fmt.Sprintf("%s:%s", rehost, report)
-	WaitingForLowerNode, err := reuseport.Listen("tcp", listenAddr)
+	waitingForLowerNode, err := reuseport.Listen("tcp", listenAddr)
 
 	if err != nil {
 		log.Fatalf("[*]Cannot listen on port %s", report)
 	}
 
 	for {
-		ConnToLowerNode, err := WaitingForLowerNode.Accept()
+		connToLowerNode, err := waitingForLowerNode.Accept()
 		if err != nil {
 			log.Println("[*]", err)
 			return
 		}
 
-		err = CheckValid(ConnToLowerNode, true, report)
+		err = CheckValid(connToLowerNode, true, report)
 		if err != nil {
 			continue
 		}
 
 		for i := 0; i < 2; i++ {
-			command, _ := utils.ExtractPayload(ConnToLowerNode, key, utils.AdminId, true)
+			command, _ := utils.ExtractPayload(connToLowerNode, key, utils.AdminId, true)
 			switch command.Command {
 			case "STOWAWAYADMIN":
-				utils.ConstructPayloadAndSend(ConnToLowerNode, nodeid, "", "COMMAND", "INIT", " ", report, 0, utils.AdminId, key, false)
+				utils.ConstructPayloadAndSend(connToLowerNode, nodeid, "", "COMMAND", "INIT", " ", report, 0, utils.AdminId, key, false)
 			case "ID":
-				NodeStuff.ControlConnForLowerNodeChan <- ConnToLowerNode
-				NodeStuff.NewNodeMessageChan <- NewNodeMessage
+				NodeStuff.ControlConnForLowerNodeChan <- connToLowerNode
+				NodeStuff.NewNodeMessageChan <- newNodeMessage
 				NodeStuff.IsAdmin <- true
 			case "REONLINESUC":
-				NodeStuff.Adminconn <- ConnToLowerNode
+				NodeStuff.Adminconn <- connToLowerNode
 			case "STOWAWAYAGENT":
 				if !NodeStuff.Offline {
-					utils.ConstructPayloadAndSend(ConnToLowerNode, nodeid, "", "COMMAND", "CONFIRM", " ", " ", 0, nodeid, key, false)
+					utils.ConstructPayloadAndSend(connToLowerNode, nodeid, "", "COMMAND", "CONFIRM", " ", " ", 0, nodeid, key, false)
 				} else {
-					utils.ConstructPayloadAndSend(ConnToLowerNode, nodeid, "", "COMMAND", "REONLINE", " ", report, 0, nodeid, key, false)
+					utils.ConstructPayloadAndSend(connToLowerNode, nodeid, "", "COMMAND", "REONLINE", " ", report, 0, nodeid, key, false)
 				}
 			case "INIT":
 				//告知admin新节点消息
-				NewNodeMessage, _ = utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NEW", " ", ConnToLowerNode.RemoteAddr().String(), 0, nodeid, key, false)
-				NodeInfo.LowerNode.Payload[utils.AdminId] = ConnToLowerNode //将这个socket用0号位暂存，等待admin分配完id后再将其放入对应的位置
-				NodeStuff.ControlConnForLowerNodeChan <- ConnToLowerNode
-				NodeStuff.NewNodeMessageChan <- NewNodeMessage //被连接后不终止监听，继续等待可能的后续节点连接，以此组成树状结构
+				newNodeMessage, _ = utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NEW", " ", connToLowerNode.RemoteAddr().String(), 0, nodeid, key, false)
+				NodeInfo.LowerNode.Payload[utils.AdminId] = connToLowerNode //将这个socket用0号位暂存，等待admin分配完id后再将其放入对应的位置
+				NodeStuff.ControlConnForLowerNodeChan <- connToLowerNode
+				NodeStuff.NewNodeMessageChan <- newNodeMessage //被连接后不终止监听，继续等待可能的后续节点连接，以此组成树状结构
 				NodeStuff.IsAdmin <- false
 			}
 		}
@@ -73,33 +73,33 @@ func StartNodeListenReuse(rehost, report string, nodeid string, key []byte) {
 // AcceptConnFromUpperNodeReuse 被动模式下startnode接收admin重连 && 普通节点被动启动等待上级节点主动连接
 func AcceptConnFromUpperNodeReuse(rehost, report string, nodeid string, key []byte) (net.Conn, string) {
 	listenAddr := fmt.Sprintf("%s:%s", rehost, report)
-	WaitingForConn, err := reuseport.Listen("tcp", listenAddr)
+	waitingForConn, err := reuseport.Listen("tcp", listenAddr)
 
 	if err != nil {
 		log.Fatalf("[*]Cannot reuse port %s", report)
 	}
 
 	for {
-		Comingconn, err := WaitingForConn.Accept()
+		comingConn, err := waitingForConn.Accept()
 		if err != nil {
 			log.Println("[*]", err)
 			continue
 		}
 
-		err = CheckValid(Comingconn, true, report)
+		err = CheckValid(comingConn, true, report)
 		if err != nil {
 			continue
 		}
 
-		utils.ExtractPayload(Comingconn, key, utils.AdminId, true)
+		utils.ExtractPayload(comingConn, key, utils.AdminId, true)
 
-		utils.ConstructPayloadAndSend(Comingconn, nodeid, "", "COMMAND", "INIT", " ", report, 0, utils.AdminId, key, false)
+		utils.ConstructPayloadAndSend(comingConn, nodeid, "", "COMMAND", "INIT", " ", report, 0, utils.AdminId, key, false)
 
-		command, _ := utils.ExtractPayload(Comingconn, key, utils.AdminId, true) //等待分配id
+		command, _ := utils.ExtractPayload(comingConn, key, utils.AdminId, true) //等待分配id
 		if command.Command == "ID" {
 			nodeid = command.NodeId
-			WaitingForConn.Close()
-			return Comingconn, nodeid
+			waitingForConn.Close()
+			return comingConn, nodeid
 		}
 
 	}

@@ -29,8 +29,8 @@ func AddNodeToTopology(nodeid, upperNodeId string) {
 	if _, ok := Topology.AllNode[nodeid]; ok {
 		Topology.AllNode[nodeid].Uppernode = upperNodeId
 	} else {
-		tempnode := utils.NewNode()
-		Topology.AllNode[nodeid] = tempnode
+		tempNode := utils.NewNode()
+		Topology.AllNode[nodeid] = tempNode
 		Topology.AllNode[nodeid].Uppernode = upperNodeId
 	}
 	if upperNodeId != utils.AdminId {
@@ -66,10 +66,10 @@ func DelNodeFromTopology(nodeid string) {
 	defer Topology.Unlock()
 
 	if _, ok := Topology.AllNode[nodeid]; ok {
-		uppernode := Topology.AllNode[nodeid].Uppernode
-		if _, ok := Topology.AllNode[uppernode]; ok {
-			index := utils.FindSpecFromSlice(nodeid, Topology.AllNode[uppernode].Lowernode)
-			Topology.AllNode[uppernode].Lowernode = append(Topology.AllNode[uppernode].Lowernode[:index], Topology.AllNode[uppernode].Lowernode[index+1:]...)
+		upperNode := Topology.AllNode[nodeid].Uppernode
+		if _, ok := Topology.AllNode[upperNode]; ok {
+			index := utils.FindSpecFromSlice(nodeid, Topology.AllNode[upperNode].Lowernode)
+			Topology.AllNode[upperNode].Lowernode = append(Topology.AllNode[upperNode].Lowernode[:index], Topology.AllNode[upperNode].Lowernode[index+1:]...)
 		}
 
 		Del(nodeid, readyToDel)
@@ -197,24 +197,24 @@ func ShowTree() {
 
 		for _, value := range nodesid {
 			node := AdminStatus.CurrentClient[value]
-			nodestatus := Topology.AllNode[node]
+			nodeStatus := Topology.AllNode[node]
 
 			if node == utils.StartNodeId {
 				fmt.Printf("StartNode[%s]'s child nodes:\n", fmt.Sprint(value+1))
-				if len(nodestatus.Lowernode) == 0 {
+				if len(nodeStatus.Lowernode) == 0 {
 					fmt.Println("\tThere is no child node for this one.")
 				} else {
-					for _, child := range nodestatus.Lowernode {
+					for _, child := range nodeStatus.Lowernode {
 						childid := FindIntByNodeid(child)
 						fmt.Printf("\tNode [%s]\n", fmt.Sprint(childid+1))
 					}
 				}
 			} else {
 				fmt.Printf("Node[%s]'s child nodes:\n", fmt.Sprint(value+1))
-				if len(nodestatus.Lowernode) == 0 {
+				if len(nodeStatus.Lowernode) == 0 {
 					fmt.Println("\tThere is no child node for this one.")
 				} else {
-					for _, child := range nodestatus.Lowernode {
+					for _, child := range nodeStatus.Lowernode {
 						childid := FindIntByNodeid(child)
 						fmt.Printf("\tNode [%s]\n", fmt.Sprint(childid+1))
 					}

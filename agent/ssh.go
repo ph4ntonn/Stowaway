@@ -18,29 +18,29 @@ var (
 
 // StartSSH 启动ssh
 func StartSSH(info string, nodeid string) error {
-	var authpayload ssh.AuthMethod
-	spiltedinfo := strings.Split(info, ":::")
+	var authPayload ssh.AuthMethod
+	spiltedInfo := strings.Split(info, ":::")
 
-	host := spiltedinfo[0]
-	username := spiltedinfo[1]
-	authway := spiltedinfo[2]
-	method := spiltedinfo[3]
+	host := spiltedInfo[0]
+	username := spiltedInfo[1]
+	authWay := spiltedInfo[2]
+	method := spiltedInfo[3]
 
 	if method == "1" {
-		authpayload = ssh.Password(authway)
+		authPayload = ssh.Password(authWay)
 	} else if method == "2" {
-		key, err := ssh.ParsePrivateKey([]byte(authway))
+		key, err := ssh.ParsePrivateKey([]byte(authWay))
 		if err != nil {
 			sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHCERTERROR", " ", " ", 0, nodeid, AgentStatus.AESKey, false)
 			AgentStuff.ProxyChan.ProxyChanToUpperNode <- sshMess
 			return err
 		}
-		authpayload = ssh.PublicKeys(key)
+		authPayload = ssh.PublicKeys(key)
 	}
 
-	sshdial, err := ssh.Dial("tcp", host, &ssh.ClientConfig{
+	sshDial, err := ssh.Dial("tcp", host, &ssh.ClientConfig{
 		User:            username,
-		Auth:            []ssh.AuthMethod{authpayload},
+		Auth:            []ssh.AuthMethod{authPayload},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	})
 	if err != nil {
@@ -49,7 +49,7 @@ func StartSSH(info string, nodeid string) error {
 		return err
 	}
 
-	Sshhost, err = sshdial.NewSession()
+	Sshhost, err = sshDial.NewSession()
 	if err != nil {
 		sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
 		AgentStuff.ProxyChan.ProxyChanToUpperNode <- sshMess

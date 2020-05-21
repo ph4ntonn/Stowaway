@@ -24,32 +24,32 @@ const STOP_FORWARDING = "stowawayleaving"
 // AcceptConnFromUpperNodeIPTableReuse 在iptable reuse状态下接收上一级节点的连接
 func AcceptConnFromUpperNodeIPTableReuse(report, localPort string, nodeid string, key []byte) (net.Conn, string) {
 	listenAddr := fmt.Sprintf("0.0.0.0:%s", localPort)
-	WaitingForConn, err := net.Listen("tcp", listenAddr)
+	waitingForConn, err := net.Listen("tcp", listenAddr)
 
 	if err != nil {
 		log.Fatalf("[*]Cannot reuse port %s", localPort)
 	}
 	for {
-		Comingconn, err := WaitingForConn.Accept()
+		comingConn, err := waitingForConn.Accept()
 		if err != nil {
 			log.Println("[*]", err)
 			continue
 		}
 
-		err = CheckValid(Comingconn, true, report)
+		err = CheckValid(comingConn, true, report)
 		if err != nil {
 			continue
 		}
 
-		utils.ExtractPayload(Comingconn, key, utils.AdminId, true)
+		utils.ExtractPayload(comingConn, key, utils.AdminId, true)
 
-		utils.ConstructPayloadAndSend(Comingconn, nodeid, "", "COMMAND", "INIT", " ", report, 0, utils.AdminId, key, false)
+		utils.ConstructPayloadAndSend(comingConn, nodeid, "", "COMMAND", "INIT", " ", report, 0, utils.AdminId, key, false)
 
-		command, _ := utils.ExtractPayload(Comingconn, key, utils.AdminId, true) //等待分配id
+		command, _ := utils.ExtractPayload(comingConn, key, utils.AdminId, true) //等待分配id
 		if command.Command == "ID" {
 			nodeid = command.NodeId
-			WaitingForConn.Close()
-			return Comingconn, nodeid
+			waitingForConn.Close()
+			return comingConn, nodeid
 		}
 
 	}
@@ -57,53 +57,53 @@ func AcceptConnFromUpperNodeIPTableReuse(report, localPort string, nodeid string
 
 // StartNodeListenIPTableReuse 初始化节点监听操作
 func StartNodeListenIPTableReuse(report, localPort string, nodeid string, key []byte) {
-	var NewNodeMessage []byte
+	var newNodeMessage []byte
 
 	if localPort == "" { //如果没有port，直接退出
 		return
 	}
 
 	listenAddr := fmt.Sprintf("0.0.0.0:%s", localPort)
-	WaitingForLowerNode, err := net.Listen("tcp", listenAddr)
+	waitingForLowerNode, err := net.Listen("tcp", listenAddr)
 
 	if err != nil {
 		log.Fatalf("[*]Cannot listen on port %s", localPort)
 	}
 
 	for {
-		ConnToLowerNode, err := WaitingForLowerNode.Accept()
+		connToLowerNode, err := waitingForLowerNode.Accept()
 		if err != nil {
 			log.Println("[*]", err)
 			return
 		}
 
-		err = CheckValid(ConnToLowerNode, true, report)
+		err = CheckValid(connToLowerNode, true, report)
 		if err != nil {
 			continue
 		}
 
 		for i := 0; i < 2; i++ {
-			command, _ := utils.ExtractPayload(ConnToLowerNode, key, utils.AdminId, true)
+			command, _ := utils.ExtractPayload(connToLowerNode, key, utils.AdminId, true)
 			switch command.Command {
 			case "STOWAWAYADMIN":
-				utils.ConstructPayloadAndSend(ConnToLowerNode, nodeid, "", "COMMAND", "INIT", " ", report, 0, utils.AdminId, key, false)
+				utils.ConstructPayloadAndSend(connToLowerNode, nodeid, "", "COMMAND", "INIT", " ", report, 0, utils.AdminId, key, false)
 			case "ID":
-				NodeStuff.ControlConnForLowerNodeChan <- ConnToLowerNode
-				NodeStuff.NewNodeMessageChan <- NewNodeMessage
+				NodeStuff.ControlConnForLowerNodeChan <- connToLowerNode
+				NodeStuff.NewNodeMessageChan <- newNodeMessage
 				NodeStuff.IsAdmin <- true
 			case "REONLINESUC":
-				NodeStuff.Adminconn <- ConnToLowerNode
+				NodeStuff.Adminconn <- connToLowerNode
 			case "STOWAWAYAGENT":
 				if !NodeStuff.Offline {
-					utils.ConstructPayloadAndSend(ConnToLowerNode, nodeid, "", "COMMAND", "CONFIRM", " ", " ", 0, nodeid, key, false)
+					utils.ConstructPayloadAndSend(connToLowerNode, nodeid, "", "COMMAND", "CONFIRM", " ", " ", 0, nodeid, key, false)
 				} else {
-					utils.ConstructPayloadAndSend(ConnToLowerNode, nodeid, "", "COMMAND", "REONLINE", " ", report, 0, nodeid, key, false)
+					utils.ConstructPayloadAndSend(connToLowerNode, nodeid, "", "COMMAND", "REONLINE", " ", report, 0, nodeid, key, false)
 				}
 			case "INIT":
-				NewNodeMessage, _ = utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NEW", " ", ConnToLowerNode.RemoteAddr().String(), 0, nodeid, key, false)
-				NodeInfo.LowerNode.Payload[utils.AdminId] = ConnToLowerNode
-				NodeStuff.ControlConnForLowerNodeChan <- ConnToLowerNode
-				NodeStuff.NewNodeMessageChan <- NewNodeMessage
+				newNodeMessage, _ = utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NEW", " ", connToLowerNode.RemoteAddr().String(), 0, nodeid, key, false)
+				NodeInfo.LowerNode.Payload[utils.AdminId] = connToLowerNode
+				NodeStuff.ControlConnForLowerNodeChan <- connToLowerNode
+				NodeStuff.NewNodeMessageChan <- newNodeMessage
 				NodeStuff.IsAdmin <- false
 			}
 		}
