@@ -329,6 +329,7 @@ Now anyone who connect to 127.0.0.1:80 will connect to 127.0.0.1:22 in fact(forw
 - [ ] Clean codes, optimize logic
 - [x] Add reverse connect mode
 - [x] Support port reuse
+- [x] Let stowaway avoid the memory leak problem that happens on similar programs 
 
 ### Attention
 
