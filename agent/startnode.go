@@ -69,7 +69,6 @@ func HandleDataFromAdmin(connToAdmin *net.Conn, payloadBuffChan chan *utils.Payl
 			case "COMMAND":
 				switch AdminData.Command {
 				case "SHELL":
-					fmt.Println("i am here")
 					switch AdminData.Info {
 					case "":
 						stdout, stdin, err = CreatInteractiveShell()
