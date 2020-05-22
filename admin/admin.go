@@ -117,24 +117,22 @@ func HandleInitControlConn(startNodeConn net.Conn, adminCommandChan chan []strin
 		case "STOWAWAYAGENT":
 			utils.ConstructPayloadAndSend(startNodeConn, utils.StartNodeId, "", "COMMAND", "CONFIRM", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 		case "INIT":
+			dataBufferChan := make(chan *utils.Payload, 10)
 			utils.ConstructPayloadAndSend(startNodeConn, utils.StartNodeId, "", "COMMAND", "ID", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 			AdminStatus.StartNode = strings.Split(startNodeConn.RemoteAddr().String(), ":")[0]
 			AdminStuff.NodeStatus.Nodenote[utils.StartNodeId] = ""
 			AdminStatus.CurrentClient = append(AdminStatus.CurrentClient, utils.StartNodeId) //记录startnode加入网络
 			AddNodeToTopology(utils.StartNodeId, utils.AdminId)
 			CalRoute()
-			go HandleStartConn(startNodeConn, adminCommandChan)
+			go HandleConn(startNodeConn, dataBufferChan)
+			go HandleData(startNodeConn, adminCommandChan, dataBufferChan)
 			go HandleCommandToControlConn(startNodeConn, adminCommandChan)
 			return nil
 		}
 	}
 }
 
-// HandleStartConn 处理与startnode的信道
-func HandleStartConn(startNodeConn net.Conn, adminCommandChan chan []string) {
-	fileDataMap := utils.NewIntStrMap()
-	cannotRead := make(chan bool, 1)
-
+func HandleConn(startNodeConn net.Conn, dataBufferChan chan *utils.Payload) {
 	for {
 		nodeResp, err := utils.ExtractPayload(startNodeConn, AdminStatus.AESKey, utils.AdminId, true)
 		if err != nil {
@@ -144,6 +142,17 @@ func HandleStartConn(startNodeConn net.Conn, adminCommandChan chan []string) {
 			startNodeConn.Close()
 			break
 		}
+		dataBufferChan <- nodeResp
+	}
+}
+
+// HandleStartConn 处理与startnode的信道
+func HandleData(startNodeConn net.Conn, adminCommandChan chan []string, dataBufferChan chan *utils.Payload) {
+	fileDataMap := utils.NewIntStrMap()
+	cannotRead := make(chan bool, 1)
+
+	for {
+		nodeResp := <-dataBufferChan
 		switch nodeResp.Type {
 		case "COMMAND":
 			switch nodeResp.Command {

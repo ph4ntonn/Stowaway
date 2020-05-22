@@ -105,19 +105,21 @@ func WaitingAdmin(nodeid string) {
 // PrepareForReOnlineNode 等待重连时，用来供上一个节点起HandleConnFromLowerNode函数
 func PrepareForReOnlineNode() {
 	for {
+		payloadBuffChan := make(chan *utils.Payload, 10)
 		nodeid := <-node.NodeStuff.ReOnlineID
 		conn := <-node.NodeStuff.ReOnlineConn
 		//如果此节点没有启动过HandleConnToLowerNode函数，启动之
 		if AgentStatus.NotLastOne == false {
 			AgentStuff.ProxyChan.ProxyChanToLowerNode = make(chan *utils.PassToLowerNodeData)
-			go HandleConnToLowerNode()
+			go HandleDataToLowerNode()
 		}
 		AgentStatus.NotLastOne = true
 		//记录此节点，启动HandleConnFromLowerNode
 		node.NodeInfo.LowerNode.Lock()
 		node.NodeInfo.LowerNode.Payload[nodeid] = conn
 		node.NodeInfo.LowerNode.Unlock()
-		go HandleConnFromLowerNode(conn, AgentStatus.Nodeid, nodeid)
+		go HandleLowerNodeConn(conn, payloadBuffChan, AgentStatus.Nodeid, nodeid)
+		go HandleDataFromLowerNode(conn, payloadBuffChan, AgentStatus.Nodeid, nodeid)
 		node.NodeStuff.PrepareForReOnlineNodeReady <- true
 	}
 }

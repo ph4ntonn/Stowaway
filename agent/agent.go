@@ -78,17 +78,19 @@ func StartNodeInit(monitor, listenPort, reConn string, passive bool) {
 	go PrepareForReOnlineNode()
 
 	for {
+		payloadBuffChan := make(chan *utils.Payload, 10)
 		controlConnForLowerNode := <-node.NodeStuff.ControlConnForLowerNodeChan
 		newNodeMessage := <-node.NodeStuff.NewNodeMessageChan
 		<-node.NodeStuff.IsAdmin //正常模式启动的节点被连接一定是agent来连接，所以这里不需要判断是否是admin连接
 		AgentStuff.ProxyChan.ProxyChanToUpperNode <- newNodeMessage
 		if AgentStatus.NotLastOne == false {
 			AgentStuff.ProxyChan.ProxyChanToLowerNode = make(chan *utils.PassToLowerNodeData)
-			go HandleConnToLowerNode()
+			go HandleDataToLowerNode()
 		}
 		AgentStatus.NotLastOne = true
 		lowerid := <-AgentStatus.WaitForIDAllocate
-		go HandleConnFromLowerNode(controlConnForLowerNode, AgentStatus.Nodeid, lowerid)
+		go HandleLowerNodeConn(controlConnForLowerNode, payloadBuffChan, AgentStatus.Nodeid, lowerid)
+		go HandleDataFromLowerNode(controlConnForLowerNode, payloadBuffChan, AgentStatus.Nodeid, lowerid)
 	}
 }
 
@@ -113,17 +115,19 @@ func SimpleNodeInit(monitor, listenPort string, rhostReuse bool) {
 	go PrepareForReOnlineNode()
 	//等待下级节点的连接
 	for {
+		payloadBuffChan := make(chan *utils.Payload, 10)
 		controlConnForLowerNode := <-node.NodeStuff.ControlConnForLowerNodeChan
 		newNodeMessage := <-node.NodeStuff.NewNodeMessageChan
 		<-node.NodeStuff.IsAdmin //正常模式启动的节点被连接一定是agent来连接，所以这里不需要判断是否是admin连接
 		AgentStuff.ProxyChan.ProxyChanToUpperNode <- newNodeMessage
 		if AgentStatus.NotLastOne == false {
 			AgentStuff.ProxyChan.ProxyChanToLowerNode = make(chan *utils.PassToLowerNodeData)
-			go HandleConnToLowerNode()
+			go HandleDataToLowerNode()
 		}
 		AgentStatus.NotLastOne = true
 		lowerid := <-AgentStatus.WaitForIDAllocate
-		go HandleConnFromLowerNode(controlConnForLowerNode, AgentStatus.Nodeid, lowerid)
+		go HandleLowerNodeConn(controlConnForLowerNode, payloadBuffChan, AgentStatus.Nodeid, lowerid)
+		go HandleDataFromLowerNode(controlConnForLowerNode, payloadBuffChan, AgentStatus.Nodeid, lowerid)
 	}
 }
 
@@ -140,6 +144,7 @@ func StartNodeReversemodeInit(monitor, listenPort string, passive bool) {
 	go PrepareForReOnlineNode()
 
 	for {
+		payloadBuffChan := make(chan *utils.Payload, 10)
 		controlConnForLowerNode := <-node.NodeStuff.ControlConnForLowerNodeChan
 		newNodeMessage := <-node.NodeStuff.NewNodeMessageChan
 		isAdmin := <-node.NodeStuff.IsAdmin
@@ -150,11 +155,12 @@ func StartNodeReversemodeInit(monitor, listenPort string, passive bool) {
 			AgentStuff.ProxyChan.ProxyChanToUpperNode <- newNodeMessage
 			if AgentStatus.NotLastOne == false {
 				AgentStuff.ProxyChan.ProxyChanToLowerNode = make(chan *utils.PassToLowerNodeData)
-				go HandleConnToLowerNode()
+				go HandleDataToLowerNode()
 			}
 			AgentStatus.NotLastOne = true
 			lowerid := <-AgentStatus.WaitForIDAllocate
-			go HandleConnFromLowerNode(controlConnForLowerNode, AgentStatus.Nodeid, lowerid)
+			go HandleLowerNodeConn(controlConnForLowerNode, payloadBuffChan, AgentStatus.Nodeid, lowerid)
+			go HandleDataFromLowerNode(controlConnForLowerNode, payloadBuffChan, AgentStatus.Nodeid, lowerid)
 		}
 	}
 }
@@ -172,17 +178,19 @@ func SimpleNodeReversemodeInit(monitor, listenPort string) {
 	go PrepareForReOnlineNode()
 
 	for {
+		payloadBuffChan := make(chan *utils.Payload, 10)
 		controlConnForLowerNode := <-node.NodeStuff.ControlConnForLowerNodeChan
 		newNodeMessage := <-node.NodeStuff.NewNodeMessageChan
 		<-node.NodeStuff.IsAdmin //被动模式启动的节点被连接一定是agent来连接，所以这里不需要判断是否是admin连接
 		AgentStuff.ProxyChan.ProxyChanToUpperNode <- newNodeMessage
 		if AgentStatus.NotLastOne == false {
 			AgentStuff.ProxyChan.ProxyChanToLowerNode = make(chan *utils.PassToLowerNodeData)
-			go HandleConnToLowerNode()
+			go HandleDataToLowerNode()
 		}
 		AgentStatus.NotLastOne = true
 		lowerid := <-AgentStatus.WaitForIDAllocate
-		go HandleConnFromLowerNode(controlConnForLowerNode, AgentStatus.Nodeid, lowerid)
+		go HandleLowerNodeConn(controlConnForLowerNode, payloadBuffChan, AgentStatus.Nodeid, lowerid)
+		go HandleDataFromLowerNode(controlConnForLowerNode, payloadBuffChan, AgentStatus.Nodeid, lowerid)
 	}
 }
 
@@ -213,6 +221,7 @@ func StartNodeReuseInit(reuseHost, reusePort, localPort string, method int) {
 	go PrepareForReOnlineNode()
 
 	for {
+		payloadBuffChan := make(chan *utils.Payload, 10)
 		controlConnForLowerNode := <-node.NodeStuff.ControlConnForLowerNodeChan
 		newNodeMessage := <-node.NodeStuff.NewNodeMessageChan
 		isAdmin := <-node.NodeStuff.IsAdmin
@@ -223,11 +232,12 @@ func StartNodeReuseInit(reuseHost, reusePort, localPort string, method int) {
 			AgentStuff.ProxyChan.ProxyChanToUpperNode <- newNodeMessage
 			if AgentStatus.NotLastOne == false {
 				AgentStuff.ProxyChan.ProxyChanToLowerNode = make(chan *utils.PassToLowerNodeData)
-				go HandleConnToLowerNode()
+				go HandleDataToLowerNode()
 			}
 			AgentStatus.NotLastOne = true
 			lowerid := <-AgentStatus.WaitForIDAllocate
-			go HandleConnFromLowerNode(controlConnForLowerNode, AgentStatus.Nodeid, lowerid)
+			go HandleLowerNodeConn(controlConnForLowerNode, payloadBuffChan, AgentStatus.Nodeid, lowerid)
+			go HandleDataFromLowerNode(controlConnForLowerNode, payloadBuffChan, AgentStatus.Nodeid, lowerid)
 		}
 	}
 }
@@ -259,17 +269,19 @@ func SimpleNodeReuseInit(reuseHost, reusePort, localPort string, method int) {
 	go PrepareForReOnlineNode()
 
 	for {
+		payloadBuffChan := make(chan *utils.Payload, 10)
 		controlConnForLowerNode := <-node.NodeStuff.ControlConnForLowerNodeChan
 		newNodeMessage := <-node.NodeStuff.NewNodeMessageChan
 		<-node.NodeStuff.IsAdmin
 		AgentStuff.ProxyChan.ProxyChanToUpperNode <- newNodeMessage
 		if AgentStatus.NotLastOne == false {
 			AgentStuff.ProxyChan.ProxyChanToLowerNode = make(chan *utils.PassToLowerNodeData)
-			go HandleConnToLowerNode()
+			go HandleDataToLowerNode()
 		}
 		AgentStatus.NotLastOne = true
 		lowerid := <-AgentStatus.WaitForIDAllocate
-		go HandleConnFromLowerNode(controlConnForLowerNode, AgentStatus.Nodeid, lowerid)
+		go HandleLowerNodeConn(controlConnForLowerNode, payloadBuffChan, AgentStatus.Nodeid, lowerid)
+		go HandleDataFromLowerNode(controlConnForLowerNode, payloadBuffChan, AgentStatus.Nodeid, lowerid)
 	}
 }
 

@@ -72,7 +72,7 @@ func DelNodeFromTopology(nodeid string) {
 			Topology.AllNode[upperNode].Lowernode = append(Topology.AllNode[upperNode].Lowernode[:index], Topology.AllNode[upperNode].Lowernode[index+1:]...)
 		}
 
-		Del(nodeid, readyToDel)
+		Find(&readyToDel, nodeid)
 
 		readyToDel = append(readyToDel, nodeid)
 		for _, value := range readyToDel {
@@ -84,17 +84,12 @@ func DelNodeFromTopology(nodeid string) {
 	}
 }
 
-// Del 收集需要删除的节点
-func Del(nodeid string, readyToDel []string) {
-	for _, value := range Topology.AllNode[nodeid].Lowernode {
-		readyToDel = append(readyToDel, value)
-		Del(value, readyToDel)
-	}
-}
-
 // FindAll 找到所有的子节点
 func FindAll(nodeid string) []string {
 	var readyToDel []string
+
+	Topology.Lock()
+	defer Topology.Unlock()
 
 	Find(&readyToDel, nodeid)
 
@@ -105,12 +100,10 @@ func FindAll(nodeid string) []string {
 
 // Find 收集所有的子节点
 func Find(readyToDel *[]string, nodeid string) {
-	Topology.Lock()
 	for _, value := range Topology.AllNode[nodeid].Lowernode {
 		*readyToDel = append(*readyToDel, value)
 		Find(readyToDel, value)
 	}
-	Topology.Unlock()
 }
 
 /*-------------------------路由相关代码--------------------------*/

@@ -17,30 +17,13 @@ import (
 
 // HandleSimpleNodeConn 启动普通节点
 func HandleSimpleNodeConn(connToUpperNode *net.Conn, nodeid string) {
-	go HandleConnFromUpperNode(connToUpperNode, nodeid)
-	go HandleConnToUpperNode(connToUpperNode)
+	payloadBuffChan := make(chan *utils.Payload, 10)
+	go HandleNodeConn(connToUpperNode, payloadBuffChan, nodeid)
+	go HandleDataFromUpperNode(connToUpperNode, payloadBuffChan, nodeid)
+	go HandleDataToUpperNode(connToUpperNode)
 }
 
-// HandleConnToUpperNode 处理发往上一级节点的控制信道
-func HandleConnToUpperNode(connToUpperNode *net.Conn) {
-	for {
-		proxyData := <-AgentStuff.ProxyChan.ProxyChanToUpperNode
-		_, err := (*connToUpperNode).Write(proxyData)
-		if err != nil {
-			continue
-		}
-	}
-}
-
-// HandleConnFromUpperNode 处理来自上一级节点的控制信道
-func HandleConnFromUpperNode(connToUpperNode *net.Conn, nodeid string) {
-	var (
-		cannotRead  = make(chan bool, 1)
-		getName     = make(chan bool, 1)
-		fileDataMap = utils.NewIntStrMap()
-		stdin       io.Writer
-		stdout      io.Reader
-	)
+func HandleNodeConn(connToUpperNode *net.Conn, payloadBuffChan chan *utils.Payload, nodeid string) {
 	for {
 		command, err := utils.ExtractPayload(*connToUpperNode, AgentStatus.AESKey, nodeid, false)
 		if err != nil {
@@ -50,6 +33,33 @@ func HandleConnFromUpperNode(connToUpperNode *net.Conn, nodeid string) {
 			go SendNote(nodeid)  //重连后发送admin设置的备忘
 			continue
 		}
+		payloadBuffChan <- command
+	}
+}
+
+// HandleDataToUpperNode 处理发往上一级节点的控制信道
+func HandleDataToUpperNode(connToUpperNode *net.Conn) {
+	for {
+		proxyData := <-AgentStuff.ProxyChan.ProxyChanToUpperNode
+		_, err := (*connToUpperNode).Write(proxyData)
+		if err != nil {
+			continue
+		}
+	}
+}
+
+// HandleDataFromUpperNode 处理来自上一级节点的控制信道
+func HandleDataFromUpperNode(connToUpperNode *net.Conn, payloadBuffChan chan *utils.Payload, nodeid string) {
+	var (
+		err         error
+		cannotRead  = make(chan bool, 1)
+		getName     = make(chan bool, 1)
+		fileDataMap = utils.NewIntStrMap()
+		stdin       io.Writer
+		stdout      io.Reader
+	)
+	for {
+		command := <-payloadBuffChan
 		if command.NodeId == nodeid {
 			switch command.Type {
 			case "COMMAND":
