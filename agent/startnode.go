@@ -27,6 +27,7 @@ func HandleStartNodeConn(connToAdmin *net.Conn, monitor, listenPort, reConn stri
 	go HandleDataToAdmin(connToAdmin)
 }
 
+// HandleStartConn 处理与admin的信道
 func HandleStartConn(connToAdmin *net.Conn, payloadBuffChan chan *utils.Payload, monitor, listenPort, reConn string, passive bool, nodeid string) {
 	for {
 		AdminData, err := utils.ExtractPayload(*connToAdmin, AgentStatus.AESKey, nodeid, false)

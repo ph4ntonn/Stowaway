@@ -23,6 +23,7 @@ func HandleSimpleNodeConn(connToUpperNode *net.Conn, nodeid string) {
 	go HandleDataToUpperNode(connToUpperNode)
 }
 
+// HandleNodeConn 处理来自上级节点的信道
 func HandleNodeConn(connToUpperNode *net.Conn, payloadBuffChan chan *utils.Payload, nodeid string) {
 	for {
 		command, err := utils.ExtractPayload(*connToUpperNode, AgentStatus.AESKey, nodeid, false)
@@ -37,7 +38,7 @@ func HandleNodeConn(connToUpperNode *net.Conn, payloadBuffChan chan *utils.Paylo
 	}
 }
 
-// HandleDataToUpperNode 处理发往上一级节点的控制信道
+// HandleDataToUpperNode 处理发往上级节点的信道
 func HandleDataToUpperNode(connToUpperNode *net.Conn) {
 	for {
 		proxyData := <-AgentStuff.ProxyChan.ProxyChanToUpperNode
@@ -48,7 +49,7 @@ func HandleDataToUpperNode(connToUpperNode *net.Conn) {
 	}
 }
 
-// HandleDataFromUpperNode 处理来自上一级节点的控制信道
+// HandleDataFromUpperNode 处理来自上一级节点的数据
 func HandleDataFromUpperNode(connToUpperNode *net.Conn, payloadBuffChan chan *utils.Payload, nodeid string) {
 	var (
 		err         error

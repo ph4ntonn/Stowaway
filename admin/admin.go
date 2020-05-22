@@ -132,6 +132,7 @@ func HandleInitControlConn(startNodeConn net.Conn, adminCommandChan chan []strin
 	}
 }
 
+// HandleConn 处理接收startnode数据的信道
 func HandleConn(startNodeConn net.Conn, dataBufferChan chan *utils.Payload) {
 	for {
 		nodeResp, err := utils.ExtractPayload(startNodeConn, AdminStatus.AESKey, utils.AdminId, true)
@@ -146,7 +147,7 @@ func HandleConn(startNodeConn net.Conn, dataBufferChan chan *utils.Payload) {
 	}
 }
 
-// HandleStartConn 处理与startnode的信道
+// HandleData 处理startnode信道上的数据
 func HandleData(startNodeConn net.Conn, adminCommandChan chan []string, dataBufferChan chan *utils.Payload) {
 	fileDataMap := utils.NewIntStrMap()
 	cannotRead := make(chan bool, 1)
