@@ -4,6 +4,10 @@
 import socket
 import argparse
 import sys
+import hashlib
+
+# eg: when start node like: ./linux_x64_agent --report 80 -l 10000 -s ph4ntom ,set SECRET = "ph4ntom"
+SECRET = "" # set SECRET as you secret key(-s option) ,if you do not set the -s option,just leave it like SECRET = ""
 
 # Usage:
 # python reuse.py --start --rhost 192.168.1.2 --rport 80  Start the port reuse function
@@ -15,8 +19,13 @@ parser.add_argument('--stop', help='stop port reusing', action='store_true')
 parser.add_argument('--rhost', help='remote host', dest='ip')
 parser.add_argument('--rport', help='remote port', dest='port')
 
-START_PORT_REUSE = "stowawaycoming"
-STOP_PORT_REUSE = "stowawayleaving"
+checkcode = hashlib.md5(SECRET).hexdigest()
+prefix = checkcode[8:16]
+start_suffix = checkcode[16:24]
+stop_suffix = start_suffix[::-1]
+
+START_PORT_REUSE = prefix + start_suffix
+STOP_PORT_REUSE = prefix + stop_suffix
 
 options = parser.parse_args()    
 

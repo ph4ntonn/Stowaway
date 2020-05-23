@@ -8,13 +8,22 @@ import (
 	"net"
 	"time"
 
-	"Stowaway/config"
 	"Stowaway/utils"
 )
+
+var VALIDMESSAGE string
+var READYMESSAGE string
 
 //reuse模式下的共用代码
 
 /*-------------------------端口复用模式下节点主动连接功能代码--------------------------*/
+
+// SetValidtMessage 设置启动认证密钥
+func SetValidtMessage(key []byte) {
+	secret := utils.GetStringMd5(string(key))
+	VALIDMESSAGE = secret[0:16]
+	READYMESSAGE = secret[0:16]
+}
 
 // StartNodeConnReuse 初始化时的连接
 func StartNodeConnReuse(monitor string, listenPort string, nodeid string, key []byte) (net.Conn, string, error) {
@@ -104,12 +113,12 @@ func ConnectNextNodeReuse(target string, nodeid string, key []byte) bool {
 func IfValid(conn net.Conn) error {
 	var NOT_VALID = errors.New("Not valid")
 	//发送标志字段
-	conn.Write([]byte(config.VALIDMESSAGE))
+	conn.Write([]byte(VALIDMESSAGE))
 
-	returnMess := make([]byte, 13)
+	returnMess := make([]byte, 16)
 	io.ReadFull(conn, returnMess)
 	//检查返回字段
-	if string(returnMess) != config.READYMESSAGE {
+	if string(returnMess) != READYMESSAGE {
 		return NOT_VALID
 	} else {
 		return nil
@@ -123,7 +132,7 @@ func CheckValid(conn net.Conn, reuse bool, report string) error {
 	defer conn.SetReadDeadline(time.Time{})
 	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 
-	message := make([]byte, 8)
+	message := make([]byte, 16)
 	count, err := io.ReadFull(conn, message)
 	//防止如果复用的是mysql的情况，因为mysql是服务端先发送握手初始化消息
 	if timeoutErr, ok := err.(net.Error); ok && timeoutErr.Timeout() {
@@ -133,8 +142,8 @@ func CheckValid(conn net.Conn, reuse bool, report string) error {
 		return NOT_VALID
 	}
 
-	if string(message) == config.VALIDMESSAGE {
-		conn.Write([]byte(config.READYMESSAGE))
+	if string(message) == VALIDMESSAGE {
+		conn.Write([]byte(READYMESSAGE))
 		return nil
 	} else {
 		if reuse {

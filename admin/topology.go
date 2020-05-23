@@ -126,7 +126,7 @@ func CalRoute() {
 				count = Topology.AllNode[count].Uppernode
 				temp = append(temp, count)
 			} else {
-				utils.StringReverse(temp)
+				utils.StringSliceReverse(temp)
 				route := strings.Join(temp, ":")
 				Route.Lock()
 				Route.Route[key] = route

@@ -84,10 +84,12 @@ func ConnectToStartNode(startNodeAddr string, rhostReuse bool, adminCommandChan 
 		}
 
 		if rhostReuse { //如果startnode在reuse状态下
+			node.SetValidtMessage(AdminStatus.AESKey)
+			node.SetForwardMessage(AdminStatus.AESKey)
 			err = node.IfValid(startNodeConn)
 			if err != nil {
 				startNodeConn.Close()
-				continue
+				log.Fatal("[*]Seems like agent is not reusing port ,or maybe you forget to use the 'reuse.py'?")
 			}
 		} else {
 			err := node.SendSecret(startNodeConn, AdminStatus.AESKey)

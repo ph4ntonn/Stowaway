@@ -32,7 +32,7 @@ type AgentOptions struct {
 	Listen      string
 	Reconnect   string
 	Reverse     bool
-	Monitor     string
+	Connect     string
 	IsStartNode bool
 	ReuseHost   string
 	ReusePort   string
@@ -510,8 +510,8 @@ func CheckRange(nodes []int) {
 	}
 }
 
-// StringReverse 倒置[]string
-func StringReverse(src []string) {
+// StringSliceReverse 倒置[]string
+func StringSliceReverse(src []string) {
 	if src == nil {
 		return
 	}
@@ -523,6 +523,15 @@ func StringReverse(src []string) {
 		src[count-1] = tmp
 		count--
 	}
+}
+
+// StringReverse 倒置string
+func StringReverse(s string) string {
+	r := []byte(s)
+	for i := 0; i < len(s); i++ {
+		r[i] = s[len(s)-1-i]
+	}
+	return string(r)
 }
 
 // FindSpecFromSlice 获取slice中的特定值

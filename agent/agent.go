@@ -28,7 +28,7 @@ func NewAgent(c *utils.AgentOptions) {
 	listenPort := c.Listen
 	reconn := c.Reconnect
 	passive := c.Reverse
-	monitor := c.Monitor
+	monitor := c.Connect
 	isStartNode := c.IsStartNode
 	reuseHost := c.ReuseHost
 	reusePort := c.ReusePort
@@ -198,6 +198,9 @@ func SimpleNodeReversemodeInit(monitor, listenPort string) {
 func StartNodeReuseInit(reuseHost, reusePort, localPort string, method int) {
 	AgentStatus.Nodeid = utils.StartNodeId
 
+	node.SetValidtMessage(AgentStatus.AESKey)
+	node.SetForwardMessage(AgentStatus.AESKey)
+
 	if method == 1 {
 		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeReuse(reuseHost, reusePort, AgentStatus.Nodeid, AgentStatus.AESKey)
 	} else {
@@ -245,6 +248,9 @@ func StartNodeReuseInit(reuseHost, reusePort, localPort string, method int) {
 // SimpleNodeReuseInit reuseport下的普通节点
 func SimpleNodeReuseInit(reuseHost, reusePort, localPort string, method int) {
 	AgentStatus.Nodeid = utils.AdminId
+
+	node.SetValidtMessage(AgentStatus.AESKey)
+	node.SetForwardMessage(AgentStatus.AESKey)
 
 	if method == 1 {
 		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeReuse(reuseHost, reusePort, AgentStatus.Nodeid, AgentStatus.AESKey)

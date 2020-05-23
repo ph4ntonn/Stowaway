@@ -55,11 +55,11 @@ Stowaway一共包含三种角色，分别是：
             -s 参数代表节点通信加密密钥(admin端与所有node必须一致!)
 
  
-   - **startnode端： ./stowaway_agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 --reconnect 5**
+   - **startnode端： ./stowaway_agent -c 127.0.0.1:9999 -l 10000 --startnode -s 123 --reconnect 5**
   
          命令解析：
   
-            -m 代表上一级节点的地址
+            -c 代表上一级节点的地址
   
             -l 代表监听端口(如果暂时不需要监听，也可直接省略,后续如果需要开启，可参见listen命令的用法)
 
@@ -84,7 +84,7 @@ Stowaway一共包含三种角色，分别是：
 
    - **若后续node希望以active模式启动**
 
-      后续node启动命令改为：```./stowaway_agent -m 127.0.0.1:10000 -s 123``` 即可
+      后续node启动命令改为：```./stowaway_agent -c 127.0.0.1:10000 -s 123``` 即可
 
      **其余node同理**
 
@@ -149,7 +149,7 @@ Stowaway一共包含三种角色，分别是：
 
            --rehost 代表复用端口时需要监听的本机ip（不可用0.0.0.0）
 
-     **如果后续有node想要连接startnode,则node命令为: ```./stowaway_agent -s 123 -m 192.168.0.105:80 --rhostreuse```**
+     **如果后续有node想要连接startnode,则node命令为: ```./stowaway_agent -s 123 -c 192.168.0.105:80 --rhostreuse```**
 
 - IPTABLES模式
 
@@ -167,7 +167,7 @@ Stowaway一共包含三种角色，分别是：
 
            -l 代表复用端口时需要监听的端口（渗透测试者所有访问report端口的流量将会导向这个端口）
 
-    在startnode启动后，使用script目录下的reuse.py打开复用：```python reuse.py --start --rhost 192.168.0.105 --rport 22```
+    在startnode启动后，使用script目录下的reuse.py,先设置SECRET的值(SECRET的值就是在启动各个节点时所设置的通信密钥，即-s选项),之后打开复用：```python reuse.py --start --rhost 192.168.0.105 --rport 22```
 
   - **此时admin端就可以连接：./stowaway_admin -c 192.168.0.105:22 -s 123 --rhostreuse**
 
@@ -175,7 +175,7 @@ Stowaway一共包含三种角色，分别是：
 
            -c/-s/--rhostreuse 同上，不再赘述
 
-  如果后续有node想要连接startnode: ```./stowaway_agent -s 123 -m 192.168.0.105:22 --rhostreuse```
+  如果后续有node想要连接startnode: ```./stowaway_agent -s 123 -c 192.168.0.105:22 --rhostreuse```
 
 ### 注意
 - 如果startnode被ctrl-c或者kill命令杀死，程序将会自动清理iptables规则，但如果被kill -9 杀死，则无法自动清除

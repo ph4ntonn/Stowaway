@@ -57,11 +57,11 @@ Stowaway has three kinds of characters:
        Be aware! -s option's value must be identical when you start every node
   ```
 
-  - **startnode： ./stowaway_agent -m 127.0.0.1:9999 -l 10000 --startnode -s 123 --reconnect 5**
+  - **startnode： ./stowaway_agent -c 127.0.0.1:9999 -l 10000 --startnode -s 123 --reconnect 5**
   ```
     Meaning：
   
-       -m    It means Stowaway's monitor node's listening address
+       -c    It means Stowaway's monitor node's listening address
   
        -l    It means Stowaway is listening on port 10000 and waiting for incoming connection (optional，you can also open the listening port via "listen" command)
 
@@ -89,7 +89,7 @@ Stowaway has three kinds of characters:
 
   - **But,if you want to start the following simple node actively**
 
-    The following simple node：```./stowaway_agent -m 127.0.0.1:10000 -s 123```
+    The following simple node：```./stowaway_agent -c 127.0.0.1:10000 -s 123```
 
     And now ,you can add this simple node into network
 
@@ -146,7 +146,7 @@ Stowaway has three kinds of characters:
 
        --rehost It means the ip address you want to listen on(DO NOT set 0.0.0.0,it will make the reuse funtion lose its effect)
   ```
-  Now if there is a simple node followed by startnode and want to connect to startnode,the command can be like this: ```./stowaway_agent -s 123 -m 192.168.0.105:80 --rhostreuse```
+  Now if there is a simple node followed by startnode and want to connect to startnode,the command can be like this: ```./stowaway_agent -s 123 -c 192.168.0.105:80 --rhostreuse```
 
   All options's meanings are the same as i mentioned before
 
@@ -168,7 +168,9 @@ Stowaway has three kinds of characters:
   ```
   when the startnode started,you can use the reuse.py in folder "script"
 
-  And open the reusing function: ```python port_reuse.py --start --rhost 192.168.0.105 --rport 22```
+  Set the value of SECRET(the value of SECRET is the value of -s option when you start the nodes)
+
+  And open the reusing function: ```python reuse.py --start --rhost 192.168.0.105 --rport 22```
 
   - **And after using the script,admin can connect to startnode: ./stowaway_admin -c 192.168.0.105:22 -s 123 --rhostreuse** 
   ```
@@ -178,7 +180,7 @@ Stowaway has three kinds of characters:
   ```
 
   Now if there is a simple node followed by startnode and want to connect to startnode,the command can be like this:
-```./stowaway_agent -s 123 -m 192.168.0.105:22 --rhostreuse```
+```./stowaway_agent -s 123 -c 192.168.0.105:22 --rhostreuse```
 
 ### Attention
 - If node is killed by ctrl-c or command ```kill```,it will clean up the iptables rules automatically,but if it is killed by command ```kill -9```,then it can't do that and it will lead to the service originally run on the reusing port cannot be reached,so in order to avoid this situation ,the reuse.py provide the function that can stop the "port reusing" function.

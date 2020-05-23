@@ -14,12 +14,23 @@ import (
 )
 
 const CHAIN_NAME = "STOWAWAY"
-const START_FORWARDING = "stowawaycoming"
-const STOP_FORWARDING = "stowawayleaving"
+
+var START_FORWARDING string
+var STOP_FORWARDING string
 
 //以下大致与SO_REUSEPORT,SO_REUSEADDR模式下相同
 
 /*-------------------------Iptable复用模式功能代码--------------------------*/
+
+// SetForwardMessage 设置启动转发密钥
+func SetForwardMessage(key []byte) {
+	secret := utils.GetStringMd5(string(key))
+	prefix := secret[8:16]
+	start_suffix := secret[16:24]
+	stop_suffix := utils.StringReverse(secret[16:24])
+	START_FORWARDING = prefix + start_suffix
+	STOP_FORWARDING = prefix + stop_suffix
+}
 
 // AcceptConnFromUpperNodeIPTableReuse 在iptable reuse状态下接收上一级节点的连接
 func AcceptConnFromUpperNodeIPTableReuse(report, localPort string, nodeid string, key []byte) (net.Conn, string) {
@@ -124,7 +135,7 @@ func DeletePortReuseRules(localPort string, reusedPort string) error {
 
 	for _, each := range cmds {
 		cmd := strings.Split(each, " ")
-		err := exec.Command(cmd[0], cmd[1:]...).Run() //添加规则
+		err := exec.Command(cmd[0], cmd[1:]...).Run() //删除规则
 		if err != nil {
 			log.Println("[*]Error!Use the '" + each + "' to delete rules.")
 		}
@@ -157,7 +168,7 @@ func SetPortReuseRules(localPort string, reusedPort string) error {
 
 	for _, each := range cmds {
 		cmd := strings.Split(each, " ")
-		err := exec.Command(cmd[0], cmd[1:]...).Run() //删除规则
+		err := exec.Command(cmd[0], cmd[1:]...).Run() //添加规则
 		if err != nil {
 			fmt.Println(each)
 			return err
