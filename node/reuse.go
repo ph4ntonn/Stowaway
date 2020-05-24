@@ -23,8 +23,8 @@ func SetValidtMessage(key []byte) {
 	firstSecret := utils.GetStringMd5(string(key))
 	secondSecret := utils.GetStringMd5(firstSecret)
 	finalSecret := firstSecret[:24] + secondSecret[:24]
-	VALIDMESSAGE = finalSecret[0:8]
-	READYMESSAGE = finalSecret[8:16]
+	VALIDMESSAGE = finalSecret[8:16]
+	READYMESSAGE = finalSecret[0:8]
 }
 
 // StartNodeConnReuse 初始化时的连接
