@@ -50,8 +50,13 @@ func HandleDataFromLowerNode(connForLowerNode net.Conn, payloadBuffChan chan *ut
 			case "COMMAND":
 				switch command.Command {
 				case "RECONNID":
+					var info string
 					if _, ok := node.NodeInfo.LowerNode.Payload[command.CurrentId]; ok {
-						info := fmt.Sprintf("%s:::%s", currentid, connForLowerNode.RemoteAddr().String())
+						if connForLowerNode.RemoteAddr().String() == "0.0.0.0:0" {
+							info = fmt.Sprintf("%s:::%s", currentid, "Can't retrive ip address") //被sshtunnel连接的节点在重连时无法取到ip:port信息，可利用'shell' -> 'ipconfig/ifconfig'自行查看
+						} else {
+							info = fmt.Sprintf("%s:::%s", currentid, connForLowerNode.RemoteAddr().String())
+						}
 						proxyCommand, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", command.Command, " ", info, 0, command.CurrentId, AgentStatus.AESKey, false)
 						AgentStuff.ProxyChan.ProxyChanToUpperNode <- proxyCommand
 						continue

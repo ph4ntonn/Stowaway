@@ -154,13 +154,13 @@ func ShowDetail() {
 		for Nodeid, _ := range AdminStuff.NodeStatus.NodeIP {
 			nodes = append(nodes, Nodeid)
 		}
-		for _, value := range nodes {
+		for _, id := range nodes {
 			fmt.Printf("Node[%s]: IP:%s  Hostname:%s  Username:%s\nNote:%s\n\n",
-				fmt.Sprint(FindIntByNodeid(value)+1),
-				AdminStuff.NodeStatus.NodeIP[value],
-				AdminStuff.NodeStatus.NodeHostname[utils.StartNodeId],
-				AdminStuff.NodeStatus.NodeUser[utils.StartNodeId],
-				AdminStuff.NodeStatus.Nodenote[value],
+				fmt.Sprint(FindIntByNodeid(id)+1),
+				AdminStuff.NodeStatus.NodeIP[id],
+				AdminStuff.NodeStatus.NodeHostname[id],
+				AdminStuff.NodeStatus.NodeUser[id],
+				AdminStuff.NodeStatus.Nodenote[id],
 			)
 		}
 	} else {

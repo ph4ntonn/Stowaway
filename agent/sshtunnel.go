@@ -72,7 +72,8 @@ func SSHTunnelNextNode(info string, nodeid string) error {
 		}
 		switch command.Command {
 		case "INIT":
-			newNodeMessage, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NEW", " ", nodeConn.RemoteAddr().String(), 0, nodeid, AgentStatus.AESKey, false)
+			addr := strings.Split(sshClient.RemoteAddr().String(), ":")[0] + ":" + lport
+			newNodeMessage, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NEW", " ", addr, 0, nodeid, AgentStatus.AESKey, false)
 			node.NodeInfo.LowerNode.Payload[utils.AdminId] = nodeConn
 			node.NodeStuff.ControlConnForLowerNodeChan <- nodeConn
 			node.NodeStuff.NewNodeMessageChan <- newNodeMessage
