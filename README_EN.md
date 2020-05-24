@@ -2,6 +2,11 @@
 
 # Stowaway
 
+[![GitHub issues](https://img.shields.io/github/issues/ph4ntonn/Stowaway)](https://github.com/ph4ntonn/Stowaway/issues)
+[![GitHub forks](https://img.shields.io/github/forks/ph4ntonn/Stowaway)](https://github.com/ph4ntonn/Stowaway/network)
+[![GitHub stars](https://img.shields.io/github/stars/ph4ntonn/Stowaway)](https://github.com/ph4ntonn/Stowaway/stargazers)
+[![GitHub license](https://img.shields.io/github/license/ph4ntonn/Stowaway)](https://github.com/ph4ntonn/Stowaway/blob/master/LICENSE)
+
 Stowaway is Multi-hop proxy tool for security researchers and pentesters
 
 Users can easily proxy their network traffic to intranet nodes (multi-layer),break the restrction and manipulate all the nodes that under your control XD
