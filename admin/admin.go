@@ -90,7 +90,7 @@ func ConnectToStartNode(startNodeAddr string, rhostReuse bool, adminCommandChan 
 			err = node.IfValid(startNodeConn)
 			if err != nil {
 				startNodeConn.Close()
-				log.Fatal("[*]Seems like agent is not reusing port ,or maybe you forget to use the 'reuse.py'?")
+				log.Fatal("[*]Can't connect to agent,check your -s option or (if you are using iptables mode)maybe you forget to use the 'reuse.py'?")
 			}
 		} else {
 			err := node.SendSecret(startNodeConn, AdminStatus.AESKey)
