@@ -24,12 +24,11 @@ var STOP_FORWARDING string
 
 // SetForwardMessage 设置启动转发密钥
 func SetForwardMessage(key []byte) {
-	secret := utils.GetStringMd5(string(key))
-	prefix := secret[8:16]
-	start_suffix := secret[16:24]
-	stop_suffix := utils.StringReverse(secret[16:24])
-	START_FORWARDING = prefix + start_suffix
-	STOP_FORWARDING = prefix + stop_suffix
+	firstSecret := utils.GetStringMd5(string(key))
+	secondSecret := utils.GetStringMd5(firstSecret)
+	finalSecret := firstSecret[:24] + secondSecret[:24]
+	START_FORWARDING = finalSecret[16:32]
+	STOP_FORWARDING = finalSecret[32:]
 }
 
 // AcceptConnFromUpperNodeIPTableReuse 在iptable reuse状态下接收上一级节点的连接

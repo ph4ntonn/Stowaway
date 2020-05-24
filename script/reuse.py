@@ -19,13 +19,12 @@ parser.add_argument('--stop', help='stop port reusing', action='store_true')
 parser.add_argument('--rhost', help='remote host', dest='ip')
 parser.add_argument('--rport', help='remote port', dest='port')
 
-checkcode = hashlib.md5(SECRET).hexdigest()
-prefix = checkcode[8:16]
-start_suffix = checkcode[16:24]
-stop_suffix = start_suffix[::-1]
+first_checkcode = hashlib.md5(SECRET).hexdigest()
+second_checkcode = hashlib.md5(first_checkcode).hexdigest()
+final_checkcode = first_checkcode[:24] + second_checkcode[:24]
 
-START_PORT_REUSE = prefix + start_suffix
-STOP_PORT_REUSE = prefix + stop_suffix
+START_PORT_REUSE = final_checkcode[16:32]
+STOP_PORT_REUSE = final_checkcode[32:]
 
 options = parser.parse_args()    
 

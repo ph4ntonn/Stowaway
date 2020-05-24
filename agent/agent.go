@@ -33,6 +33,9 @@ func NewAgent(c *utils.AgentOptions) {
 	reuseHost := c.ReuseHost
 	reusePort := c.ReusePort
 	rhostReuse := c.RhostReuse
+	//设置通信字符串
+	node.SetValidtMessage(AgentStatus.AESKey)
+	node.SetForwardMessage(AgentStatus.AESKey)
 	//根据选择确定启动方式
 	if isStartNode && passive == false && reuseHost == "" && reusePort == "" {
 		go WaitForExit()
@@ -198,9 +201,6 @@ func SimpleNodeReversemodeInit(monitor, listenPort string) {
 func StartNodeReuseInit(reuseHost, reusePort, localPort string, method int) {
 	AgentStatus.Nodeid = utils.StartNodeId
 
-	node.SetValidtMessage(AgentStatus.AESKey)
-	node.SetForwardMessage(AgentStatus.AESKey)
-
 	if method == 1 {
 		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeReuse(reuseHost, reusePort, AgentStatus.Nodeid, AgentStatus.AESKey)
 	} else {
@@ -248,9 +248,6 @@ func StartNodeReuseInit(reuseHost, reusePort, localPort string, method int) {
 // SimpleNodeReuseInit reuseport下的普通节点
 func SimpleNodeReuseInit(reuseHost, reusePort, localPort string, method int) {
 	AgentStatus.Nodeid = utils.AdminId
-
-	node.SetValidtMessage(AgentStatus.AESKey)
-	node.SetForwardMessage(AgentStatus.AESKey)
 
 	if method == 1 {
 		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeReuse(reuseHost, reusePort, AgentStatus.Nodeid, AgentStatus.AESKey)

@@ -20,9 +20,11 @@ var READYMESSAGE string
 
 // SetValidtMessage 设置启动认证密钥
 func SetValidtMessage(key []byte) {
-	secret := utils.GetStringMd5(string(key))
-	VALIDMESSAGE = secret[0:16]
-	READYMESSAGE = secret[0:16]
+	firstSecret := utils.GetStringMd5(string(key))
+	secondSecret := utils.GetStringMd5(firstSecret)
+	finalSecret := firstSecret[:24] + secondSecret[:24]
+	VALIDMESSAGE = finalSecret[0:8]
+	READYMESSAGE = finalSecret[8:16]
 }
 
 // StartNodeConnReuse 初始化时的连接
@@ -115,7 +117,7 @@ func IfValid(conn net.Conn) error {
 	//发送标志字段
 	conn.Write([]byte(VALIDMESSAGE))
 
-	returnMess := make([]byte, 16)
+	returnMess := make([]byte, 8)
 	io.ReadFull(conn, returnMess)
 	//检查返回字段
 	if string(returnMess) != READYMESSAGE {
@@ -132,7 +134,7 @@ func CheckValid(conn net.Conn, reuse bool, report string) error {
 	defer conn.SetReadDeadline(time.Time{})
 	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 
-	message := make([]byte, 16)
+	message := make([]byte, 8)
 	count, err := io.ReadFull(conn, message)
 	//防止如果复用的是mysql的情况，因为mysql是服务端先发送握手初始化消息
 	if timeoutErr, ok := err.(net.Error); ok && timeoutErr.Timeout() {

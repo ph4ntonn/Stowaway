@@ -40,6 +40,9 @@ func NewAdmin(c *utils.AdminOptions) {
 		log.Println("[*]Now Connection is maintianed without any encryption!")
 	}
 
+	node.SetValidtMessage(AdminStatus.AESKey)
+	node.SetForwardMessage(AdminStatus.AESKey)
+
 	if startNodeAddr == "" {
 		go StartListen(listenPort, adminCommandChan)
 	} else {
@@ -84,8 +87,6 @@ func ConnectToStartNode(startNodeAddr string, rhostReuse bool, adminCommandChan 
 		}
 
 		if rhostReuse { //如果startnode在reuse状态下
-			node.SetValidtMessage(AdminStatus.AESKey)
-			node.SetForwardMessage(AdminStatus.AESKey)
 			err = node.IfValid(startNodeConn)
 			if err != nil {
 				startNodeConn.Close()
