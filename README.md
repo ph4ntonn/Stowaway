@@ -265,7 +265,7 @@ Stowaway一共包含三种角色，分别是：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/ssh.png)
 
-此时第二个node会作为ssh客户端发起ssh连接来访问指定的ssh服务，并将ssh数据回传至admin端
+此时第二个node会作为ssh客户端发起ssh连接来访问指定的ssh服务，并将ssh数据回传至admin端(arm以及mipsel客户端不支持此功能)
 
 PS: 在ssh模式下，你可以用pwd来判断自己所处的文件夹（好吧，其实就是没法把banner传回来。。）
 
@@ -274,7 +274,7 @@ PS: 在ssh模式下，你可以用pwd来判断自己所处的文件夹（好吧�
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/waiting.png)
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/sshtunnel.png)
 
-此时将可以利用sshtunnel将节点加入网络，这一方法适用于当防火墙做了流量限制，只有ssh流量能够通过的情况（一般情况下推荐使用connect命令即可，不需要使用sshtunnel）。
+此时将可以利用sshtunnel将节点加入网络，这一方法适用于当防火墙做了流量限制，只有ssh流量能够通过的情况.一般情况下推荐使用connect命令即可，不需要使用sshtunnel.(arm以及mipsel客户端不支持此功能)。
 
 - 上传/下载文件：
 

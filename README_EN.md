@@ -278,7 +278,7 @@ If you want to set username/password for socks5 service(Firefox support this fun
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/ssh.png)
 
-And it can make the second simple node do its work as ssh cilent to start a ssh connection to 127.0.0.1:22
+And it can make the second simple node do its work as ssh cilent to start a ssh connection to 127.0.0.1:22(arm and mipsel agent doesn't support this function)
 
 PS: In this function,you can type in ```pwd``` to check where you currently are
 
@@ -288,7 +288,7 @@ PS: In this function,you can type in ```pwd``` to check where you currently are
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/sshtunnel.png)
 
 
-And I suggest to use the "sshtunnel" command to add the node into network when the firewall has stricted all the traffics expect for SSH(In general,you can just use "connect" command,it also works)
+And I suggest to use the "sshtunnel" command to add the node into network when the firewall has stricted all the traffics expect for SSH.In general,you can just use "connect" command,it also works(arm and mipsel agent doesn't support this function)
 
 - Upload/Download file:
 
