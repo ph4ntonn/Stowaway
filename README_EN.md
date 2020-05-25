@@ -342,6 +342,7 @@ Now anyone who connect to 127.0.0.1:80 will connect to 127.0.0.1:22 in fact(forw
 
 - This porject is coding just for fun , the logic structure and code structure are not strict enough, please don't be so serious about it
 - This program will be slightly bigger than usual after compiled, but actually through my test , it just 1 MB more than usual,Maybe slightly big on IOT platform(1MB maybe not a big deal lol),so if you got any problem when you are using it on IOT platform,just tell me, and i will try my best to decrease the size.
+- The executable file after upx compress seems much more smaller than original one and it really makes upload stowaway to target server easily,but actually ,although it can make uploading stuff easier,it will occupy slightly more memory than original one,so pick the suitable version(upx or non-upx) depends on the target you want to use stowaway on.
 - Admin node MUST be online when new node is being added into the network
 - If you want to compile this project from source code,you can run build_admin.sh/build_agent.sh（Be Mentioned!!!!!!!!!! The default compile result is AGENT mode and please run build_agent.sh. But if you want to compile ADMIN mode,please see the main.go file and FOLLOW THE INSTRUCTION, and next you can run build_admin.sh to get admin mode program.)
 
