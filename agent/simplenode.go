@@ -52,12 +52,12 @@ func HandleDataToUpperNode(connToUpperNode *net.Conn) {
 // HandleDataFromUpperNode 处理来自上一级节点的数据
 func HandleDataFromUpperNode(connToUpperNode *net.Conn, payloadBuffChan chan *utils.Payload, nodeid string) {
 	var (
-		err         error
-		cannotRead  = make(chan bool, 1)
-		getName     = make(chan bool, 1)
-		fileDataMap = utils.NewIntStrMap()
-		stdin       io.Writer
-		stdout      io.Reader
+		err          error
+		cannotRead   = make(chan bool, 1)
+		getName      = make(chan bool, 1)
+		fileDataChan = make(chan []byte, 1)
+		stdin        io.Writer
+		stdout       io.Reader
 	)
 	for {
 		command := <-payloadBuffChan
@@ -126,7 +126,7 @@ func HandleDataFromUpperNode(connToUpperNode *net.Conn, payloadBuffChan chan *ut
 					} else {
 						respComm, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NAMECONFIRM", " ", " ", 0, nodeid, AgentStatus.AESKey, false)
 						AgentStuff.ProxyChan.ProxyChanToUpperNode <- respComm
-						go share.ReceiveFile("", connToUpperNode, fileDataMap, cannotRead, uploadFile, AgentStatus.AESKey, false, nodeid)
+						go share.ReceiveFile("", connToUpperNode, fileDataChan, cannotRead, uploadFile, AgentStatus.AESKey, false, nodeid)
 					}
 				case "FILESIZE":
 					share.File.FileSize, _ = strconv.ParseInt(command.Info, 10, 64)
@@ -263,10 +263,7 @@ func HandleDataFromUpperNode(connToUpperNode *net.Conn, payloadBuffChan chan *ut
 					}
 					AgentStuff.SocksDataChanMap.Unlock()
 				case "FILEDATA": //接收文件内容
-					sliceNum, _ := strconv.Atoi(command.FileSliceNum)
-					fileDataMap.Lock()
-					fileDataMap.Payload[sliceNum] = command.Info
-					fileDataMap.Unlock()
+					fileDataChan <- []byte(command.Info)
 				case "FORWARDDATA":
 					AgentStuff.ForwardConnMap.RLock()
 					if _, ok := AgentStuff.ForwardConnMap.Payload[command.Clientid]; ok {

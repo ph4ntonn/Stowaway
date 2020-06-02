@@ -152,7 +152,7 @@ func HandleConn(startNodeConn net.Conn, dataBufferChan chan *utils.Payload) {
 
 // HandleData 处理startnode信道上的数据
 func HandleData(startNodeConn net.Conn, adminCommandChan chan []string, dataBufferChan chan *utils.Payload) {
-	fileDataMap := utils.NewIntStrMap()
+	fileDataChan := make(chan []byte, 1)
 	cannotRead := make(chan bool, 1)
 
 	for {
@@ -229,7 +229,7 @@ func HandleData(startNodeConn net.Conn, adminCommandChan chan []string, dataBuff
 					SendPayloadViaRoute(startNodeConn, AdminStatus.HandleNode, "COMMAND", "CREATEFAIL", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 				} else {
 					SendPayloadViaRoute(startNodeConn, AdminStatus.HandleNode, "COMMAND", "NAMECONFIRM", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
-					go share.ReceiveFile(Route.Route[AdminStatus.HandleNode], &startNodeConn, fileDataMap, cannotRead, uploadFile, AdminStatus.AESKey, true, utils.AdminId)
+					go share.ReceiveFile(Route.Route[AdminStatus.HandleNode], &startNodeConn, fileDataChan, cannotRead, uploadFile, AdminStatus.AESKey, true, utils.AdminId)
 				}
 			case "FILESIZE":
 				share.File.FileSize, _ = strconv.ParseInt(nodeResp.Info, 10, 64)
@@ -345,10 +345,7 @@ func HandleData(startNodeConn net.Conn, adminCommandChan chan []string, dataBuff
 				}
 				AdminStuff.ClientSockets.RUnlock()
 			case "FILEDATA": //接收文件内容
-				sliceNum, _ := strconv.Atoi(nodeResp.FileSliceNum)
-				fileDataMap.Lock()
-				fileDataMap.Payload[sliceNum] = nodeResp.Info
-				fileDataMap.Unlock()
+				fileDataChan <- []byte(nodeResp.Info)
 			case "FORWARDDATARESP":
 				AdminStuff.PortForWardMap.Lock()
 				if _, ok := AdminStuff.PortForWardMap.Payload[nodeResp.Clientid]; ok {

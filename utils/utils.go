@@ -304,11 +304,6 @@ type Uint32ChanStrMap struct {
 	Payload map[uint32]chan string
 }
 
-type IntStrMap struct {
-	sync.RWMutex
-	Payload map[int]string
-}
-
 type StrConnMap struct {
 	sync.RWMutex
 	Payload map[string]net.Conn
@@ -361,12 +356,6 @@ func NewStrConnMap() *StrConnMap {
 	nscm := new(StrConnMap)
 	nscm.Payload = make(map[string]net.Conn)
 	return nscm
-}
-
-func NewIntStrMap() *IntStrMap {
-	sm := new(IntStrMap)
-	sm.Payload = make(map[int]string)
-	return sm
 }
 
 func NewUint32ConnMap() *Uint32ConnMap {

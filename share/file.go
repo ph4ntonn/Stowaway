@@ -7,7 +7,6 @@ import (
 	"os"
 	"runtime"
 	"strconv"
-	"time"
 
 	"Stowaway/utils"
 
@@ -107,7 +106,7 @@ func DownloadFile(route, fileName string, conn net.Conn, nodeid string, currenti
 }
 
 // ReceiveFile admin || agent接收文件
-func ReceiveFile(route string, controlConnToAdmin *net.Conn, fileDataMap *utils.IntStrMap, cannotRead chan bool, uploadFile *os.File, AESKey []byte, notAgent bool, currentid string) {
+func ReceiveFile(route string, controlConnToAdmin *net.Conn, fileDataChan chan []byte, cannotRead chan bool, uploadFile *os.File, AESKey []byte, notAgent bool, currentid string) {
 	defer uploadFile.Close()
 
 	if notAgent {
@@ -123,27 +122,15 @@ func ReceiveFile(route string, controlConnToAdmin *net.Conn, fileDataMap *utils.
 	}
 
 	for num := 0; num < File.TotalSilceNum; num++ { //根据对端传输过来的文件分包数进行循环
-		for {
-			if len(cannotRead) != 1 { //检查不可读chan是否存在元素，存在即表示对端无法继续读，上传/下载终止
-				fileDataMap.Lock()
-				if _, ok := fileDataMap.Payload[num]; ok {
-
-					if notAgent {
-						Bar.Add64(int64(len(fileDataMap.Payload[num])))
-					}
-
-					uploadFile.Write([]byte(fileDataMap.Payload[num]))
-					delete(fileDataMap.Payload, num) //往文件里写完后立即清空，防止占用内存过大
-					fileDataMap.Unlock()
-					break
-				} else {
-					fileDataMap.Unlock()
-					time.Sleep(5 * time.Millisecond) //如果暂时没有收到当前序号的包，先释放锁，等待5ms后继续检查(减少在网络传输过慢时cpu消耗)
-				}
-			} else {
-				<-cannotRead
-				return
+		if len(cannotRead) != 1 { //检查不可读chan是否存在元素，存在即表示对端无法继续读，上传/下载终止
+			data := <-fileDataChan
+			if notAgent {
+				Bar.Add64(int64(len(data)))
 			}
+			uploadFile.Write(data)
+		} else {
+			<-cannotRead
+			return
 		}
 	}
 

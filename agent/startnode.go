@@ -55,12 +55,12 @@ func HandleDataToAdmin(connToAdmin *net.Conn) {
 // HandleDataFromAdmin 管理admin端下发的数据
 func HandleDataFromAdmin(connToAdmin *net.Conn, payloadBuffChan chan *utils.Payload, monitor, listenPort, reConn string, passive bool, nodeid string) {
 	var (
-		err         error
-		cannotRead  = make(chan bool, 1)
-		getName     = make(chan bool, 1)
-		fileDataMap = utils.NewIntStrMap()
-		stdin       io.Writer
-		stdout      io.Reader
+		err          error
+		cannotRead   = make(chan bool, 1)
+		getName      = make(chan bool, 1)
+		fileDataChan = make(chan []byte, 1)
+		stdin        io.Writer
+		stdout       io.Reader
 	)
 	for {
 		AdminData := <-payloadBuffChan
@@ -129,7 +129,7 @@ func HandleDataFromAdmin(connToAdmin *net.Conn, payloadBuffChan chan *utils.Payl
 					} else {
 						respComm, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "NAMECONFIRM", " ", " ", 0, nodeid, AgentStatus.AESKey, false)
 						AgentStuff.ProxyChan.ProxyChanToUpperNode <- respComm
-						go share.ReceiveFile("", connToAdmin, fileDataMap, cannotRead, uploadFile, AgentStatus.AESKey, false, nodeid)
+						go share.ReceiveFile("", connToAdmin, fileDataChan, cannotRead, uploadFile, AgentStatus.AESKey, false, nodeid)
 					}
 				case "FILESIZE":
 					share.File.FileSize, _ = strconv.ParseInt(AdminData.Info, 10, 64)
@@ -255,10 +255,7 @@ func HandleDataFromAdmin(connToAdmin *net.Conn, payloadBuffChan chan *utils.Payl
 					}
 					AgentStuff.SocksDataChanMap.Unlock()
 				case "FILEDATA": //接收文件内容
-					sliceNum, _ := strconv.Atoi(AdminData.FileSliceNum)
-					fileDataMap.Lock()
-					fileDataMap.Payload[sliceNum] = AdminData.Info
-					fileDataMap.Unlock()
+					fileDataChan <- []byte(AdminData.Info)
 				case "FORWARDDATA":
 					AgentStuff.ForwardConnMap.RLock()
 					if _, ok := AgentStuff.ForwardConnMap.Payload[AdminData.Clientid]; ok {
