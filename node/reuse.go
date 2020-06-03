@@ -115,9 +115,6 @@ func ConnectNextNodeReuse(target string, nodeid string, key []byte) bool {
 func IfValid(conn net.Conn) error {
 	var NOT_VALID = errors.New("Not valid")
 
-	defer conn.SetReadDeadline(time.Time{})
-	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
-
 	//发送标志字段
 	conn.Write([]byte(VALIDMESSAGE))
 
