@@ -122,15 +122,14 @@ func ReceiveFile(route string, controlConnToAdmin *net.Conn, fileDataChan chan [
 	}
 
 	for num := 0; num < File.TotalSilceNum; num++ { //根据对端传输过来的文件分包数进行循环
-		if len(cannotRead) != 1 { //检查不可读chan是否存在元素，存在即表示对端无法继续读，上传/下载终止
-			data := <-fileDataChan
+		select {
+		case <-cannotRead: //检查不可读chan是否存在元素，存在即表示对端无法继续读，上传/下载终止
+			return
+		case data := <-fileDataChan:
 			if notAgent {
 				Bar.Add64(int64(len(data)))
 			}
 			uploadFile.Write(data)
-		} else {
-			<-cannotRead
-			return
 		}
 	}
 
