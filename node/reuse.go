@@ -114,11 +114,21 @@ func ConnectNextNodeReuse(target string, nodeid string, key []byte) bool {
 // IfValid 发送特征字段
 func IfValid(conn net.Conn) error {
 	var NOT_VALID = errors.New("Not valid")
+
+	defer conn.SetReadDeadline(time.Time{})
+	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+
 	//发送标志字段
 	conn.Write([]byte(VALIDMESSAGE))
 
 	returnMess := make([]byte, 8)
-	io.ReadFull(conn, returnMess)
+	_, err := io.ReadFull(conn, returnMess)
+
+	if err != nil {
+		conn.Close()
+		return NOT_VALID
+	}
+
 	//检查返回字段
 	if string(returnMess) != READYMESSAGE {
 		return NOT_VALID
@@ -137,11 +147,16 @@ func CheckValid(conn net.Conn, reuse bool, report string) error {
 	message := make([]byte, 8)
 	count, err := io.ReadFull(conn, message)
 	//防止如果复用的是mysql的情况，因为mysql是服务端先发送握手初始化消息
-	if timeoutErr, ok := err.(net.Error); ok && timeoutErr.Timeout() {
-		if reuse {
-			go ProxyStream(conn, message[:count], report)
+	if err != nil {
+		if timeoutErr, ok := err.(net.Error); ok && timeoutErr.Timeout() {
+			if reuse {
+				go ProxyStream(conn, message[:count], report)
+			}
+			return NOT_VALID
+		} else {
+			conn.Close()
+			return NOT_VALID
 		}
-		return NOT_VALID
 	}
 
 	if string(message) == VALIDMESSAGE {
