@@ -36,7 +36,7 @@ PS:谢谢大家的star，同时欢迎大家使用后提出问题 :kissing_heart:
 
 ## 下载及演示
 
-- 不想编译的盆油可以直接用[release](https://github.com/ph4ntonn/Stowaway/releases)下编译完成的程序
+- 不想编译的盆油可以直接用[release](https://github.com/ph4ntonn/Stowaway/releases)下编译完成的程序.其中[Uncompressed](https://github.com/ph4ntonn/Stowaway/releases/download/v1.6.1/Uncompress_By_Upx.7z) 是未经压缩的程序合集，若需要更小体积的程序合集以此方便上传至服务器，请下载[Compressed](https://github.com/ph4ntonn/Stowaway/releases/download/v1.6.1/Compressed_By_Upx.tar)
 -  演示视频：[Youtube](https://www.youtube.com/watch?v=O3DHQ1ESMhw)
 
 ## 使用方法

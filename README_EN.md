@@ -34,7 +34,7 @@ PS: Thanks for everyone's star, i'm just an amateur, and the code still need be 
 
 ## Download and Demo
 
-- If you don't want to compile the project by yourself, you can check the [release](https://github.com/ph4ntonn/Stowaway/releases) 
+- Check the [release](https://github.com/ph4ntonn/Stowaway/releases) to get one.And if you want the Uncompressed collection，check [Uncompressed](https://github.com/ph4ntonn/Stowaway/releases/download/v1.6.1/Uncompress_By_Upx.7z) or you can choose the Compressed collection(much more easier for u to upload agent to target server),check [Compressed](https://github.com/ph4ntonn/Stowaway/releases/download/v1.6.1/Compressed_By_Upx.tar)
 
 - Demo video: [Youtube](https://www.youtube.com/watch?v=O3DHQ1ESMhw)
 
