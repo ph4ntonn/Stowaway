@@ -79,7 +79,7 @@ func StartSocksServiceForClient(command []string, startNodeConn net.Conn, nodeid
 	}
 }
 
-// HandleNewSocksConn 处理每一个单个的socks socket
+// HandleNewSocksConn 处理每一个单个的socks TCPsocket
 func HandleNewSocksConn(startNodeConn net.Conn, clientSocks net.Conn, num uint32, nodeid string) {
 	route := utils.GetInfoViaLockMap(Route, nodeid).(string)
 
@@ -90,9 +90,65 @@ func HandleNewSocksConn(startNodeConn net.Conn, clientSocks net.Conn, num uint32
 		if err != nil {
 			clientSocks.Close()
 			utils.ConstructPayloadAndSend(startNodeConn, nodeid, route, "COMMAND", "FIN", " ", " ", num, utils.AdminId, AdminStatus.AESKey, false)
+			AdminStuff.Socks5UDPAssociate.Lock()
+			if _, ok := AdminStuff.Socks5UDPAssociate.Info[num]; ok {
+				AdminStuff.Socks5UDPAssociate.Info[num].Listener.Close()
+			}
+			AdminStuff.Socks5UDPAssociate.Unlock()
 			return
 		}
-		utils.ConstructPayloadAndSend(startNodeConn, nodeid, route, "DATA", "SOCKSDATA", " ", string(buffer[:len]), num, utils.AdminId, AdminStatus.AESKey, false)
+		utils.ConstructPayloadAndSend(startNodeConn, nodeid, route, "DATA", "TCPSOCKSDATA", " ", string(buffer[:len]), num, utils.AdminId, AdminStatus.AESKey, false)
+	}
+}
+
+// StartUDPAssociate 处理agent返回的UDPAssociate启动请求
+func StartUDPAssociate(id uint32) (*net.UDPConn, string, bool) {
+	AdminStuff.ClientSockets.Lock()
+	localAddr := AdminStuff.ClientSockets.Payload[id].LocalAddr().(*net.TCPAddr).IP.String()
+	AdminStuff.ClientSockets.Unlock()
+
+	udpListenerAddr, err := net.ResolveUDPAddr("udp", localAddr+":0")
+	if err != nil {
+		return nil, "", false
+	}
+
+	udpListener, err := net.ListenUDP("udp", udpListenerAddr)
+	if err != nil {
+		return nil, "", false
+	}
+
+	return udpListener, udpListener.LocalAddr().String(), true
+}
+
+// HandleUDPAssociateListener 处理每一个udp的listener
+func HandleUDPAssociateListener(startNodeConn net.Conn, udpListener *net.UDPConn, nodeid string, id uint32) {
+	route := utils.GetInfoViaLockMap(Route, nodeid).(string)
+
+	newUDPInfo := utils.NewUDPAssociateInfo()
+	newUDPInfo.Listener = udpListener
+	AdminStuff.Socks5UDPAssociate.Lock()
+	AdminStuff.Socks5UDPAssociate.Info[id] = newUDPInfo
+	AdminStuff.Socks5UDPAssociate.Unlock()
+
+	buffer := make([]byte, 20480)
+
+	var alreadyGetAddr bool
+	for {
+		len, addr, err := udpListener.ReadFromUDP(buffer)
+		if !alreadyGetAddr {
+			AdminStuff.Socks5UDPAssociate.Lock()
+			AdminStuff.Socks5UDPAssociate.Info[id].Accepter = addr
+			AdminStuff.Socks5UDPAssociate.Unlock()
+			alreadyGetAddr = true
+		}
+
+		if err != nil {
+			udpListener.Close()
+			utils.ConstructPayloadAndSend(startNodeConn, nodeid, route, "COMMAND", "UDPFIN", " ", " ", id, utils.AdminId, AdminStatus.AESKey, false)
+			return
+		}
+
+		utils.ConstructPayloadAndSend(startNodeConn, nodeid, route, "DATA", "UDPSOCKSDATA", " ", string(buffer[:len]), id, utils.AdminId, AdminStatus.AESKey, false)
 	}
 }
 

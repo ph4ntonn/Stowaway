@@ -81,6 +81,7 @@ type AdminStuff struct {
 	ForwardStatus          *ForwardStatus
 	ReflectConnMap         *Uint32ConnMap
 	PortReflectMap         *Uint32ChanStrMap
+	Socks5UDPAssociate     *UDPAssociate
 }
 
 func (nas *AdminStuff) NewAdminStuff() {
@@ -94,6 +95,7 @@ func (nas *AdminStuff) NewAdminStuff() {
 	nas.PortReflectMap = NewUint32ChanStrMap()
 	nas.NodeStatus = NewNodeStatus()
 	nas.ForwardStatus = NewForwardStatus()
+	nas.Socks5UDPAssociate = NewSocks5UDPAssociate()
 }
 
 /*-------------------------Agent相关状态变量代码--------------------------*/
@@ -120,14 +122,15 @@ func (nas *AgentStatus) NewAgentStatus() {
 /*-------------------------Agent结构体变量代码--------------------------*/
 
 type AgentStuff struct {
-	ProxyChan         *ProxyChan
-	SocksInfo         *SocksSetting
-	SocksDataChanMap  *Uint32ChanStrMap
-	PortFowardMap     *Uint32ChanStrMap
-	ForwardConnMap    *Uint32ConnMap
-	ReflectConnMap    *Uint32ConnMap
-	ReflectStatus     *ReflectStatus
-	CurrentSocks5Conn *Uint32ConnMap
+	ProxyChan          *ProxyChan
+	SocksInfo          *SocksSetting
+	SocksDataChanMap   *Uint32ChanStrMap
+	PortFowardMap      *Uint32ChanStrMap
+	ForwardConnMap     *Uint32ConnMap
+	ReflectConnMap     *Uint32ConnMap
+	ReflectStatus      *ReflectStatus
+	CurrentSocks5Conn  *Uint32ConnMap
+	Socks5UDPAssociate *UDPAssociate
 }
 
 func (nas *AgentStuff) NewAgentStuff() {
@@ -139,6 +142,7 @@ func (nas *AgentStuff) NewAgentStuff() {
 	nas.ReflectStatus = NewReflectStatus()
 	nas.ReflectConnMap = NewUint32ConnMap()
 	nas.CurrentSocks5Conn = NewUint32ConnMap()
+	nas.Socks5UDPAssociate = NewSocks5UDPAssociate()
 }
 
 /*-------------------------Node状态代码--------------------------*/
@@ -264,6 +268,47 @@ type SocksSetting struct {
 func NewSocksSetting() *SocksSetting {
 	nss := new(SocksSetting)
 	return nss
+}
+
+type UDPAssociate struct {
+	sync.RWMutex
+	Info map[uint32]*UDPAssociateInfo
+}
+
+func NewSocks5UDPAssociate() *UDPAssociate {
+	ua := new(UDPAssociate)
+	ua.Info = make(map[uint32]*UDPAssociateInfo)
+	return ua
+}
+
+type UDPAssociateInfo struct {
+	SourceAddr string
+	Accepter   *net.UDPAddr
+	Listener   *net.UDPConn
+	Pair       map[string][]byte
+	Ready      chan string
+	UDPData    chan string
+}
+
+func NewUDPAssociateInfo() *UDPAssociateInfo {
+	ua := new(UDPAssociateInfo)
+	ua.Pair = make(map[string][]byte)
+	ua.Ready = make(chan string)
+	ua.UDPData = make(chan string, 1)
+	return ua
+}
+
+type SocksLocalAddr struct {
+	Host string
+	Port int
+}
+
+func (addr *SocksLocalAddr) ByteArray() []byte {
+	bytes := make([]byte, 6)
+	copy(bytes[:4], net.ParseIP(addr.Host).To4())
+	bytes[4] = byte(addr.Port >> 8)
+	bytes[5] = byte(addr.Port % 256)
+	return bytes
 }
 
 /*-------------------------File upload/download配置相关代码--------------------------*/

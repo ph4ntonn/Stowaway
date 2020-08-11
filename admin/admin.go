@@ -141,6 +141,7 @@ func HandleConn(startNodeConn net.Conn, dataBufferChan chan *utils.Payload) {
 		nodeResp, err := utils.ExtractPayload(startNodeConn, AdminStatus.AESKey, utils.AdminId, true)
 		if err != nil {
 			log.Println("[*]StartNode seems offline")
+			CloseAll("0000000001")
 			DelNodeFromTopology(utils.StartNodeId)
 			AdminStatus.StartNode = "offline"
 			startNodeConn.Close()
@@ -196,6 +197,14 @@ func HandleData(startNodeConn net.Conn, adminCommandChan chan []string, dataBuff
 				case "FAILED":
 					fmt.Println("[*]Socks5 service started failed!")
 					AdminStatus.NodeSocksStarted <- false
+				}
+			case "STARTUDPASS":
+				udpListener, listenAddress, ok := StartUDPAssociate(nodeResp.Clientid)
+				if ok {
+					go HandleUDPAssociateListener(startNodeConn, udpListener, nodeResp.CurrentId, nodeResp.Clientid)
+					SendPayloadViaRoute(startNodeConn, AdminStatus.HandleNode, "COMMAND", "UDPSTARTED", " ", listenAddress, nodeResp.Clientid, utils.AdminId, AdminStatus.AESKey, false)
+				} else {
+					SendPayloadViaRoute(startNodeConn, AdminStatus.HandleNode, "COMMAND", "UDPSTARTED", " ", " ", nodeResp.Clientid, utils.AdminId, AdminStatus.AESKey, false)
 				}
 			case "SSHRESP":
 				switch nodeResp.Info {
@@ -261,8 +270,27 @@ func HandleData(startNodeConn net.Conn, adminCommandChan chan []string, dataBuff
 				AdminStuff.ClientSockets.Lock()
 				if _, ok := AdminStuff.ClientSockets.Payload[nodeResp.Clientid]; ok {
 					AdminStuff.ClientSockets.Payload[nodeResp.Clientid].Close()
+					delete(AdminStuff.ClientSockets.Payload, nodeResp.Clientid)
 				}
+				AdminStuff.ClientSockets.Unlock()
+				SendPayloadViaRoute(startNodeConn, nodeResp.CurrentId, "COMMAND", "FINOK", " ", " ", nodeResp.Clientid, utils.AdminId, AdminStatus.AESKey, false)
+			case "UDPFIN":
+				AdminStuff.Socks5UDPAssociate.Lock()
+				if _, ok := AdminStuff.Socks5UDPAssociate.Info[nodeResp.Clientid]; ok {
+					AdminStuff.Socks5UDPAssociate.Info[nodeResp.Clientid].Listener.Close()
+					if !utils.IsClosed(AdminStuff.Socks5UDPAssociate.Info[nodeResp.Clientid].Ready) {
+						close(AdminStuff.Socks5UDPAssociate.Info[nodeResp.Clientid].Ready)
+					}
+					if !utils.IsClosed(AdminStuff.Socks5UDPAssociate.Info[nodeResp.Clientid].UDPData) {
+						close(AdminStuff.Socks5UDPAssociate.Info[nodeResp.Clientid].UDPData)
+					}
+					delete(AdminStuff.Socks5UDPAssociate.Info, nodeResp.Clientid)
+				}
+				AdminStuff.Socks5UDPAssociate.Unlock()
+				SendPayloadViaRoute(startNodeConn, nodeResp.CurrentId, "COMMAND", "UDPFINOK", " ", " ", nodeResp.Clientid, utils.AdminId, AdminStatus.AESKey, false)
+				AdminStuff.ClientSockets.Lock()
 				if _, ok := AdminStuff.ClientSockets.Payload[nodeResp.Clientid]; ok {
+					AdminStuff.ClientSockets.Payload[nodeResp.Clientid].Close()
 					delete(AdminStuff.ClientSockets.Payload, nodeResp.Clientid)
 				}
 				AdminStuff.ClientSockets.Unlock()
@@ -334,7 +362,7 @@ func HandleData(startNodeConn net.Conn, adminCommandChan chan []string, dataBuff
 			case "SSHMESS":
 				fmt.Print(nodeResp.Info)
 				fmt.Print("(ssh mode)>>>")
-			case "SOCKSDATARESP":
+			case "TSOCKSDATARESP":
 				AdminStuff.ClientSockets.RLock()
 				if _, ok := AdminStuff.ClientSockets.Payload[nodeResp.Clientid]; ok {
 					_, err := AdminStuff.ClientSockets.Payload[nodeResp.Clientid].Write([]byte(nodeResp.Info))
@@ -344,6 +372,16 @@ func HandleData(startNodeConn net.Conn, adminCommandChan chan []string, dataBuff
 					}
 				}
 				AdminStuff.ClientSockets.RUnlock()
+			case "USOCKSDATARESP":
+				AdminStuff.Socks5UDPAssociate.Lock()
+				if _, ok := AdminStuff.Socks5UDPAssociate.Info[nodeResp.Clientid]; ok {
+					_, err := AdminStuff.Socks5UDPAssociate.Info[nodeResp.Clientid].Listener.WriteToUDP([]byte(nodeResp.Info), AdminStuff.Socks5UDPAssociate.Info[nodeResp.Clientid].Accepter)
+					if err != nil {
+						AdminStuff.Socks5UDPAssociate.Unlock()
+						continue
+					}
+				}
+				AdminStuff.Socks5UDPAssociate.Unlock()
 			case "FILEDATA": //接收文件内容
 				fileDataChan <- []byte(nodeResp.Info)
 			case "FORWARDDATARESP":
