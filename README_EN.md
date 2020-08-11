@@ -13,6 +13,8 @@ Users can easily proxy their network traffic to intranet nodes (multi-layer),bre
 
 PS: Thanks for everyone's star, i'm just an amateur, and the code still need be optimized,so if you find anything wrong or bugs, feel free to tell me, prs and issues are welcome :kissing_heart:. 
 
+PPS: Please read the usage method and the precautions at the end of the article before use!
+
 > This tool is limited to security research and teaching, and the user bears all legal and related responsibilities caused by the use of this tool! The author does not assume any legal and related responsibilities!
 
 ## Features
@@ -22,7 +24,7 @@ PS: Thanks for everyone's star, i'm just an amateur, and the code still need be 
 - Active/passive connect mode between nodes
 - Ssh tunnel mode
 - Can be used on multiple platforms
-- Multi-hop socks5 traffic proxy
+- Multi-hop socks5 traffic proxy(Support UDP/TCP,IPV4/IPV6)
 - Multi-hop ssh traffic proxy
 - Remote interactive shell
 - Upload/download functions
@@ -344,6 +346,7 @@ Now anyone who connect to 127.0.0.1:80 will connect to 127.0.0.1:22 in fact(forw
 - This program will be slightly bigger than usual after compiled, but actually through my test , it just 1 MB more than usual,Maybe slightly big on IOT platform(1MB maybe not a big deal lol),so if you got any problem when you are using it on IOT platform,just tell me, and i will try my best to decrease the size.
 - The executable file after upx compress seems much more smaller than original one and it really makes upload stowaway to target server easily,but actually ,although it can make uploading stuff easier,it will occupy slightly more memory than original one,so pick the suitable version(upx or non-upx) depends on the target you want to use stowaway on.
 - Admin node MUST be online when new node is being added into the network
+- This program only supports standard UDP ASSOCIATE (that supports UDP proxy) described in [RFC1928](https://www.ietf.org/rfc/rfc1928.txt), please pay attention to what you are using when using socks5 udp proxy Programs (such as scanners, etc.), the packet construction method must comply with the standard [RFC1928] (https://www.ietf.org/rfc/rfc1928.txt), and the packet loss situation needs to be handled by yourself.
 - If you want to compile this project from source code,you can run build_admin.sh/build_agent.sh（Be Mentioned!!!!!!!!!! The default compile result is AGENT mode and please run build_agent.sh. But if you want to compile ADMIN mode,please see the main.go file and FOLLOW THE INSTRUCTION, and next you can run build_admin.sh to get admin mode program.)
 
 ### Thanks
