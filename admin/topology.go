@@ -100,26 +100,6 @@ func (topology *Topology) Find(readyToDel *[]string, nodeid string) {
 	}
 }
 
-// ReconnAddCurrentClient 重连时对添加clientid的操作
-func ReconnAddCurrentClient(id string) {
-	for _, value := range AdminStatus.CurrentClient {
-		if value == id {
-			return
-		}
-	}
-	AdminStatus.CurrentClient = append(AdminStatus.CurrentClient, id)
-}
-
-// AddToChain 将节点加入拓扑
-func AddToChain() {
-	for {
-		newNode := <-AdminStatus.NodesReadyToadd
-		for key, value := range newNode {
-			AdminStuff.NodeStatus.NodeIP[key] = value
-		}
-	}
-}
-
 /*-------------------------路由相关代码--------------------------*/
 
 // CalRoute 计算路由表
@@ -299,4 +279,25 @@ func FindIntByNodeid(id string) int {
 		}
 	}
 	return 0
+}
+
+/*-------------------------节点重连、节点状态更新代码--------------------------*/
+// ReconnAddCurrentClient 重连时对添加clientid的操作
+func ReconnAddCurrentClient(id string) {
+	for _, value := range AdminStatus.CurrentClient {
+		if value == id {
+			return
+		}
+	}
+	AdminStatus.CurrentClient = append(AdminStatus.CurrentClient, id)
+}
+
+// AddToChain 将节点加入拓扑
+func AddToChain() {
+	for {
+		newNode := <-AdminStatus.NodesReadyToadd
+		for key, value := range newNode {
+			AdminStuff.NodeStatus.NodeIP[key] = value
+		}
+	}
 }
