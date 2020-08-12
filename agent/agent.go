@@ -15,10 +15,8 @@ var AgentStatus *utils.AgentStatus
 var ConnToAdmin net.Conn
 
 func init() {
-	AgentStatus = new(utils.AgentStatus)
-	AgentStuff = new(utils.AgentStuff)
-	AgentStatus.NewAgentStatus()
-	AgentStuff.NewAgentStuff()
+	AgentStatus = utils.NewAgentStatus()
+	AgentStuff = utils.NewAgentStuff()
 }
 
 // NewAgent 启动agent

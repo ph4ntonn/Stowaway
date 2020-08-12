@@ -31,5 +31,6 @@ func ParseCommand() {
 	} else {
 		log.Fatalln("Bad format! See readme!")
 	}
+
 	NewAdmin(Args)
 }

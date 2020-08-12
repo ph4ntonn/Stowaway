@@ -160,9 +160,7 @@ func UDPAssociate(connToUpper net.Conn, buffer []byte, len int, checkNum uint32,
 
 	utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "COMMAND", "STARTUDPASS", " ", net.JoinHostPort(host, port), checkNum, currentid, key, false)
 
-	adminResponse := <-AgentStuff.Socks5UDPAssociate.Info[checkNum].Ready
-
-	if adminResponse != "" {
+	if adminResponse := <-AgentStuff.Socks5UDPAssociate.Info[checkNum].Ready; adminResponse != "" {
 		temp := strings.Split(adminResponse, ":")
 		adminAddr := temp[0]
 		adminPort, _ := strconv.Atoi(temp[1])
@@ -174,10 +172,9 @@ func UDPAssociate(connToUpper net.Conn, buffer []byte, len int, checkNum uint32,
 
 		utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "TSOCKSDATARESP", " ", string(buf), checkNum, currentid, key, false)
 		return true
-	} else {
-		utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "TSOCKSDATARESP", " ", string([]byte{0x05, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}), checkNum, currentid, key, false)
-		return false
 	}
+	utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "TSOCKSDATARESP", " ", string([]byte{0x05, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}), checkNum, currentid, key, false)
+	return false
 }
 
 // ProxyUDP 代理udp流量
@@ -190,15 +187,15 @@ func ProxyUDP(connToUpper net.Conn, checkNum uint32, key []byte, currentid strin
 	AgentStuff.Socks5UDPAssociate.Unlock()
 
 	for {
-		n, addr, err := udpConn.ReadFromUDP(serverBuffer)
+		length, addr, err := udpConn.ReadFromUDP(serverBuffer)
 		if err != nil {
 			return err
 		}
 		AgentStuff.Socks5UDPAssociate.Lock()
 		if header, ok := AgentStuff.Socks5UDPAssociate.Info[checkNum].Pair[addr.String()]; ok {
-			data = make([]byte, 0, len(header)+n)
+			data = make([]byte, 0, len(header)+length)
 			data = append(data, header...)
-			data = append(data, serverBuffer[:n]...)
+			data = append(data, serverBuffer[:length]...)
 		} else {
 			AgentStuff.Socks5UDPAssociate.Unlock()
 			continue

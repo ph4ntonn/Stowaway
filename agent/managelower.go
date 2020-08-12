@@ -12,16 +12,19 @@ import (
 
 // HandleLowerNodeConn 处理接收下级节点数据的信道
 func HandleLowerNodeConn(connForLowerNode net.Conn, payloadBuffChan chan *utils.Payload, currentid, lowerid string) {
+	defer func() {
+		connForLowerNode.Close()
+		node.NodeInfo.LowerNode.Lock()
+		delete(node.NodeInfo.LowerNode.Payload, lowerid) //下级节点掉线，立即将此节点从自己的子节点列表删除
+		node.NodeInfo.LowerNode.Unlock()
+		offlineMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "AGENTOFFLINE", " ", lowerid, 0, currentid, AgentStatus.AESKey, false) //通知admin下级节点已经下线
+		AgentStuff.ProxyChan.ProxyChanToUpperNode <- offlineMess
+		close(payloadBuffChan)
+	}()
+
 	for {
 		command, err := utils.ExtractPayload(connForLowerNode, AgentStatus.AESKey, currentid, false)
 		if err != nil {
-			connForLowerNode.Close()
-			node.NodeInfo.LowerNode.Lock()
-			delete(node.NodeInfo.LowerNode.Payload, lowerid) //下级节点掉线，立即将此节点从自己的子节点列表删除
-			node.NodeInfo.LowerNode.Unlock()
-			offlineMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "AGENTOFFLINE", " ", lowerid, 0, currentid, AgentStatus.AESKey, false) //通知admin下级节点已经下线
-			AgentStuff.ProxyChan.ProxyChanToUpperNode <- offlineMess
-			close(payloadBuffChan)
 			return
 		}
 		payloadBuffChan <- command
@@ -39,7 +42,6 @@ func HandleDataToLowerNode() {
 		}
 		node.NodeInfo.LowerNode.Unlock()
 	}
-
 }
 
 // HandleDataFromLowerNode 处理来自下级节点的数据

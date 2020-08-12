@@ -47,7 +47,7 @@ func Controlpanel(adminCommandChan chan []string) {
 /*------------------------- admin模式下相关代码--------------------------*/
 
 // HandleCommandToControlConn 处理admin模式下用户的输入及由admin发往startnode的控制信号
-func HandleCommandToControlConn(startNodeControlConn net.Conn, adminCommandChan chan []string) {
+func HandleCommandToControlConn(topology *Topology, startNodeControlConn net.Conn, adminCommandChan chan []string) {
 	for {
 		AdminCommand := <-adminCommandChan
 		switch AdminCommand[0] {
@@ -92,7 +92,7 @@ func HandleCommandToControlConn(startNodeControlConn net.Conn, adminCommandChan 
 			ShowDetail()
 			CommandContinue()
 		case "tree":
-			ShowTree()
+			topology.ShowTree()
 			CommandContinue()
 		case "help":
 			ShowMainHelp()

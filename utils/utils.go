@@ -56,7 +56,8 @@ type AdminStatus struct {
 	AESKey           []byte
 }
 
-func (nas *AdminStatus) NewAdminStatus() {
+func NewAdminStatus() *AdminStatus {
+	nas := new(AdminStatus)
 	nas.ReadyChange = make(chan bool, 1)
 	nas.IsShellMode = make(chan bool, 1)
 	nas.SSHSuccess = make(chan bool, 1)
@@ -66,6 +67,7 @@ func (nas *AdminStatus) NewAdminStatus() {
 	nas.NodesReadyToadd = make(chan map[string]string)
 	nas.StartNode = "0.0.0.0"
 	nas.HandleNode = AdminId
+	return nas
 }
 
 /*-------------------------Admin结构体变量代码--------------------------*/
@@ -84,7 +86,8 @@ type AdminStuff struct {
 	Socks5UDPAssociate     *UDPAssociate
 }
 
-func (nas *AdminStuff) NewAdminStuff() {
+func NewAdminStuff() *AdminStuff {
+	nas := new(AdminStuff)
 	nas.SocksNum = NewSafeUint32()
 	nas.ReflectNum = NewSafeUint32()
 	nas.SocksListenerForClient = NewStrListenerSliceMap()
@@ -96,6 +99,7 @@ func (nas *AdminStuff) NewAdminStuff() {
 	nas.NodeStatus = NewNodeStatus()
 	nas.ForwardStatus = NewForwardStatus()
 	nas.Socks5UDPAssociate = NewSocks5UDPAssociate()
+	return nas
 }
 
 /*-------------------------Agent相关状态变量代码--------------------------*/
@@ -110,13 +114,15 @@ type AgentStatus struct {
 	AESKey            []byte
 }
 
-func (nas *AgentStatus) NewAgentStatus() {
+func NewAgentStatus() *AgentStatus {
+	nas := new(AgentStatus)
 	nas.ReConnCome = make(chan bool, 1)
 	nas.WaitForIDAllocate = make(chan string, 1)
 	nas.Nodeid = StartNodeId
 	nas.NodeNote = ""
 	nas.NotLastOne = false
 	nas.Waiting = false
+	return nas
 }
 
 /*-------------------------Agent结构体变量代码--------------------------*/
@@ -133,7 +139,8 @@ type AgentStuff struct {
 	Socks5UDPAssociate *UDPAssociate
 }
 
-func (nas *AgentStuff) NewAgentStuff() {
+func NewAgentStuff() *AgentStuff {
+	nas := new(AgentStuff)
 	nas.SocksInfo = NewSocksSetting()
 	nas.ProxyChan = NewProxyChan()
 	nas.SocksDataChanMap = NewUint32ChanStrMap()
@@ -143,6 +150,7 @@ func (nas *AgentStuff) NewAgentStuff() {
 	nas.ReflectConnMap = NewUint32ConnMap()
 	nas.CurrentSocks5Conn = NewUint32ConnMap()
 	nas.Socks5UDPAssociate = NewSocks5UDPAssociate()
+	return nas
 }
 
 /*-------------------------Node状态代码--------------------------*/
@@ -201,19 +209,6 @@ func NewNodeStuff() *NodeStuff {
 	nns.ReOnlineID = make(chan string, 1)
 	nns.Offline = false
 	return nns
-}
-
-/*-------------------------Node上下级信息代码--------------------------*/
-
-type Node struct {
-	Uppernode string
-	Lowernode []string
-}
-
-func NewNode() *Node {
-	nn := new(Node)
-	nn.Lowernode = make([]string, 0)
-	return nn
 }
 
 /*-------------------------传递给下级节点结构代码--------------------------*/
@@ -364,11 +359,6 @@ type Uint32StrMap struct {
 	Payload map[uint32]string
 }
 
-type SafeNodeMap struct {
-	sync.RWMutex
-	AllNode map[string]*Node
-}
-
 type SafeRouteMap struct {
 	sync.RWMutex
 	Route map[string]string
@@ -425,12 +415,6 @@ func NewStrUint32SliceMap() *StrUint32SliceMap {
 	nuusm := new(StrUint32SliceMap)
 	nuusm.Payload = make(map[string][]uint32)
 	return nuusm
-}
-
-func NewSafeNodeMap() *SafeNodeMap {
-	nsnm := new(SafeNodeMap)
-	nsnm.AllNode = make(map[string]*Node)
-	return nsnm
 }
 
 func NewSafeRouteMap() *SafeRouteMap {

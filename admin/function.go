@@ -17,8 +17,7 @@ import (
 var AdminStuff *utils.AdminStuff
 
 func init() {
-	AdminStuff = new(utils.AdminStuff)
-	AdminStuff.NewAdminStuff()
+	AdminStuff = utils.NewAdminStuff()
 }
 
 //admin端功能及零碎代码
@@ -85,16 +84,19 @@ func HandleNewSocksConn(startNodeConn net.Conn, clientSocks net.Conn, num uint32
 
 	buffer := make([]byte, 20480)
 
+	defer func() {
+		clientSocks.Close()
+		utils.ConstructPayloadAndSend(startNodeConn, nodeid, route, "COMMAND", "FIN", " ", " ", num, utils.AdminId, AdminStatus.AESKey, false)
+		AdminStuff.Socks5UDPAssociate.Lock()
+		if _, ok := AdminStuff.Socks5UDPAssociate.Info[num]; ok {
+			AdminStuff.Socks5UDPAssociate.Info[num].Listener.Close()
+		}
+		AdminStuff.Socks5UDPAssociate.Unlock()
+	}()
+
 	for {
 		len, err := clientSocks.Read(buffer)
 		if err != nil {
-			clientSocks.Close()
-			utils.ConstructPayloadAndSend(startNodeConn, nodeid, route, "COMMAND", "FIN", " ", " ", num, utils.AdminId, AdminStatus.AESKey, false)
-			AdminStuff.Socks5UDPAssociate.Lock()
-			if _, ok := AdminStuff.Socks5UDPAssociate.Info[num]; ok {
-				AdminStuff.Socks5UDPAssociate.Info[num].Listener.Close()
-			}
-			AdminStuff.Socks5UDPAssociate.Unlock()
 			return
 		}
 		utils.ConstructPayloadAndSend(startNodeConn, nodeid, route, "DATA", "TCPSOCKSDATA", " ", string(buffer[:len]), num, utils.AdminId, AdminStatus.AESKey, false)
@@ -410,8 +412,8 @@ func CheckInput(input string) string {
 /*-------------------------控制相关代码--------------------------*/
 
 // CloseAll 当有一个节点下线，强制关闭该节点及其子节点对应的服务
-func CloseAll(id string) {
-	readyToDel := FindAll(id)
+func CloseAll(topology *Topology, id string) {
+	readyToDel := topology.FindAll(id)
 
 	AdminStuff.SocksListenerForClient.Lock()
 

@@ -26,6 +26,7 @@ func init() {
 
 // ParseCommand 解析输入的命令
 func ParseCommand() {
+
 	flag.Parse()
 
 	if Args.Listen != "" && Args.Reverse && Args.Connect == "" {
@@ -51,5 +52,6 @@ func ParseCommand() {
 	} else {
 		log.Fatalln("Bad format! See readme!")
 	}
+
 	NewAgent(Args)
 }

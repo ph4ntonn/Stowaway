@@ -5,36 +5,98 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"sync"
 
 	"Stowaway/utils"
 
 	"github.com/gofrs/uuid"
 )
 
-var Topology *utils.SafeNodeMap
-var Route *utils.SafeRouteMap
+type Topology struct {
+	sync.RWMutex
+	AllNode map[string]*Node
+}
 
-func init() {
-	Topology = utils.NewSafeNodeMap()
-	Route = utils.NewSafeRouteMap()
+type Node struct {
+	Uppernode string
+	Lowernode []string
+}
+
+func NewTopology() *Topology {
+	nsnm := new(Topology)
+	nsnm.AllNode = make(map[string]*Node)
+	return nsnm
+}
+
+func NewNode() *Node {
+	nn := new(Node)
+	nn.Lowernode = make([]string, 0)
+	return nn
 }
 
 /*-------------------------节点拓扑相关代码--------------------------*/
 
-// AddNodeToTopology 将节点加入拓扑
-func AddNodeToTopology(nodeid, upperNodeId string) {
-	Topology.Lock()
-	defer Topology.Unlock()
+// AddNode 将节点加入拓扑
+func (topology *Topology) AddNode(nodeid, upperNodeId string) {
+	topology.Lock()
+	defer topology.Unlock()
 
-	if _, ok := Topology.AllNode[nodeid]; ok {
-		Topology.AllNode[nodeid].Uppernode = upperNodeId
+	if _, ok := topology.AllNode[nodeid]; ok {
+		topology.AllNode[nodeid].Uppernode = upperNodeId
 	} else {
-		tempNode := utils.NewNode()
-		Topology.AllNode[nodeid] = tempNode
-		Topology.AllNode[nodeid].Uppernode = upperNodeId
+		topology.AllNode[nodeid] = NewNode()
+		topology.AllNode[nodeid].Uppernode = upperNodeId
 	}
 	if upperNodeId != utils.AdminId {
-		Topology.AllNode[upperNodeId].Lowernode = append(Topology.AllNode[upperNodeId].Lowernode, nodeid)
+		topology.AllNode[upperNodeId].Lowernode = append(topology.AllNode[upperNodeId].Lowernode, nodeid)
+	}
+}
+
+// DelNode 将节点从拓扑中删除
+func (topology *Topology) DelNode(nodeid string) {
+	var readyToDel []string
+
+	topology.Lock()
+	defer topology.Unlock()
+
+	if _, ok := topology.AllNode[nodeid]; ok {
+		upperNode := topology.AllNode[nodeid].Uppernode
+		if _, ok := topology.AllNode[upperNode]; ok {
+			index := utils.FindSpecFromSlice(nodeid, topology.AllNode[upperNode].Lowernode)
+			topology.AllNode[upperNode].Lowernode = append(topology.AllNode[upperNode].Lowernode[:index], topology.AllNode[upperNode].Lowernode[index+1:]...)
+		}
+
+		topology.Find(&readyToDel, nodeid)
+
+		readyToDel = append(readyToDel, nodeid)
+		for _, value := range readyToDel {
+			delete(topology.AllNode, value)
+			delete(AdminStuff.NodeStatus.NodeIP, value)
+			delete(AdminStuff.NodeStatus.Nodenote, value)
+		}
+		readyToDel = make([]string, 0)
+	}
+}
+
+// FindAll 找到所有的子节点
+func (topology *Topology) FindAll(nodeid string) []string {
+	var readyToDel []string
+
+	topology.Lock()
+	defer topology.Unlock()
+
+	topology.Find(&readyToDel, nodeid)
+
+	readyToDel = append(readyToDel, nodeid)
+
+	return readyToDel
+}
+
+// Find 收集所有的子节点
+func (topology *Topology) Find(readyToDel *[]string, nodeid string) {
+	for _, value := range topology.AllNode[nodeid].Lowernode {
+		*readyToDel = append(*readyToDel, value)
+		topology.Find(readyToDel, value)
 	}
 }
 
@@ -58,62 +120,14 @@ func AddToChain() {
 	}
 }
 
-// DelNodeFromTopology 将节点从拓扑中删除
-func DelNodeFromTopology(nodeid string) {
-	var readyToDel []string
-
-	Topology.Lock()
-	defer Topology.Unlock()
-
-	if _, ok := Topology.AllNode[nodeid]; ok {
-		upperNode := Topology.AllNode[nodeid].Uppernode
-		if _, ok := Topology.AllNode[upperNode]; ok {
-			index := utils.FindSpecFromSlice(nodeid, Topology.AllNode[upperNode].Lowernode)
-			Topology.AllNode[upperNode].Lowernode = append(Topology.AllNode[upperNode].Lowernode[:index], Topology.AllNode[upperNode].Lowernode[index+1:]...)
-		}
-
-		Find(&readyToDel, nodeid)
-
-		readyToDel = append(readyToDel, nodeid)
-		for _, value := range readyToDel {
-			delete(Topology.AllNode, value)
-			delete(AdminStuff.NodeStatus.NodeIP, value)
-			delete(AdminStuff.NodeStatus.Nodenote, value)
-		}
-		readyToDel = make([]string, 0)
-	}
-}
-
-// FindAll 找到所有的子节点
-func FindAll(nodeid string) []string {
-	var readyToDel []string
-
-	Topology.Lock()
-	defer Topology.Unlock()
-
-	Find(&readyToDel, nodeid)
-
-	readyToDel = append(readyToDel, nodeid)
-
-	return readyToDel
-}
-
-// Find 收集所有的子节点
-func Find(readyToDel *[]string, nodeid string) {
-	for _, value := range Topology.AllNode[nodeid].Lowernode {
-		*readyToDel = append(*readyToDel, value)
-		Find(readyToDel, value)
-	}
-}
-
 /*-------------------------路由相关代码--------------------------*/
 
 // CalRoute 计算路由表
-func CalRoute() {
-	Topology.Lock()
-	defer Topology.Unlock()
+func (topology *Topology) CalRoute() {
+	topology.Lock()
+	defer topology.Unlock()
 
-	for key, _ := range Topology.AllNode {
+	for key := range topology.AllNode {
 		var temp []string = []string{}
 		count := key
 
@@ -122,8 +136,8 @@ func CalRoute() {
 		}
 
 		for {
-			if Topology.AllNode[count].Uppernode != utils.AdminId && Topology.AllNode[count].Uppernode != utils.StartNodeId {
-				count = Topology.AllNode[count].Uppernode
+			if topology.AllNode[count].Uppernode != utils.AdminId && topology.AllNode[count].Uppernode != utils.StartNodeId {
+				count = topology.AllNode[count].Uppernode
 				temp = append(temp, count)
 			} else {
 				utils.StringSliceReverse(temp)
@@ -139,45 +153,16 @@ func CalRoute() {
 
 /*-------------------------节点拓扑信息相关代码--------------------------*/
 
-// ShowDetail 显示节点拓扑详细信息
-func ShowDetail() {
-	if AdminStatus.StartNode != "0.0.0.0" {
-		var nodes []string
-
-		fmt.Printf("StartNode[1]: IP:%s  Hostname:%s  Username:%s\nNote:%s\n\n",
-			AdminStatus.StartNode,
-			AdminStuff.NodeStatus.NodeHostname[utils.StartNodeId],
-			AdminStuff.NodeStatus.NodeUser[utils.StartNodeId],
-			AdminStuff.NodeStatus.Nodenote[utils.StartNodeId],
-		)
-
-		for Nodeid, _ := range AdminStuff.NodeStatus.NodeIP {
-			nodes = append(nodes, Nodeid)
-		}
-		for _, id := range nodes {
-			fmt.Printf("Node[%s]: IP:%s  Hostname:%s  Username:%s\nNote:%s\n\n",
-				fmt.Sprint(FindIntByNodeid(id)+1),
-				AdminStuff.NodeStatus.NodeIP[id],
-				AdminStuff.NodeStatus.NodeHostname[id],
-				AdminStuff.NodeStatus.NodeUser[id],
-				AdminStuff.NodeStatus.Nodenote[id],
-			)
-		}
-	} else {
-		fmt.Println("There is no agent connected!")
-	}
-}
-
 // ShowTree 显示节点层级关系
-func ShowTree() {
+func (topology *Topology) ShowTree() {
 	if AdminStatus.StartNode != "0.0.0.0" {
 		var nodes []string
 		var nodesid []int
 
-		Topology.Lock()
-		defer Topology.Unlock()
+		topology.Lock()
+		defer topology.Unlock()
 
-		for key, _ := range Topology.AllNode {
+		for key := range topology.AllNode {
 			nodes = append(nodes, key)
 		}
 
@@ -190,7 +175,7 @@ func ShowTree() {
 
 		for _, value := range nodesid {
 			node := AdminStatus.CurrentClient[value]
-			nodeStatus := Topology.AllNode[node]
+			nodeStatus := topology.AllNode[node]
 
 			if node == utils.StartNodeId {
 				fmt.Printf("StartNode[%s]'s child nodes:\n", fmt.Sprint(value+1))
@@ -213,6 +198,36 @@ func ShowTree() {
 					}
 				}
 			}
+		}
+	} else {
+		fmt.Println("There is no agent connected!")
+	}
+}
+
+// ShowDetail 显示节点拓扑详细信息
+func ShowDetail() {
+	if AdminStatus.StartNode != "0.0.0.0" {
+		var nodes []string
+
+		fmt.Printf("StartNode[1]: IP:%s  Hostname:%s  Username:%s\nNote:%s\n\n",
+			AdminStatus.StartNode,
+			AdminStuff.NodeStatus.NodeHostname[utils.StartNodeId],
+			AdminStuff.NodeStatus.NodeUser[utils.StartNodeId],
+			AdminStuff.NodeStatus.Nodenote[utils.StartNodeId],
+		)
+
+		for Nodeid := range AdminStuff.NodeStatus.NodeIP {
+			nodes = append(nodes, Nodeid)
+		}
+
+		for _, id := range nodes {
+			fmt.Printf("Node[%s]: IP:%s  Hostname:%s  Username:%s\nNote:%s\n\n",
+				fmt.Sprint(FindIntByNodeid(id)+1),
+				AdminStuff.NodeStatus.NodeIP[id],
+				AdminStuff.NodeStatus.NodeHostname[id],
+				AdminStuff.NodeStatus.NodeUser[id],
+				AdminStuff.NodeStatus.Nodenote[id],
+			)
 		}
 	} else {
 		fmt.Println("There is no agent connected!")

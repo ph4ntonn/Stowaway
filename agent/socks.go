@@ -74,21 +74,19 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 					}
 					_, err := server.Write([]byte(data))
 					if err != nil {
-						AgentStuff.SocksDataChanMap.RLock()
+						AgentStuff.SocksDataChanMap.Lock()
 						if _, ok := AgentStuff.SocksDataChanMap.Payload[checkNum]; ok {
-							AgentStuff.SocksDataChanMap.RUnlock()
+							AgentStuff.SocksDataChanMap.Unlock()
 							continue
 						} else {
-							AgentStuff.SocksDataChanMap.RUnlock()
+							AgentStuff.SocksDataChanMap.Unlock()
 							return
 						}
 					}
 				}
 			}()
 
-			err := ProxyTCP(ConnToAdmin, server, checkNum, AgentStatus.AESKey, currentid)
-
-			if err != nil {
+			if err := ProxyTCP(ConnToAdmin, server, checkNum, AgentStatus.AESKey, currentid); err != nil {
 				return
 			}
 		} else if isAuthed == true && isUDP && success {
@@ -110,22 +108,23 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 					if buf[0] != 0x00 || buf[1] != 0x00 || buf[2] != 0x00 {
 						continue
 					}
+
 					udpHeader := make([]byte, 0, 1024)
 					addrtype := buf[3]
 					var remote string
 					var udpData []byte
-					if addrtype == 0x01 {
+					if addrtype == 0x01 { //IPV4
 						ip := net.IPv4(buf[4], buf[5], buf[6], buf[7])
 						remote = fmt.Sprintf("%s:%d", ip.String(), uint(buf[8])<<8+uint(buf[9]))
 						udpData = buf[10:]
 						udpHeader = append(udpHeader, buf[:10]...)
-					} else if addrtype == 0x03 {
+					} else if addrtype == 0x03 { //DOMAIN
 						nmlen := int(buf[4])
 						nmbuf := buf[5 : 5+nmlen+2]
 						remote = fmt.Sprintf("%s:%d", nmbuf[:nmlen], uint(nmbuf[nmlen])<<8+uint(nmbuf[nmlen+1]))
 						udpData = buf[8+nmlen:]
 						udpHeader = append(udpHeader, buf[:8+nmlen]...)
-					} else if addrtype == 0x04 {
+					} else if addrtype == 0x04 { //IPV6
 						ip := net.IP{buf[4], buf[5], buf[6], buf[7],
 							buf[8], buf[9], buf[10], buf[11], buf[12],
 							buf[13], buf[14], buf[15], buf[16], buf[17],
@@ -150,9 +149,7 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 				}
 			}()
 
-			err := ProxyUDP(ConnToAdmin, checkNum, AgentStatus.AESKey, currentid)
-
-			if err != nil {
+			if err := ProxyUDP(ConnToAdmin, checkNum, AgentStatus.AESKey, currentid); err != nil {
 				return
 			}
 		} else {
@@ -163,22 +160,12 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 
 // SendTCPFin 发送tcp server offline通知
 func SendTCPFin(num uint32) {
-	AgentStuff.SocksDataChanMap.RLock()
-	if _, ok := AgentStuff.SocksDataChanMap.Payload[num]; ok {
-		respData, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "FIN", " ", " ", num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
-		AgentStuff.ProxyChan.ProxyChanToUpperNode <- respData
-	}
-	AgentStuff.SocksDataChanMap.RUnlock()
-	return
+	respData, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "FIN", " ", " ", num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+	AgentStuff.ProxyChan.ProxyChanToUpperNode <- respData
 }
 
 // SendUDPFin 发送udp listener offline通知
 func SendUDPFin(num uint32) {
-	AgentStuff.Socks5UDPAssociate.RLock()
-	if _, ok := AgentStuff.Socks5UDPAssociate.Info[num]; ok {
-		respData, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "UDPFIN", " ", " ", num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
-		AgentStuff.ProxyChan.ProxyChanToUpperNode <- respData
-	}
-	AgentStuff.Socks5UDPAssociate.RUnlock()
-	return
+	respData, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "UDPFIN", " ", " ", num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+	AgentStuff.ProxyChan.ProxyChanToUpperNode <- respData
 }
