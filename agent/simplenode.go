@@ -84,8 +84,8 @@ func HandleDataFromUpperNode(connToUpperNode *net.Conn, payloadBuffChan chan *ut
 					socksInfo := strings.Split(command.Info, ":::")
 					AgentStuff.SocksInfo.SocksUsername = socksInfo[1]
 					AgentStuff.SocksInfo.SocksPass = socksInfo[2]
-					StartSocks()
-				case "SOCKSOFF":
+					socksStartMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SOCKSRESP", " ", "SUCCESS", 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
+					AgentStuff.ProxyChan.ProxyChanToUpperNode <- socksStartMess
 				case "UDPSTARTED":
 					AgentStuff.Socks5UDPAssociate.Lock()
 					AgentStuff.Socks5UDPAssociate.Info[command.Clientid].Ready <- command.Info
@@ -98,7 +98,7 @@ func HandleDataFromUpperNode(connToUpperNode *net.Conn, payloadBuffChan chan *ut
 						}
 					}()
 				case "SSHCOMMAND":
-					go WriteCommand(command.Info)
+					WriteCommand(command.Info)
 				case "SSHTUNNEL":
 					go func() {
 						err := SSHTunnelNextNode(command.Info, nodeid)

@@ -11,9 +11,9 @@ import (
 )
 
 var (
-	Stdin   io.Writer
-	Stdout  io.Reader
-	Sshhost *ssh.Session
+	stdin   io.Writer
+	stdout  io.Reader
+	sshHost *ssh.Session
 )
 
 // StartSSH 启动ssh
@@ -49,28 +49,28 @@ func StartSSH(info string, nodeid string) error {
 		return err
 	}
 
-	Sshhost, err = sshDial.NewSession()
+	sshHost, err = sshDial.NewSession()
 	if err != nil {
 		sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
 		AgentStuff.ProxyChan.ProxyChanToUpperNode <- sshMess
 		return err
 	}
 
-	Stdout, err = Sshhost.StdoutPipe()
+	stdout, err = sshHost.StdoutPipe()
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
 
-	Stdin, err = Sshhost.StdinPipe()
+	stdin, err = sshHost.StdinPipe()
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
 
-	Sshhost.Stderr = Sshhost.Stdout
+	sshHost.Stderr = sshHost.Stdout
 
-	err = Sshhost.Shell()
+	err = sshHost.Shell()
 	if err != nil {
 		sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
 		AgentStuff.ProxyChan.ProxyChanToUpperNode <- sshMess
@@ -85,14 +85,14 @@ func StartSSH(info string, nodeid string) error {
 
 // WriteCommand 写入command
 func WriteCommand(command string) {
-	Stdin.Write([]byte(command))
+	stdin.Write([]byte(command))
 }
 
 // ReadCommand 读出command运行结果
 func ReadCommand() {
 	buffer := make([]byte, 20480)
 	for {
-		len, err := Stdout.Read(buffer)
+		len, err := stdout.Read(buffer)
 		if err != nil {
 			break
 		}

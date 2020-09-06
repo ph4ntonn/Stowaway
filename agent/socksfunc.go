@@ -105,8 +105,29 @@ func TCPConnect(connToUpper net.Conn, buffer []byte, len int, checkNum uint32, k
 	return server, true, true
 }
 
-// ProxyTCP 转发流量
-func ProxyTCP(connToUpper net.Conn, server net.Conn, checkNum uint32, key []byte, currentid string) error {
+// ProxyC2STCP 转发C-->S流量
+func ProxyC2STCP(info chan string,server net.Conn,checkNum uint32){
+	for {
+		data, ok := <-info
+		if !ok {
+			return
+		}
+		_, err := server.Write([]byte(data))
+		if err != nil {
+			AgentStuff.SocksDataChanMap.Lock()
+			if _, ok := AgentStuff.SocksDataChanMap.Payload[checkNum]; ok {
+				AgentStuff.SocksDataChanMap.Unlock()
+				continue
+			} else {
+				AgentStuff.SocksDataChanMap.Unlock()
+				return
+			}
+		}
+	}
+}
+
+// ProxyS2CTCP 转发S-->C流量
+func ProxyS2CTCP(connToUpper net.Conn, server net.Conn, checkNum uint32, key []byte, currentid string) error {
 	serverBuffer := make([]byte, 20480)
 
 	for {
@@ -177,8 +198,68 @@ func UDPAssociate(connToUpper net.Conn, buffer []byte, len int, checkNum uint32,
 	return false
 }
 
-// ProxyUDP 代理udp流量
-func ProxyUDP(connToUpper net.Conn, checkNum uint32, key []byte, currentid string) error {
+// ProxyC2SUDP 代理C-->Sudp流量
+func ProxyC2SUDP(checkNum uint32){
+	AgentStuff.Socks5UDPAssociate.Lock()
+	listener := AgentStuff.Socks5UDPAssociate.Info[checkNum].Listener
+	AgentStuff.Socks5UDPAssociate.Unlock()
+
+	for {
+		var remote string
+		var udpData []byte
+
+		data, ok := <-AgentStuff.Socks5UDPAssociate.Info[checkNum].UDPData
+		if !ok {
+			return
+		}
+
+		buf := []byte(data)
+
+		if buf[0] != 0x00 || buf[1] != 0x00 || buf[2] != 0x00 {
+			continue
+		}
+
+		udpHeader := make([]byte, 0, 1024)
+		addrtype := buf[3]
+			
+		if addrtype == 0x01 { //IPV4
+			ip := net.IPv4(buf[4], buf[5], buf[6], buf[7])
+			remote = fmt.Sprintf("%s:%d", ip.String(), uint(buf[8])<<8+uint(buf[9]))
+			udpData = buf[10:]
+			udpHeader = append(udpHeader, buf[:10]...)
+		} else if addrtype == 0x03 { //DOMAIN
+			nmlen := int(buf[4])
+			nmbuf := buf[5 : 5+nmlen+2]
+			remote = fmt.Sprintf("%s:%d", nmbuf[:nmlen], uint(nmbuf[nmlen])<<8+uint(nmbuf[nmlen+1]))
+			udpData = buf[8+nmlen:]
+			udpHeader = append(udpHeader, buf[:8+nmlen]...)
+		} else if addrtype == 0x04 { //IPV6
+			ip := net.IP{buf[4], buf[5], buf[6], buf[7],
+						buf[8], buf[9], buf[10], buf[11], buf[12],
+						buf[13], buf[14], buf[15], buf[16], buf[17],
+						buf[18], buf[19]}
+			remote = fmt.Sprintf("[%s]:%d", ip.String(), uint(buf[20])<<8+uint(buf[21]))
+			udpData = buf[22:]
+			udpHeader = append(udpHeader, buf[:22]...)
+		} else {
+			continue
+		}
+
+		remoteAddr, err := net.ResolveUDPAddr("udp", remote)
+		if err != nil {
+			continue
+		}
+
+		AgentStuff.Socks5UDPAssociate.Lock()
+		AgentStuff.Socks5UDPAssociate.Info[checkNum].Pair[remote] = udpHeader
+		AgentStuff.Socks5UDPAssociate.Unlock()
+
+		listener.WriteToUDP(udpData, remoteAddr)
+	}
+}
+
+// ProxyS2CUDP 代理S-->Cudp流量
+func ProxyS2CUDP(connToUpper net.Conn, checkNum uint32, key []byte, currentid string) error {
 	serverBuffer := make([]byte, 20480)
 	var data []byte
 

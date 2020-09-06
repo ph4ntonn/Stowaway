@@ -130,9 +130,7 @@ func PrepareForReOnlineNode() {
 func ClearAllConn() {
 	AgentStuff.CurrentSocks5Conn.Lock()
 	for key, conn := range AgentStuff.CurrentSocks5Conn.Payload {
-		err := conn.Close()
-		if err != nil {
-		}
+		conn.Close()
 		delete(AgentStuff.CurrentSocks5Conn.Payload, key)
 	}
 	AgentStuff.CurrentSocks5Conn.Unlock()
@@ -157,18 +155,14 @@ func ClearAllConn() {
 
 	AgentStuff.ForwardConnMap.Lock()
 	for key, conn := range AgentStuff.ForwardConnMap.Payload {
-		err := conn.Close()
-		if err != nil {
-		}
+		conn.Close()
 		delete(AgentStuff.ForwardConnMap.Payload, key)
 	}
 	AgentStuff.ForwardConnMap.Unlock()
 
 	AgentStuff.ReflectConnMap.Lock()
 	for key, conn := range AgentStuff.ReflectConnMap.Payload {
-		err := conn.Close()
-		if err != nil {
-		}
+		conn.Close()
 		delete(AgentStuff.ReflectConnMap.Payload, key)
 	}
 	AgentStuff.ReflectConnMap.Unlock()

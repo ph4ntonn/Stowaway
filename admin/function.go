@@ -29,8 +29,6 @@ func init() {
 
 // StartSocksServiceForClient 启动socks5 for client
 func StartSocksServiceForClient(command []string, startNodeConn net.Conn, nodeid string) {
-	route := utils.GetInfoViaLockMap(Route, nodeid).(string)
-
 	socksPort := command[1]
 	checkPort, _ := strconv.Atoi(socksPort)
 	if checkPort <= 0 || checkPort > 65535 {
@@ -41,10 +39,6 @@ func StartSocksServiceForClient(command []string, startNodeConn net.Conn, nodeid
 	socks5Addr := fmt.Sprintf("0.0.0.0:%s", socksPort)
 	socksListenerForClient, err := net.Listen("tcp", socks5Addr)
 	if err != nil {
-		err = utils.ConstructPayloadAndSend(startNodeConn, nodeid, route, "COMMAND", "SOCKSOFF", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
-		if err != nil {
-			log.Println("[*]Cannot stop agent's socks service,check the connection!")
-		}
 		log.Println("[*]Cannot listen this port!")
 		return
 	}
@@ -299,7 +293,6 @@ func StopForward() {
 		}
 
 		log.Println("[*]All forward sockets are closed successfully!")
-
 	}
 }
 
