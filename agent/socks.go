@@ -54,7 +54,6 @@ func HanleClientSocksConn(info chan string, socksUsername, socksPass string, che
 				AgentStuff.CurrentSocks5Conn.Payload[checkNum] = server
 				AgentStuff.CurrentSocks5Conn.Unlock()
 			}
-
 		} else if isAuthed == true && tcpConnected == true && serverFlag == true && !isUDP { //All done!
 			defer SendTCPFin(checkNum)
 
