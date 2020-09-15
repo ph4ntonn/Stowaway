@@ -28,11 +28,19 @@ func SetValidtMessage(key []byte) {
 }
 
 // StartNodeConnReuse 初始化时的连接
-func StartNodeConnReuse(monitor string, listenPort string, nodeid string, key []byte) (net.Conn, string, error) {
+func StartNodeConnReuse(monitor string, listenPort string, nodeid string, proxy, proxyU, proxyP string, key []byte) (net.Conn, string, error) {
 	for {
-		controlConnToUpperNode, err := net.Dial("tcp", monitor)
+		var controlConnToUpperNode net.Conn
+		var err error
+
+		if proxy == ""{
+			controlConnToUpperNode, err = net.Dial("tcp", monitor)
+		} else {
+			controlConnToUpperNode, err = DialViaProxy(monitor,proxy,proxyU, proxyP)
+		}
+
 		if err != nil {
-			log.Println("[*]Connection refused!")
+			log.Printf("[*]Connection refused! err:%s\n",err)
 			return controlConnToUpperNode, "", err
 		}
 

@@ -25,10 +25,18 @@ func init() {
 /*-------------------------一般模式下初始化节点代码--------------------------*/
 
 // StartNodeConn 初始化一个节点连接操作
-func StartNodeConn(monitor string, listenPort string, nodeid string, key []byte) (net.Conn, string, error) {
-	controlConnToUpperNode, err := net.Dial("tcp", monitor)
+func StartNodeConn(monitor string, listenPort string, nodeid string, proxy,proxyU,proxyP string,key []byte) (net.Conn, string, error) {
+	var controlConnToUpperNode net.Conn
+	var err error
+
+	if proxy == ""{
+		controlConnToUpperNode, err = net.Dial("tcp", monitor)
+	} else {
+		controlConnToUpperNode, err = DialViaProxy(monitor,proxy,proxyU,proxyP)
+	}
+
 	if err != nil {
-		log.Println("[*]Connection refused!")
+		log.Printf("[*]Connection refused! err:%s\n",err)
 		return controlConnToUpperNode, "", err
 	}
 

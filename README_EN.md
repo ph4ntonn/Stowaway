@@ -22,6 +22,7 @@ PPS: Please read the usage method and the precautions at the end of the article 
 - Obvious node topology
 - Clear information display of nodes and keep them permanently
 - Active/passive connect mode between nodes
+- Reverse connection between nodes through socks5 proxy
 - Ssh tunnel mode
 - Can be used on multiple platforms
 - Multi-hop socks5 traffic proxy(Support UDP/TCP,IPV4/IPV6)
@@ -119,6 +120,30 @@ Stowaway has three kinds of characters:
   The following simple nodes can be started as Example 1's description
 
   The next time you want to reconnect to the startnode and rebuild the whole network,just start the admin node like ```./stowaway_admin -s 123 -c 127.0.0.1:9999```,and then whole network will be rebuilt
+
+## SOCKS5 proxy connection
+
+  Stowaway can perform reverse connections between nodes through socks5 proxy
+
+  That needs following three params ```--proxy```,```--proxyu```, ```--proxyp```
+
+### Example 
+
+  Suppose there is a socks5 server A, ip is 6.6.6.6, proxy port is 1080, username is ph4ntom, password is just4fun 
+
+  startnode needs to be connected to admin via server A, admin is deployed on 7.7.7.7, and the internal network address of startnode is 192.168.0.200 
+
+  admin: ```./stowaway_admin -l 9999 -s 123```
+
+  startnode: ```./stowaway_agent -c 7.7.7.7:9999 --startnode -s 123 -l 10000 --proxy 6.6.6.6:1080 --proxyu ph4ntom --proxyp just4fun```
+
+  At this time, if there is an another socks5 server B in the intranet, the ip is 192.168.0.2, the proxy port is 1080, and there is no username and password.
+
+  And there is a new child node that wants to connect to the startnode node via B,Then run command below
+
+  node: ```./stowaway_agent -c 192.168.0.200:10000 -s 123 --proxy 192.168.0.2:1080```
+
+  That's all :)
 
 ## Port Reuse
 

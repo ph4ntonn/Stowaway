@@ -37,6 +37,9 @@ type AgentOptions struct {
 	ReuseHost   string
 	ReusePort   string
 	RhostReuse  bool
+	Proxy 	    string
+	ProxyU 		string
+	ProxyP		string
 }
 
 /*-------------------------Admin相关状态变量代码--------------------------*/
@@ -441,7 +444,7 @@ func IsClosed(ch chan string) bool {
 	return false
 }
 
-/*-------------------------操作系统判断相关代码--------------------------*/
+/*-------------------------操作系统&IP类型判断相关代码--------------------------*/
 
 // CheckSystem 检查所在的操作系统
 func CheckSystem() (sysType uint32) {
@@ -455,6 +458,18 @@ func CheckSystem() (sysType uint32) {
 	return
 }
 
+// CheckIfIP4 检查是否是ipv4地址 
+func CheckIfIP4(ip string) bool{
+	for i := 0; i < len(ip); i++ {
+		switch ip[i] {
+		case '.':
+			return true
+		case ':':
+			return false
+		}
+	}
+	return false
+}
 /*-------------------------根据操作系统返回系统信息相关代码--------------------------*/
 
 // GetInfoViaSystem 获得系统信息

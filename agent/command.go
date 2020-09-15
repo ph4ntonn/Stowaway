@@ -20,6 +20,9 @@ func init() {
 	flag.StringVar(&Args.ReuseHost, "rehost", "", "")
 	flag.StringVar(&Args.ReusePort, "report", "", "")
 	flag.BoolVar(&Args.RhostReuse, "rhostreuse", false, "")
+	flag.StringVar(&Args.Proxy, "proxy", "", "")
+	flag.StringVar(&Args.ProxyU, "proxyu", "", "")
+	flag.StringVar(&Args.ProxyP, "proxyp", "", "")
 
 	flag.Usage = func() {}
 }

@@ -20,19 +20,19 @@ import (
 //先暂时不加入，权当一个胡思乱想的idea，今后可视情况增加对startnode保护机制的处理代码，使得入口点更加稳固和隐蔽
 
 // HandleStartNodeConn 处理与startnode的连接
-func HandleStartNodeConn(connToAdmin *net.Conn, monitor, listenPort, reConn string, passive bool, nodeid string) {
+func HandleStartNodeConn(connToAdmin *net.Conn, monitor, listenPort, reConn string, passive bool, nodeid string, proxy, proxyU, proxyP string) {
 	payloadBuffChan := make(chan *utils.Payload, 10)
-	go HandleStartConn(connToAdmin, payloadBuffChan, monitor, listenPort, reConn, passive, nodeid)
+	go HandleStartConn(connToAdmin, payloadBuffChan, monitor, listenPort, reConn, passive, nodeid, proxy, proxyU, proxyP)
 	go HandleDataFromAdmin(connToAdmin, payloadBuffChan, monitor, listenPort, reConn, passive, nodeid)
 	go HandleDataToAdmin(connToAdmin)
 }
 
 // HandleStartConn 处理与admin的信道
-func HandleStartConn(connToAdmin *net.Conn, payloadBuffChan chan *utils.Payload, monitor, listenPort, reConn string, passive bool, nodeid string) {
+func HandleStartConn(connToAdmin *net.Conn, payloadBuffChan chan *utils.Payload, monitor, listenPort, reConn string, passive bool, nodeid string, proxy, proxyU, proxyP string) {
 	for {
 		AdminData, err := utils.ExtractPayload(*connToAdmin, AgentStatus.AESKey, nodeid, false)
 		if err != nil {
-			AdminOffline(reConn, monitor, listenPort, passive)
+			AdminOffline(reConn, monitor, listenPort, proxy, proxyU, proxyP, passive)
 			go SendInfo(nodeid) //重连后发送自身信息
 			go SendNote(nodeid) //重连后发送admin设置的备忘
 			continue

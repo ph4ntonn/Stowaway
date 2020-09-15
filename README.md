@@ -24,6 +24,7 @@ PPS:请在使用前详细阅读使用方法及文末的注意事项！
 - 一目了然的节点树管理
 - 丰富的节点信息展示及长久保存
 - 节点间正向/反向连接
+- 节点间可通过socks5代理进行反向连接
 - ssh隧道连接
 - 多平台适配
 - 多级socks5流量代理转发(支持UDP/TCP,IPV4/IPV6)
@@ -119,6 +120,29 @@ Stowaway一共包含三种角色，分别是：
 
     下一次想要重连时，再次执行```./stowaway_admin -s 123 -c 127.0.0.1:9999```，即可重建网络
 
+## SOCKS5代理连接机制
+
+  Stowaway可以通过socks5代理进行节点间的反向连接
+
+  需要用到以下三个参数```--proxy```,```--proxyu```, ```--proxyp```
+
+### 简单示例
+
+   假设有一台socks5服务器A,ip为6.6.6.6，代理端口为1080，用户名为ph4ntom，密码为just4fun
+
+   startnode需要通过A服务器与admin相连接,admin部署在7.7.7.7上，startnode的内网地址为192.168.0.200
+
+   admin端: ```./stowaway_admin -l 9999 -s 123```
+
+   startnode端: ```./stowaway_agent -c 7.7.7.7:9999 --startnode -s 123 -l 10000 --proxy 6.6.6.6:1080 --proxyu ph4ntom --proxyp just4fun```
+
+   此时如果内网有一台socks5服务器B,ip为192.168.0.2，代理端口为1080，无用户名密码
+
+   有一个新的子节点希望通过B连接到startnode节点
+
+   node端: ```./stowaway_agent -c 192.168.0.200:10000 -s 123 --proxy 192.168.0.2:1080```
+
+   以上
 
 ## 端口复用机制
 

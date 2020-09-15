@@ -36,14 +36,14 @@ func SendNote(nodeid string) {
 /*-------------------------startnode重连功能相关代码--------------------------*/
 
 // TryReconnect 重连操作
-func TryReconnect(gap string, monitor string, listenPort string) {
+func TryReconnect(gap string, monitor string, listenPort string, proxy, proxyU, proxyP string) {
 	lag, _ := strconv.Atoi(gap)
 
 	for {
 		//等待指定的时间
 		time.Sleep(time.Duration(lag) * time.Second)
 		//尝试连接admin端
-		controlConnToAdmin, _, err := node.StartNodeConn(monitor, listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
+		controlConnToAdmin, _, err := node.StartNodeConn(monitor, listenPort, AgentStatus.Nodeid, proxy, proxyU, proxyP, AgentStatus.AESKey)
 		if err != nil {
 			fmt.Println("[*]Admin seems still down")
 		} else {
@@ -55,7 +55,7 @@ func TryReconnect(gap string, monitor string, listenPort string) {
 }
 
 // AdminOffline admin下线后startnode操作
-func AdminOffline(reConn, monitor, listenPort string, passive bool) {
+func AdminOffline(reConn, monitor, listenPort, proxy, proxyU, proxyP string, passive bool) {
 	log.Println("[*]Admin seems offline!")
 	if reConn != "0" && reConn != "" && !passive { //当是主动重连时
 		ClearAllConn()
@@ -63,7 +63,7 @@ func AdminOffline(reConn, monitor, listenPort string, passive bool) {
 		if AgentStatus.NotLastOne {
 			BroadCast("CLEAR")
 		}
-		TryReconnect(reConn, monitor, listenPort)
+		TryReconnect(reConn, monitor, listenPort, proxy, proxyU, proxyP)
 		if AgentStatus.NotLastOne {
 			BroadCast("RECONN")
 		}
