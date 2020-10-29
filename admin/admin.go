@@ -76,8 +76,6 @@ func StartListen(topology *Topology, listenPort string, adminCommandChan chan []
 		HandleInitControlConn(topology, startNodeConn, adminCommandChan)
 
 		log.Printf("[*]StartNode connected from %s!\n", startNodeConn.RemoteAddr().String())
-
-		return
 	}
 }
 
