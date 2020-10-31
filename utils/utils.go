@@ -68,7 +68,7 @@ func NewAdminStatus() *AdminStatus {
 	nas.GetName = make(chan bool, 1)
 	nas.ShellSuccess = make(chan bool, 1)
 	nas.NodesReadyToadd = make(chan map[string]string)
-	nas.StartNode = "0.0.0.0"
+	nas.StartNode = "offline"
 	nas.HandleNode = AdminId
 	return nas
 }

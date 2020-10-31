@@ -48,6 +48,7 @@ func AcceptConnFromUpperNodeIPTableReuse(report, localPort string, nodeid string
 
 		err = CheckValid(comingConn, true, report)
 		if err != nil {
+			log.Println("[*]", err)
 			continue
 		}
 
@@ -89,6 +90,7 @@ func StartNodeListenIPTableReuse(report, localPort string, nodeid string, key []
 
 		err = CheckValid(connToLowerNode, true, report)
 		if err != nil {
+			log.Println("[*]", err)
 			continue
 		}
 

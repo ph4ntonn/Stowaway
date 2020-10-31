@@ -68,8 +68,15 @@ func StartListen(topology *Topology, listenPort string, adminCommandChan chan []
 	for {
 		startNodeConn, _ := localListener.Accept() //一定要有连接进入才可继续操作，故没有连接时，admin端无法操作
 
+		if AdminStatus.StartNode != "offline"{
+			log.Println("[*]Startnode currently online! Only ONE startnode can be connected to admin at the same time!")
+			startNodeConn.Close()
+			continue
+		}
+
 		err = node.CheckSecret(startNodeConn, AdminStatus.AESKey)
 		if err != nil {
+			log.Println("[*]",err)
 			continue
 		}
 
@@ -84,19 +91,19 @@ func ConnectToStartNode(topology *Topology, startNodeAddr string, rhostReuse boo
 	for {
 		startNodeConn, err := net.Dial("tcp", startNodeAddr)
 		if err != nil {
-			log.Fatal("[*]Connection refused!")
+			log.Fatal("[*]Connection refused!\n")
 		}
 
 		if rhostReuse { //如果startnode在reuse状态下
 			err = node.IfValid(startNodeConn)
 			if err != nil {
 				startNodeConn.Close()
-				log.Fatal("[*]Can't connect to agent,check your -s option or (if you are using iptables mode)maybe you forget to use the 'reuse.py'?")
+				log.Fatal("[*]Can't connect to agent,check your -s option or (if you are using iptables mode)maybe you forget to use the 'reuse.py'?\n")
 			}
 		} else {
 			err := node.SendSecret(startNodeConn, AdminStatus.AESKey)
 			if err != nil {
-				log.Fatal("[*]Connection refused!")
+				log.Fatalf("[*]Connection refused! err is:%s\n",err)
 			}
 		}
 

@@ -38,6 +38,7 @@ func StartNodeListenReuse(rehost, report string, nodeid string, key []byte) {
 
 		err = CheckValid(connToLowerNode, true, report)
 		if err != nil {
+			log.Println("[*]", err)
 			continue
 		}
 
@@ -76,7 +77,7 @@ func AcceptConnFromUpperNodeReuse(rehost, report string, nodeid string, key []by
 	waitingForConn, err := reuseport.Listen("tcp", listenAddr)
 
 	if err != nil {
-		log.Fatalf("[*]Cannot reuse port %s", report)
+		log.Fatalf("[*]Cannot reuse port %s\n", report)
 	}
 
 	for {
@@ -88,6 +89,7 @@ func AcceptConnFromUpperNodeReuse(rehost, report string, nodeid string, key []by
 
 		err = CheckValid(comingConn, true, report)
 		if err != nil {
+			log.Println("[*]", err)
 			continue
 		}
 

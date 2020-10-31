@@ -3,7 +3,6 @@ package agent
 import (
 	"log"
 	"net"
-	"os"
 
 	"Stowaway/node"
 	"Stowaway/share"
@@ -72,7 +71,7 @@ func StartNodeInit(monitor, listenPort, reConn, proxy, proxyU, proxyP string, pa
 
 	ConnToAdmin, AgentStatus.Nodeid, err = node.StartNodeConn(monitor, listenPort, AgentStatus.Nodeid, proxy, proxyU, proxyP,AgentStatus.AESKey)
 	if err != nil {
-		os.Exit(0)
+		log.Fatalf("[*]Error occured: %s\n", err)
 	}
 
 	go SendInfo(AgentStatus.Nodeid) //发送自身信息
@@ -109,7 +108,7 @@ func SimpleNodeInit(monitor, listenPort, proxy, proxyU, proxyP string, rhostReus
 		ConnToAdmin, AgentStatus.Nodeid, err = node.StartNodeConnReuse(monitor, listenPort, AgentStatus.Nodeid, proxy, proxyU, proxyP,AgentStatus.AESKey)
 	}
 	if err != nil {
-		os.Exit(0)
+		log.Fatalf("[*]Error occured: %s\n", err)
 	}
 	//与上级连接建立成功后的代码
 	go SendInfo(AgentStatus.Nodeid)

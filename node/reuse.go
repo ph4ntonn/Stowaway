@@ -40,7 +40,6 @@ func StartNodeConnReuse(monitor string, listenPort string, nodeid string, proxy,
 		}
 
 		if err != nil {
-			log.Printf("[*]Connection refused! err:%s\n",err)
 			return controlConnToUpperNode, "", err
 		}
 
@@ -56,7 +55,6 @@ func StartNodeConnReuse(monitor string, listenPort string, nodeid string, proxy,
 
 		err = utils.ConstructPayloadAndSend(controlConnToUpperNode, nodeid, "", "COMMAND", "INIT", " ", listenPort, 0, utils.AdminId, key, false)
 		if err != nil {
-			log.Printf("[*]Error occured: %s", err)
 			return controlConnToUpperNode, "", err
 		}
 		//等待admin为其分配一个id号
@@ -121,7 +119,7 @@ func ConnectNextNodeReuse(target string, nodeid string, key []byte) bool {
 
 // IfValid 发送特征字段
 func IfValid(conn net.Conn) error {
-	var NOT_VALID = errors.New("Not valid")
+	var NOT_VALID = errors.New("Not valid secret,check the secret!")
 
 	//发送标志字段
 	conn.Write([]byte(VALIDMESSAGE))
@@ -144,7 +142,7 @@ func IfValid(conn net.Conn) error {
 
 // CheckValid 检查特征字符串
 func CheckValid(conn net.Conn, reuse bool, report string) error {
-	var NOT_VALID = errors.New("Not valid")
+	var NOT_VALID = errors.New("Not valid secret,check the secret!")
 
 	defer conn.SetReadDeadline(time.Time{})
 	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
