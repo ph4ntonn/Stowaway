@@ -14,21 +14,38 @@ import (
 // CheckMethod 判断是否需要用户名/密码
 func CheckMethod(connToUpper net.Conn, buffer []byte, username string, secret string, clientid uint32, key []byte, currentid string) string {
 	if buffer[0] == 0x05 {
-		if buffer[2] == 0x02 && (username != "") {
-			utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "TSOCKSDATARESP", " ", string([]byte{0x05, 0x02}), clientid, currentid, key, false)
-			return "PASSWORD"
-		} else if buffer[2] == 0x00 && (username == "" && secret == "") {
-			utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "TSOCKSDATARESP", " ", string([]byte{0x05, 0x00}), clientid, currentid, key, false)
-			return "NONE"
-		} else if buffer[2] == 0x00 && (username != "") {
-			utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "TSOCKSDATARESP", " ", string([]byte{0x05, 0x02}), clientid, currentid, key, false)
+		nMethods := int(buffer[1])
+		if nMethods == 0{return "ILLEGAL"}
+
+		var supportMethodFinded,userPassFinded,noAuthFinded bool
+
+		for _,method := range buffer[2:2+nMethods]{
+			if method == 0x00 {
+				noAuthFinded = true	
+				supportMethodFinded = true
+			} else if method == 0x02 {
+				userPassFinded = true	
+				supportMethodFinded = true
+			}
+		}
+
+		if !supportMethodFinded {
+			utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "TSOCKSDATARESP", " ", string([]byte{0x05, 0xff}), clientid, currentid, key, false)
 			return "ILLEGAL"
-		} else if buffer[2] == 0x02 && (username == "") {
+		} 
+
+		if noAuthFinded && (username == "" && secret == ""){
 			utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "TSOCKSDATARESP", " ", string([]byte{0x05, 0x00}), clientid, currentid, key, false)
-			return "ILLEGAL"
+			return "NONE"	
+		} else if  userPassFinded && (username != "" && secret != "") {
+			utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "TSOCKSDATARESP", " ", string([]byte{0x05, 0x02}), clientid, currentid, key, false)
+			return "PASSWORD"	
+		} else {
+			utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "TSOCKSDATARESP", " ", string([]byte{0x05, 0xff}), clientid, currentid, key, false)
+			return "ILLEGAL"	
 		}
 	}
-	return "RETURN"
+	return "ILLEGAL"
 }
 
 // AuthClient 如果需要用户名/密码，验证用户合法性
