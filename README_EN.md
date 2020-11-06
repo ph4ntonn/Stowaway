@@ -252,7 +252,13 @@ For instance：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/node1.png)
 
-Now, use admin node and type in "use 1" -> "connect 127.0.0.1:10001" ,then you can add node 1 into the net
+Now, use admin node and type in ```use 1``` -> ```connect 127.0.0.1:10001``` ,then you can add node 1 into the net
+
+- Let startnode to listen on the port and accept connections from subsequent nodes 
+
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/listen.png)
+
+```listen```command enables the current node to listen to the specified port and accept subsequent node connections on this port
 
 - Second simple Node：
 
@@ -295,7 +301,7 @@ Now you can use the admin's port 7777 as the socks5 proxy service
 
 And it can proxy your traffic to the second simple node and the second simple node will do its work like a socks5 server
 
-If you want to set username/password for socks5 service(Firefox support this function, Chrome doesn't), For instance, if you want to set the username as ph4ntom and password as 11235,just change the command to ```socks 7777 ph4ntom 11235``` (Be aware,do not use colon(:) in either username or password)
+If you want to set username/password for socks5 service:For instance, if you want to set the username as ph4ntom and password as 11235,just change the command to ```socks 7777 ph4ntom 11235``` (Be aware,do not use colon(:) in either username or password)
 
 - Shutdown the socks5 proxy service：
 
@@ -309,13 +315,13 @@ And it can make the second simple node do its work as ssh cilent to start a ssh 
 
 PS: In this function,you can type in ```pwd``` to check where you currently are
 
-- Now if you want to add another node into the network, you can choose sshtunnel command：
+- Now if you want to add another node into the network, you can choose ```sshtunnel``` command：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/waiting.png)
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/sshtunnel.png)
 
 
-And I suggest to use the "sshtunnel" command to add the node into network when the firewall has stricted all the traffics expect for SSH.In general,you can just use "connect" command,it also works(arm and mipsel agent doesn't support this function)
+And I suggest to use the ```sshtunnel``` command to add the node into network **ONLY** when the firewall has stricted all the traffics expect for SSH.In general,you can just use ```connect``` command,it also works(arm and mipsel agent doesn't support this function)
 
 - Upload/Download file:
 
@@ -323,7 +329,7 @@ And I suggest to use the "sshtunnel" command to add the node into network when t
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/download.png)
 
-If you want to upload/download any files,use upload/download + (filepath),and then you can upload specific file to selected node/download specific file from selected node XD (Be aware! You can just transfer only ONE file at the same time,if you want to transfer more,please wait for the previous one complete.)
+If you want to ```upload/download``` any files,use ```upload/download + (filepath)```,and then you can upload specific file to selected node/download specific file from selected node XD (Be aware! You can just transfer only ONE file at the same time,if you want to transfer more,please wait for the previous one complete.)
 
 - Mapping local port to remote port:
 
@@ -346,10 +352,6 @@ Now anyone who connect to 127.0.0.1:80 will connect to 127.0.0.1:22 in fact(forw
 - If you want to shutdown the reflect service:
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/shutdownreflect.png)
-
-- If you want to open a new listener on node 3 for accepting the following nodes connection,you can use "listen" command
-
-![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/listen.png)
 
 > For more detail, just type ```help``` to get more informations
 

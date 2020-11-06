@@ -241,7 +241,13 @@ Stowaway一共包含三种角色，分别是：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/node1.png)
 
-  此时，进入(use命令，本例中为use 1）此节点的上级节点（即startnode），利用命令connect 127.0.0.1:10001 即可将此反向模式节点加入网络
+此时，进入(```use```命令，本例中为```use 1```）此节点的上级节点（即```startnode```），利用命令```connect 127.0.0.1:10001``` 即可将此反向模式节点加入网络
+
+- 命令startnode监听端口，接受后续节点的连接
+
+![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/listen.png)
+
+```listen```命令可使当前节点监听指定的端口，并在此端口上接受后续节点的连接
 
 - 第二个Node：
 
@@ -293,14 +299,14 @@ Stowaway一共包含三种角色，分别是：
 
 此时第二个node会作为ssh客户端发起ssh连接来访问指定的ssh服务，并将ssh数据回传至admin端(arm以及mipsel客户端不支持此功能)
 
-PS: 在ssh模式下，你可以用pwd来判断自己所处的文件夹（好吧，其实就是没法把banner传回来。。）
+PS: 在ssh模式下，你可以用```pwd```来判断自己所处的文件夹（好吧，其实就是没法把banner传回来。。）
 
 - 此时若还有节点需要加入网络，可使用sshtunnel命令：
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/waiting.png)
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/sshtunnel.png)
 
-此时将可以利用sshtunnel将节点加入网络，这一方法适用于当防火墙做了流量限制，只有ssh流量能够通过的情况.一般情况下推荐使用connect命令即可，不需要使用sshtunnel.(arm以及mipsel客户端不支持此功能)。
+此时将可以利用```sshtunnel```将节点加入网络，这一方法适用于当防火墙做了流量限制，只有ssh流量能够通过的情况.一般情况下推荐使用```connect```命令即可，不需要使用```sshtunnel```.(arm以及mipsel客户端不支持此功能)。
 
 - 上传/下载文件：
 
@@ -308,7 +314,7 @@ PS: 在ssh模式下，你可以用pwd来判断自己所处的文件夹（好吧�
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/download.png)
 
-上传下载功能命令为 upload/download 后加文件路径,此时就可以上传文件至指定节点/下载指定节点的文件(注意，同时只能传输一个文件，请务必等之前一个传输完成再进行下一步操作)
+上传下载功能命令为 ```upload/download``` 后加文件路径,此时就可以上传文件至指定节点/下载指定节点的文件(注意，同时只能传输一个文件，请务必等之前一个传输完成再进行下一步操作)
 
 - 本地端口映射至远程端口
 
@@ -328,13 +334,9 @@ PS: 在ssh模式下，你可以用pwd来判断自己所处的文件夹（好吧�
 
 此时外部访问127.0.0.1的80端口，就相当于访问127.0.0.1的22端口（远程映射至本地）
 
-- 如果不想reflect了，可以关闭
+- 如果不想```reflect```了，可以关闭
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/shutdownreflect.png)
-
-- 如果想在node3上新开一个监听端口来让后续节点连接（原来如果启动时设置过-l选项，则之前的监听不会因此停止）
-
-![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/listen.png)
 
 > 具体命令使用可输入```help```查询
 
