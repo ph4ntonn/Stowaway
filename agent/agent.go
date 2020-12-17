@@ -34,8 +34,12 @@ func NewAgent(c *utils.AgentOptions) {
 	proxyU := c.ProxyU
 	proxyP := c.ProxyP
 	//解析监听地址
-	listenAddr,localAddr,err := utils.CheckIPPort(listenInfo)
-	if err != nil{log.Fatalf("[*]Error occured: %s\n", err)}	
+	var listenAddr,localAddr string 
+	var err error
+	if listenInfo != ""{
+		listenAddr,localAddr,err = utils.CheckIPPort(listenInfo)
+		if err != nil{log.Fatalf("[*]Error occured: %s\n", err)}
+	}
 	//设置通信字符串
 	node.SetValidtMessage(AgentStatus.AESKey)
 	node.SetForwardMessage(AgentStatus.AESKey)

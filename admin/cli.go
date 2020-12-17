@@ -24,23 +24,23 @@ func Banner() {
 // ShowMainHelp 打印admin模式下的帮助
 func ShowMainHelp() {
 	fmt.Println(`
-	help                                     		Show Help information.
-	exit                                     		Exit.
+	help                                     		Show Help information
+	exit                                     		Exit
 	detail                                  		Display connected node detail
 	tree                                     		Display nodes's topology
-	use        [id]                          		Select the target node you want to use.
+	use        [id]                          		Select the target node you want to use
   `)
 }
 
 // ShowNodeHelp 打印node模式下的帮助
 func ShowNodeHelp() {
 	fmt.Println(`
-	help                                     		Show Help information.
-	listen     [ip:]<port>                          Start port listening on selected node
+	help                                     		Show Help information
+	listen     [ip:]<port>                  		Start port listening on selected node
 	addnote    <string>                      		Add note for this node
 	delnote                                  		Delete note of this node
-	ssh        <ip:port>    		                Start SSH through selected node.
-	shell                                    		Start an interactive shell on selected node.
+	ssh        <ip:port>    		                Start SSH through selected node
+	shell                                    		Start an interactive shell on selected node
 	socks      <lport> [username] [pass]     		Start a socks5 server.(username and pass are optional)
 	connect    <ip:port>                     		Connect to new node
 	sshtunnel  <ip:sshport> <agent port>    		Use sshtunnel to add the node into the whole network
