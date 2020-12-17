@@ -28,7 +28,7 @@ func SetValidtMessage(key []byte) {
 }
 
 // StartNodeConnReuse 初始化时的连接
-func StartNodeConnReuse(monitor string, listenPort string, nodeid string, proxy, proxyU, proxyP string, key []byte) (net.Conn, string, error) {
+func StartNodeConnReuse(monitor string, listenAddr string, nodeid string, proxy, proxyU, proxyP string, key []byte) (net.Conn, string, error) {
 	for {
 		var controlConnToUpperNode net.Conn
 		var err error
@@ -53,7 +53,7 @@ func StartNodeConnReuse(monitor string, listenPort string, nodeid string, proxy,
 
 		utils.ExtractPayload(controlConnToUpperNode, key, utils.AdminId, true)
 
-		err = utils.ConstructPayloadAndSend(controlConnToUpperNode, nodeid, "", "COMMAND", "INIT", " ", listenPort, 0, utils.AdminId, key, false)
+		err = utils.ConstructPayloadAndSend(controlConnToUpperNode, nodeid, "", "COMMAND", "INIT", " ", listenAddr, 0, utils.AdminId, key, false)
 		if err != nil {
 			return controlConnToUpperNode, "", err
 		}

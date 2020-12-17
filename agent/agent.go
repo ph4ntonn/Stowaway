@@ -22,7 +22,7 @@ func init() {
 func NewAgent(c *utils.AgentOptions) {
 	//解析参数
 	AgentStatus.AESKey = []byte(c.Secret)
-	listenPort := c.Listen
+	listenInfo := c.Listen
 	reconn := c.Reconnect
 	passive := c.Reverse
 	monitor := c.Connect
@@ -33,51 +33,54 @@ func NewAgent(c *utils.AgentOptions) {
 	proxy := c.Proxy
 	proxyU := c.ProxyU
 	proxyP := c.ProxyP
+	//解析监听地址
+	listenAddr,localAddr,err := utils.CheckIPPort(listenInfo)
+	if err != nil{log.Fatalf("[*]Error occured: %s\n", err)}	
 	//设置通信字符串
 	node.SetValidtMessage(AgentStatus.AESKey)
 	node.SetForwardMessage(AgentStatus.AESKey)
 	//根据选择确定启动方式
 	if isStartNode && passive == false && reuseHost == "" && reusePort == "" {
 		go WaitForExit()
-		StartNodeInit(monitor, listenPort, reconn,proxy, proxyU, proxyP, passive)
+		StartNodeInit(monitor, listenAddr, reconn,proxy, proxyU, proxyP, passive)
 	} else if passive == false && reuseHost == "" && reusePort == "" {
 		go WaitForExit()
-		SimpleNodeInit(monitor, listenPort, proxy, proxyU, proxyP, rhostReuse)
+		SimpleNodeInit(monitor, listenAddr, proxy, proxyU, proxyP, rhostReuse)
 	} else if isStartNode && passive && reuseHost == "" && reusePort == "" {
 		go WaitForExit()
-		StartNodeReversemodeInit(monitor, listenPort, proxy, proxyU, proxyP,passive)
+		StartNodeReversemodeInit(monitor, listenAddr, proxy, proxyU, proxyP,passive)
 	} else if passive && reuseHost == "" && reusePort == "" {
 		go WaitForExit()
-		SimpleNodeReversemodeInit(monitor, listenPort)
+		SimpleNodeReversemodeInit(monitor, listenAddr)
 	} else if reuseHost != "" && reusePort != "" && isStartNode {
 		go WaitForExit()
-		StartNodeReuseInit(reuseHost, reusePort, listenPort, proxy, proxyU, proxyP, 1)
+		StartNodeReuseInit(reuseHost, reusePort, localAddr, proxy, proxyU, proxyP, 1)
 	} else if reuseHost != "" && reusePort != "" {
 		go WaitForExit()
-		SimpleNodeReuseInit(reuseHost, reusePort, listenPort, 1)
-	} else if reusePort != "" && listenPort != "" && isStartNode {
-		StartNodeReuseInit(reuseHost, reusePort, listenPort, proxy, proxyU, proxyP,2)
-	} else if reusePort != "" && listenPort != "" {
-		SimpleNodeReuseInit(reuseHost, reusePort, listenPort, 2)
+		SimpleNodeReuseInit(reuseHost, reusePort, localAddr, 1)
+	} else if reusePort != "" && localAddr != "" && isStartNode {
+		StartNodeReuseInit(reuseHost, reusePort, localAddr, proxy, proxyU, proxyP,2)
+	} else if reusePort != "" && localAddr != "" {
+		SimpleNodeReuseInit(reuseHost, reusePort, localAddr, 2)
 	}
 }
 
 // 初始化代码开始
 
 // StartNodeInit 后续想让startnode与simplenode实现不一样的功能，故将两种node实现代码分开写
-func StartNodeInit(monitor, listenPort, reConn, proxy, proxyU, proxyP string, passive bool) {
+func StartNodeInit(monitor, listenAddr, reConn, proxy, proxyU, proxyP string, passive bool) {
 	var err error
 	AgentStatus.Nodeid = utils.StartNodeId
 
-	ConnToAdmin, AgentStatus.Nodeid, err = node.StartNodeConn(monitor, listenPort, AgentStatus.Nodeid, proxy, proxyU, proxyP,AgentStatus.AESKey)
+	ConnToAdmin, AgentStatus.Nodeid, err = node.StartNodeConn(monitor, listenAddr, AgentStatus.Nodeid, proxy, proxyU, proxyP,AgentStatus.AESKey)
 	if err != nil {
 		log.Fatalf("[*]Error occured: %s\n", err)
 	}
 
 	go SendInfo(AgentStatus.Nodeid) //发送自身信息
 	go share.SendHeartBeatControl(&ConnToAdmin, AgentStatus.Nodeid, AgentStatus.AESKey)
-	go HandleStartNodeConn(&ConnToAdmin, monitor, listenPort, reConn, passive, AgentStatus.Nodeid, proxy, proxyU, proxyP)
-	go node.StartNodeListen(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
+	go HandleStartNodeConn(&ConnToAdmin, monitor, listenAddr, reConn, passive, AgentStatus.Nodeid, proxy, proxyU, proxyP)
+	go node.StartNodeListen(listenAddr, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go PrepareForReOnlineNode()
 
 	for {
@@ -98,14 +101,14 @@ func StartNodeInit(monitor, listenPort, reConn, proxy, proxyU, proxyP string, pa
 }
 
 // SimpleNodeInit 普通的node节点
-func SimpleNodeInit(monitor, listenPort, proxy, proxyU, proxyP string, rhostReuse bool) {
+func SimpleNodeInit(monitor, listenAddr, proxy, proxyU, proxyP string, rhostReuse bool) {
 	var err error
 	AgentStatus.Nodeid = utils.AdminId
 
 	if !rhostReuse { //连接的节点是否是在reuseport？
-		ConnToAdmin, AgentStatus.Nodeid, err = node.StartNodeConn(monitor, listenPort, AgentStatus.Nodeid, proxy, proxyU, proxyP, AgentStatus.AESKey)
+		ConnToAdmin, AgentStatus.Nodeid, err = node.StartNodeConn(monitor, listenAddr, AgentStatus.Nodeid, proxy, proxyU, proxyP, AgentStatus.AESKey)
 	} else {
-		ConnToAdmin, AgentStatus.Nodeid, err = node.StartNodeConnReuse(monitor, listenPort, AgentStatus.Nodeid, proxy, proxyU, proxyP,AgentStatus.AESKey)
+		ConnToAdmin, AgentStatus.Nodeid, err = node.StartNodeConnReuse(monitor, listenAddr, AgentStatus.Nodeid, proxy, proxyU, proxyP,AgentStatus.AESKey)
 	}
 	if err != nil {
 		log.Fatalf("[*]Error occured: %s\n", err)
@@ -114,7 +117,7 @@ func SimpleNodeInit(monitor, listenPort, proxy, proxyU, proxyP string, rhostReus
 	go SendInfo(AgentStatus.Nodeid)
 	go share.SendHeartBeatControl(&ConnToAdmin, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go HandleSimpleNodeConn(&ConnToAdmin, AgentStatus.Nodeid)
-	go node.StartNodeListen(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
+	go node.StartNodeListen(listenAddr, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go PrepareForReOnlineNode()
 	//等待下级节点的连接
 	for {
@@ -135,15 +138,15 @@ func SimpleNodeInit(monitor, listenPort, proxy, proxyU, proxyP string, rhostReus
 }
 
 // StartNodeReversemodeInit reverse mode下的startnode节点
-func StartNodeReversemodeInit(monitor, listenPort, proxy, proxyU, proxyP string, passive bool) {
+func StartNodeReversemodeInit(monitor, listenAddr, proxy, proxyU, proxyP string, passive bool) {
 	AgentStatus.Nodeid = utils.StartNodeId
 
-	ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNode(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
+	ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNode(listenAddr, AgentStatus.Nodeid, AgentStatus.AESKey)
 
 	go SendInfo(AgentStatus.Nodeid)
 	go share.SendHeartBeatControl(&ConnToAdmin, AgentStatus.Nodeid, AgentStatus.AESKey)
-	go HandleStartNodeConn(&ConnToAdmin, monitor, listenPort, "", passive, AgentStatus.Nodeid, proxy, proxyU, proxyP)
-	go node.StartNodeListen(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
+	go HandleStartNodeConn(&ConnToAdmin, monitor, listenAddr, "", passive, AgentStatus.Nodeid, proxy, proxyU, proxyP)
+	go node.StartNodeListen(listenAddr, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go PrepareForReOnlineNode()
 
 	for {
@@ -169,15 +172,15 @@ func StartNodeReversemodeInit(monitor, listenPort, proxy, proxyU, proxyP string,
 }
 
 // SimpleNodeReversemodeInit reverse mode下的普通节点
-func SimpleNodeReversemodeInit(monitor, listenPort string) {
+func SimpleNodeReversemodeInit(monitor, listenAddr string) {
 	AgentStatus.Nodeid = utils.AdminId
 
-	ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNode(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
+	ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNode(listenAddr, AgentStatus.Nodeid, AgentStatus.AESKey)
 
 	go SendInfo(AgentStatus.Nodeid)
 	go share.SendHeartBeatControl(&ConnToAdmin, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go HandleSimpleNodeConn(&ConnToAdmin, AgentStatus.Nodeid)
-	go node.StartNodeListen(listenPort, AgentStatus.Nodeid, AgentStatus.AESKey)
+	go node.StartNodeListen(listenAddr, AgentStatus.Nodeid, AgentStatus.AESKey)
 	go PrepareForReOnlineNode()
 
 	for {
@@ -198,17 +201,17 @@ func SimpleNodeReversemodeInit(monitor, listenPort string) {
 }
 
 // StartNodeReuseInit reuseport下的startnode节点
-func StartNodeReuseInit(reuseHost, reusePort, localPort, proxy, proxyU, proxyP string, method int) {
+func StartNodeReuseInit(reuseHost, reusePort, listenAddr, proxy, proxyU, proxyP string, method int) {
 	AgentStatus.Nodeid = utils.StartNodeId
 
 	if method == 1 {
 		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeReuse(reuseHost, reusePort, AgentStatus.Nodeid, AgentStatus.AESKey)
 	} else {
-		err := node.SetPortReuseRules(localPort, reusePort)
+		err := node.SetPortReuseRules(listenAddr, reusePort)
 		if err != nil {
 			log.Fatal("[*]Cannot set the iptable rules!")
 		}
-		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeIPTableReuse(reusePort, localPort, AgentStatus.Nodeid, AgentStatus.AESKey)
+		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeIPTableReuse(reusePort, listenAddr, AgentStatus.Nodeid, AgentStatus.AESKey)
 	}
 
 	go SendInfo(AgentStatus.Nodeid)
@@ -218,7 +221,7 @@ func StartNodeReuseInit(reuseHost, reusePort, localPort, proxy, proxyU, proxyP s
 	if method == 1 {
 		go node.StartNodeListenReuse(reuseHost, reusePort, AgentStatus.Nodeid, AgentStatus.AESKey)
 	} else {
-		go node.StartNodeListenIPTableReuse(reusePort, localPort, AgentStatus.Nodeid, AgentStatus.AESKey)
+		go node.StartNodeListenIPTableReuse(reusePort, listenAddr, AgentStatus.Nodeid, AgentStatus.AESKey)
 	}
 
 	go PrepareForReOnlineNode()
@@ -246,17 +249,17 @@ func StartNodeReuseInit(reuseHost, reusePort, localPort, proxy, proxyU, proxyP s
 }
 
 // SimpleNodeReuseInit reuseport下的普通节点
-func SimpleNodeReuseInit(reuseHost, reusePort, localPort string, method int) {
+func SimpleNodeReuseInit(reuseHost, reusePort, listenAddr string, method int) {
 	AgentStatus.Nodeid = utils.AdminId
 
 	if method == 1 {
 		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeReuse(reuseHost, reusePort, AgentStatus.Nodeid, AgentStatus.AESKey)
 	} else {
-		err := node.SetPortReuseRules(localPort, reusePort)
+		err := node.SetPortReuseRules(listenAddr, reusePort)
 		if err != nil {
 			log.Fatal("[*]Cannot set the iptable rules!")
 		}
-		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeIPTableReuse(reusePort, localPort, AgentStatus.Nodeid, AgentStatus.AESKey)
+		ConnToAdmin, AgentStatus.Nodeid = node.AcceptConnFromUpperNodeIPTableReuse(reusePort, listenAddr, AgentStatus.Nodeid, AgentStatus.AESKey)
 	}
 
 	go SendInfo(AgentStatus.Nodeid)
@@ -266,7 +269,7 @@ func SimpleNodeReuseInit(reuseHost, reusePort, localPort string, method int) {
 	if method == 1 {
 		go node.StartNodeListenReuse(reuseHost, reusePort, AgentStatus.Nodeid, AgentStatus.AESKey)
 	} else {
-		go node.StartNodeListenIPTableReuse(reusePort, localPort, AgentStatus.Nodeid, AgentStatus.AESKey)
+		go node.StartNodeListenIPTableReuse(reusePort, listenAddr, AgentStatus.Nodeid, AgentStatus.AESKey)
 	}
 
 	go PrepareForReOnlineNode()

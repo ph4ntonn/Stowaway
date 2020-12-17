@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"errors"
 
 	"github.com/cheggaaa/pb/v3"
 )
@@ -470,6 +471,40 @@ func CheckIfIP4(ip string) bool{
 	}
 	return false
 }
+
+// CheckIPPort检查输入ip+port是否合法 
+func CheckIPPort(info string) (string,string,error) {
+	var 
+	(
+		readyIP string
+	    readyPort int
+		err error
+	)
+
+	spliltedInfo := strings.Split(info,":")
+	
+	if len(spliltedInfo) == 1 {
+		readyIP = "0.0.0.0"
+		readyPort, err = strconv.Atoi(info)
+	} else if len(spliltedInfo) == 2{
+		readyIP = spliltedInfo[0]
+		readyPort, err = strconv.Atoi(spliltedInfo[1])
+	} else {
+		return "","",errors.New("Unknown error")	
+	}
+
+	if err != nil || readyPort < 1 || readyPort > 65535 || readyIP == ""{
+		return "","",errors.New("Please input valid port(1~65535)/ip+port!")
+	}
+
+	NormalAddr := readyIP + ":" + strconv.Itoa(readyPort)
+	ReuseAddr := "0.0.0.0:" + strconv.Itoa(readyPort) 
+	return NormalAddr,ReuseAddr,nil
+}
+
+// GiveMePortViaAddr 返回端口号 
+func GiveMePortViaAddr(addr string) string {return strings.Split(addr,":")[1]}
+
 /*-------------------------根据操作系统返回系统信息相关代码--------------------------*/
 
 // GetInfoViaSystem 获得系统信息

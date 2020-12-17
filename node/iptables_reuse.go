@@ -32,12 +32,11 @@ func SetForwardMessage(key []byte) {
 }
 
 // AcceptConnFromUpperNodeIPTableReuse 在iptable reuse状态下接收上一级节点的连接
-func AcceptConnFromUpperNodeIPTableReuse(report, localPort string, nodeid string, key []byte) (net.Conn, string) {
-	listenAddr := fmt.Sprintf("0.0.0.0:%s", localPort)
+func AcceptConnFromUpperNodeIPTableReuse(report, listenAddr string, nodeid string, key []byte) (net.Conn, string) {
 	waitingForConn, err := net.Listen("tcp", listenAddr)
 
 	if err != nil {
-		log.Fatalf("[*]Cannot reuse port %s", localPort)
+		log.Fatalf("[*]Cannot reuse %s", listenAddr)
 	}
 	for {
 		comingConn, err := waitingForConn.Accept()
@@ -67,18 +66,17 @@ func AcceptConnFromUpperNodeIPTableReuse(report, localPort string, nodeid string
 }
 
 // StartNodeListenIPTableReuse 初始化节点监听操作
-func StartNodeListenIPTableReuse(report, localPort string, nodeid string, key []byte) {
+func StartNodeListenIPTableReuse(report, listenAddr string, nodeid string, key []byte) {
 	var newNodeMessage []byte
 
-	if localPort == "" { //如果没有port，直接退出
+	if listenAddr == "" { //如果没有addr，直接退出
 		return
 	}
 
-	listenAddr := fmt.Sprintf("0.0.0.0:%s", localPort)
 	waitingForLowerNode, err := net.Listen("tcp", listenAddr)
 
 	if err != nil {
-		log.Fatalf("[*]Cannot listen on port %s", localPort)
+		log.Fatalf("[*]Cannot listen on %s", listenAddr)
 	}
 
 	for {
@@ -148,8 +146,10 @@ func DeletePortReuseRules(localPort string, reusedPort string) error {
 }
 
 // SetPortReuseRules 添加iptable规则
-func SetPortReuseRules(localPort string, reusedPort string) error {
+func SetPortReuseRules(listenAddr string, reusedPort string) error {
 	sigs := make(chan os.Signal, 1)
+
+	localPort := utils.GiveMePortViaAddr(listenAddr)
 
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM) //监听ctrl+c、kill命令
 	go func() {

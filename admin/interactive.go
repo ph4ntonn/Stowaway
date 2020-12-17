@@ -7,7 +7,6 @@ import (
 	"net"
 	"os"
 	"runtime"
-	"strconv"
 	"strings"
 
 	"Stowaway/share"
@@ -265,13 +264,13 @@ func HandleNodeCommand(startNodeConn net.Conn, nodeid string, adminCommandChan c
 			CommandContinue()
 		case "listen":
 			if len(AdminCommand) == 2 {
-				port, err := strconv.Atoi(AdminCommand[1])
-				if err != nil || port < 0 || port > 65535 {
+				address,_,err := utils.CheckIPPort(AdminCommand[1])	
+				if err != nil {
 					fmt.Println("[*]Bad format! Should be listen [port],and port must between 1~65535")
 					CommandContinue()
 					continue
 				}
-				utils.ConstructPayloadAndSend(startNodeConn, nodeid, route, "COMMAND", "LISTEN", " ", AdminCommand[1], 0, utils.AdminId, AdminStatus.AESKey, false)
+				utils.ConstructPayloadAndSend(startNodeConn, nodeid, route, "COMMAND", "LISTEN", " ", address, 0, utils.AdminId, AdminStatus.AESKey, false)
 			} else {
 				fmt.Println("[*]Bad format! Should be listen [port]")
 			}

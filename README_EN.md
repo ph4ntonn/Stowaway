@@ -58,7 +58,7 @@ Stowaway has three kinds of characters:
   ```
     Meaning：
   
-       -l     It means Stowaway is listening on port 9999 and waiting for incoming connection
+       -l     It means Stowaway is listening on port 9999 and waiting for incoming connection(default listening on 0.0.0.0)
 
        -s     It means Stowaway has used 123 as the encrypt key during the communication
   
@@ -71,7 +71,7 @@ Stowaway has three kinds of characters:
   
        -c    It means Stowaway's monitor node's listening address
   
-       -l    It means Stowaway is listening on port 10000 and waiting for incoming connection (optional，you can also open the listening port via "listen" command)
+       -l    It means Stowaway is listening on port 10000 and waiting for incoming connection (You can also specify the listening ip at the same time, like 192.168.0.1:9999, if you don’t specify the ip, the default listening is 0.0.0.0; And besides，you can also open the listening port via "listen" command)
 
        -s    It means Stowaway has used 123 as the AES encrypt key during the communication 
 
@@ -91,7 +91,7 @@ Stowaway has three kinds of characters:
 
        -r   It means you want to start the node in passive mode
 
-       -l   It means Stowaway is listening on port 10000 and waiting for incoming connection
+       -l   It means Stowaway is listening on port 10001 and waiting for incoming connection
   ```
     And now, you can use admin,type in ```use 1```---> ```connect 127.0.0.1:10001``` to add this simple node into network
 
@@ -221,6 +221,7 @@ Stowaway has three kinds of characters:
 
   And then the "port reusing" will be closed,and the service originally run on the reusing port can be reached again
 
+- If you use the port reusing mode via IPTABLES , the agent will be forced to monitor at 0.0.0.0, and you cannot specify ip+port by the ```-l``` option
 
 ## Some points you should know
 
@@ -258,7 +259,7 @@ Now, use admin node and type in ```use 1``` -> ```connect 127.0.0.1:10001``` ,th
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/listen.png)
 
-```listen```command enables the current node to listen to the specified port and accept subsequent node connections on this port
+```listen```command enables the current node to listen to the specified port and accept subsequent node connections on this port,and the format is ```listen <ip:>port```, if ip is not specified, the default listening is ```0.0.0.0```
 
 - Second simple Node：
 

@@ -2,7 +2,6 @@ package node
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -63,18 +62,17 @@ func StartNodeConn(monitor string, listenPort string, nodeid string, proxy,proxy
 }
 
 // StartNodeListen 初始化节点监听操作
-func StartNodeListen(listenPort string, nodeid string, key []byte) {
+func StartNodeListen(listenAddr string, nodeid string, key []byte) {
 	var newNodeMessage []byte
 
-	if listenPort == "" { //如果没有port，直接退出
+	if listenAddr == "" { //如果没有addr，直接退出
 		return
 	}
 
-	listenAddr := fmt.Sprintf("0.0.0.0:%s", listenPort)
 	waitingForLowerNode, err := net.Listen("tcp", listenAddr)
 
 	if err != nil {
-		log.Fatalf("[*]Cannot listen on port %s", listenPort)
+		log.Fatalf("[*]Cannot listen on port %s", listenAddr)
 	}
 
 	for {
@@ -94,7 +92,7 @@ func StartNodeListen(listenPort string, nodeid string, key []byte) {
 			command, _ := utils.ExtractPayload(connToLowerNode, key, utils.AdminId, true)
 			switch command.Command {
 			case "STOWAWAYADMIN":
-				utils.ConstructPayloadAndSend(connToLowerNode, nodeid, "", "COMMAND", "INIT", " ", listenPort, 0, utils.AdminId, key, false)
+				utils.ConstructPayloadAndSend(connToLowerNode, nodeid, "", "COMMAND", "INIT", " ", listenAddr, 0, utils.AdminId, key, false)
 			case "ID":
 				NodeStuff.ControlConnForLowerNodeChan <- connToLowerNode
 				NodeStuff.NewNodeMessageChan <- newNodeMessage
@@ -105,7 +103,7 @@ func StartNodeListen(listenPort string, nodeid string, key []byte) {
 				if !NodeStuff.Offline {
 					utils.ConstructPayloadAndSend(connToLowerNode, nodeid, "", "COMMAND", "CONFIRM", " ", " ", 0, nodeid, key, false)
 				} else {
-					utils.ConstructPayloadAndSend(connToLowerNode, nodeid, "", "COMMAND", "REONLINE", " ", listenPort, 0, nodeid, key, false)
+					utils.ConstructPayloadAndSend(connToLowerNode, nodeid, "", "COMMAND", "REONLINE", " ", listenAddr, 0, nodeid, key, false)
 				}
 			case "INIT":
 				//告知admin新节点消息
@@ -172,12 +170,11 @@ func ConnectNextNode(target string, nodeid string, key []byte) bool {
 /*-------------------------节点被动模式下功能代码--------------------------*/
 
 // AcceptConnFromUpperNode 被动模式下startnode接收admin重连 && 普通节点被动启动等待上级节点主动连接
-func AcceptConnFromUpperNode(listenPort string, nodeid string, key []byte) (net.Conn, string) {
-	listenAddr := fmt.Sprintf("0.0.0.0:%s", listenPort)
+func AcceptConnFromUpperNode(listenAddr string, nodeid string, key []byte) (net.Conn, string) {
 	waitingForConn, err := net.Listen("tcp", listenAddr)
 
 	if err != nil {
-		log.Fatalf("[*]Cannot listen on port %s", listenPort)
+		log.Fatalf("[*]Cannot listen on %s", listenAddr)
 	}
 
 	for {
@@ -195,7 +192,7 @@ func AcceptConnFromUpperNode(listenPort string, nodeid string, key []byte) (net.
 
 		utils.ExtractPayload(comingConn, key, utils.AdminId, true)
 
-		utils.ConstructPayloadAndSend(comingConn, nodeid, "", "COMMAND", "INIT", " ", listenPort, 0, utils.AdminId, key, false)
+		utils.ConstructPayloadAndSend(comingConn, nodeid, "", "COMMAND", "INIT", " ", listenAddr, 0, utils.AdminId, key, false)
 
 		command, _ := utils.ExtractPayload(comingConn, key, utils.AdminId, true) //等待分配id
 		if command.Command == "ID" {
