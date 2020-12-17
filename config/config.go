@@ -1,6 +1,6 @@
 package config
 
-const VERSION = "1.6.1" //版本号
+const VERSION = "1.6.2" //版本号
 
 const INFO_LEN = 4         //数据包实际承载信息长度
 const TYPE_LEN = 4         //数据包类型长度
