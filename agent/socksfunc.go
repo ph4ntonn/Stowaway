@@ -12,10 +12,16 @@ import (
 /*-------------------------Socks5功能代码-------------------------*/
 
 // CheckMethod 判断是否需要用户名/密码
-func CheckMethod(connToUpper net.Conn, buffer []byte, username string, secret string, clientid uint32, key []byte, currentid string) string {
+func CheckMethod(connToUpper net.Conn, buffer []byte, username string, secret string, clientid uint32, key []byte, currentid string) (result string) {
+	defer func(){ //防止读出的socks标头不完整,从而数组越界导致panic(极少见)
+		if r := recover(); r != nil{
+			utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "TSOCKSDATARESP", " ", string([]byte{0x05, 0xff}), clientid, currentid, key, false)
+			result = "ILLEGAL"
+		}
+	}()
+	
 	if buffer[0] == 0x05 {
 		nMethods := int(buffer[1])
-		if nMethods == 0{return "ILLEGAL"}
 
 		var supportMethodFinded,userPassFinded,noAuthFinded bool
 
@@ -49,7 +55,14 @@ func CheckMethod(connToUpper net.Conn, buffer []byte, username string, secret st
 }
 
 // AuthClient 如果需要用户名/密码，验证用户合法性
-func AuthClient(connToUpper net.Conn, buffer []byte, username string, secret string, clientid uint32, key []byte, currentid string) bool {
+func AuthClient(connToUpper net.Conn, buffer []byte, username string, secret string, clientid uint32, key []byte, currentid string) (result bool) {
+	defer func(){
+		if r := recover(); r != nil{
+			utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "TSOCKSDATARESP", " ", string([]byte{0x01, 0x01}), clientid, currentid, key, false)
+			result = false
+		}
+	}()
+
 	ulen := int(buffer[1])
 	slen := int(buffer[2+ulen])
 	clientName := string(buffer[2 : 2+ulen])
@@ -65,23 +78,29 @@ func AuthClient(connToUpper net.Conn, buffer []byte, username string, secret str
 
 // ConfirmTarget 判断代理方式
 func ConfirmTarget(connToUpper net.Conn, buffer []byte, checkNum uint32, key []byte, currentid string) (net.Conn, bool, bool, bool, bool) {
-	len := len(buffer)
-	connected := false
+	length := len(buffer)
+	var connected bool
 	var server net.Conn
 	var serverFlag bool
 	var isUDP bool
 	var success bool
 
+	if len(buffer) <= 2 {
+		utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "TSOCKSDATARESP", " ", string([]byte{0x05, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}), checkNum, currentid, key, false)
+		return server, connected, false, isUDP, success
+	}
+
 	if buffer[0] == 0x05 {
 		switch buffer[1] {
 		case 0x01:
-			server, connected, serverFlag = TCPConnect(connToUpper, buffer, len, checkNum, key, currentid)
+			server, connected, serverFlag = TCPConnect(connToUpper, buffer, length, checkNum, key, currentid)
 		case 0x02:
-			connected = TCPBind(connToUpper, buffer, len, checkNum, key)
+			connected = TCPBind(connToUpper, buffer, length, checkNum, key)
 		case 0x03:
-			success = UDPAssociate(connToUpper, buffer, len, checkNum, key, currentid)
+			success = UDPAssociate(connToUpper, buffer, length, checkNum, key, currentid)
 			isUDP = true
 		default:
+			utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "TSOCKSDATARESP", " ", string([]byte{0x05, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}), checkNum, currentid, key, false)
 			return server, connected, false, isUDP, success
 		}
 	}
@@ -90,27 +109,35 @@ func ConfirmTarget(connToUpper net.Conn, buffer []byte, checkNum uint32, key []b
 }
 
 // TCPConnect 如果是代理tcp
-func TCPConnect(connToUpper net.Conn, buffer []byte, len int, checkNum uint32, key []byte, currentid string) (net.Conn, bool, bool) {
-	host := ""
-	var server net.Conn
+func TCPConnect(connToUpper net.Conn, buffer []byte, length int, checkNum uint32, key []byte, currentid string) (server net.Conn, connectedResult bool,serverFlagResult bool) {
+	var host string
+	var err error
+
+	defer func(){
+		if r := recover(); r != nil{
+			utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "TSOCKSDATARESP", " ", string([]byte{0x05, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}), checkNum, currentid, key, false)
+			server = nil;connectedResult = false;serverFlagResult = false	
+		}
+	}()
 
 	switch buffer[3] {
 	case 0x01:
 		host = net.IPv4(buffer[4], buffer[5], buffer[6], buffer[7]).String()
 	case 0x03:
-		host = string(buffer[5 : len-2])
+		host = string(buffer[5 : length-2])
 	case 0x04:
 		host = net.IP{buffer[4], buffer[5], buffer[6], buffer[7],
 			buffer[8], buffer[9], buffer[10], buffer[11], buffer[12],
 			buffer[13], buffer[14], buffer[15], buffer[16], buffer[17],
 			buffer[18], buffer[19]}.String()
 	default:
+		utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "TSOCKSDATARESP", " ", string([]byte{0x05, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}), checkNum, currentid, key, false)	
 		return server, false, false
 	}
 
-	port := strconv.Itoa(int(buffer[len-2])<<8 | int(buffer[len-1]))
+	port := strconv.Itoa(int(buffer[length-2])<<8 | int(buffer[length-1]))
 
-	server, err := net.Dial("tcp", net.JoinHostPort(host, port))
+	server, err = net.Dial("tcp", net.JoinHostPort(host, port))
 
 	if err != nil {
 		utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "TSOCKSDATARESP", " ", string([]byte{0x05, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}), checkNum, currentid, key, false)
@@ -148,36 +175,44 @@ func ProxyS2CTCP(connToUpper net.Conn, server net.Conn, checkNum uint32, key []b
 	serverBuffer := make([]byte, 20480)
 
 	for {
-		len, err := server.Read(serverBuffer)
+		length, err := server.Read(serverBuffer)
 		if err != nil {
 			server.Close()
 			return err
 		}
-		utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "TSOCKSDATARESP", " ", string(serverBuffer[:len]), checkNum, currentid, key, false)
+		utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "TSOCKSDATARESP", " ", string(serverBuffer[:length]), checkNum, currentid, key, false)
 	}
 }
 
 // 基于rfc1928编写，如果客户端没有严格按照rfc1928规定发送数据包，可能导致agent崩溃！
 // UDPAssociate UDPAssociate方式
-func UDPAssociate(connToUpper net.Conn, buffer []byte, len int, checkNum uint32, key []byte, currentid string) bool {
+func UDPAssociate(connToUpper net.Conn, buffer []byte, length int, checkNum uint32, key []byte, currentid string) (result bool) {
 	var host string
 	newUDPAssociate := utils.NewUDPAssociateInfo()
+
+	defer func(){
+		if r := recover(); r != nil{
+			utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "TSOCKSDATARESP", " ", string([]byte{0x05, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}), checkNum, currentid, key, false)
+			result = false			
+		}
+	}()
 
 	switch buffer[3] {
 	case 0x01:
 		host = net.IPv4(buffer[4], buffer[5], buffer[6], buffer[7]).String()
 	case 0x03:
-		host = string(buffer[5 : len-2])
+		host = string(buffer[5 : length-2])
 	case 0x04:
 		host = net.IP{buffer[4], buffer[5], buffer[6], buffer[7],
 			buffer[8], buffer[9], buffer[10], buffer[11], buffer[12],
 			buffer[13], buffer[14], buffer[15], buffer[16], buffer[17],
 			buffer[18], buffer[19]}.String()
 	default:
+		utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "TSOCKSDATARESP", " ", string([]byte{0x05, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}), checkNum, currentid, key, false)
 		return false
 	}
 
-	port := strconv.Itoa(int(buffer[len-2])<<8 | int(buffer[len-1])) //先拿到客户端想要发送数据的ip:port地址
+	port := strconv.Itoa(int(buffer[length-2])<<8 | int(buffer[length-1])) //先拿到客户端想要发送数据的ip:port地址
 
 	udpListenerAddr, err := net.ResolveUDPAddr("udp", "0.0.0.0:0")
 	if err != nil {
@@ -220,6 +255,16 @@ func ProxyC2SUDP(checkNum uint32){
 	AgentStuff.Socks5UDPAssociate.Lock()
 	listener := AgentStuff.Socks5UDPAssociate.Info[checkNum].Listener
 	AgentStuff.Socks5UDPAssociate.Unlock()
+
+	defer func(){
+		if r := recover(); r != nil{} // Just avoid panic
+		go func(){    //continue to read channel,avoid some remaining data sended by admin blocking our main thread
+			_, ok := <-AgentStuff.Socks5UDPAssociate.Info[checkNum].UDPData
+			if !ok {
+				return
+			}
+		}()
+	}()
 
 	for {
 		var remote string
@@ -304,7 +349,7 @@ func ProxyS2CUDP(connToUpper net.Conn, checkNum uint32, key []byte, currentid st
 }
 
 // TCPBind TCPBind方式
-func TCPBind(connToUpper net.Conn, buffer []byte, len int, checkNum uint32, AESKey []byte) bool {
+func TCPBind(connToUpper net.Conn, buffer []byte, length int, checkNum uint32, AESKey []byte) bool {
 	fmt.Println("Not ready") //limited use, add to Todo
 	return false
 }
