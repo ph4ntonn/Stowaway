@@ -4,6 +4,7 @@ import (
 	"io"
 	"os/exec"
 	"runtime"
+	//"syscall"
 
 	"Stowaway/utils"
 )
@@ -15,6 +16,7 @@ func CreatInteractiveShell() (io.Reader, io.Writer, error) {
 	switch utils.CheckSystem() {
 	case 0x01:
 		cmd = exec.Command("c:\\windows\\system32\\cmd.exe")
+		// cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}	//如果不想在windows上隐蔽执行时弹出cmd，去除注释
 	default:
 		cmd = exec.Command("/bin/sh", "-i")
 		if runtime.GOARCH == "386" || runtime.GOARCH == "amd64" {

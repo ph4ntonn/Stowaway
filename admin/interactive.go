@@ -20,7 +20,6 @@ func Controlpanel(adminCommandChan chan []string) {
 	var command string
 
 	inputReader := bufio.NewReader(os.Stdin)
-	platform := utils.CheckSystem()
 
 	for {
 		fmt.Printf("(%s) >> ", *AdminStatus.CliStatus)
@@ -29,11 +28,9 @@ func Controlpanel(adminCommandChan chan []string) {
 			fmt.Println(err)
 			continue
 		}
-		if platform == 0x01 {
-			command = strings.Replace(input, "\r\n", "", -1)
-		} else {
-			command = strings.Replace(input, "\n", "", -1)
-		}
+
+		command = strings.Replace(input, "\r", "", -1)
+		command = strings.Replace(command, "\n", "", -1)
 
 		execCommand := strings.Split(command, " ")
 		adminCommandChan <- execCommand
