@@ -257,6 +257,8 @@ func HandleDataFromAdmin(connToAdmin *net.Conn, payloadBuffChan chan *utils.Payl
 						delete(AgentStuff.Socks5UDPAssociate.Info, AdminData.Clientid)
 					}
 					AgentStuff.Socks5UDPAssociate.Unlock()
+				case "QUIT":
+					os.Exit(0)
 				case "KEEPALIVE":
 				default:
 					continue

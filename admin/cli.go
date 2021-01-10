@@ -51,6 +51,7 @@ func ShowNodeHelp() {
 	stopforward                                		Shut down all forward services
 	reflect    <rport> <lport>               		Reflect remote port(agent) to local port(admin) (eg:reflect 22 80)
 	stopreflect                                		Shut down all reflect services
+	offline                                 		Terminate current node
 	exit                                     		Back to upper panel
   `)
 }

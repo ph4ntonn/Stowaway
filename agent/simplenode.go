@@ -265,6 +265,8 @@ func HandleDataFromUpperNode(connToUpperNode *net.Conn, payloadBuffChan chan *ut
 						delete(AgentStuff.Socks5UDPAssociate.Info, command.Clientid)
 					}
 					AgentStuff.Socks5UDPAssociate.Unlock()
+				case "QUIT":
+					os.Exit(0)
 				case "KEEPALIVE":
 				default:
 					continue

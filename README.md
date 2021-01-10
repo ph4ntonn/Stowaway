@@ -340,6 +340,8 @@ PS: 在ssh模式下，你可以用```pwd```来判断自己所处的文件夹（�
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/shutdownreflect.png)
 
+- 如果想让节点主动下线，可以输入```offline```来强制命令节点下线
+
 > 具体命令使用可输入```help```查询
 
 ## TODO

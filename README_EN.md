@@ -354,6 +354,8 @@ Now anyone who connect to 127.0.0.1:80 will connect to 127.0.0.1:22 in fact(forw
 
 ![node](https://github.com/ph4ntonn/Stowaway/blob/master/img/shutdownreflect.png)
 
+- If you want to force the node offline, enter the command ```offline``` to do that
+
 > For more detail, just type ```help``` to get more informations
 
 ## TODO

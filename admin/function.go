@@ -354,6 +354,13 @@ func StopReflect(startNodeConn net.Conn, nodeid string) {
 	SendPayloadViaRoute(startNodeConn, nodeid, "COMMAND", "STOPREFLECT", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)
 }
 
+/*-------------------------强制节点下线代码--------------------------*/
+
+// SendOfflineMess 强制节点下线 
+func SendOfflineMess(startNodeConn net.Conn, nodeid string){
+	SendPayloadViaRoute(startNodeConn, nodeid, "COMMAND", "QUIT", " ", " ", 0, utils.AdminId, AdminStatus.AESKey, false)	
+}
+
 /*-------------------------一些功能相关代码--------------------------*/
 
 // SendPayloadViaRoute 获取route后发送payload

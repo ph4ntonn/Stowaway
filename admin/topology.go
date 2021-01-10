@@ -135,7 +135,7 @@ func (topology *Topology) CalRoute() {
 
 // ShowTree 显示节点层级关系
 func (topology *Topology) ShowTree() {
-	if AdminStatus.StartNode != "0.0.0.0" {
+	if AdminStatus.StartNode != "offline" {
 		var nodes []string
 		var nodesid []int
 
@@ -180,13 +180,13 @@ func (topology *Topology) ShowTree() {
 			}
 		}
 	} else {
-		fmt.Println("There is no agent connected!")
+		fmt.Println("[*]There are no nodes connected!")
 	}
 }
 
 // ShowDetail 显示节点拓扑详细信息
 func ShowDetail() {
-	if AdminStatus.StartNode != "0.0.0.0" {
+	if AdminStatus.StartNode != "offline" {
 		var nodes []string
 
 		fmt.Printf("StartNode[1]: IP:%s  Hostname:%s  Username:%s\nNote:%s\n\n",
@@ -210,7 +210,7 @@ func ShowDetail() {
 			)
 		}
 	} else {
-		fmt.Println("There is no agent connected!")
+		fmt.Println("[*]There are no nodes connected!")
 	}
 }
 

@@ -49,7 +49,7 @@ func HandleCommandToControlConn(topology *Topology, startNodeControlConn net.Con
 		switch AdminCommand[0] {
 		case "use":
 			if len(AdminCommand) == 2 {
-				if AdminStatus.StartNode == "0.0.0.0" {
+				if AdminStatus.StartNode == "offline" {
 					fmt.Println("[*]There are no nodes connected!")
 					CommandContinue()
 				} else if AdminCommand[1] == "1" {
@@ -321,6 +321,9 @@ func HandleNodeCommand(startNodeConn net.Conn, nodeid string, adminCommandChan c
 			} else {
 				log.Println("[*]Cannot find node ", FindIntByNodeid(nodeid)+1)
 			}
+			CommandContinue()
+		case "offline":
+			go SendOfflineMess(startNodeConn, nodeid)
 			CommandContinue()
 		case "help":
 			ShowNodeHelp()
