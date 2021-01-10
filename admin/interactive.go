@@ -29,8 +29,7 @@ func Controlpanel(adminCommandChan chan []string) {
 			continue
 		}
 
-		command = strings.Replace(input, "\r", "", -1)
-		command = strings.Replace(command, "\n", "", -1)
+		command = strings.TrimRight(input," \t\r\n")
 
 		execCommand := strings.Split(command, " ")
 		adminCommandChan <- execCommand
