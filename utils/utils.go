@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-09 18:29:02
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-18 18:42:48
+ * @LastEditTime: 2021-03-19 16:31:28
  */
 
 package utils
@@ -146,11 +146,11 @@ func CheckIPPort(info string) (string, string, error) {
 		readyIP = spliltedInfo[0]
 		readyPort, err = strconv.Atoi(spliltedInfo[1])
 	} else {
-		return "", "", errors.New("[*]Wrong ip/port format!")
+		return "", "", errors.New("Wrong ip/port format!")
 	}
 
 	if err != nil || readyPort < 1 || readyPort > 65535 || readyIP == "" {
-		return "", "", errors.New("[*]Please input valid port(1~65535)/ip+port!")
+		return "", "", errors.New("Please input valid port(1~65535)/ip+port!")
 	}
 
 	normalAddr := readyIP + ":" + strconv.Itoa(readyPort)

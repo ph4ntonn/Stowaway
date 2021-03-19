@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-09 14:02:57
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-18 19:19:42
+ * @LastEditTime: 2021-03-19 15:26:19
  */
 package protocol
 
@@ -171,6 +171,11 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 			methodBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(methodBuf, mmess.Method)
 
+			addrLenBuf := make([]byte, 8)
+			binary.BigEndian.PutUint64(addrLenBuf, mmess.AddrLen)
+
+			addrBuf := []byte(mmess.Addr)
+
 			usernameLenBuf := make([]byte, 8)
 			binary.BigEndian.PutUint64(usernameLenBuf, mmess.UsernameLen)
 
@@ -186,7 +191,9 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 
 			certificateBuf := mmess.Certificate
 
-			tDataBuf = append(methodBuf, usernameLenBuf...)
+			tDataBuf = append(methodBuf, addrLenBuf...)
+			tDataBuf = append(tDataBuf, addrBuf...)
+			tDataBuf = append(tDataBuf, usernameLenBuf...)
 			tDataBuf = append(tDataBuf, usernameBuf...)
 			tDataBuf = append(tDataBuf, passwordLenBuf...)
 			tDataBuf = append(tDataBuf, passwordBuf...)
@@ -211,7 +218,7 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 			tDataBuf = append(commandLenBuf, commandBuf...)
 			tDataBuf = crypto.AESEncrypt(tDataBuf, message.CryptoSecret)
 		case SSHRESULT:
-			mmess := mess.(ShellResult)
+			mmess := mess.(SSHResult)
 
 			resultLenBuf := make([]byte, 8)
 			binary.BigEndian.PutUint64(resultLenBuf, mmess.ResultLen)
@@ -375,12 +382,14 @@ func (message *TCPMessage) DeconstructData() (Header, interface{}, error) {
 	case SSHREQ:
 		mmess := new(SSHReq)
 		mmess.Method = binary.BigEndian.Uint16(fDataBuf[:2])
-		mmess.UsernameLen = binary.BigEndian.Uint64(fDataBuf[2:10])
-		mmess.Username = string(fDataBuf[10 : 10+mmess.UsernameLen])
-		mmess.PasswordLen = binary.BigEndian.Uint64(fDataBuf[10+mmess.UsernameLen : 18+mmess.UsernameLen])
-		mmess.Password = string(fDataBuf[18+mmess.UsernameLen : 18+mmess.UsernameLen+mmess.PasswordLen])
-		mmess.CertificateLen = binary.BigEndian.Uint64(fDataBuf[18+mmess.UsernameLen+mmess.PasswordLen : 26+mmess.UsernameLen+mmess.PasswordLen])
-		mmess.Certificate = fDataBuf[26+mmess.UsernameLen+mmess.PasswordLen : 26+mmess.UsernameLen+mmess.PasswordLen+mmess.CertificateLen]
+		mmess.AddrLen = binary.BigEndian.Uint64(fDataBuf[2:10])
+		mmess.Addr = string(fDataBuf[10 : 10+mmess.AddrLen])
+		mmess.UsernameLen = binary.BigEndian.Uint64(fDataBuf[10+mmess.AddrLen : 18+mmess.AddrLen])
+		mmess.Username = string(fDataBuf[18+mmess.AddrLen : 18+mmess.AddrLen+mmess.UsernameLen])
+		mmess.PasswordLen = binary.BigEndian.Uint64(fDataBuf[18+mmess.AddrLen+mmess.UsernameLen : 26+mmess.AddrLen+mmess.UsernameLen])
+		mmess.Password = string(fDataBuf[26+mmess.AddrLen+mmess.UsernameLen : 26+mmess.AddrLen+mmess.UsernameLen+mmess.PasswordLen])
+		mmess.CertificateLen = binary.BigEndian.Uint64(fDataBuf[26+mmess.AddrLen+mmess.UsernameLen+mmess.PasswordLen : 34+mmess.AddrLen+mmess.UsernameLen+mmess.PasswordLen])
+		mmess.Certificate = fDataBuf[34+mmess.AddrLen+mmess.UsernameLen+mmess.PasswordLen : 34+mmess.AddrLen+mmess.UsernameLen+mmess.PasswordLen+mmess.CertificateLen]
 		return header, mmess, nil
 	case SSHRES:
 		mmess := new(SSHRes)

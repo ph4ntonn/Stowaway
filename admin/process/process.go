@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-16 16:10:23
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-18 18:47:07
+ * @LastEditTime: 2021-03-19 18:11:03
  */
 package process
 
@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 )
 
 type Admin struct {
@@ -55,7 +56,7 @@ func (admin *Admin) handleDataFromDownstream(console *cli.Console, routeMap map[
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 		if err != nil {
 			log.Print("\n[*]Peer node seems offline!")
-			break
+			os.Exit(0)
 		}
 		switch fHeader.MessageType {
 		case protocol.MYINFO:
@@ -70,19 +71,15 @@ func (admin *Admin) handleDataFromDownstream(console *cli.Console, routeMap map[
 		case protocol.SHELLRES:
 			message := fMessage.(*protocol.ShellRes)
 			if message.OK == 1 {
+				fmt.Print("\r\n[*]Shell is started successfully!\r\n")
 				console.OK <- true
-				fmt.Print("\n[*]Shell is started successfully!")
 			} else {
+				fmt.Print("\r\n[*]Shell cannot be started!")
 				console.OK <- false
-				fmt.Print("\n[*]Shell cannot be started!")
 			}
 		case protocol.SHELLRESULT:
 			message := fMessage.(*protocol.ShellResult)
-			if message.OK == 1 {
-				fmt.Print(message.Result)
-			} else {
-				fmt.Print("\n[*]Command cannot be executed!")
-			}
+			fmt.Print(message.Result)
 		case protocol.LISTENRES:
 			message := fMessage.(*protocol.ListenRes)
 			if message.OK == 1 {
@@ -90,6 +87,19 @@ func (admin *Admin) handleDataFromDownstream(console *cli.Console, routeMap map[
 			} else {
 				fmt.Print("\n[*]Listen failed!")
 			}
+		case protocol.SSHRES:
+			message := fMessage.(*protocol.SSHRes)
+			if message.OK == 1 {
+				fmt.Print("\r\n[*]Connect to target host via ssh successfully!")
+				console.OK <- true
+			} else {
+				fmt.Print("\r\n[*]Fail to connect to target host via ssh!")
+				console.OK <- false
+			}
+		case protocol.SSHRESULT:
+			message := fMessage.(*protocol.SSHResult)
+			fmt.Printf("\033[u\033[K\r%s", message.Result)
+			fmt.Printf("\r\n%s", console.Status)
 		default:
 			log.Print("\n[*]Unknown Message!")
 		}

@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 18:11:41
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-18 18:39:25
+ * @LastEditTime: 2021-03-19 18:33:37
  */
 package cli
 
@@ -15,6 +15,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/eiannone/keyboard"
 )
@@ -141,8 +142,7 @@ func (console *Console) mainPanel() {
 
 func (console *Console) handleMainPanelCommand() {
 	for {
-		tCommand := <-console.getCommand
-		tCommand = strings.TrimRight(tCommand, " \t\r\n")
+		tCommand := console.pretreatInput()
 		fCommand := strings.Split(tCommand, " ")
 		switch fCommand[0] {
 		case "use":
@@ -185,7 +185,7 @@ func (console *Console) handleMainPanelCommand() {
 			<-console.Topology.ResultChan
 			console.Ready <- true
 		case "":
-			if console.expectParamsNum(fCommand, 0, MAIN, 0) {
+			if console.expectParamsNum(fCommand, 1, MAIN, 0) {
 				break
 			}
 			console.Ready <- true
@@ -230,8 +230,7 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 	console.Ready <- true
 
 	for {
-		tCommand := <-console.getCommand
-		tCommand = strings.TrimRight(tCommand, " \t\r\n")
+		tCommand := console.pretreatInput()
 		fCommand := strings.Split(tCommand, " ")
 		switch fCommand[0] {
 		case "addmemo":
@@ -247,12 +246,17 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 			if console.expectParamsNum(fCommand, 1, NODE, 0) {
 				break
 			}
+
 			handler.LetShellStart(sMessage, route, nodeID)
+			console.Status = ""
+
+			fmt.Print("\r\n[*]Waiting for response.....")
+
 			if <-console.OK {
-				console.Status = ""
 				console.handleShellPanelCommand(sMessage, route, nodeID)
-				console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(idNum))
 			}
+
+			console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(idNum))
 			console.Ready <- true
 		case "listen":
 			if console.expectParamsNum(fCommand, 2, NODE, 0) {
@@ -260,19 +264,87 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 			}
 			handler.LetListen(sMessage, route, nodeID, fCommand[1])
 			console.Ready <- true
+		case "ssh":
+			if console.expectParamsNum(fCommand, 2, NODE, 0) {
+				break
+			}
+
+			console.Status = "" // temporarily set status to ""
+			console.Ready <- true
+
+			var err error
+			ssh := handler.NewSSH()
+			ssh.Addr = fCommand[1]
+
+			time.Sleep(300 * time.Millisecond) // sleep 300 ms to make sure ```fmt.Print("\r\n") fmt.Print(console.Status)``` run first!
+			fmt.Print("[*]Please choose the auth method(1.username/password 2.certificate): ")
+			firstChoice := console.pretreatInput()
+
+			if firstChoice == "1" {
+				ssh.Method = handler.UPMETHOD
+			} else if firstChoice == "2" {
+				ssh.Method = handler.CERMETHOD
+			} else {
+				time.Sleep(300 * time.Millisecond)
+				fmt.Print("\r\n[*]Please input 1 or 2!")
+				console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(idNum))
+				console.Ready <- true
+				break
+			}
+
+			console.Ready <- true
+
+			switch ssh.Method {
+			case handler.UPMETHOD:
+				time.Sleep(300 * time.Millisecond)
+				fmt.Print("[*]Please enter the username:")
+				ssh.Username = console.pretreatInput()
+				console.Ready <- true
+				time.Sleep(300 * time.Millisecond)
+				fmt.Print("[*]Please enter the password:")
+				ssh.Password = console.pretreatInput()
+				err = ssh.LetSSH(sMessage, route, nodeID)
+			case handler.CERMETHOD:
+				time.Sleep(300 * time.Millisecond)
+				fmt.Print("[*]Please enter the username:")
+				ssh.Username = console.pretreatInput()
+				console.Ready <- true
+				time.Sleep(300 * time.Millisecond)
+				fmt.Print("[*]Please enter the file path of the key:")
+				ssh.CertificatePath = console.pretreatInput()
+				err = ssh.LetSSH(sMessage, route, nodeID)
+			}
+
+			if err != nil {
+				time.Sleep(300 * time.Millisecond)
+				fmt.Printf("\r\n[*]Error: %s", err.Error())
+				console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(idNum))
+				console.Ready <- true
+				break
+			}
+
+			fmt.Print("\r\n[*]Waiting for response.....")
+
+			if <-console.OK {
+				console.Status = fmt.Sprintf("(ssh %s) >> ", ssh.Addr)
+				console.handleSSHPanelCommand(sMessage, route, nodeID)
+			}
+
+			console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(idNum))
+			console.Ready <- true
 		case "":
-			if console.expectParamsNum(fCommand, 0, NODE, 1) {
+			if console.expectParamsNum(fCommand, 1, NODE, 0) {
 				break
 			}
 			console.Ready <- true
 		case "help":
-			if console.expectParamsNum(fCommand, 1, NODE, 1) {
+			if console.expectParamsNum(fCommand, 1, NODE, 0) {
 				break
 			}
 			ShowNodeHelp()
 			console.Ready <- true
 		case "exit":
-			if console.expectParamsNum(fCommand, 1, NODE, 1) {
+			if console.expectParamsNum(fCommand, 1, NODE, 0) {
 				break
 			}
 			return
@@ -316,6 +388,42 @@ func (console *Console) handleShellPanelCommand(sMessage protocol.Message, route
 	}
 }
 
+func (console *Console) handleSSHPanelCommand(sMessage protocol.Message, route string, nodeID string) {
+	header := protocol.Header{
+		Sender:      protocol.ADMIN_UUID,
+		Accepter:    nodeID,
+		MessageType: protocol.SSHCOMMAND,
+		RouteLen:    uint32(len([]byte(route))),
+		Route:       route,
+	}
+
+	console.Ready <- true
+
+	for {
+		tCommand := <-console.getCommand
+
+		if tCommand == "exit" {
+			return
+		}
+
+		console.Ready <- true
+
+		if tCommand == "" {
+			continue
+		}
+
+		fCommand := tCommand + "\n"
+
+		sshCommandMess := protocol.SSHCommand{
+			CommandLen: uint64(len(fCommand)),
+			Command:    fCommand,
+		}
+
+		protocol.ConstructMessage(sMessage, header, sshCommandMess)
+		sMessage.SendMessage()
+	}
+}
+
 func (console *Console) expectParamsNum(params []string, num int, mode int, needToBeInt int) bool {
 	if len(params) != num {
 		fmt.Print("\n[*]Format error!\n")
@@ -331,10 +439,22 @@ func (console *Console) expectParamsNum(params []string, num int, mode int, need
 	if needToBeInt != 0 {
 		_, err := utils.Str2Int(params[needToBeInt])
 		if err != nil {
+			fmt.Print("\n[*]Format error!\n")
+			if mode == MAIN {
+				ShowMainHelp()
+			} else {
+				ShowNodeHelp()
+			}
 			console.Ready <- true
 			return true
 		}
 	}
 
 	return false
+}
+
+func (console *Console) pretreatInput() string {
+	tCommand := <-console.getCommand
+	tCommand = strings.TrimRight(tCommand, " \t\r\n")
+	return tCommand
 }

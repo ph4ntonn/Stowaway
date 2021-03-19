@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-18 18:56:20
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-18 18:56:51
+ * @LastEditTime: 2021-03-19 17:42:28
  */
 
 package handler
@@ -10,100 +10,143 @@ package handler
 import (
 	"fmt"
 	"io"
-	"strings"
+	"net"
 
-	"Stowaway/utils"
+	"Stowaway/protocol"
 
 	"golang.org/x/crypto/ssh"
 )
 
-var (
-	stdin   io.Writer
-	stdout  io.Reader
-	sshHost *ssh.Session
+const (
+	UPMETHOD = iota
+	CERMETHOD
 )
 
+type SSH struct {
+	stdin           io.Writer
+	stdout          io.Reader
+	sshHost         *ssh.Session
+	Method          int
+	Addr            string
+	Username        string
+	Password        string
+	CertificatePath string
+	Certificate     []byte
+}
+
+func NewSSH() *SSH {
+	return new(SSH)
+}
+
 // StartSSH 启动ssh
-func StartSSH(info string, nodeid string) error {
+func (mySSH *SSH) Start(conn net.Conn, nodeID string, secret string) {
 	var authPayload ssh.AuthMethod
-	spiltedInfo := strings.Split(info, ":::")
 
-	host := spiltedInfo[0]
-	username := spiltedInfo[1]
-	authWay := spiltedInfo[2]
-	method := spiltedInfo[3]
+	sMessage := protocol.PrepareAndDecideWhichSProto(conn, secret, nodeID)
 
-	if method == "1" {
-		authPayload = ssh.Password(authWay)
-	} else if method == "2" {
-		key, err := ssh.ParsePrivateKey([]byte(authWay))
+	sshResheader := protocol.Header{
+		Sender:      nodeID,
+		Accepter:    protocol.ADMIN_UUID,
+		MessageType: protocol.SSHRES,
+		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))), // No need to set route when agent send mess to admin
+		Route:       protocol.TEMP_ROUTE,
+	}
+
+	sshResultheader := protocol.Header{
+		Sender:      nodeID,
+		Accepter:    protocol.ADMIN_UUID,
+		MessageType: protocol.SSHRESULT,
+		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))), // No need to set route when agent send mess to admin
+		Route:       protocol.TEMP_ROUTE,
+	}
+
+	sshResSuccMess := protocol.SSHRes{
+		OK: 1,
+	}
+
+	sshResFailMess := protocol.SSHRes{
+		OK: 0,
+	}
+
+	switch mySSH.Method {
+	case UPMETHOD:
+		authPayload = ssh.Password(mySSH.Password)
+	case CERMETHOD:
+		key, err := ssh.ParsePrivateKey(mySSH.Certificate)
 		if err != nil {
-			sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHCERTERROR", " ", " ", 0, nodeid, AgentStatus.AESKey, false)
-			AgentStuff.ProxyChan.ProxyChanToUpperNode <- sshMess
-			return err
+			protocol.ConstructMessage(sMessage, sshResheader, sshResFailMess)
+			sMessage.SendMessage()
+			return
 		}
 		authPayload = ssh.PublicKeys(key)
 	}
 
-	sshDial, err := ssh.Dial("tcp", host, &ssh.ClientConfig{
-		User:            username,
+	sshDial, err := ssh.Dial("tcp", mySSH.Addr, &ssh.ClientConfig{
+		User:            mySSH.Username,
 		Auth:            []ssh.AuthMethod{authPayload},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	})
 	if err != nil {
-		sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
-		AgentStuff.ProxyChan.ProxyChanToUpperNode <- sshMess
-		return err
+		protocol.ConstructMessage(sMessage, sshResheader, sshResFailMess)
+		sMessage.SendMessage()
+		return
 	}
 
-	sshHost, err = sshDial.NewSession()
+	mySSH.sshHost, err = sshDial.NewSession()
 	if err != nil {
-		sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
-		AgentStuff.ProxyChan.ProxyChanToUpperNode <- sshMess
-		return err
+		fmt.Println(err.Error())
+		protocol.ConstructMessage(sMessage, sshResheader, sshResFailMess)
+		sMessage.SendMessage()
+		return
 	}
 
-	stdout, err = sshHost.StdoutPipe()
+	mySSH.stdout, err = mySSH.sshHost.StdoutPipe()
 	if err != nil {
-		fmt.Println(err)
-		return err
+		fmt.Println(err.Error())
+		protocol.ConstructMessage(sMessage, sshResheader, sshResFailMess)
+		sMessage.SendMessage()
+		return
 	}
 
-	stdin, err = sshHost.StdinPipe()
+	mySSH.stdin, err = mySSH.sshHost.StdinPipe()
 	if err != nil {
-		fmt.Println(err)
-		return err
+		fmt.Println(err.Error())
+		protocol.ConstructMessage(sMessage, sshResheader, sshResFailMess)
+		sMessage.SendMessage()
+		return
 	}
 
-	sshHost.Stderr = sshHost.Stdout
+	mySSH.sshHost.Stderr = mySSH.sshHost.Stdout
 
-	err = sshHost.Shell()
+	err = mySSH.sshHost.Shell()
 	if err != nil {
-		sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHRESP", " ", "FAILED", 0, nodeid, AgentStatus.AESKey, false)
-		AgentStuff.ProxyChan.ProxyChanToUpperNode <- sshMess
-		return err
+		fmt.Println(err.Error())
+		protocol.ConstructMessage(sMessage, sshResheader, sshResFailMess)
+		sMessage.SendMessage()
+		return
 	}
 
-	sshMess, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "SSHRESP", " ", "SUCCESS", 0, nodeid, AgentStatus.AESKey, false)
-	AgentStuff.ProxyChan.ProxyChanToUpperNode <- sshMess
+	protocol.ConstructMessage(sMessage, sshResheader, sshResSuccMess)
+	sMessage.SendMessage()
 
-	return nil
-}
-
-// WriteCommand 写入command
-func WriteCommand(command string) {
-	stdin.Write([]byte(command))
-}
-
-// ReadCommand 读出command运行结果
-func ReadCommand() {
 	buffer := make([]byte, 20480)
 	for {
-		len, err := stdout.Read(buffer)
+		length, err := mySSH.stdout.Read(buffer)
 		if err != nil {
 			break
 		}
-		sshRespMess, _ := utils.ConstructPayload(utils.AdminId, "", "DATA", "SSHMESS", " ", string(buffer[:len]), 0, AgentStatus.Nodeid, AgentStatus.AESKey, false)
-		AgentStuff.ProxyChan.ProxyChanToUpperNode <- sshRespMess
+
+		sshResultMess := protocol.SSHResult{
+			ResultLen: uint64(length),
+			Result:    string(buffer[:length]),
+		}
+
+		protocol.ConstructMessage(sMessage, sshResultheader, sshResultMess)
+		sMessage.SendMessage()
 	}
+}
+
+// WriteCommand 写入command
+func (mySSH *SSH) Input(command string) {
+	mySSH.stdin.Write([]byte(command))
 }

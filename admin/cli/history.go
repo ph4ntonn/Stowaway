@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-11 14:59:13
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-11 18:52:59
+ * @LastEditTime: 2021-03-19 18:09:41
  */
 package cli
 
@@ -74,6 +74,11 @@ func (history *History) search() {
 		if now != nil {
 			history.Display <- now.Value
 			history.Result <- now.Value.(string)
+		}
+
+		if history.StoreList.Len() == 0 { // avoid blocking the interactive panel if user press arrowup or arrowdown when no history node exists
+			history.Display <- ""
+			history.Result <- ""
 		}
 	}
 }

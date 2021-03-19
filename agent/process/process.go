@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 15:27:30
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-18 18:55:56
+ * @LastEditTime: 2021-03-19 16:57:07
  */
 
 package process
@@ -64,6 +64,7 @@ func (agent *Agent) handleDataFromUpstream() {
 	rMessage := protocol.PrepareAndDecideWhichRProto(agent.Conn, agent.UserOptions.Secret, agent.ID)
 	sMessage := protocol.PrepareAndDecideWhichSProto(agent.Conn, agent.UserOptions.Secret, agent.ID)
 	shell := handler.NewShell()
+	mySSH := handler.NewSSH()
 
 	for {
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
@@ -103,6 +104,17 @@ func (agent *Agent) handleDataFromUpstream() {
 		case protocol.LISTENREQ:
 			//message := fMessage.(*protocol.ListenReq)
 			//go handler.StartListen(message.Addr)
+		case protocol.SSHREQ:
+			message := fMessage.(*protocol.SSHReq)
+			mySSH.Addr = message.Addr
+			mySSH.Method = int(message.Method)
+			mySSH.Username = message.Username
+			mySSH.Password = message.Password
+			mySSH.Certificate = message.Certificate
+			go mySSH.Start(agent.Conn, agent.ID, agent.UserOptions.Secret)
+		case protocol.SSHCOMMAND:
+			message := fMessage.(*protocol.SSHCommand)
+			mySSH.Input(message.Command)
 		default:
 			log.Println("[*]Unknown Message!")
 		}

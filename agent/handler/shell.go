@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-17 18:38:28
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-18 17:33:28
+ * @LastEditTime: 2021-03-19 16:55:10
  */
 package handler
 
@@ -62,6 +62,7 @@ func (shell *Shell) Run(conn net.Conn, nodeID string, secret string) {
 
 	var shellResultMess protocol.ShellResult
 	shell.stdin.Write([]byte(""))
+
 	for {
 		count, err := shell.stdout.Read(buf)
 
