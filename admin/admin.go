@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-08 14:35:02
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-18 16:41:10
+ * @LastEditTime: 2021-03-19 19:53:03
  */
 package main
 
@@ -30,9 +30,6 @@ func main() {
 	topo := topology.NewTopology()
 	go topo.Run()
 
-	route := topology.NewRoute()
-	go route.Run(topo)
-
 	log.Println("[*]Waiting for new connection...")
 	switch options.Mode {
 	case initial.NORMAL_ACTIVE:
@@ -44,7 +41,6 @@ func main() {
 	}
 
 	admin.Topology = topo
-	admin.Route = route
 
 	admin.Run()
 }

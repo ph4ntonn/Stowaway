@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 18:11:41
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-19 18:33:37
+ * @LastEditTime: 2021-03-19 19:52:00
  */
 package cli
 
@@ -32,11 +32,10 @@ type Console struct {
 	Secret       string
 	CryptoSecret []byte
 	Topology     *topology.Topology
-	Route        *topology.Route
 	// console original status
 	Status     string
 	OK         chan bool
-	Ready      chan bool
+	ready      chan bool
 	getCommand chan string
 }
 
@@ -44,18 +43,17 @@ func NewConsole() *Console {
 	console := new(Console)
 	console.Status = "(admin) >> "
 	console.OK = make(chan bool)
-	console.Ready = make(chan bool)
+	console.ready = make(chan bool)
 	console.getCommand = make(chan string)
 	return console
 }
 
-func (console *Console) Init(tTopology *topology.Topology, tRoute *topology.Route, conn net.Conn, ID string, secret string, cryptoSecret []byte) {
+func (console *Console) Init(tTopology *topology.Topology, conn net.Conn, ID string, secret string, cryptoSecret []byte) {
 	console.ID = ID
 	console.Conn = conn
 	console.Secret = secret
 	console.CryptoSecret = cryptoSecret
 	console.Topology = tTopology
-	console.Route = tRoute
 }
 
 func (console *Console) Run() {
@@ -110,7 +108,7 @@ func (console *Console) mainPanel() {
 			console.getCommand <- command
 			isGoingOn = false
 			command = ""
-			<-console.Ready // avoid situation that console.Status is printed before it's changed
+			<-console.ready // avoid situation that console.Status is printed before it's changed
 			fmt.Print("\r\n")
 			fmt.Print(console.Status)
 		} else if event.Key == keyboard.KeyArrowUp {
@@ -163,7 +161,7 @@ func (console *Console) handleMainPanelCommand() {
 			} else {
 				fmt.Printf("\n[*]Node %s doesn't exist!", fCommand[1])
 			}
-			console.Ready <- true
+			console.ready <- true
 		case "detail":
 			if console.expectParamsNum(fCommand, 1, MAIN, 0) {
 				break
@@ -173,7 +171,7 @@ func (console *Console) handleMainPanelCommand() {
 			}
 			console.Topology.TaskChan <- task
 			<-console.Topology.ResultChan
-			console.Ready <- true
+			console.ready <- true
 		case "tree":
 			if console.expectParamsNum(fCommand, 1, MAIN, 0) {
 				break
@@ -183,18 +181,18 @@ func (console *Console) handleMainPanelCommand() {
 			}
 			console.Topology.TaskChan <- task
 			<-console.Topology.ResultChan
-			console.Ready <- true
+			console.ready <- true
 		case "":
 			if console.expectParamsNum(fCommand, 1, MAIN, 0) {
 				break
 			}
-			console.Ready <- true
+			console.ready <- true
 		case "help":
 			if console.expectParamsNum(fCommand, 1, MAIN, 0) {
 				break
 			}
 			ShowMainHelp()
-			console.Ready <- true
+			console.ready <- true
 		case "exit":
 			if console.expectParamsNum(fCommand, 1, MAIN, 0) {
 				break
@@ -204,7 +202,7 @@ func (console *Console) handleMainPanelCommand() {
 		default:
 			fmt.Print("\n[*]Unknown Command!\n")
 			ShowMainHelp()
-			console.Ready <- true
+			console.ready <- true
 		}
 	}
 }
@@ -212,14 +210,14 @@ func (console *Console) handleMainPanelCommand() {
 func (console *Console) handleNodePanelCommand(idNum int) {
 	sMessage := protocol.PrepareAndDecideWhichSProto(console.Conn, console.Secret, console.ID)
 
-	routeTask := &topology.RouteTask{
+	topoTask := &topology.TopoTask{
 		Mode: topology.CALCULATE,
 	}
-	console.Route.TaskChan <- routeTask
-	routeResult := <-console.Route.ResultChan
+	console.Topology.TaskChan <- topoTask
+	routeResult := <-console.Topology.ResultChan
 	route := routeResult.RouteInfo[idNum]
 
-	topoTask := &topology.TopoTask{
+	topoTask = &topology.TopoTask{
 		Mode:  topology.GETNODEID,
 		IDNum: idNum,
 	}
@@ -227,7 +225,7 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 	topoResult := <-console.Topology.ResultChan
 	nodeID := topoResult.NodeID
 
-	console.Ready <- true
+	console.ready <- true
 
 	for {
 		tCommand := console.pretreatInput()
@@ -235,13 +233,13 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 		switch fCommand[0] {
 		case "addmemo":
 			handler.AddMemo(sMessage, console.Topology.TaskChan, fCommand[1:], nodeID, route)
-			console.Ready <- true
+			console.ready <- true
 		case "delmemo":
 			if console.expectParamsNum(fCommand, 1, NODE, 0) {
 				break
 			}
 			handler.DelMemo(sMessage, console.Topology.TaskChan, nodeID, route)
-			console.Ready <- true
+			console.ready <- true
 		case "shell":
 			if console.expectParamsNum(fCommand, 1, NODE, 0) {
 				break
@@ -257,20 +255,20 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 			}
 
 			console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(idNum))
-			console.Ready <- true
+			console.ready <- true
 		case "listen":
 			if console.expectParamsNum(fCommand, 2, NODE, 0) {
 				break
 			}
 			handler.LetListen(sMessage, route, nodeID, fCommand[1])
-			console.Ready <- true
+			console.ready <- true
 		case "ssh":
 			if console.expectParamsNum(fCommand, 2, NODE, 0) {
 				break
 			}
 
 			console.Status = "" // temporarily set status to ""
-			console.Ready <- true
+			console.ready <- true
 
 			var err error
 			ssh := handler.NewSSH()
@@ -288,29 +286,29 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 				time.Sleep(300 * time.Millisecond)
 				fmt.Print("\r\n[*]Please input 1 or 2!")
 				console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(idNum))
-				console.Ready <- true
+				console.ready <- true
 				break
 			}
 
-			console.Ready <- true
+			console.ready <- true
 
 			switch ssh.Method {
 			case handler.UPMETHOD:
 				time.Sleep(300 * time.Millisecond)
-				fmt.Print("[*]Please enter the username:")
+				fmt.Print("[*]Please enter the username: ")
 				ssh.Username = console.pretreatInput()
-				console.Ready <- true
+				console.ready <- true
 				time.Sleep(300 * time.Millisecond)
-				fmt.Print("[*]Please enter the password:")
+				fmt.Print("[*]Please enter the password: ")
 				ssh.Password = console.pretreatInput()
 				err = ssh.LetSSH(sMessage, route, nodeID)
 			case handler.CERMETHOD:
 				time.Sleep(300 * time.Millisecond)
-				fmt.Print("[*]Please enter the username:")
+				fmt.Print("[*]Please enter the username: ")
 				ssh.Username = console.pretreatInput()
-				console.Ready <- true
+				console.ready <- true
 				time.Sleep(300 * time.Millisecond)
-				fmt.Print("[*]Please enter the file path of the key:")
+				fmt.Print("[*]Please enter the filepath of the privkey: ")
 				ssh.CertificatePath = console.pretreatInput()
 				err = ssh.LetSSH(sMessage, route, nodeID)
 			}
@@ -319,7 +317,7 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 				time.Sleep(300 * time.Millisecond)
 				fmt.Printf("\r\n[*]Error: %s", err.Error())
 				console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(idNum))
-				console.Ready <- true
+				console.ready <- true
 				break
 			}
 
@@ -331,18 +329,23 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 			}
 
 			console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(idNum))
-			console.Ready <- true
+			console.ready <- true
+		case "socks":
+			if console.expectParamsNum(fCommand, 2, NODE, 1) {
+				break
+			}
+
 		case "":
 			if console.expectParamsNum(fCommand, 1, NODE, 0) {
 				break
 			}
-			console.Ready <- true
+			console.ready <- true
 		case "help":
 			if console.expectParamsNum(fCommand, 1, NODE, 0) {
 				break
 			}
 			ShowNodeHelp()
-			console.Ready <- true
+			console.ready <- true
 		case "exit":
 			if console.expectParamsNum(fCommand, 1, NODE, 0) {
 				break
@@ -351,7 +354,7 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 		default:
 			fmt.Print("\n[*]Unknown Command!\n")
 			ShowNodeHelp()
-			console.Ready <- true
+			console.ready <- true
 		}
 	}
 }
@@ -365,7 +368,7 @@ func (console *Console) handleShellPanelCommand(sMessage protocol.Message, route
 		Route:       route,
 	}
 
-	console.Ready <- true
+	console.ready <- true
 
 	for {
 		tCommand := <-console.getCommand
@@ -374,7 +377,7 @@ func (console *Console) handleShellPanelCommand(sMessage protocol.Message, route
 			return
 		}
 
-		console.Ready <- true
+		console.ready <- true
 
 		fCommand := tCommand + "\n"
 
@@ -397,7 +400,7 @@ func (console *Console) handleSSHPanelCommand(sMessage protocol.Message, route s
 		Route:       route,
 	}
 
-	console.Ready <- true
+	console.ready <- true
 
 	for {
 		tCommand := <-console.getCommand
@@ -406,7 +409,7 @@ func (console *Console) handleSSHPanelCommand(sMessage protocol.Message, route s
 			return
 		}
 
-		console.Ready <- true
+		console.ready <- true
 
 		if tCommand == "" {
 			continue
@@ -432,7 +435,7 @@ func (console *Console) expectParamsNum(params []string, num int, mode int, need
 		} else {
 			ShowNodeHelp()
 		}
-		console.Ready <- true
+		console.ready <- true
 		return true
 	}
 
@@ -445,7 +448,7 @@ func (console *Console) expectParamsNum(params []string, num int, mode int, need
 			} else {
 				ShowNodeHelp()
 			}
-			console.Ready <- true
+			console.ready <- true
 			return true
 		}
 	}

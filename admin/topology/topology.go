@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-11 19:10:16
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-18 18:04:05
+ * @LastEditTime: 2021-03-19 19:50:23
  */
 package topology
 
@@ -16,10 +16,8 @@ import (
 const (
 	// Topology
 	ADDNODE = iota
-	GETNODES
 	GETNODEID
 	CHECKNODE
-	// Route
 	CALCULATE
 	// User-friendly
 	UPDATEDETAIL
@@ -30,6 +28,7 @@ const (
 
 type Topology struct {
 	nodes        map[int]*Node
+	routes       map[int]string
 	currentIDNum int
 	TaskChan     chan *TopoTask
 	ResultChan   chan *TopoResult
@@ -57,14 +56,15 @@ type TopoTask struct {
 }
 
 type TopoResult struct {
-	nodes   map[int]*Node
-	IsExist bool
-	NodeID  string
+	IsExist   bool
+	NodeID    string
+	RouteInfo map[int]string
 }
 
 func NewTopology() *Topology {
 	topology := new(Topology)
 	topology.nodes = make(map[int]*Node)
+	topology.routes = make(map[int]string)
 	topology.currentIDNum = 0
 	topology.TaskChan = make(chan *TopoTask)
 	topology.ResultChan = make(chan *TopoResult)
@@ -84,8 +84,6 @@ func (topology *Topology) Run() {
 		switch task.Mode {
 		case ADDNODE:
 			topology.addNode(task)
-		case GETNODES:
-			topology.getNodesInfo()
 		case GETNODEID:
 			topology.getNodeID(task)
 		case CHECKNODE:
@@ -98,6 +96,8 @@ func (topology *Topology) Run() {
 			topology.showTree()
 		case UPDATEMEMO:
 			topology.updateMemo(task)
+		case CALCULATE:
+			topology.calculate()
 		}
 	}
 }
@@ -114,22 +114,6 @@ func (topology *Topology) id2IDNum(id string) (idNum int) {
 
 func (topology *Topology) idNum2ID(idNum int) (id string) {
 	return topology.nodes[idNum].ID
-}
-
-func (topology *Topology) getNodesInfo() {
-	newNodesInfo := make(map[int]*Node) // Create brand new nodesInfo
-	for idNum, oldNode := range topology.nodes {
-		newNode := new(Node)
-		newNode.ID = oldNode.ID
-		newNode.ParentID = oldNode.ParentID
-		newNode.ChildrenID = oldNode.ChildrenID
-		newNodesInfo[idNum] = newNode
-	}
-
-	result := &TopoResult{
-		nodes: newNodesInfo,
-	}
-	topology.ResultChan <- result
 }
 
 func (topology *Topology) getNodeID(task *TopoTask) {
@@ -160,6 +144,42 @@ func (topology *Topology) addNode(task *TopoTask) {
 	topology.nodes[topology.currentIDNum] = task.Target
 	topology.currentIDNum++
 	topology.ResultChan <- &TopoResult{} // Just tell upstream: work done!
+}
+
+func (topology *Topology) calculate() {
+	for currentID := range topology.nodes {
+		var tempRoute []string
+		tempID := currentID
+
+		if topology.nodes[currentID].ParentID == protocol.ADMIN_UUID {
+			topology.routes[currentID] = ""
+			continue
+		}
+
+		for {
+			if topology.nodes[tempID].ParentID != protocol.ADMIN_UUID {
+				tempRoute = append(tempRoute, topology.nodes[tempID].ParentID)
+				for i := 0; i < len(topology.nodes); i++ {
+					if topology.nodes[i].ID == topology.nodes[tempID].ParentID {
+						tempID = i
+						break
+					}
+				}
+			} else {
+				utils.StringSliceReverse(tempRoute)
+				finalRoute := strings.Join(tempRoute, ":")
+				topology.routes[currentID] = finalRoute
+				break
+			}
+		}
+	}
+
+	newRouteInfo := make(map[int]string) // Create brand new routeInfo
+	for idNum, oldRoute := range topology.routes {
+		newRouteInfo[idNum] = oldRoute
+	}
+
+	topology.ResultChan <- &TopoResult{RouteInfo: newRouteInfo}
 }
 
 func (topology *Topology) updateDetail(task *TopoTask) {
@@ -194,84 +214,4 @@ func (topology *Topology) showTree() {
 func (topology *Topology) updateMemo(task *TopoTask) {
 	idNum := topology.id2IDNum(task.ID)
 	topology.nodes[idNum].Memo = task.Memo
-}
-
-type Route struct {
-	routes     map[int]string
-	TaskChan   chan *RouteTask
-	ResultChan chan *RouteResult
-}
-
-type RouteTask struct {
-	Mode            int
-	TargetNodeID    string
-	TargetNodeIDNum int
-}
-
-type RouteResult struct {
-	RouteInfo map[int]string
-}
-
-func NewRoute() *Route {
-	route := new(Route)
-	route.routes = make(map[int]string)
-	route.TaskChan = make(chan *RouteTask)
-	route.ResultChan = make(chan *RouteResult)
-	return route
-}
-
-func (route *Route) Run(topo *Topology) {
-	for {
-		task := <-route.TaskChan
-		switch task.Mode {
-		case CALCULATE:
-			route.calculate(topo)
-		}
-	}
-}
-
-func (route *Route) giveRouteInfo() map[int]string {
-	newRouteInfo := make(map[int]string) // Create brand new routeInfo
-	for idNum, oldRoute := range route.routes {
-		newRouteInfo[idNum] = oldRoute
-	}
-	return newRouteInfo
-}
-
-func (route *Route) calculate(topo *Topology) {
-	task := &TopoTask{
-		Mode: GETNODES,
-	}
-
-	topo.TaskChan <- task
-	nodesInfo := <-topo.ResultChan
-
-	for currentID := range nodesInfo.nodes {
-		var tempRoute []string
-		tempID := currentID
-
-		if nodesInfo.nodes[currentID].ParentID == protocol.ADMIN_UUID {
-			route.routes[currentID] = ""
-			continue
-		}
-
-		for {
-			if nodesInfo.nodes[tempID].ParentID != protocol.ADMIN_UUID {
-				tempRoute = append(tempRoute, nodesInfo.nodes[tempID].ParentID)
-				for i := 0; i < len(nodesInfo.nodes); i++ {
-					if nodesInfo.nodes[i].ID == nodesInfo.nodes[tempID].ParentID {
-						tempID = i
-						break
-					}
-				}
-			} else {
-				utils.StringSliceReverse(tempRoute)
-				finalRoute := strings.Join(tempRoute, ":")
-				route.routes[currentID] = finalRoute
-				break
-			}
-		}
-	}
-
-	route.ResultChan <- &RouteResult{RouteInfo: route.giveRouteInfo()}
 }
