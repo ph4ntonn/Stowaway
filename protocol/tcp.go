@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-09 14:02:57
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-20 14:36:53
+ * @LastEditTime: 2021-03-20 15:32:52
  */
 package protocol
 
@@ -16,11 +16,15 @@ import (
 )
 
 type TCPMessage struct {
+	// Essential component to apply a Message
 	ID           string
 	Conn         net.Conn
 	CryptoSecret []byte
-	Buffer       []byte
-	IsPass       bool
+	// flag to mark if the packet needed to be proxy
+	IsPass bool
+	// Prepared buffer
+	HeaderBuffer []byte
+	DataBuffer   []byte
 }
 
 /**
@@ -36,8 +40,7 @@ func (message *TCPMessage) ConstructHeader() {}
  * @return {*}
  */
 func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
-	var buffer bytes.Buffer
-	var tDataBuf []byte
+	var headerBuffer bytes.Buffer
 	// First, construct own header
 	messageTypeBuf := make([]byte, 2)
 	routeLenBuf := make([]byte, 4)
@@ -46,49 +49,49 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 	binary.BigEndian.PutUint32(routeLenBuf, header.RouteLen)
 
 	// Write header into buffer(except for dataLen)
-	buffer.Write([]byte(header.Sender))
-	buffer.Write([]byte(header.Accepter))
-	buffer.Write(messageTypeBuf)
-	buffer.Write(routeLenBuf)
-	buffer.Write([]byte(header.Route))
+	headerBuffer.Write([]byte(header.Sender))
+	headerBuffer.Write([]byte(header.Accepter))
+	headerBuffer.Write(messageTypeBuf)
+	headerBuffer.Write(routeLenBuf)
+	headerBuffer.Write([]byte(header.Route))
 
 	// Check if message's data is needed to encrypt
-	if message.IsPass && message.Buffer != nil {
-		dataLenBuf := make([]byte, 8)
-		binary.BigEndian.PutUint64(dataLenBuf, uint64(len(message.Buffer)))
-		buffer.Write(dataLenBuf)
-		buffer.Write(message.Buffer)
-		// Remember to set buffer to nil
+	if message.IsPass && message.DataBuffer != nil {
 		message.IsPass = false
-		message.Buffer = nil
 	} else {
 		switch header.MessageType {
 		case HI:
 			mmess := mess.(HIMess)
-			greetingBuf := []byte(mmess.Greeting)
 			greetingLenBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(greetingLenBuf, mmess.GreetingLen)
+
+			greetingBuf := []byte(mmess.Greeting)
+
 			isAdminBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(isAdminBuf, mmess.IsAdmin)
 			// Collect all spilted data, try encrypt them
-			tDataBuf = append(greetingLenBuf, greetingBuf...)
-			tDataBuf = append(tDataBuf, isAdminBuf...)
-			tDataBuf = crypto.AESEncrypt(tDataBuf, message.CryptoSecret)
+			// use message.DataBuffer directly to save memory
+			message.DataBuffer = append(message.DataBuffer, greetingLenBuf...)
+			message.DataBuffer = append(message.DataBuffer, greetingBuf...)
+			message.DataBuffer = append(message.DataBuffer, isAdminBuf...)
+			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
 		case UUID:
 			mmess := mess.(UUIDMess)
 			uuidLenBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(uuidLenBuf, mmess.UUIDLen)
+
 			uuidBuf := []byte(mmess.UUID)
 
-			tDataBuf = append(uuidLenBuf, uuidBuf...)
-			tDataBuf = crypto.AESEncrypt(tDataBuf, message.CryptoSecret)
+			message.DataBuffer = append(message.DataBuffer, uuidLenBuf...)
+			message.DataBuffer = append(message.DataBuffer, uuidBuf...)
+			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
 		case UUIDRET:
 			mmess := mess.(UUIDRetMess)
 			OKBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
 
-			tDataBuf = OKBuf
-			tDataBuf = crypto.AESEncrypt(tDataBuf, message.CryptoSecret)
+			message.DataBuffer = OKBuf
+			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
 		case MYINFO:
 			mmess := mess.(MyInfo)
 			usernameLenBuf := make([]byte, 8)
@@ -101,10 +104,11 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 
 			hostnameBuf := []byte(mmess.Hostname)
 
-			tDataBuf = append(usernameLenBuf, usernameBuf...)
-			tDataBuf = append(tDataBuf, hostnameLenBuf...)
-			tDataBuf = append(tDataBuf, hostnameBuf...)
-			tDataBuf = crypto.AESEncrypt(tDataBuf, message.CryptoSecret)
+			message.DataBuffer = append(message.DataBuffer, usernameLenBuf...)
+			message.DataBuffer = append(message.DataBuffer, usernameBuf...)
+			message.DataBuffer = append(message.DataBuffer, hostnameLenBuf...)
+			message.DataBuffer = append(message.DataBuffer, hostnameBuf...)
+			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
 		case MYMEMO:
 			mmess := mess.(MyMemo)
 			memoLenBuf := make([]byte, 8)
@@ -112,22 +116,23 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 
 			memoBuf := []byte(mmess.Memo)
 
-			tDataBuf = append(memoLenBuf, memoBuf...)
-			tDataBuf = crypto.AESEncrypt(tDataBuf, message.CryptoSecret)
+			message.DataBuffer = append(message.DataBuffer, memoLenBuf...)
+			message.DataBuffer = append(message.DataBuffer, memoBuf...)
+			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
 		case SHELLREQ:
 			mmess := mess.(ShellReq)
 			startBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(startBuf, mmess.Start)
 
-			tDataBuf = startBuf
-			tDataBuf = crypto.AESEncrypt(tDataBuf, message.CryptoSecret)
+			message.DataBuffer = startBuf
+			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
 		case SHELLRES:
 			mmess := mess.(ShellRes)
 			OKBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
 
-			tDataBuf = OKBuf
-			tDataBuf = crypto.AESEncrypt(tDataBuf, message.CryptoSecret)
+			message.DataBuffer = OKBuf
+			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
 		case SHELLCOMMAND:
 			mmess := mess.(ShellCommand)
 			commandLenBuf := make([]byte, 8)
@@ -135,8 +140,9 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 
 			commandBuf := []byte(mmess.Command)
 
-			tDataBuf = append(commandLenBuf, commandBuf...)
-			tDataBuf = crypto.AESEncrypt(tDataBuf, message.CryptoSecret)
+			message.DataBuffer = append(message.DataBuffer, commandLenBuf...)
+			message.DataBuffer = append(message.DataBuffer, commandBuf...)
+			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
 		case SHELLRESULT:
 			mmess := mess.(ShellResult)
 
@@ -145,8 +151,9 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 
 			resultBuf := []byte(mmess.Result)
 
-			tDataBuf = append(resultLenBuf, resultBuf...)
-			tDataBuf = crypto.AESEncrypt(tDataBuf, message.CryptoSecret)
+			message.DataBuffer = append(message.DataBuffer, resultLenBuf...)
+			message.DataBuffer = append(message.DataBuffer, resultBuf...)
+			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
 		case LISTENREQ:
 			mmess := mess.(ListenReq)
 			addrLenBuf := make([]byte, 8)
@@ -154,15 +161,16 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 
 			addrBuf := []byte(mmess.Addr)
 
-			tDataBuf = append(addrLenBuf, addrBuf...)
-			tDataBuf = crypto.AESEncrypt(tDataBuf, message.CryptoSecret)
+			message.DataBuffer = append(message.DataBuffer, addrLenBuf...)
+			message.DataBuffer = append(message.DataBuffer, addrBuf...)
+			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
 		case LISTENRES:
 			mmess := mess.(ListenRes)
 			OKBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
 
-			tDataBuf = OKBuf
-			tDataBuf = crypto.AESEncrypt(tDataBuf, message.CryptoSecret)
+			message.DataBuffer = OKBuf
+			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
 		case SSHREQ:
 			mmess := mess.(SSHReq)
 			methodBuf := make([]byte, 2)
@@ -188,22 +196,23 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 
 			certificateBuf := mmess.Certificate
 
-			tDataBuf = append(methodBuf, addrLenBuf...)
-			tDataBuf = append(tDataBuf, addrBuf...)
-			tDataBuf = append(tDataBuf, usernameLenBuf...)
-			tDataBuf = append(tDataBuf, usernameBuf...)
-			tDataBuf = append(tDataBuf, passwordLenBuf...)
-			tDataBuf = append(tDataBuf, passwordBuf...)
-			tDataBuf = append(tDataBuf, certificateLenBuf...)
-			tDataBuf = append(tDataBuf, certificateBuf...)
-			tDataBuf = crypto.AESEncrypt(tDataBuf, message.CryptoSecret)
+			message.DataBuffer = append(message.DataBuffer, methodBuf...)
+			message.DataBuffer = append(message.DataBuffer, addrLenBuf...)
+			message.DataBuffer = append(message.DataBuffer, addrBuf...)
+			message.DataBuffer = append(message.DataBuffer, usernameLenBuf...)
+			message.DataBuffer = append(message.DataBuffer, usernameBuf...)
+			message.DataBuffer = append(message.DataBuffer, passwordLenBuf...)
+			message.DataBuffer = append(message.DataBuffer, passwordBuf...)
+			message.DataBuffer = append(message.DataBuffer, certificateLenBuf...)
+			message.DataBuffer = append(message.DataBuffer, certificateBuf...)
+			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
 		case SSHRES:
 			mmess := mess.(SSHRes)
 			OKBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
 
-			tDataBuf = OKBuf
-			tDataBuf = crypto.AESEncrypt(tDataBuf, message.CryptoSecret)
+			message.DataBuffer = OKBuf
+			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
 		case SSHCOMMAND:
 			mmess := mess.(SSHCommand)
 
@@ -212,8 +221,9 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 
 			commandBuf := []byte(mmess.Command)
 
-			tDataBuf = append(commandLenBuf, commandBuf...)
-			tDataBuf = crypto.AESEncrypt(tDataBuf, message.CryptoSecret)
+			message.DataBuffer = append(message.DataBuffer, commandLenBuf...)
+			message.DataBuffer = append(message.DataBuffer, commandBuf...)
+			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
 		case SSHRESULT:
 			mmess := mess.(SSHResult)
 
@@ -222,18 +232,18 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 
 			resultBuf := []byte(mmess.Result)
 
-			tDataBuf = append(resultLenBuf, resultBuf...)
-			tDataBuf = crypto.AESEncrypt(tDataBuf, message.CryptoSecret)
+			message.DataBuffer = append(message.DataBuffer, resultLenBuf...)
+			message.DataBuffer = append(message.DataBuffer, resultBuf...)
+			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
 		default:
 		}
 	}
 	// Calculate the whole data's length
 	dataLenBuf := make([]byte, 8)
-	binary.BigEndian.PutUint64(dataLenBuf, uint64(len(tDataBuf)))
-	buffer.Write(dataLenBuf)
-	buffer.Write(tDataBuf)
+	binary.BigEndian.PutUint64(dataLenBuf, uint64(len(message.DataBuffer)))
+	headerBuffer.Write(dataLenBuf)
 
-	message.Buffer = buffer.Bytes()
+	message.HeaderBuffer = headerBuffer.Bytes()
 }
 
 /**
@@ -310,96 +320,94 @@ func (message *TCPMessage) DeconstructData() (Header, interface{}, error) {
 		return header, nil, err
 	}
 
-	var fDataBuf []byte
 	if header.Accepter == TEMP_UUID || message.ID == ADMIN_UUID || message.ID == header.Accepter {
-		fDataBuf = crypto.AESDecrypt(dataBuf[:], message.CryptoSecret)
-	} else if message.CryptoSecret == nil {
+		dataBuf = crypto.AESDecrypt(dataBuf[:], message.CryptoSecret) // use dataBuf directly to save the memory
 	} else {
 		message.IsPass = true
-		message.Buffer = dataBuf
+		message.DataBuffer = dataBuf
 		return header, nil, nil
 	}
 
 	switch header.MessageType {
 	case HI:
 		mmess := new(HIMess)
-		mmess.GreetingLen = binary.BigEndian.Uint16(fDataBuf[:2])
-		mmess.Greeting = string(fDataBuf[2 : 2+mmess.GreetingLen])
-		mmess.IsAdmin = binary.BigEndian.Uint16(fDataBuf[2+mmess.GreetingLen : header.DataLen])
+		mmess.GreetingLen = binary.BigEndian.Uint16(dataBuf[:2])
+		mmess.Greeting = string(dataBuf[2 : 2+mmess.GreetingLen])
+		mmess.IsAdmin = binary.BigEndian.Uint16(dataBuf[2+mmess.GreetingLen : header.DataLen])
 		return header, mmess, nil
 	case UUID:
 		mmess := new(UUIDMess)
-		mmess.UUIDLen = binary.BigEndian.Uint16(fDataBuf[:2])
-		mmess.UUID = string(fDataBuf[2 : 2+mmess.UUIDLen])
+		mmess.UUIDLen = binary.BigEndian.Uint16(dataBuf[:2])
+		mmess.UUID = string(dataBuf[2 : 2+mmess.UUIDLen])
 		return header, mmess, nil
 	case UUIDRET:
 		mmess := new(UUIDRetMess)
-		mmess.OK = binary.BigEndian.Uint16(fDataBuf[:2])
+		mmess.OK = binary.BigEndian.Uint16(dataBuf[:2])
 		return header, mmess, nil
 	case MYINFO:
 		mmess := new(MyInfo)
-		mmess.UsernameLen = binary.BigEndian.Uint64(fDataBuf[:8])
-		mmess.Username = string(fDataBuf[8 : 8+mmess.UsernameLen])
-		mmess.HostnameLen = binary.BigEndian.Uint64(fDataBuf[8+mmess.UsernameLen : 16+mmess.UsernameLen])
-		mmess.Hostname = string(fDataBuf[16+mmess.UsernameLen : 16+mmess.UsernameLen+mmess.HostnameLen])
+		mmess.UsernameLen = binary.BigEndian.Uint64(dataBuf[:8])
+		mmess.Username = string(dataBuf[8 : 8+mmess.UsernameLen])
+		mmess.HostnameLen = binary.BigEndian.Uint64(dataBuf[8+mmess.UsernameLen : 16+mmess.UsernameLen])
+		mmess.Hostname = string(dataBuf[16+mmess.UsernameLen : 16+mmess.UsernameLen+mmess.HostnameLen])
 		return header, mmess, nil
 	case MYMEMO:
 		mmess := new(MyMemo)
-		mmess.MemoLen = binary.BigEndian.Uint64(fDataBuf[:8])
-		mmess.Memo = string(fDataBuf[8 : 8+mmess.MemoLen])
+		mmess.MemoLen = binary.BigEndian.Uint64(dataBuf[:8])
+		mmess.Memo = string(dataBuf[8 : 8+mmess.MemoLen])
 		return header, mmess, nil
 	case SHELLREQ:
 		mmess := new(ShellReq)
-		mmess.Start = binary.BigEndian.Uint16(fDataBuf[:2])
+		mmess.Start = binary.BigEndian.Uint16(dataBuf[:2])
 		return header, mmess, nil
 	case SHELLRES:
 		mmess := new(ShellRes)
-		mmess.OK = binary.BigEndian.Uint16(fDataBuf[:2])
+		mmess.OK = binary.BigEndian.Uint16(dataBuf[:2])
 		return header, mmess, nil
 	case SHELLCOMMAND:
 		mmess := new(ShellCommand)
-		mmess.CommandLen = binary.BigEndian.Uint64(fDataBuf[:8])
-		mmess.Command = string(fDataBuf[8 : 8+mmess.CommandLen])
+		mmess.CommandLen = binary.BigEndian.Uint64(dataBuf[:8])
+		mmess.Command = string(dataBuf[8 : 8+mmess.CommandLen])
 		return header, mmess, nil
 	case SHELLRESULT:
 		mmess := new(ShellResult)
-		mmess.ResultLen = binary.BigEndian.Uint64(fDataBuf[:8])
-		mmess.Result = string(fDataBuf[8 : 8+mmess.ResultLen])
+		mmess.ResultLen = binary.BigEndian.Uint64(dataBuf[:8])
+		mmess.Result = string(dataBuf[8 : 8+mmess.ResultLen])
 		return header, mmess, nil
 	case LISTENREQ:
 		mmess := new(ListenReq)
-		mmess.AddrLen = binary.BigEndian.Uint64(fDataBuf[:8])
-		mmess.Addr = string(fDataBuf[8 : 8+mmess.AddrLen])
+		mmess.AddrLen = binary.BigEndian.Uint64(dataBuf[:8])
+		mmess.Addr = string(dataBuf[8 : 8+mmess.AddrLen])
 		return header, mmess, nil
 	case LISTENRES:
 		mmess := new(ListenRes)
-		mmess.OK = binary.BigEndian.Uint16(fDataBuf[:2])
+		mmess.OK = binary.BigEndian.Uint16(dataBuf[:2])
 		return header, mmess, nil
 	case SSHREQ:
 		mmess := new(SSHReq)
-		mmess.Method = binary.BigEndian.Uint16(fDataBuf[:2])
-		mmess.AddrLen = binary.BigEndian.Uint64(fDataBuf[2:10])
-		mmess.Addr = string(fDataBuf[10 : 10+mmess.AddrLen])
-		mmess.UsernameLen = binary.BigEndian.Uint64(fDataBuf[10+mmess.AddrLen : 18+mmess.AddrLen])
-		mmess.Username = string(fDataBuf[18+mmess.AddrLen : 18+mmess.AddrLen+mmess.UsernameLen])
-		mmess.PasswordLen = binary.BigEndian.Uint64(fDataBuf[18+mmess.AddrLen+mmess.UsernameLen : 26+mmess.AddrLen+mmess.UsernameLen])
-		mmess.Password = string(fDataBuf[26+mmess.AddrLen+mmess.UsernameLen : 26+mmess.AddrLen+mmess.UsernameLen+mmess.PasswordLen])
-		mmess.CertificateLen = binary.BigEndian.Uint64(fDataBuf[26+mmess.AddrLen+mmess.UsernameLen+mmess.PasswordLen : 34+mmess.AddrLen+mmess.UsernameLen+mmess.PasswordLen])
-		mmess.Certificate = fDataBuf[34+mmess.AddrLen+mmess.UsernameLen+mmess.PasswordLen : 34+mmess.AddrLen+mmess.UsernameLen+mmess.PasswordLen+mmess.CertificateLen]
+		mmess.Method = binary.BigEndian.Uint16(dataBuf[:2])
+		mmess.AddrLen = binary.BigEndian.Uint64(dataBuf[2:10])
+		mmess.Addr = string(dataBuf[10 : 10+mmess.AddrLen])
+		mmess.UsernameLen = binary.BigEndian.Uint64(dataBuf[10+mmess.AddrLen : 18+mmess.AddrLen])
+		mmess.Username = string(dataBuf[18+mmess.AddrLen : 18+mmess.AddrLen+mmess.UsernameLen])
+		mmess.PasswordLen = binary.BigEndian.Uint64(dataBuf[18+mmess.AddrLen+mmess.UsernameLen : 26+mmess.AddrLen+mmess.UsernameLen])
+		mmess.Password = string(dataBuf[26+mmess.AddrLen+mmess.UsernameLen : 26+mmess.AddrLen+mmess.UsernameLen+mmess.PasswordLen])
+		mmess.CertificateLen = binary.BigEndian.Uint64(dataBuf[26+mmess.AddrLen+mmess.UsernameLen+mmess.PasswordLen : 34+mmess.AddrLen+mmess.UsernameLen+mmess.PasswordLen])
+		mmess.Certificate = dataBuf[34+mmess.AddrLen+mmess.UsernameLen+mmess.PasswordLen : 34+mmess.AddrLen+mmess.UsernameLen+mmess.PasswordLen+mmess.CertificateLen]
 		return header, mmess, nil
 	case SSHRES:
 		mmess := new(SSHRes)
-		mmess.OK = binary.BigEndian.Uint16(fDataBuf[:2])
+		mmess.OK = binary.BigEndian.Uint16(dataBuf[:2])
 		return header, mmess, nil
 	case SSHCOMMAND:
 		mmess := new(SSHCommand)
-		mmess.CommandLen = binary.BigEndian.Uint64(fDataBuf[:8])
-		mmess.Command = string(fDataBuf[8 : 8+mmess.CommandLen])
+		mmess.CommandLen = binary.BigEndian.Uint64(dataBuf[:8])
+		mmess.Command = string(dataBuf[8 : 8+mmess.CommandLen])
 		return header, mmess, nil
 	case SSHRESULT:
 		mmess := new(SSHResult)
-		mmess.ResultLen = binary.BigEndian.Uint64(fDataBuf[:8])
-		mmess.Result = string(fDataBuf[8 : 8+mmess.ResultLen])
+		mmess.ResultLen = binary.BigEndian.Uint64(dataBuf[:8])
+		mmess.Result = string(dataBuf[8 : 8+mmess.ResultLen])
 		return header, mmess, nil
 	default:
 	}
@@ -420,6 +428,9 @@ func (message *TCPMessage) DeconstructSuffix() {}
  * @return {*}
  */
 func (message *TCPMessage) SendMessage() {
-	message.Conn.Write(message.Buffer)
-	message.Buffer = nil
+	message.Conn.Write(message.HeaderBuffer)
+	message.Conn.Write(message.DataBuffer)
+	// Don't forget to set both Buffer to nil!!!
+	message.HeaderBuffer = nil
+	message.DataBuffer = nil
 }

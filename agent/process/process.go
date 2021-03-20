@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 15:27:30
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-20 13:41:47
+ * @LastEditTime: 2021-03-20 15:12:33
  */
 
 package process
@@ -74,32 +74,34 @@ func (agent *Agent) handleDataFromUpstream() {
 			log.Println("[*]Peer node seems offline!")
 			break
 		}
-		switch fHeader.MessageType {
-		case protocol.MYMEMO:
-			message := fMessage.(*protocol.MyMemo)
-			agent.Memo = message.Memo
-		case protocol.SHELLREQ:
-			// No need to check member "start"
-			go shell.Start(agent.Conn, agent.ID, agent.UserOptions.Secret)
-		case protocol.SHELLCOMMAND:
-			message := fMessage.(*protocol.ShellCommand)
-			shell.Input(message.Command)
-		case protocol.LISTENREQ:
-			//message := fMessage.(*protocol.ListenReq)
-			//go handler.StartListen(message.Addr)
-		case protocol.SSHREQ:
-			message := fMessage.(*protocol.SSHReq)
-			mySSH.Addr = message.Addr
-			mySSH.Method = int(message.Method)
-			mySSH.Username = message.Username
-			mySSH.Password = message.Password
-			mySSH.Certificate = message.Certificate
-			go mySSH.Start(agent.Conn, agent.ID, agent.UserOptions.Secret)
-		case protocol.SSHCOMMAND:
-			message := fMessage.(*protocol.SSHCommand)
-			mySSH.Input(message.Command)
-		default:
-			log.Println("[*]Unknown Message!")
+		if fHeader.Accepter == agent.ID {
+			switch fHeader.MessageType {
+			case protocol.MYMEMO:
+				message := fMessage.(*protocol.MyMemo)
+				agent.Memo = message.Memo
+			case protocol.SHELLREQ:
+				// No need to check member "start"
+				go shell.Start(agent.Conn, agent.ID, agent.UserOptions.Secret)
+			case protocol.SHELLCOMMAND:
+				message := fMessage.(*protocol.ShellCommand)
+				shell.Input(message.Command)
+			case protocol.LISTENREQ:
+				//message := fMessage.(*protocol.ListenReq)
+				//go handler.StartListen(message.Addr)
+			case protocol.SSHREQ:
+				message := fMessage.(*protocol.SSHReq)
+				mySSH.Addr = message.Addr
+				mySSH.Method = int(message.Method)
+				mySSH.Username = message.Username
+				mySSH.Password = message.Password
+				mySSH.Certificate = message.Certificate
+				go mySSH.Start(agent.Conn, agent.ID, agent.UserOptions.Secret)
+			case protocol.SSHCOMMAND:
+				message := fMessage.(*protocol.SSHCommand)
+				mySSH.Input(message.Command)
+			default:
+				log.Println("[*]Unknown Message!")
+			}
 		}
 	}
 }

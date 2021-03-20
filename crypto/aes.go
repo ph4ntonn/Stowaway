@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-08 19:15:11
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-11 18:56:36
+ * @LastEditTime: 2021-03-20 15:23:19
  */
 package crypto
 
@@ -74,6 +74,7 @@ func AESEncrypt(origData, key []byte) []byte {
 	if key == nil {
 		return origData
 	}
+
 	block, _ := aes.NewCipher(key)
 	origData = PKCS7Padding(origData, block.BlockSize())
 	blockMode := cipher.NewCBCEncrypter(block, key[:block.BlockSize()])
