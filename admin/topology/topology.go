@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-11 19:10:16
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-20 11:53:00
+ * @LastEditTime: 2021-03-20 16:29:40
  */
 package topology
 
@@ -34,18 +34,18 @@ type Topology struct {
 }
 
 type Node struct {
-	ID              string
-	ParentID        string
-	ChildrenID      []string
-	CurrentUser     string
-	CurrentHostname string
-	CurrentIP       string
-	Memo            string
+	uuid            string
+	parentUUID      string
+	childrenUUID    []string
+	currentUser     string
+	currentHostname string
+	currentIP       string
+	memo            string
 }
 
 type TopoTask struct {
 	Mode     int
-	ID       string
+	UUID     string
 	IDNum    int
 	Target   *Node
 	HostName string
@@ -69,10 +69,10 @@ func NewTopology() *Topology {
 	return topology
 }
 
-func NewNode(id string, ip string) *Node {
+func NewNode(uuid string, ip string) *Node {
 	node := new(Node)
-	node.ID = id
-	node.CurrentIP = ip
+	node.uuid = uuid
+	node.currentIP = ip
 	return node
 }
 
@@ -100,9 +100,9 @@ func (topology *Topology) Run() {
 	}
 }
 
-func (topology *Topology) id2IDNum(id string) (idNum int) {
+func (topology *Topology) id2IDNum(uuid string) (idNum int) {
 	for i := 0; i < len(topology.nodes); i++ {
-		if topology.nodes[i].ID == id {
+		if topology.nodes[i].uuid == uuid {
 			idNum = i
 			return
 		}
@@ -110,8 +110,8 @@ func (topology *Topology) id2IDNum(id string) (idNum int) {
 	return
 }
 
-func (topology *Topology) idNum2ID(idNum int) (id string) {
-	return topology.nodes[idNum].ID
+func (topology *Topology) idNum2ID(idNum int) string {
+	return topology.nodes[idNum].uuid
 }
 
 func (topology *Topology) getNodeID(task *TopoTask) {
@@ -132,11 +132,11 @@ func (topology *Topology) checkNode(task *TopoTask) {
 
 func (topology *Topology) addNode(task *TopoTask) {
 	if task.IsFirst {
-		task.Target.ParentID = protocol.ADMIN_UUID
+		task.Target.parentUUID = protocol.ADMIN_UUID
 	} else {
-		task.Target.ParentID = task.ID
-		parentIDNum := topology.id2IDNum(task.ID)
-		topology.nodes[parentIDNum].ChildrenID = append(topology.nodes[parentIDNum].ChildrenID, task.Target.ID)
+		task.Target.parentUUID = task.UUID
+		parentIDNum := topology.id2IDNum(task.UUID)
+		topology.nodes[parentIDNum].childrenUUID = append(topology.nodes[parentIDNum].childrenUUID, task.Target.uuid)
 	}
 
 	topology.nodes[topology.currentIDNum] = task.Target
@@ -151,16 +151,16 @@ func (topology *Topology) calculate() {
 		var tempRoute []string
 		tempID := currentID
 
-		if topology.nodes[currentID].ParentID == protocol.ADMIN_UUID {
+		if topology.nodes[currentID].parentUUID == protocol.ADMIN_UUID {
 			newRouteInfo[currentID] = ""
 			continue
 		}
 
 		for {
-			if topology.nodes[tempID].ParentID != protocol.ADMIN_UUID {
-				tempRoute = append(tempRoute, topology.nodes[tempID].ParentID)
+			if topology.nodes[tempID].parentUUID != protocol.ADMIN_UUID {
+				tempRoute = append(tempRoute, topology.nodes[tempID].parentUUID)
 				for i := 0; i < len(topology.nodes); i++ {
-					if topology.nodes[i].ID == topology.nodes[tempID].ParentID {
+					if topology.nodes[i].uuid == topology.nodes[tempID].parentUUID {
 						tempID = i
 						break
 					}
@@ -178,19 +178,19 @@ func (topology *Topology) calculate() {
 }
 
 func (topology *Topology) updateDetail(task *TopoTask) {
-	idNum := topology.id2IDNum(task.ID)
-	topology.nodes[idNum].CurrentUser = task.UserName
-	topology.nodes[idNum].CurrentHostname = task.HostName
+	idNum := topology.id2IDNum(task.UUID)
+	topology.nodes[idNum].currentUser = task.UserName
+	topology.nodes[idNum].currentHostname = task.HostName
 }
 
 func (topology *Topology) showDetail() {
 	for idNum, node := range topology.nodes {
 		fmt.Printf("\nNode[%s] -> IP: %s  Hostname: %s  User: %s\nMemo: %s\n",
 			utils.Int2Str(idNum),
-			node.CurrentIP,
-			node.CurrentHostname,
-			node.CurrentUser,
-			node.Memo,
+			node.currentIP,
+			node.currentHostname,
+			node.currentUser,
+			node.memo,
 		)
 	}
 	topology.ResultChan <- &TopoResult{} // Just tell upstream: work done!
@@ -199,7 +199,7 @@ func (topology *Topology) showDetail() {
 func (topology *Topology) showTree() {
 	for idNum, node := range topology.nodes {
 		fmt.Printf("\nNode[%s]'s children ->\n", utils.Int2Str(idNum))
-		for _, child := range node.ChildrenID {
+		for _, child := range node.childrenUUID {
 			fmt.Printf("Node[%s]\n", utils.Int2Str(topology.id2IDNum(child)))
 		}
 	}
@@ -207,6 +207,6 @@ func (topology *Topology) showTree() {
 }
 
 func (topology *Topology) updateMemo(task *TopoTask) {
-	idNum := topology.id2IDNum(task.ID)
-	topology.nodes[idNum].Memo = task.Memo
+	idNum := topology.id2IDNum(task.UUID)
+	topology.nodes[idNum].memo = task.Memo
 }

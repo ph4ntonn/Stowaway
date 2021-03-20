@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-09 14:02:57
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-20 15:32:52
+ * @LastEditTime: 2021-03-20 16:34:47
  */
 package protocol
 
@@ -17,7 +17,7 @@ import (
 
 type TCPMessage struct {
 	// Essential component to apply a Message
-	ID           string
+	UUID         string
 	Conn         net.Conn
 	CryptoSecret []byte
 	// flag to mark if the packet needed to be proxy
@@ -320,7 +320,7 @@ func (message *TCPMessage) DeconstructData() (Header, interface{}, error) {
 		return header, nil, err
 	}
 
-	if header.Accepter == TEMP_UUID || message.ID == ADMIN_UUID || message.ID == header.Accepter {
+	if header.Accepter == TEMP_UUID || message.UUID == ADMIN_UUID || message.UUID == header.Accepter {
 		dataBuf = crypto.AESDecrypt(dataBuf[:], message.CryptoSecret) // use dataBuf directly to save the memory
 	} else {
 		message.IsPass = true

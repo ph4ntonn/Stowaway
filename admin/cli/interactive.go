@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 18:11:41
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-20 13:37:49
+ * @LastEditTime: 2021-03-20 16:32:39
  */
 package cli
 
@@ -27,7 +27,7 @@ const (
 
 type Console struct {
 	// Admin status
-	ID           string
+	UUID         string
 	Conn         net.Conn
 	Secret       string
 	CryptoSecret []byte
@@ -48,8 +48,8 @@ func NewConsole() *Console {
 	return console
 }
 
-func (console *Console) Init(tTopology *topology.Topology, conn net.Conn, ID string, secret string, cryptoSecret []byte) {
-	console.ID = ID
+func (console *Console) Init(tTopology *topology.Topology, conn net.Conn, uuid string, secret string, cryptoSecret []byte) {
+	console.UUID = uuid
 	console.Conn = conn
 	console.Secret = secret
 	console.CryptoSecret = cryptoSecret
@@ -221,7 +221,7 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 	component := &protocol.MessageComponent{
 		Secret: console.Secret,
 		Conn:   console.Conn,
-		ID:     nodeID,
+		UUID:   console.UUID,
 	}
 
 	console.ready <- true
@@ -359,7 +359,7 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 }
 
 func (console *Console) handleShellPanelCommand(component *protocol.MessageComponent, route string, nodeID string) {
-	sMessage := protocol.PrepareAndDecideWhichSProto(component.Conn, component.Secret, component.ID)
+	sMessage := protocol.PrepareAndDecideWhichSProto(component.Conn, component.Secret, component.UUID)
 
 	header := protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
@@ -393,7 +393,7 @@ func (console *Console) handleShellPanelCommand(component *protocol.MessageCompo
 }
 
 func (console *Console) handleSSHPanelCommand(component *protocol.MessageComponent, route string, nodeID string) {
-	sMessage := protocol.PrepareAndDecideWhichSProto(component.Conn, component.Secret, component.ID)
+	sMessage := protocol.PrepareAndDecideWhichSProto(component.Conn, component.Secret, component.UUID)
 
 	header := protocol.Header{
 		Sender:      protocol.ADMIN_UUID,

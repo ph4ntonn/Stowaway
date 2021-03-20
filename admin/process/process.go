@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-16 16:10:23
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-19 19:54:39
+ * @LastEditTime: 2021-03-20 16:23:11
  */
 package process
 
@@ -19,7 +19,7 @@ import (
 )
 
 type Admin struct {
-	ID           string
+	UUID         string
 	Conn         net.Conn
 	CryptoSecret []byte
 	Topology     *topology.Topology
@@ -28,7 +28,7 @@ type Admin struct {
 
 func NewAdmin(options *initial.Options) *Admin {
 	admin := new(Admin)
-	admin.ID = protocol.ADMIN_UUID
+	admin.UUID = protocol.ADMIN_UUID
 	admin.CryptoSecret, _ = crypto.KeyPadding([]byte(options.Secret))
 	admin.UserOptions = options
 	return admin
@@ -42,7 +42,7 @@ func (admin *Admin) Run() {
 	routeResult := <-admin.Topology.ResultChan
 
 	console := cli.NewConsole()
-	console.Init(admin.Topology, admin.Conn, admin.ID, admin.UserOptions.Secret, admin.CryptoSecret)
+	console.Init(admin.Topology, admin.Conn, admin.UUID, admin.UserOptions.Secret, admin.CryptoSecret)
 
 	go admin.handleDataFromDownstream(console, routeResult.RouteInfo)
 
@@ -62,7 +62,7 @@ func (admin *Admin) handleDataFromDownstream(console *cli.Console, routeMap map[
 			message := fMessage.(*protocol.MyInfo)
 			task := &topology.TopoTask{
 				Mode:     topology.UPDATEDETAIL,
-				ID:       fHeader.Sender,
+				UUID:     fHeader.Sender,
 				UserName: message.Username,
 				HostName: message.Hostname,
 			}

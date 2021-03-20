@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 15:27:30
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-20 15:12:33
+ * @LastEditTime: 2021-03-20 16:33:33
  */
 
 package process
@@ -18,7 +18,7 @@ import (
 )
 
 type Agent struct {
-	ID           string
+	UUID         string
 	Conn         net.Conn
 	Memo         string
 	CryptoSecret []byte
@@ -27,7 +27,7 @@ type Agent struct {
 
 func NewAgent(options *initial.Options) *Agent {
 	agent := new(Agent)
-	agent.ID = protocol.TEMP_UUID
+	agent.UUID = protocol.TEMP_UUID
 	agent.CryptoSecret, _ = crypto.KeyPadding([]byte(options.Secret))
 	agent.UserOptions = options
 	return agent
@@ -40,9 +40,9 @@ func (agent *Agent) Run() {
 }
 
 func (agent *Agent) sendMyInfo() {
-	sMessage := protocol.PrepareAndDecideWhichSProto(agent.Conn, agent.UserOptions.Secret, agent.ID)
+	sMessage := protocol.PrepareAndDecideWhichSProto(agent.Conn, agent.UserOptions.Secret, agent.UUID)
 	header := protocol.Header{
-		Sender:      agent.ID,
+		Sender:      agent.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.MYINFO,
 		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))), // No need to set route when agent send mess to admin
@@ -63,7 +63,7 @@ func (agent *Agent) sendMyInfo() {
 }
 
 func (agent *Agent) handleDataFromUpstream() {
-	rMessage := protocol.PrepareAndDecideWhichRProto(agent.Conn, agent.UserOptions.Secret, agent.ID)
+	rMessage := protocol.PrepareAndDecideWhichRProto(agent.Conn, agent.UserOptions.Secret, agent.UUID)
 	//sMessage := protocol.PrepareAndDecideWhichSProto(agent.Conn, agent.UserOptions.Secret, agent.ID)
 	shell := handler.NewShell()
 	mySSH := handler.NewSSH()
@@ -74,14 +74,14 @@ func (agent *Agent) handleDataFromUpstream() {
 			log.Println("[*]Peer node seems offline!")
 			break
 		}
-		if fHeader.Accepter == agent.ID {
+		if fHeader.Accepter == agent.UUID {
 			switch fHeader.MessageType {
 			case protocol.MYMEMO:
 				message := fMessage.(*protocol.MyMemo)
 				agent.Memo = message.Memo
 			case protocol.SHELLREQ:
 				// No need to check member "start"
-				go shell.Start(agent.Conn, agent.ID, agent.UserOptions.Secret)
+				go shell.Start(agent.Conn, agent.UUID, agent.UserOptions.Secret)
 			case protocol.SHELLCOMMAND:
 				message := fMessage.(*protocol.ShellCommand)
 				shell.Input(message.Command)
@@ -95,7 +95,7 @@ func (agent *Agent) handleDataFromUpstream() {
 				mySSH.Username = message.Username
 				mySSH.Password = message.Password
 				mySSH.Certificate = message.Certificate
-				go mySSH.Start(agent.Conn, agent.ID, agent.UserOptions.Secret)
+				go mySSH.Start(agent.Conn, agent.UUID, agent.UserOptions.Secret)
 			case protocol.SSHCOMMAND:
 				message := fMessage.(*protocol.SSHCommand)
 				mySSH.Input(message.Command)

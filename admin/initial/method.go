@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-08 18:03:48
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-20 15:55:08
+ * @LastEditTime: 2021-03-20 16:22:35
  */
 package initial
 
@@ -108,7 +108,7 @@ func NormalActive(userOptions *Options, topo *topology.Topology) net.Conn {
 				task := &topology.TopoTask{
 					Mode:    topology.ADDNODE,
 					Target:  node,
-					ID:      protocol.TEMP_UUID,
+					UUID:    protocol.TEMP_UUID,
 					IsFirst: true,
 				}
 				topo.TaskChan <- task
@@ -188,7 +188,7 @@ func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 				task := &topology.TopoTask{
 					Mode:    topology.ADDNODE,
 					Target:  node,
-					ID:      protocol.TEMP_UUID,
+					UUID:    protocol.TEMP_UUID,
 					IsFirst: true,
 				}
 				topo.TaskChan <- task

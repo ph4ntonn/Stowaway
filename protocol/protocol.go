@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-08 18:19:04
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-20 15:52:13
+ * @LastEditTime: 2021-03-20 16:31:52
  */
 package protocol
 
@@ -163,7 +163,7 @@ type SSHResult struct {
  * @return {*}
  */
 type MessageComponent struct {
-	ID     string
+	UUID   string
 	Conn   net.Conn
 	Secret string
 }
@@ -178,7 +178,7 @@ func PrepareAndDecideWhichSProto(conn net.Conn, secret string, uuid string) Mess
 	// TODO: HTTP
 	tMessage := new(TCPMessage)
 	tMessage.Conn = conn
-	tMessage.ID = uuid
+	tMessage.UUID = uuid
 	tMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
 	return tMessage
 }
@@ -193,7 +193,7 @@ func PrepareAndDecideWhichRProto(conn net.Conn, secret string, uuid string) Mess
 	// TODO: HTTP
 	tMessage := new(TCPMessage)
 	tMessage.Conn = conn
-	tMessage.ID = uuid
+	tMessage.UUID = uuid
 	tMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
 	return tMessage
 }
