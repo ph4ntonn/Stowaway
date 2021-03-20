@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-08 14:35:15
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-16 19:21:38
+ * @LastEditTime: 2021-03-20 13:42:23
  */
 package main
 
@@ -21,8 +21,7 @@ func init() {
 func main() {
 	options := initial.ParseOptions()
 
-	agent := new(process.Agent)
-	agent.Prepare(options)
+	agent := process.NewAgent(options)
 
 	switch options.Mode {
 	case initial.NORMAL_PASSIVE:

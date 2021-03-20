@@ -2,13 +2,12 @@
  * @Author: ph4ntom
  * @Date: 2021-03-18 18:56:20
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-19 17:42:28
+ * @LastEditTime: 2021-03-20 14:00:38
  */
 
 package handler
 
 import (
-	"fmt"
 	"io"
 	"net"
 
@@ -41,6 +40,7 @@ func NewSSH() *SSH {
 // StartSSH 启动ssh
 func (mySSH *SSH) Start(conn net.Conn, nodeID string, secret string) {
 	var authPayload ssh.AuthMethod
+	var err error
 
 	sMessage := protocol.PrepareAndDecideWhichSProto(conn, secret, nodeID)
 
@@ -68,14 +68,20 @@ func (mySSH *SSH) Start(conn net.Conn, nodeID string, secret string) {
 		OK: 0,
 	}
 
+	defer func() {
+		if err != nil {
+			protocol.ConstructMessage(sMessage, sshResheader, sshResFailMess)
+			sMessage.SendMessage()
+		}
+	}()
+
 	switch mySSH.Method {
 	case UPMETHOD:
 		authPayload = ssh.Password(mySSH.Password)
 	case CERMETHOD:
-		key, err := ssh.ParsePrivateKey(mySSH.Certificate)
+		var key ssh.Signer
+		key, err = ssh.ParsePrivateKey(mySSH.Certificate)
 		if err != nil {
-			protocol.ConstructMessage(sMessage, sshResheader, sshResFailMess)
-			sMessage.SendMessage()
 			return
 		}
 		authPayload = ssh.PublicKeys(key)
@@ -87,32 +93,21 @@ func (mySSH *SSH) Start(conn net.Conn, nodeID string, secret string) {
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	})
 	if err != nil {
-		protocol.ConstructMessage(sMessage, sshResheader, sshResFailMess)
-		sMessage.SendMessage()
 		return
 	}
 
 	mySSH.sshHost, err = sshDial.NewSession()
 	if err != nil {
-		fmt.Println(err.Error())
-		protocol.ConstructMessage(sMessage, sshResheader, sshResFailMess)
-		sMessage.SendMessage()
 		return
 	}
 
 	mySSH.stdout, err = mySSH.sshHost.StdoutPipe()
 	if err != nil {
-		fmt.Println(err.Error())
-		protocol.ConstructMessage(sMessage, sshResheader, sshResFailMess)
-		sMessage.SendMessage()
 		return
 	}
 
 	mySSH.stdin, err = mySSH.sshHost.StdinPipe()
 	if err != nil {
-		fmt.Println(err.Error())
-		protocol.ConstructMessage(sMessage, sshResheader, sshResFailMess)
-		sMessage.SendMessage()
 		return
 	}
 
@@ -120,18 +115,16 @@ func (mySSH *SSH) Start(conn net.Conn, nodeID string, secret string) {
 
 	err = mySSH.sshHost.Shell()
 	if err != nil {
-		fmt.Println(err.Error())
-		protocol.ConstructMessage(sMessage, sshResheader, sshResFailMess)
-		sMessage.SendMessage()
 		return
 	}
 
 	protocol.ConstructMessage(sMessage, sshResheader, sshResSuccMess)
 	sMessage.SendMessage()
 
-	buffer := make([]byte, 20480)
+	buffer := make([]byte, 4096)
 	for {
 		length, err := mySSH.stdout.Read(buffer)
+
 		if err != nil {
 			break
 		}

@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-11 19:10:16
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-19 19:50:23
+ * @LastEditTime: 2021-03-20 11:53:00
  */
 package topology
 
@@ -28,7 +28,6 @@ const (
 
 type Topology struct {
 	nodes        map[int]*Node
-	routes       map[int]string
 	currentIDNum int
 	TaskChan     chan *TopoTask
 	ResultChan   chan *TopoResult
@@ -64,7 +63,6 @@ type TopoResult struct {
 func NewTopology() *Topology {
 	topology := new(Topology)
 	topology.nodes = make(map[int]*Node)
-	topology.routes = make(map[int]string)
 	topology.currentIDNum = 0
 	topology.TaskChan = make(chan *TopoTask)
 	topology.ResultChan = make(chan *TopoResult)
@@ -147,12 +145,14 @@ func (topology *Topology) addNode(task *TopoTask) {
 }
 
 func (topology *Topology) calculate() {
+	newRouteInfo := make(map[int]string) // Create brand new routeInfo
+
 	for currentID := range topology.nodes {
 		var tempRoute []string
 		tempID := currentID
 
 		if topology.nodes[currentID].ParentID == protocol.ADMIN_UUID {
-			topology.routes[currentID] = ""
+			newRouteInfo[currentID] = ""
 			continue
 		}
 
@@ -168,15 +168,10 @@ func (topology *Topology) calculate() {
 			} else {
 				utils.StringSliceReverse(tempRoute)
 				finalRoute := strings.Join(tempRoute, ":")
-				topology.routes[currentID] = finalRoute
+				newRouteInfo[currentID] = finalRoute
 				break
 			}
 		}
-	}
-
-	newRouteInfo := make(map[int]string) // Create brand new routeInfo
-	for idNum, oldRoute := range topology.routes {
-		newRouteInfo[idNum] = oldRoute
 	}
 
 	topology.ResultChan <- &TopoResult{RouteInfo: newRouteInfo}

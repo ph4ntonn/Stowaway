@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-19 12:24:52
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-19 16:03:03
+ * @LastEditTime: 2021-03-20 13:36:10
  */
 package handler
 
@@ -30,16 +30,19 @@ func NewSSH() *SSH {
 	return new(SSH)
 }
 
-func (ssh *SSH) LetSSH(sMessage protocol.Message, route string, nodeID string) error {
+func (ssh *SSH) LetSSH(component *protocol.MessageComponent, route string, nodeID string) error {
 	_, _, err := utils.CheckIPPort(ssh.Addr)
 	if err != nil {
 		return err
 	}
+
 	if ssh.Method == CERMETHOD {
 		if err := ssh.getCertificate(); err != nil {
 			return err
 		}
 	}
+
+	sMessage := protocol.PrepareAndDecideWhichSProto(component.Conn, component.Secret, component.ID)
 
 	header := protocol.Header{
 		Sender:      protocol.ADMIN_UUID,

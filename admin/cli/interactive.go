@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 18:11:41
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-19 19:52:00
+ * @LastEditTime: 2021-03-20 13:37:49
  */
 package cli
 
@@ -89,17 +89,12 @@ func (console *Console) mainPanel() {
 			}
 		} else if event.Key == keyboard.KeyBackspace2 || event.Key == keyboard.KeyBackspace {
 			var fLen int
-			cLen := len(command) - 1
 
-			if cLen != -1 {
+			if len(command) >= 1 {
 				fmt.Print("\b \b")
+				fLen = len(command) - 1
 			}
 
-			if cLen >= 0 {
-				fLen = cLen
-			} else {
-				fLen = 0
-			}
 			command = command[:fLen]
 		} else if event.Key == keyboard.KeyEnter {
 			if command != "" {
@@ -208,8 +203,6 @@ func (console *Console) handleMainPanelCommand() {
 }
 
 func (console *Console) handleNodePanelCommand(idNum int) {
-	sMessage := protocol.PrepareAndDecideWhichSProto(console.Conn, console.Secret, console.ID)
-
 	topoTask := &topology.TopoTask{
 		Mode: topology.CALCULATE,
 	}
@@ -225,6 +218,12 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 	topoResult := <-console.Topology.ResultChan
 	nodeID := topoResult.NodeID
 
+	component := &protocol.MessageComponent{
+		Secret: console.Secret,
+		Conn:   console.Conn,
+		ID:     nodeID,
+	}
+
 	console.ready <- true
 
 	for {
@@ -232,26 +231,26 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 		fCommand := strings.Split(tCommand, " ")
 		switch fCommand[0] {
 		case "addmemo":
-			handler.AddMemo(sMessage, console.Topology.TaskChan, fCommand[1:], nodeID, route)
+			handler.AddMemo(component, console.Topology.TaskChan, fCommand[1:], nodeID, route)
 			console.ready <- true
 		case "delmemo":
 			if console.expectParamsNum(fCommand, 1, NODE, 0) {
 				break
 			}
-			handler.DelMemo(sMessage, console.Topology.TaskChan, nodeID, route)
+			handler.DelMemo(component, console.Topology.TaskChan, nodeID, route)
 			console.ready <- true
 		case "shell":
 			if console.expectParamsNum(fCommand, 1, NODE, 0) {
 				break
 			}
 
-			handler.LetShellStart(sMessage, route, nodeID)
+			handler.LetShellStart(component, route, nodeID)
 			console.Status = ""
 
 			fmt.Print("\r\n[*]Waiting for response.....")
 
 			if <-console.OK {
-				console.handleShellPanelCommand(sMessage, route, nodeID)
+				console.handleShellPanelCommand(component, route, nodeID)
 			}
 
 			console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(idNum))
@@ -260,7 +259,7 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 			if console.expectParamsNum(fCommand, 2, NODE, 0) {
 				break
 			}
-			handler.LetListen(sMessage, route, nodeID, fCommand[1])
+			handler.LetListen(component, route, nodeID, fCommand[1])
 			console.ready <- true
 		case "ssh":
 			if console.expectParamsNum(fCommand, 2, NODE, 0) {
@@ -301,7 +300,7 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 				time.Sleep(300 * time.Millisecond)
 				fmt.Print("[*]Please enter the password: ")
 				ssh.Password = console.pretreatInput()
-				err = ssh.LetSSH(sMessage, route, nodeID)
+				err = ssh.LetSSH(component, route, nodeID)
 			case handler.CERMETHOD:
 				time.Sleep(300 * time.Millisecond)
 				fmt.Print("[*]Please enter the username: ")
@@ -310,7 +309,7 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 				time.Sleep(300 * time.Millisecond)
 				fmt.Print("[*]Please enter the filepath of the privkey: ")
 				ssh.CertificatePath = console.pretreatInput()
-				err = ssh.LetSSH(sMessage, route, nodeID)
+				err = ssh.LetSSH(component, route, nodeID)
 			}
 
 			if err != nil {
@@ -325,7 +324,7 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 
 			if <-console.OK {
 				console.Status = fmt.Sprintf("(ssh %s) >> ", ssh.Addr)
-				console.handleSSHPanelCommand(sMessage, route, nodeID)
+				console.handleSSHPanelCommand(component, route, nodeID)
 			}
 
 			console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(idNum))
@@ -359,7 +358,9 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 	}
 }
 
-func (console *Console) handleShellPanelCommand(sMessage protocol.Message, route string, nodeID string) {
+func (console *Console) handleShellPanelCommand(component *protocol.MessageComponent, route string, nodeID string) {
+	sMessage := protocol.PrepareAndDecideWhichSProto(component.Conn, component.Secret, component.ID)
+
 	header := protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
 		Accepter:    nodeID,
@@ -391,7 +392,9 @@ func (console *Console) handleShellPanelCommand(sMessage protocol.Message, route
 	}
 }
 
-func (console *Console) handleSSHPanelCommand(sMessage protocol.Message, route string, nodeID string) {
+func (console *Console) handleSSHPanelCommand(component *protocol.MessageComponent, route string, nodeID string) {
+	sMessage := protocol.PrepareAndDecideWhichSProto(component.Conn, component.Secret, component.ID)
+
 	header := protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
 		Accepter:    nodeID,

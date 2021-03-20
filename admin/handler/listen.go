@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-18 18:05:46
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-18 18:45:07
+ * @LastEditTime: 2021-03-20 13:37:24
  */
 package handler
 
@@ -12,12 +12,14 @@ import (
 	"fmt"
 )
 
-func LetListen(sMessage protocol.Message, route string, nodeID string, addr string) {
+func LetListen(component *protocol.MessageComponent, route string, nodeID string, addr string) {
 	normalAddr, _, err := utils.CheckIPPort(addr)
 	if err != nil {
 		fmt.Printf("[*]Error: %s\n", err.Error())
 		return
 	}
+
+	sMessage := protocol.PrepareAndDecideWhichSProto(component.Conn, component.Secret, component.ID)
 
 	header := protocol.Header{
 		Sender:      protocol.ADMIN_UUID,

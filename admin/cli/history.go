@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-11 14:59:13
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-19 18:09:41
+ * @LastEditTime: 2021-03-20 11:54:54
  */
 package cli
 
@@ -71,6 +71,7 @@ func (history *History) search() {
 				now = now.Next()
 			}
 		}
+
 		if now != nil {
 			history.Display <- now.Value
 			history.Result <- now.Value.(string)
@@ -92,8 +93,7 @@ func (history *History) display() {
 }
 
 func (history *History) clean() {
-	elementsCounts := history.StoreList.Len() - history.Capacity
-	for elementsRemain := elementsCounts; elementsRemain > 0; elementsRemain-- {
+	for elementsRemain := history.StoreList.Len() - history.Capacity; elementsRemain > 0; elementsRemain-- {
 		element := history.StoreList.Back()
 		history.StoreList.Remove(element)
 	}

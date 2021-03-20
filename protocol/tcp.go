@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-09 14:02:57
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-19 15:26:19
+ * @LastEditTime: 2021-03-20 14:36:53
  */
 package protocol
 
@@ -139,16 +139,13 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 			tDataBuf = crypto.AESEncrypt(tDataBuf, message.CryptoSecret)
 		case SHELLRESULT:
 			mmess := mess.(ShellResult)
-			OKBuf := make([]byte, 2)
-			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
 
 			resultLenBuf := make([]byte, 8)
 			binary.BigEndian.PutUint64(resultLenBuf, mmess.ResultLen)
 
 			resultBuf := []byte(mmess.Result)
 
-			tDataBuf = append(OKBuf, resultLenBuf...)
-			tDataBuf = append(tDataBuf, resultBuf...)
+			tDataBuf = append(resultLenBuf, resultBuf...)
 			tDataBuf = crypto.AESEncrypt(tDataBuf, message.CryptoSecret)
 		case LISTENREQ:
 			mmess := mess.(ListenReq)
@@ -366,9 +363,8 @@ func (message *TCPMessage) DeconstructData() (Header, interface{}, error) {
 		return header, mmess, nil
 	case SHELLRESULT:
 		mmess := new(ShellResult)
-		mmess.OK = binary.BigEndian.Uint16(fDataBuf[:2])
-		mmess.ResultLen = binary.BigEndian.Uint64(fDataBuf[2:10])
-		mmess.Result = string(fDataBuf[10 : 10+mmess.ResultLen])
+		mmess.ResultLen = binary.BigEndian.Uint64(fDataBuf[:8])
+		mmess.Result = string(fDataBuf[8 : 8+mmess.ResultLen])
 		return header, mmess, nil
 	case LISTENREQ:
 		mmess := new(ListenReq)

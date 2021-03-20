@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-08 18:19:04
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-19 12:57:01
+ * @LastEditTime: 2021-03-20 13:43:53
  */
 package protocol
 
@@ -118,7 +118,6 @@ type ShellCommand struct {
 }
 
 type ShellResult struct {
-	OK        uint16
 	ResultLen uint64
 	Result    string
 }
@@ -156,6 +155,17 @@ type SSHCommand struct {
 type SSHResult struct {
 	ResultLen uint64
 	Result    string
+}
+
+/**
+ * @description: The struct containing  essential components to use "PrepareAndDecideWhichSProto" or "PrepareAndDecideWhichRProto"
+ * @param {*}
+ * @return {*}
+ */
+type MessageComponent struct {
+	ID     string
+	Conn   net.Conn
+	Secret string
 }
 
 /**
