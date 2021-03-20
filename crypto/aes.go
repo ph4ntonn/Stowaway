@@ -55,6 +55,7 @@ func AESEncrypt(origData, key []byte) []byte {
 func PKCS7Padding(origData []byte, blockSize int) []byte {
 	//计算需要补几位数
 	padding := blockSize - len(origData)%blockSize
+	println("blocksize is ",blockSize,"padding is ",padding)
 	//在切片后面追加char数量的byte(char)
 	padText := bytes.Repeat([]byte{byte(padding)}, padding)
 	return append(origData, padText...)

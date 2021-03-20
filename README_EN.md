@@ -15,6 +15,8 @@ PS: Thanks for everyone's star, i'm just an amateur, and the code still need be 
 
 PPS: Please read the usage method and the precautions at the end of the article before use!
 
+PPPS: **The 2.0 version of this project is actively being refactored.Expect please~**
+
 > This tool is limited to security research and teaching, and the user bears all legal and related responsibilities caused by the use of this tool! The author does not assume any legal and related responsibilities!
 
 ## Features
