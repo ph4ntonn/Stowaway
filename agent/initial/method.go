@@ -105,7 +105,7 @@ func NormalActive(userOptions *Options) (net.Conn, string) {
 }
 
 func NormalPassive(userOptions *Options) (net.Conn, string) {
-	listenAddr, _, err := utils.CheckAndPrepareAddr(userOptions.Listen)
+	listenAddr, _, err := utils.CheckIPPort(userOptions.Listen)
 	if err != nil {
 		log.Fatalf("[*]Error occured: %s", err.Error())
 	}

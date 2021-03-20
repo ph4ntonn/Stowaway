@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-09 18:29:02
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-19 16:31:28
+ * @LastEditTime: 2021-03-20 16:00:34
  */
 
 package utils
@@ -33,35 +33,6 @@ func GetStringMd5(s string) string {
 	md5.Write([]byte(s))
 	md5Str := hex.EncodeToString(md5.Sum(nil))
 	return md5Str
-}
-
-/**
- * @description:
- * @param {string} info
- * @return {*}
- */
-func CheckAndPrepareAddr(info string) (normalAddr string, reuseAddr string, err error) {
-	var (
-		address string
-		port    string
-	)
-
-	spliltedInfo := strings.Split(info, ":")
-
-	if len(spliltedInfo) == 1 {
-		address = "0.0.0.0"
-		port = spliltedInfo[0]
-	} else if len(spliltedInfo) == 2 {
-		address = spliltedInfo[0]
-		port = spliltedInfo[1]
-	} else {
-		err = errors.New("Illegal option")
-		return
-	}
-
-	normalAddr = address + ":" + port
-	reuseAddr = "0.0.0.0:" + port
-	return
 }
 
 // StringSliceReverse 倒置[]string
@@ -130,11 +101,10 @@ func GetSystemInfo() (string, string) {
 }
 
 // CheckIPPort检查输入ip+port是否合法
-func CheckIPPort(info string) (string, string, error) {
+func CheckIPPort(info string) (normalAddr string, reuseAddr string, err error) {
 	var (
 		readyIP   string
 		readyPort int
-		err       error
 	)
 
 	spliltedInfo := strings.Split(info, ":")
@@ -146,15 +116,17 @@ func CheckIPPort(info string) (string, string, error) {
 		readyIP = spliltedInfo[0]
 		readyPort, err = strconv.Atoi(spliltedInfo[1])
 	} else {
-		return "", "", errors.New("Wrong ip/port format!")
+		err = errors.New("Please input either port(1~65535) or ip:port(1-65535)!")
+		return
 	}
 
 	if err != nil || readyPort < 1 || readyPort > 65535 || readyIP == "" {
-		return "", "", errors.New("Please input valid port(1~65535)/ip+port!")
+		err = errors.New("Please input either port(1~65535) or ip:port(1-65535)!")
+		return
 	}
 
-	normalAddr := readyIP + ":" + strconv.Itoa(readyPort)
-	reuseAddr := "0.0.0.0:" + strconv.Itoa(readyPort)
+	normalAddr = readyIP + ":" + strconv.Itoa(readyPort)
+	reuseAddr = "0.0.0.0:" + strconv.Itoa(readyPort)
 
-	return normalAddr, reuseAddr, nil
+	return
 }

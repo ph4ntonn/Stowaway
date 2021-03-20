@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-08 18:03:48
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-18 17:06:08
+ * @LastEditTime: 2021-03-20 15:55:08
  */
 package initial
 
@@ -126,7 +126,7 @@ func NormalActive(userOptions *Options, topo *topology.Topology) net.Conn {
 }
 
 func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
-	listenAddr, _, err := utils.CheckAndPrepareAddr(userOptions.Listen)
+	listenAddr, _, err := utils.CheckIPPort(userOptions.Listen)
 	if err != nil {
 		log.Fatalf("[*]Error occured: %s", err.Error())
 	}

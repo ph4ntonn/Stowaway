@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-08 18:19:04
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-20 13:43:53
+ * @LastEditTime: 2021-03-20 15:52:13
  */
 package protocol
 
@@ -169,7 +169,7 @@ type MessageComponent struct {
 }
 
 /**
- * @description: Decide which transmission protocol you want to use for sending message
+ * @description: Decide which transmission protocol you want to use for sending message,Never cross use the same "Message" !!!
  * @param {net.Conn} conn
  * @return {*}
  */
@@ -184,7 +184,7 @@ func PrepareAndDecideWhichSProto(conn net.Conn, secret string, uuid string) Mess
 }
 
 /**
- * @description: Decide which transmission protocol you want to use for receving message
+ * @description: Decide which transmission protocol you want to use for receving message,Never cross use the same "Message" !!!
  * @param {net.Conn} conn
  * @return {*}
  */
