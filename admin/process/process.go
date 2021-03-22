@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-16 16:10:23
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-20 16:23:11
+ * @LastEditTime: 2021-03-22 20:04:19
  */
 package process
 
@@ -12,6 +12,7 @@ import (
 	"Stowaway/admin/topology"
 	"Stowaway/crypto"
 	"Stowaway/protocol"
+	"Stowaway/share"
 	"fmt"
 	"log"
 	"net"
@@ -41,8 +42,9 @@ func (admin *Admin) Run() {
 	admin.Topology.TaskChan <- task
 	routeResult := <-admin.Topology.ResultChan
 
+	file := share.NewFile()
 	console := cli.NewConsole()
-	console.Init(admin.Topology, admin.Conn, admin.UUID, admin.UserOptions.Secret, admin.CryptoSecret)
+	console.Init(admin.Topology, file, admin.Conn, admin.UUID, admin.UserOptions.Secret, admin.CryptoSecret)
 
 	go admin.handleDataFromDownstream(console, routeResult.RouteInfo)
 
@@ -99,6 +101,30 @@ func (admin *Admin) handleDataFromDownstream(console *cli.Console, routeMap map[
 			message := fMessage.(*protocol.SSHResult)
 			fmt.Printf("\033[u\033[K\r%s", message.Result)
 			fmt.Printf("\r\n%s", console.Status)
+		case protocol.FILESTATREQ:
+			message := fMessage.(*protocol.FileStatReq)
+			console.MyFile.FileSize = int64(message.FileSize)
+			console.MyFile.SliceNum = message.SliceNum
+			console.OK <- true
+		case protocol.FILEDOWNRES:
+			// no need to check mess
+			fmt.Print("\r\n[*]Unable to download file!")
+			console.OK <- false
+		case protocol.FILESTATRES:
+			message := fMessage.(*protocol.FileStatRes)
+			if message.OK == 1 {
+				console.OK <- true
+			} else {
+				fmt.Print("\r\n[*]Fail to upload file!")
+				console.MyFile.Handler.Close()
+				console.OK <- false
+			}
+		case protocol.FILEDATA:
+			message := fMessage.(*protocol.FileData)
+			console.MyFile.DataChan <- message.Data
+		case protocol.FILEERR:
+			// no need to check mess
+			console.MyFile.ErrChan <- true
 		default:
 			log.Print("\n[*]Unknown Message!")
 		}

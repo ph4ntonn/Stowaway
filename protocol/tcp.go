@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-09 14:02:57
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-22 14:46:08
+ * @LastEditTime: 2021-03-22 19:37:15
  */
 package protocol
 
@@ -220,6 +220,68 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 
 			dataBuffer.Write(resultLenBuf)
 			dataBuffer.Write(resultBuf)
+		case FILESTATREQ:
+			mmess := mess.(FileStatReq)
+
+			filenameLenBuf := make([]byte, 4)
+			binary.BigEndian.PutUint32(filenameLenBuf, mmess.FilenameLen)
+
+			filenameBuf := []byte(mmess.Filename)
+
+			fileSizeBuf := make([]byte, 8)
+			binary.BigEndian.PutUint64(fileSizeBuf, mmess.FileSize)
+
+			sliceNumBuf := make([]byte, 8)
+			binary.BigEndian.PutUint64(sliceNumBuf, mmess.SliceNum)
+
+			dataBuffer.Write(filenameLenBuf)
+			dataBuffer.Write(filenameBuf)
+			dataBuffer.Write(fileSizeBuf)
+			dataBuffer.Write(sliceNumBuf)
+		case FILESTATRES:
+			mmess := mess.(FileStatRes)
+			OKBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
+
+			dataBuffer.Write(OKBuf)
+		case FILEDATA:
+			mmess := mess.(FileData)
+			dataLenBuf := make([]byte, 8)
+			binary.BigEndian.PutUint64(dataLenBuf, mmess.DataLen)
+
+			dataBuf := mmess.Data
+
+			dataBuffer.Write(dataLenBuf)
+			dataBuffer.Write(dataBuf)
+		case FILEERR:
+			mmess := mess.(FileErr)
+			errorBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(errorBuf, mmess.Error)
+
+			dataBuffer.Write(errorBuf)
+		case FILEDOWNREQ:
+			mmess := mess.(FileDownReq)
+
+			filePathLenBuf := make([]byte, 4)
+			binary.BigEndian.PutUint32(filePathLenBuf, mmess.FilePathLen)
+
+			filePathBuf := []byte(mmess.FilePath)
+
+			filenameLenBuf := make([]byte, 4)
+			binary.BigEndian.PutUint32(filenameLenBuf, mmess.FilenameLen)
+
+			filenameBuf := []byte(mmess.Filename)
+
+			dataBuffer.Write(filePathLenBuf)
+			dataBuffer.Write(filePathBuf)
+			dataBuffer.Write(filenameLenBuf)
+			dataBuffer.Write(filenameBuf)
+		case FILEDOWNRES:
+			mmess := mess.(FileDownRes)
+			OKBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
+
+			dataBuffer.Write(OKBuf)
 		default:
 		}
 	}
@@ -395,6 +457,37 @@ func (message *TCPMessage) DeconstructData() (Header, interface{}, error) {
 		mmess := new(SSHResult)
 		mmess.ResultLen = binary.BigEndian.Uint64(dataBuf[:8])
 		mmess.Result = string(dataBuf[8 : 8+mmess.ResultLen])
+		return header, mmess, nil
+	case FILESTATREQ:
+		mmess := new(FileStatReq)
+		mmess.FilenameLen = binary.BigEndian.Uint32(dataBuf[:4])
+		mmess.Filename = string(dataBuf[4 : 4+mmess.FilenameLen])
+		mmess.FileSize = binary.BigEndian.Uint64(dataBuf[4+mmess.FilenameLen : 12+mmess.FilenameLen])
+		mmess.SliceNum = binary.BigEndian.Uint64(dataBuf[12+mmess.FilenameLen : 20+mmess.FilenameLen])
+		return header, mmess, nil
+	case FILESTATRES:
+		mmess := new(FileStatRes)
+		mmess.OK = binary.BigEndian.Uint16(dataBuf[:2])
+		return header, mmess, nil
+	case FILEDATA:
+		mmess := new(FileData)
+		mmess.DataLen = binary.BigEndian.Uint64(dataBuf[:8])
+		mmess.Data = dataBuf[8 : 8+mmess.DataLen]
+		return header, mmess, nil
+	case FILEERR:
+		mmess := new(FileErr)
+		mmess.Error = binary.BigEndian.Uint16(dataBuf[:2])
+		return header, mmess, nil
+	case FILEDOWNREQ:
+		mmess := new(FileDownReq)
+		mmess.FilePathLen = binary.BigEndian.Uint32(dataBuf[:4])
+		mmess.FilePath = string(dataBuf[4 : 4+mmess.FilePathLen])
+		mmess.FilenameLen = binary.BigEndian.Uint32(dataBuf[4+mmess.FilePathLen : 8+mmess.FilePathLen])
+		mmess.Filename = string(dataBuf[8+mmess.FilePathLen : 8+mmess.FilePathLen+mmess.FilenameLen])
+		return header, mmess, nil
+	case FILEDOWNRES:
+		mmess := new(FileDownRes)
+		mmess.OK = binary.BigEndian.Uint16(dataBuf[:2])
 		return header, mmess, nil
 	default:
 	}

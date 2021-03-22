@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-08 18:19:04
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-20 16:31:52
+ * @LastEditTime: 2021-03-22 19:36:26
  */
 package protocol
 
@@ -27,6 +27,12 @@ const (
 	SSHRES
 	SSHCOMMAND
 	SSHRESULT
+	FILESTATREQ
+	FILESTATRES
+	FILEDATA
+	FILEERR
+	FILEDOWNREQ
+	FILEDOWNRES
 )
 
 const ADMIN_UUID = "IAMADMINXD"
@@ -155,6 +161,37 @@ type SSHCommand struct {
 type SSHResult struct {
 	ResultLen uint64
 	Result    string
+}
+
+type FileStatReq struct {
+	FilenameLen uint32
+	Filename    string
+	FileSize    uint64
+	SliceNum    uint64
+}
+
+type FileStatRes struct {
+	OK uint16
+}
+
+type FileData struct {
+	DataLen uint64
+	Data    []byte
+}
+
+type FileErr struct {
+	Error uint16
+}
+
+type FileDownReq struct {
+	FilePathLen uint32
+	FilePath    string
+	FilenameLen uint32
+	Filename    string
+}
+
+type FileDownRes struct {
+	OK uint16
 }
 
 /**

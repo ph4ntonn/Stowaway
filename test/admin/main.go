@@ -1,3 +1,9 @@
+/*
+ * @Author: ph4ntom
+ * @Date: 2021-03-11 16:10:51
+ * @LastEditors: ph4ntom
+ * @LastEditTime: 2021-03-22 17:27:39
+ */
 package main
 
 import (
@@ -10,6 +16,7 @@ import (
 )
 
 func main() {
+	fmt.Println([]byte("6111111111111111111"))
 	fmt.Println("kcp listens on 10000")
 	lis, err := kcp.ListenWithOptions(":10000", nil, 10, 3)
 	if err != nil {

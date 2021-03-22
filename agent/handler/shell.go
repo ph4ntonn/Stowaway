@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-17 18:38:28
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-20 13:59:59
+ * @LastEditTime: 2021-03-22 16:11:15
  */
 package handler
 
@@ -10,7 +10,6 @@ import (
 	"Stowaway/protocol"
 	"Stowaway/utils"
 	"io"
-	"net"
 	"os/exec"
 	"runtime"
 )
@@ -24,14 +23,14 @@ func NewShell() *Shell {
 	return new(Shell)
 }
 
-func (shell *Shell) Start(conn net.Conn, nodeID string, secret string) {
+func (shell *Shell) Start(component *protocol.MessageComponent) {
 	var cmd *exec.Cmd
 	var err error
 
-	sMessage := protocol.PrepareAndDecideWhichSProto(conn, secret, nodeID)
+	sMessage := protocol.PrepareAndDecideWhichSProto(component.Conn, component.Secret, component.UUID)
 
 	shellResheader := protocol.Header{
-		Sender:      nodeID,
+		Sender:      component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.SHELLRES,
 		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))), // No need to set route when agent send mess to admin
@@ -39,7 +38,7 @@ func (shell *Shell) Start(conn net.Conn, nodeID string, secret string) {
 	}
 
 	shellResultHeader := protocol.Header{
-		Sender:      nodeID,
+		Sender:      component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.SHELLRESULT,
 		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))), // No need to set route when agent send mess to admin

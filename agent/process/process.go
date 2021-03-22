@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 15:27:30
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-20 16:33:33
+ * @LastEditTime: 2021-03-22 20:05:37
  */
 
 package process
@@ -12,6 +12,7 @@ import (
 	"Stowaway/agent/initial"
 	"Stowaway/crypto"
 	"Stowaway/protocol"
+	"Stowaway/share"
 	"Stowaway/utils"
 	"log"
 	"net"
@@ -65,8 +66,15 @@ func (agent *Agent) sendMyInfo() {
 func (agent *Agent) handleDataFromUpstream() {
 	rMessage := protocol.PrepareAndDecideWhichRProto(agent.Conn, agent.UserOptions.Secret, agent.UUID)
 	//sMessage := protocol.PrepareAndDecideWhichSProto(agent.Conn, agent.UserOptions.Secret, agent.ID)
+	component := &protocol.MessageComponent{
+		Secret: agent.UserOptions.Secret,
+		Conn:   agent.Conn,
+		UUID:   agent.UUID,
+	}
+
 	shell := handler.NewShell()
 	mySSH := handler.NewSSH()
+	file := share.NewFile()
 
 	for {
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
@@ -81,7 +89,7 @@ func (agent *Agent) handleDataFromUpstream() {
 				agent.Memo = message.Memo
 			case protocol.SHELLREQ:
 				// No need to check member "start"
-				go shell.Start(agent.Conn, agent.UUID, agent.UserOptions.Secret)
+				go shell.Start(component)
 			case protocol.SHELLCOMMAND:
 				message := fMessage.(*protocol.ShellCommand)
 				shell.Input(message.Command)
@@ -95,10 +103,36 @@ func (agent *Agent) handleDataFromUpstream() {
 				mySSH.Username = message.Username
 				mySSH.Password = message.Password
 				mySSH.Certificate = message.Certificate
-				go mySSH.Start(agent.Conn, agent.UUID, agent.UserOptions.Secret)
+				go mySSH.Start(component)
 			case protocol.SSHCOMMAND:
 				message := fMessage.(*protocol.SSHCommand)
 				mySSH.Input(message.Command)
+			case protocol.FILESTATREQ:
+				message := fMessage.(*protocol.FileStatReq)
+				file.FileName = message.Filename
+				file.SliceNum = message.SliceNum
+				err := file.CheckFileStat(component, protocol.TEMP_ROUTE, protocol.ADMIN_UUID)
+				if err == nil {
+					go file.Receive(component, protocol.TEMP_ROUTE, protocol.ADMIN_UUID, share.AGENT)
+				}
+			case protocol.FILESTATRES:
+				message := fMessage.(*protocol.FileStatRes)
+				if message.OK == 1 {
+					go file.Upload(component, protocol.TEMP_ROUTE, protocol.ADMIN_UUID, share.AGENT)
+				} else {
+					file.Handler.Close()
+				}
+			case protocol.FILEDATA:
+				message := fMessage.(*protocol.FileData)
+				file.DataChan <- message.Data
+			case protocol.FILEERR:
+				// No need to check message
+				file.ErrChan <- true
+			case protocol.FILEDOWNREQ:
+				message := fMessage.(*protocol.FileDownReq)
+				file.FilePath = message.FilePath
+				file.FileName = message.Filename
+				file.SendFileStat(component, protocol.TEMP_ROUTE, protocol.ADMIN_UUID, share.AGENT)
 			default:
 				log.Println("[*]Unknown Message!")
 			}

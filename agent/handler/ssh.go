@@ -2,14 +2,13 @@
  * @Author: ph4ntom
  * @Date: 2021-03-18 18:56:20
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-20 14:00:38
+ * @LastEditTime: 2021-03-22 16:12:34
  */
 
 package handler
 
 import (
 	"io"
-	"net"
 
 	"Stowaway/protocol"
 
@@ -38,14 +37,14 @@ func NewSSH() *SSH {
 }
 
 // StartSSH 启动ssh
-func (mySSH *SSH) Start(conn net.Conn, nodeID string, secret string) {
+func (mySSH *SSH) Start(component *protocol.MessageComponent) {
 	var authPayload ssh.AuthMethod
 	var err error
 
-	sMessage := protocol.PrepareAndDecideWhichSProto(conn, secret, nodeID)
+	sMessage := protocol.PrepareAndDecideWhichSProto(component.Conn, component.Secret, component.UUID)
 
 	sshResheader := protocol.Header{
-		Sender:      nodeID,
+		Sender:      component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.SSHRES,
 		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))), // No need to set route when agent send mess to admin
@@ -53,7 +52,7 @@ func (mySSH *SSH) Start(conn net.Conn, nodeID string, secret string) {
 	}
 
 	sshResultheader := protocol.Header{
-		Sender:      nodeID,
+		Sender:      component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.SSHRESULT,
 		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))), // No need to set route when agent send mess to admin

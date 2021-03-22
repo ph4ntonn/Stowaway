@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 18:11:41
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-20 16:32:39
+ * @LastEditTime: 2021-03-22 20:00:09
  */
 package cli
 
@@ -10,6 +10,7 @@ import (
 	"Stowaway/admin/handler"
 	"Stowaway/admin/topology"
 	"Stowaway/protocol"
+	"Stowaway/share"
 	"Stowaway/utils"
 	"fmt"
 	"net"
@@ -37,6 +38,8 @@ type Console struct {
 	OK         chan bool
 	ready      chan bool
 	getCommand chan string
+	// elements that needs to be shared
+	MyFile *share.MyFile
 }
 
 func NewConsole() *Console {
@@ -48,12 +51,13 @@ func NewConsole() *Console {
 	return console
 }
 
-func (console *Console) Init(tTopology *topology.Topology, conn net.Conn, uuid string, secret string, cryptoSecret []byte) {
+func (console *Console) Init(tTopology *topology.Topology, file *share.MyFile, conn net.Conn, uuid string, secret string, cryptoSecret []byte) {
 	console.UUID = uuid
 	console.Conn = conn
 	console.Secret = secret
 	console.CryptoSecret = cryptoSecret
 	console.Topology = tTopology
+	console.MyFile = file
 }
 
 func (console *Console) Run() {
@@ -333,7 +337,41 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 			if console.expectParamsNum(fCommand, 2, NODE, 1) {
 				break
 			}
+		case "upload":
+			if console.expectParamsNum(fCommand, 3, NODE, 0) {
+				break
+			}
 
+			console.MyFile.FilePath = fCommand[1]
+			console.MyFile.FileName = fCommand[2]
+
+			err := console.MyFile.SendFileStat(component, route, nodeID, share.ADMIN)
+
+			if err == nil && <-console.OK {
+				console.MyFile.Upload(component, route, nodeID, share.ADMIN)
+			} else if err != nil {
+				fmt.Printf("\r\n[*]Error: %s", err.Error())
+			}
+
+			console.ready <- true
+		case "download":
+			if console.expectParamsNum(fCommand, 3, NODE, 0) {
+				break
+			}
+
+			console.MyFile.FilePath = fCommand[1]
+			console.MyFile.FileName = fCommand[2]
+
+			console.MyFile.Ask4Download(component, route, nodeID)
+
+			if <-console.OK {
+				err := console.MyFile.CheckFileStat(component, route, nodeID)
+				if err == nil {
+					console.MyFile.Receive(component, route, nodeID, share.ADMIN)
+				}
+			}
+
+			console.ready <- true
 		case "":
 			if console.expectParamsNum(fCommand, 1, NODE, 0) {
 				break
