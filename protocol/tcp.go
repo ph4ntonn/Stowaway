@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-09 14:02:57
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-20 16:34:47
+ * @LastEditTime: 2021-03-22 14:46:08
  */
 package protocol
 
@@ -40,7 +40,7 @@ func (message *TCPMessage) ConstructHeader() {}
  * @return {*}
  */
 func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
-	var headerBuffer bytes.Buffer
+	var headerBuffer, dataBuffer bytes.Buffer
 	// First, construct own header
 	messageTypeBuf := make([]byte, 2)
 	routeLenBuf := make([]byte, 4)
@@ -71,10 +71,9 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 			binary.BigEndian.PutUint16(isAdminBuf, mmess.IsAdmin)
 			// Collect all spilted data, try encrypt them
 			// use message.DataBuffer directly to save memory
-			message.DataBuffer = append(message.DataBuffer, greetingLenBuf...)
-			message.DataBuffer = append(message.DataBuffer, greetingBuf...)
-			message.DataBuffer = append(message.DataBuffer, isAdminBuf...)
-			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
+			dataBuffer.Write(greetingLenBuf)
+			dataBuffer.Write(greetingBuf)
+			dataBuffer.Write(isAdminBuf)
 		case UUID:
 			mmess := mess.(UUIDMess)
 			uuidLenBuf := make([]byte, 2)
@@ -82,16 +81,14 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 
 			uuidBuf := []byte(mmess.UUID)
 
-			message.DataBuffer = append(message.DataBuffer, uuidLenBuf...)
-			message.DataBuffer = append(message.DataBuffer, uuidBuf...)
-			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
+			dataBuffer.Write(uuidLenBuf)
+			dataBuffer.Write(uuidBuf)
 		case UUIDRET:
 			mmess := mess.(UUIDRetMess)
 			OKBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
 
-			message.DataBuffer = OKBuf
-			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
+			dataBuffer.Write(OKBuf)
 		case MYINFO:
 			mmess := mess.(MyInfo)
 			usernameLenBuf := make([]byte, 8)
@@ -104,11 +101,10 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 
 			hostnameBuf := []byte(mmess.Hostname)
 
-			message.DataBuffer = append(message.DataBuffer, usernameLenBuf...)
-			message.DataBuffer = append(message.DataBuffer, usernameBuf...)
-			message.DataBuffer = append(message.DataBuffer, hostnameLenBuf...)
-			message.DataBuffer = append(message.DataBuffer, hostnameBuf...)
-			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
+			dataBuffer.Write(usernameLenBuf)
+			dataBuffer.Write(usernameBuf)
+			dataBuffer.Write(hostnameLenBuf)
+			dataBuffer.Write(hostnameBuf)
 		case MYMEMO:
 			mmess := mess.(MyMemo)
 			memoLenBuf := make([]byte, 8)
@@ -116,23 +112,20 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 
 			memoBuf := []byte(mmess.Memo)
 
-			message.DataBuffer = append(message.DataBuffer, memoLenBuf...)
-			message.DataBuffer = append(message.DataBuffer, memoBuf...)
-			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
+			dataBuffer.Write(memoLenBuf)
+			dataBuffer.Write(memoBuf)
 		case SHELLREQ:
 			mmess := mess.(ShellReq)
 			startBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(startBuf, mmess.Start)
 
-			message.DataBuffer = startBuf
-			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
+			dataBuffer.Write(startBuf)
 		case SHELLRES:
 			mmess := mess.(ShellRes)
 			OKBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
 
-			message.DataBuffer = OKBuf
-			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
+			dataBuffer.Write(OKBuf)
 		case SHELLCOMMAND:
 			mmess := mess.(ShellCommand)
 			commandLenBuf := make([]byte, 8)
@@ -140,9 +133,8 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 
 			commandBuf := []byte(mmess.Command)
 
-			message.DataBuffer = append(message.DataBuffer, commandLenBuf...)
-			message.DataBuffer = append(message.DataBuffer, commandBuf...)
-			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
+			dataBuffer.Write(commandLenBuf)
+			dataBuffer.Write(commandBuf)
 		case SHELLRESULT:
 			mmess := mess.(ShellResult)
 
@@ -151,9 +143,8 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 
 			resultBuf := []byte(mmess.Result)
 
-			message.DataBuffer = append(message.DataBuffer, resultLenBuf...)
-			message.DataBuffer = append(message.DataBuffer, resultBuf...)
-			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
+			dataBuffer.Write(resultLenBuf)
+			dataBuffer.Write(resultBuf)
 		case LISTENREQ:
 			mmess := mess.(ListenReq)
 			addrLenBuf := make([]byte, 8)
@@ -161,16 +152,14 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 
 			addrBuf := []byte(mmess.Addr)
 
-			message.DataBuffer = append(message.DataBuffer, addrLenBuf...)
-			message.DataBuffer = append(message.DataBuffer, addrBuf...)
-			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
+			dataBuffer.Write(addrLenBuf)
+			dataBuffer.Write(addrBuf)
 		case LISTENRES:
 			mmess := mess.(ListenRes)
 			OKBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
 
-			message.DataBuffer = OKBuf
-			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
+			dataBuffer.Write(OKBuf)
 		case SSHREQ:
 			mmess := mess.(SSHReq)
 			methodBuf := make([]byte, 2)
@@ -196,23 +185,21 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 
 			certificateBuf := mmess.Certificate
 
-			message.DataBuffer = append(message.DataBuffer, methodBuf...)
-			message.DataBuffer = append(message.DataBuffer, addrLenBuf...)
-			message.DataBuffer = append(message.DataBuffer, addrBuf...)
-			message.DataBuffer = append(message.DataBuffer, usernameLenBuf...)
-			message.DataBuffer = append(message.DataBuffer, usernameBuf...)
-			message.DataBuffer = append(message.DataBuffer, passwordLenBuf...)
-			message.DataBuffer = append(message.DataBuffer, passwordBuf...)
-			message.DataBuffer = append(message.DataBuffer, certificateLenBuf...)
-			message.DataBuffer = append(message.DataBuffer, certificateBuf...)
-			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
+			dataBuffer.Write(methodBuf)
+			dataBuffer.Write(addrLenBuf)
+			dataBuffer.Write(addrBuf)
+			dataBuffer.Write(usernameLenBuf)
+			dataBuffer.Write(usernameBuf)
+			dataBuffer.Write(passwordLenBuf)
+			dataBuffer.Write(passwordBuf)
+			dataBuffer.Write(certificateLenBuf)
+			dataBuffer.Write(certificateBuf)
 		case SSHRES:
 			mmess := mess.(SSHRes)
 			OKBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
 
-			message.DataBuffer = OKBuf
-			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
+			dataBuffer.Write(OKBuf)
 		case SSHCOMMAND:
 			mmess := mess.(SSHCommand)
 
@@ -221,9 +208,8 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 
 			commandBuf := []byte(mmess.Command)
 
-			message.DataBuffer = append(message.DataBuffer, commandLenBuf...)
-			message.DataBuffer = append(message.DataBuffer, commandBuf...)
-			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
+			dataBuffer.Write(commandLenBuf)
+			dataBuffer.Write(commandBuf)
 		case SSHRESULT:
 			mmess := mess.(SSHResult)
 
@@ -232,17 +218,18 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 
 			resultBuf := []byte(mmess.Result)
 
-			message.DataBuffer = append(message.DataBuffer, resultLenBuf...)
-			message.DataBuffer = append(message.DataBuffer, resultBuf...)
-			message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
+			dataBuffer.Write(resultLenBuf)
+			dataBuffer.Write(resultBuf)
 		default:
 		}
 	}
+	// Encrypt data
+	message.DataBuffer = dataBuffer.Bytes()
+	message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
 	// Calculate the whole data's length
 	dataLenBuf := make([]byte, 8)
 	binary.BigEndian.PutUint64(dataLenBuf, uint64(len(message.DataBuffer)))
 	headerBuffer.Write(dataLenBuf)
-
 	message.HeaderBuffer = headerBuffer.Bytes()
 }
 
