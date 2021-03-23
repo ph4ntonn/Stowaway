@@ -51,7 +51,7 @@ func NewFile() *MyFile {
 
 func (file *MyFile) SendFileStat(component *protocol.MessageComponent, route string, targetUUID string, identity int) error {
 	var err error
-	sMessage := protocol.PrepareAndDecideWhichSProto(component.Conn, component.Secret, component.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
 
 	statHeader := protocol.Header{
 		Sender:      component.UUID,
@@ -113,7 +113,7 @@ func (file *MyFile) SendFileStat(component *protocol.MessageComponent, route str
 
 func (file *MyFile) CheckFileStat(component *protocol.MessageComponent, route string, targetUUID string) error {
 	var err error
-	sMessage := protocol.PrepareAndDecideWhichSProto(component.Conn, component.Secret, component.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
 
 	header := protocol.Header{
 		Sender:      component.UUID,
@@ -152,7 +152,7 @@ func (file *MyFile) CheckFileStat(component *protocol.MessageComponent, route st
 }
 
 func (file *MyFile) Upload(component *protocol.MessageComponent, route string, targetUUID string, identity int) {
-	sMessage := protocol.PrepareAndDecideWhichSProto(component.Conn, component.Secret, component.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
 
 	dataHeader := protocol.Header{
 		Sender:      component.UUID,
@@ -242,7 +242,7 @@ func (file *MyFile) Receive(component *protocol.MessageComponent, route string, 
 }
 
 func (file *MyFile) Ask4Download(component *protocol.MessageComponent, route string, targetUUID string) {
-	sMessage := protocol.PrepareAndDecideWhichSProto(component.Conn, component.Secret, component.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
 
 	header := protocol.Header{
 		Sender:      component.UUID,

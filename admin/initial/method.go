@@ -32,12 +32,12 @@ func dispatchUUID(conn net.Conn, secret string) string {
 		Route:       protocol.TEMP_ROUTE,
 	}
 
-	sMessage = protocol.PrepareAndDecideWhichSProto(conn, secret, protocol.ADMIN_UUID)
+	sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(conn, secret, protocol.ADMIN_UUID)
 
 	protocol.ConstructMessage(sMessage, header, uuidMess)
 	sMessage.SendMessage()
 
-	rMessage = protocol.PrepareAndDecideWhichRProto(conn, secret, protocol.ADMIN_UUID)
+	rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, secret, protocol.ADMIN_UUID)
 	fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 
 	if err != nil {
@@ -88,12 +88,12 @@ func NormalActive(userOptions *Options, topo *topology.Topology) net.Conn {
 			log.Fatalf("[*]Error occured: %s", err.Error())
 		}
 
-		sMessage = protocol.PrepareAndDecideWhichSProto(conn, userOptions.Secret, protocol.ADMIN_UUID)
+		sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(conn, userOptions.Secret, protocol.ADMIN_UUID)
 
 		protocol.ConstructMessage(sMessage, header, hiMess)
 		sMessage.SendMessage()
 
-		rMessage = protocol.PrepareAndDecideWhichRProto(conn, userOptions.Secret, protocol.ADMIN_UUID)
+		rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, userOptions.Secret, protocol.ADMIN_UUID)
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 
 		if err != nil {
@@ -169,7 +169,7 @@ func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 			log.Fatalf("[*]Error occured: %s", err.Error())
 		}
 
-		rMessage = protocol.PrepareAndDecideWhichRProto(conn, userOptions.Secret, protocol.ADMIN_UUID)
+		rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, userOptions.Secret, protocol.ADMIN_UUID)
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 
 		if err != nil {
@@ -181,7 +181,7 @@ func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 		if fHeader.MessageType == protocol.HI {
 			mmess := fMessage.(*protocol.HIMess)
 			if mmess.Greeting == "Shhh..." {
-				sMessage = protocol.PrepareAndDecideWhichSProto(conn, userOptions.Secret, protocol.ADMIN_UUID)
+				sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(conn, userOptions.Secret, protocol.ADMIN_UUID)
 				protocol.ConstructMessage(sMessage, header, hiMess)
 				sMessage.SendMessage()
 				node := topology.NewNode(dispatchUUID(conn, userOptions.Secret), conn.RemoteAddr().String())

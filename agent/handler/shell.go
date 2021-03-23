@@ -27,7 +27,7 @@ func (shell *Shell) Start(component *protocol.MessageComponent) {
 	var cmd *exec.Cmd
 	var err error
 
-	sMessage := protocol.PrepareAndDecideWhichSProto(component.Conn, component.Secret, component.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
 
 	shellResheader := protocol.Header{
 		Sender:      component.UUID,

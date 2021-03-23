@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-18 16:59:46
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-20 16:32:20
+ * @LastEditTime: 2021-03-23 16:26:38
  */
 package handler
 
@@ -19,7 +19,7 @@ func AddMemo(component *protocol.MessageComponent, taskChan chan *topology.TopoT
 		memo = memo + " " + i
 	}
 
-	sMessage := protocol.PrepareAndDecideWhichSProto(component.Conn, component.Secret, component.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
 
 	topoTask := &topology.TopoTask{
 		Mode: topology.UPDATEMEMO,
@@ -55,7 +55,7 @@ func DelMemo(component *protocol.MessageComponent, taskChan chan *topology.TopoT
 	}
 	taskChan <- topoTask
 
-	sMessage := protocol.PrepareAndDecideWhichSProto(component.Conn, component.Secret, component.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
 
 	header := protocol.Header{
 		Sender:      protocol.ADMIN_UUID,

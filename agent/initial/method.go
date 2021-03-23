@@ -29,7 +29,7 @@ func achieveUUID(conn net.Conn, secret string) (uuid string) {
 		Route:       protocol.TEMP_ROUTE,
 	}
 
-	rMessage = protocol.PrepareAndDecideWhichRProto(conn, secret, protocol.TEMP_UUID)
+	rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, secret, protocol.TEMP_UUID)
 	fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 
 	if err != nil {
@@ -42,7 +42,7 @@ func achieveUUID(conn net.Conn, secret string) (uuid string) {
 		uuid = mmess.UUID
 	}
 
-	sMessage = protocol.PrepareAndDecideWhichSProto(conn, secret, protocol.TEMP_UUID)
+	sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(conn, secret, protocol.TEMP_UUID)
 
 	protocol.ConstructMessage(sMessage, header, uuidRetMess)
 	sMessage.SendMessage()
@@ -77,12 +77,12 @@ func NormalActive(userOptions *Options) (net.Conn, string) {
 			log.Fatalf("[*]Error occured: %s", err.Error())
 		}
 
-		sMessage = protocol.PrepareAndDecideWhichSProto(conn, userOptions.Secret, protocol.TEMP_UUID)
+		sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(conn, userOptions.Secret, protocol.TEMP_UUID)
 
 		protocol.ConstructMessage(sMessage, header, hiMess)
 		sMessage.SendMessage()
 
-		rMessage = protocol.PrepareAndDecideWhichRProto(conn, userOptions.Secret, protocol.TEMP_UUID)
+		rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, userOptions.Secret, protocol.TEMP_UUID)
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 
 		if err != nil {
@@ -147,7 +147,7 @@ func NormalPassive(userOptions *Options) (net.Conn, string) {
 			log.Fatalf("[*]Error occured: %s", err.Error())
 		}
 
-		rMessage = protocol.PrepareAndDecideWhichRProto(conn, userOptions.Secret, protocol.TEMP_UUID)
+		rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, userOptions.Secret, protocol.TEMP_UUID)
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 
 		if err != nil {
@@ -159,7 +159,7 @@ func NormalPassive(userOptions *Options) (net.Conn, string) {
 		if fHeader.MessageType == protocol.HI {
 			mmess := fMessage.(*protocol.HIMess)
 			if mmess.Greeting == "Shhh..." && mmess.IsAdmin == 1 {
-				sMessage = protocol.PrepareAndDecideWhichSProto(conn, userOptions.Secret, protocol.TEMP_UUID)
+				sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(conn, userOptions.Secret, protocol.TEMP_UUID)
 				protocol.ConstructMessage(sMessage, header, hiMess)
 				sMessage.SendMessage()
 				uuid := achieveUUID(conn, userOptions.Secret)

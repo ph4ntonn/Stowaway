@@ -52,7 +52,7 @@ func (admin *Admin) Run() {
 }
 
 func (admin *Admin) handleDataFromDownstream(console *cli.Console, routeMap map[int]string) {
-	rMessage := protocol.PrepareAndDecideWhichRProto(admin.Conn, admin.UserOptions.Secret, protocol.ADMIN_UUID)
+	rMessage := protocol.PrepareAndDecideWhichRProtoFromUpper(admin.Conn, admin.UserOptions.Secret, protocol.ADMIN_UUID)
 	for {
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 		if err != nil {

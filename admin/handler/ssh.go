@@ -42,7 +42,7 @@ func (ssh *SSH) LetSSH(component *protocol.MessageComponent, route string, nodeI
 		}
 	}
 
-	sMessage := protocol.PrepareAndDecideWhichSProto(component.Conn, component.Secret, component.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
 
 	header := protocol.Header{
 		Sender:      protocol.ADMIN_UUID,

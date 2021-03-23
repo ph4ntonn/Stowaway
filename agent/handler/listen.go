@@ -51,7 +51,7 @@ package handler
 // 			log.Fatalf("[*]Error occured: %s", err.Error())
 // 		}
 
-// 		rMessage = protocol.PrepareAndDecideWhichRProto(conn, userOptions.Secret, protocol.TEMP_UUID)
+// 		rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, userOptions.Secret, protocol.TEMP_UUID)
 // 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 
 // 		if err != nil {
@@ -63,7 +63,7 @@ package handler
 // 		if fHeader.MessageType == protocol.HI {
 // 			mmess := fMessage.(*protocol.HIMess)
 // 			if mmess.Greeting == "Shhh..." && mmess.IsAdmin == 1 {
-// 				sMessage = protocol.PrepareAndDecideWhichSProto(conn, userOptions.Secret, protocol.TEMP_UUID)
+// 				sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(conn, userOptions.Secret, protocol.TEMP_UUID)
 // 				protocol.ConstructMessage(sMessage, header, hiMess)
 // 				sMessage.SendMessage()
 // 				uuid := achieveUUID(conn, userOptions.Secret)

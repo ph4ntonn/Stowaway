@@ -42,7 +42,7 @@ func (agent *Agent) Run() {
 }
 
 func (agent *Agent) sendMyInfo() {
-	sMessage := protocol.PrepareAndDecideWhichSProto(agent.Conn, agent.UserOptions.Secret, agent.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(agent.Conn, agent.UserOptions.Secret, agent.UUID)
 	header := protocol.Header{
 		Sender:      agent.UUID,
 		Accepter:    protocol.ADMIN_UUID,
@@ -65,8 +65,8 @@ func (agent *Agent) sendMyInfo() {
 }
 
 func (agent *Agent) handleDataFromUpstream() {
-	rMessage := protocol.PrepareAndDecideWhichRProto(agent.Conn, agent.UserOptions.Secret, agent.UUID)
-	//sMessage := protocol.PrepareAndDecideWhichSProto(agent.Conn, agent.UserOptions.Secret, agent.ID)
+	rMessage := protocol.PrepareAndDecideWhichRProtoFromUpper(agent.Conn, agent.UserOptions.Secret, agent.UUID)
+	//sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(agent.Conn, agent.UserOptions.Secret, agent.ID)
 	component := &protocol.MessageComponent{
 		Secret: agent.UserOptions.Secret,
 		Conn:   agent.Conn,

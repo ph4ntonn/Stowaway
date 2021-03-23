@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-08 18:19:04
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-23 14:22:03
+ * @LastEditTime: 2021-03-23 16:27:27
  */
 package protocol
 
@@ -200,7 +200,7 @@ type Offline struct {
 }
 
 /**
- * @description: The struct containing  essential components to use "PrepareAndDecideWhichSProto" or "PrepareAndDecideWhichRProto"
+ * @description: The struct containing  essential components to use "PrepareAndDecideWhichSProtoToUpper" or "PrepareAndDecideWhichRProtoFromUpper"
  * @param {*}
  * @return {*}
  */
@@ -215,7 +215,7 @@ type MessageComponent struct {
  * @param {net.Conn} conn
  * @return {*}
  */
-func PrepareAndDecideWhichSProto(conn net.Conn, secret string, uuid string) Message {
+func PrepareAndDecideWhichSProtoToUpper(conn net.Conn, secret string, uuid string) Message {
 	// Now only apply tcp raw
 	// TODO: HTTP
 	tMessage := new(TCPMessage)
@@ -230,7 +230,7 @@ func PrepareAndDecideWhichSProto(conn net.Conn, secret string, uuid string) Mess
  * @param {net.Conn} conn
  * @return {*}
  */
-func PrepareAndDecideWhichRProto(conn net.Conn, secret string, uuid string) Message {
+func PrepareAndDecideWhichRProtoFromUpper(conn net.Conn, secret string, uuid string) Message {
 	// Now only apply tcp raw
 	// TODO: HTTP
 	tMessage := new(TCPMessage)
