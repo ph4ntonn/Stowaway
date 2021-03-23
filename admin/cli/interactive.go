@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 18:11:41
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-22 20:00:09
+ * @LastEditTime: 2021-03-23 16:16:49
  */
 package cli
 
@@ -12,6 +12,7 @@ import (
 	"Stowaway/protocol"
 	"Stowaway/share"
 	"Stowaway/utils"
+	"bytes"
 	"fmt"
 	"net"
 	"os"
@@ -67,8 +68,10 @@ func (console *Console) Run() {
 
 func (console *Console) mainPanel() {
 	var (
-		command   string
 		isGoingOn bool
+		// serve for arrow left/right
+		leftCommand  string
+		rightCommand string
 	)
 
 	history := NewHistory()
@@ -84,29 +87,32 @@ func (console *Console) mainPanel() {
 		}
 
 		if (event.Key != keyboard.KeyEnter && event.Rune >= 0x20 && event.Rune <= 0x7F) || event.Key == keyboard.KeySpace {
+			fmt.Print("\033[u\033[K\r")
+			fmt.Print(console.Status)
 			if event.Key == keyboard.KeySpace {
-				fmt.Print(" ")
-				command = command + " "
+				leftCommand = leftCommand + " "
 			} else {
-				fmt.Print(string(event.Rune))
-				command = command + string(event.Rune)
+				leftCommand = leftCommand + string(event.Rune)
 			}
+			fmt.Print(leftCommand + rightCommand)
+			fmt.Print(string(bytes.Repeat([]byte("\b"), len(rightCommand))))
 		} else if event.Key == keyboard.KeyBackspace2 || event.Key == keyboard.KeyBackspace {
-			var fLen int
-
-			if len(command) >= 1 {
-				fmt.Print("\b \b")
-				fLen = len(command) - 1
+			fmt.Print("\033[u\033[K\r")
+			fmt.Print(console.Status)
+			if len(leftCommand) >= 1 {
+				leftCommand = leftCommand[:len(leftCommand)-1]
 			}
-
-			command = command[:fLen]
+			fmt.Print(leftCommand + rightCommand)
+			fmt.Print(string(bytes.Repeat([]byte("\b"), len(rightCommand))))
 		} else if event.Key == keyboard.KeyEnter {
+			command := leftCommand + rightCommand
 			if command != "" {
 				history.Record <- command
 			}
 			console.getCommand <- command
 			isGoingOn = false
-			command = ""
+			leftCommand = ""
+			rightCommand = ""
 			<-console.ready // avoid situation that console.Status is printed before it's changed
 			fmt.Print("\r\n")
 			fmt.Print(console.Status)
@@ -119,14 +125,39 @@ func (console *Console) mainPanel() {
 			} else {
 				history.Search <- NEXT
 			}
-			command = <-history.Result
+			leftCommand = <-history.Result
+			rightCommand = ""
 		} else if event.Key == keyboard.KeyArrowDown {
 			fmt.Print("\033[u\033[K\r")
 			fmt.Print(console.Status)
 			if isGoingOn {
 				history.Search <- PREV
-				command = <-history.Result
+				leftCommand = <-history.Result
+			} else {
+				leftCommand = ""
 			}
+			rightCommand = ""
+		} else if event.Key == keyboard.KeyArrowLeft {
+			fmt.Print("\033[u\033[K\r")
+			fmt.Print(console.Status)
+			if len(leftCommand) >= 1 {
+				rightCommand = leftCommand[len(leftCommand)-1:] + rightCommand
+				leftCommand = leftCommand[:len(leftCommand)-1]
+			}
+			fmt.Print(leftCommand + rightCommand)
+			fmt.Print(string(bytes.Repeat([]byte("\b"), len(rightCommand))))
+		} else if event.Key == keyboard.KeyArrowRight {
+			fmt.Print("\033[u\033[K\r")
+			fmt.Print(console.Status)
+			if len(rightCommand) > 1 {
+				leftCommand = leftCommand + rightCommand[:1]
+				rightCommand = rightCommand[1:]
+			} else if len(rightCommand) == 1 {
+				leftCommand = leftCommand + rightCommand[:1]
+				rightCommand = ""
+			}
+			fmt.Print(leftCommand + rightCommand)
+			fmt.Print(string(bytes.Repeat([]byte("\b"), len(rightCommand))))
 		} else if event.Key == keyboard.KeyCtrlC {
 			fmt.Print("\n[*]BYE!")
 			keyboard.Close()
@@ -348,6 +379,7 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 			err := console.MyFile.SendFileStat(component, route, nodeID, share.ADMIN)
 
 			if err == nil && <-console.OK {
+				go handler.StartBar(console.MyFile.StatusChan, console.MyFile.FileSize)
 				console.MyFile.Upload(component, route, nodeID, share.ADMIN)
 			} else if err != nil {
 				fmt.Printf("\r\n[*]Error: %s", err.Error())
@@ -367,10 +399,17 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 			if <-console.OK {
 				err := console.MyFile.CheckFileStat(component, route, nodeID)
 				if err == nil {
+					go handler.StartBar(console.MyFile.StatusChan, console.MyFile.FileSize)
 					console.MyFile.Receive(component, route, nodeID, share.ADMIN)
 				}
 			}
 
+			console.ready <- true
+		case "offline":
+			if console.expectParamsNum(fCommand, 1, NODE, 0) {
+				break
+			}
+			handler.LetOffline(component, route, nodeID)
 			console.ready <- true
 		case "":
 			if console.expectParamsNum(fCommand, 1, NODE, 0) {

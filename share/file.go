@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-22 15:30:51
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-22 20:02:17
+ * @LastEditTime: 2021-03-23 12:22:39
  */
 package share
 
@@ -11,25 +11,33 @@ import (
 	"fmt"
 	"io"
 	"os"
-
-	"github.com/cheggaaa/pb"
+	"runtime"
 )
 
 const (
 	ADMIN = iota
 	AGENT
+	// status
+	START
+	ADD
+	DONE
 )
 
 type MyFile struct {
-	FileName  string
-	FilePath  string
-	FileSize  int64
-	SliceSize int64
-	SliceNum  uint64
-	ErrChan   chan bool
-	DataChan  chan []byte
-	Handler   *os.File
-	bar       *pb.ProgressBar
+	FileName   string
+	FilePath   string
+	FileSize   int64
+	SliceSize  int64
+	SliceNum   uint64
+	ErrChan    chan bool
+	DataChan   chan []byte
+	StatusChan chan *Status
+	Handler    *os.File
+}
+
+type Status struct {
+	Stat  int
+	Scale int64
 }
 
 func NewFile() *MyFile {
@@ -37,21 +45,15 @@ func NewFile() *MyFile {
 	file.SliceSize = 30720
 	file.ErrChan = make(chan bool)
 	file.DataChan = make(chan []byte)
+	file.StatusChan = make(chan *Status, 10) // Give buffer,make sure file transmitting won't be blocked when passing Status to admin
 	return file
-}
-
-// NewBar 生成新的进度条
-func (file *MyFile) NewBar(length int64) {
-	file.bar = pb.New64(int64(length))
-	file.bar.SetTemplate(pb.Full)
-	file.bar.Set(pb.Bytes, true)
 }
 
 func (file *MyFile) SendFileStat(component *protocol.MessageComponent, route string, targetUUID string, identity int) error {
 	var err error
 	sMessage := protocol.PrepareAndDecideWhichSProto(component.Conn, component.Secret, component.UUID)
 
-	header := protocol.Header{
+	statHeader := protocol.Header{
 		Sender:      component.UUID,
 		Accepter:    targetUUID,
 		MessageType: protocol.FILESTATREQ,
@@ -59,12 +61,20 @@ func (file *MyFile) SendFileStat(component *protocol.MessageComponent, route str
 		Route:       route,
 	}
 
+	downHeader := protocol.Header{
+		Sender:      component.UUID,
+		Accepter:    targetUUID,
+		MessageType: protocol.FILEDOWNRES,
+		RouteLen:    uint32(len([]byte(route))),
+		Route:       route,
+	}
+
 	defer func() {
 		if err != nil && identity == AGENT {
-			fileDownResMess := protocol.FileStatRes{
+			fileDownResMess := protocol.FileDownRes{
 				OK: 0,
 			}
-			protocol.ConstructMessage(sMessage, header, fileDownResMess)
+			protocol.ConstructMessage(sMessage, downHeader, fileDownResMess)
 			sMessage.SendMessage()
 		}
 	}()
@@ -95,7 +105,7 @@ func (file *MyFile) SendFileStat(component *protocol.MessageComponent, route str
 		SliceNum:    uint64(fileSliceNum),
 	}
 
-	protocol.ConstructMessage(sMessage, header, fileStatReqMess)
+	protocol.ConstructMessage(sMessage, statHeader, fileStatReqMess)
 	sMessage.SendMessage()
 
 	return nil
@@ -166,16 +176,16 @@ func (file *MyFile) Upload(component *protocol.MessageComponent, route string, t
 
 	if identity == ADMIN {
 		fmt.Println("\n[*]File transmitting, please wait...")
-		file.NewBar(file.FileSize)
-		file.bar.Start()
+		file.StatusChan <- &Status{Stat: START}
 	}
 
 	buffer := make([]byte, 30720)
 
 	defer func() {
 		if identity == ADMIN {
-			file.bar.Finish()
+			file.StatusChan <- &Status{Stat: DONE}
 		}
+		runtime.GC()
 		file.Handler.Close()
 	}()
 
@@ -198,7 +208,7 @@ func (file *MyFile) Upload(component *protocol.MessageComponent, route string, t
 		sMessage.SendMessage()
 
 		if identity == ADMIN {
-			file.bar.Add64(int64(length))
+			file.StatusChan <- &Status{Stat: ADD, Scale: int64(length)}
 		}
 	}
 
@@ -207,14 +217,14 @@ func (file *MyFile) Upload(component *protocol.MessageComponent, route string, t
 func (file *MyFile) Receive(component *protocol.MessageComponent, route string, targetUUID string, identity int) {
 	if identity == ADMIN {
 		fmt.Println("\n[*]File transmitting, please wait...")
-		file.NewBar(file.FileSize)
-		file.bar.Start()
+		file.StatusChan <- &Status{Stat: START}
 	}
 
 	defer func() {
 		if identity == ADMIN {
-			file.bar.Finish()
+			file.StatusChan <- &Status{Stat: DONE}
 		}
+		runtime.GC()
 		file.Handler.Close()
 	}()
 
@@ -224,7 +234,7 @@ func (file *MyFile) Receive(component *protocol.MessageComponent, route string, 
 			return
 		case data := <-file.DataChan:
 			if identity == ADMIN {
-				file.bar.Add64(int64(len(data)))
+				file.StatusChan <- &Status{Stat: ADD, Scale: int64(len(data))}
 			}
 			file.Handler.Write(data)
 		}

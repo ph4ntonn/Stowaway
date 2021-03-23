@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 15:27:30
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-22 20:05:37
+ * @LastEditTime: 2021-03-23 14:24:46
  */
 
 package process
@@ -16,6 +16,7 @@ import (
 	"Stowaway/utils"
 	"log"
 	"net"
+	"os"
 )
 
 type Agent struct {
@@ -133,6 +134,9 @@ func (agent *Agent) handleDataFromUpstream() {
 				file.FilePath = message.FilePath
 				file.FileName = message.Filename
 				file.SendFileStat(component, protocol.TEMP_ROUTE, protocol.ADMIN_UUID, share.AGENT)
+			case protocol.OFFLINE:
+				// No need to check message
+				os.Exit(0)
 			default:
 				log.Println("[*]Unknown Message!")
 			}

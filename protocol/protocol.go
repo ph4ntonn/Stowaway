@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-08 18:19:04
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-22 19:36:26
+ * @LastEditTime: 2021-03-23 14:22:03
  */
 package protocol
 
@@ -33,6 +33,7 @@ const (
 	FILEERR
 	FILEDOWNREQ
 	FILEDOWNRES
+	OFFLINE
 )
 
 const ADMIN_UUID = "IAMADMINXD"
@@ -191,6 +192,10 @@ type FileDownReq struct {
 }
 
 type FileDownRes struct {
+	OK uint16
+}
+
+type Offline struct {
 	OK uint16
 }
 

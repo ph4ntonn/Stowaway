@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-09 14:02:57
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-22 19:37:15
+ * @LastEditTime: 2021-03-23 14:22:42
  */
 package protocol
 
@@ -282,6 +282,12 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
 
 			dataBuffer.Write(OKBuf)
+		case OFFLINE:
+			mmess := mess.(Offline)
+			OKBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
+
+			dataBuffer.Write(OKBuf)
 		default:
 		}
 	}
@@ -486,6 +492,10 @@ func (message *TCPMessage) DeconstructData() (Header, interface{}, error) {
 		mmess.Filename = string(dataBuf[8+mmess.FilePathLen : 8+mmess.FilePathLen+mmess.FilenameLen])
 		return header, mmess, nil
 	case FILEDOWNRES:
+		mmess := new(FileDownRes)
+		mmess.OK = binary.BigEndian.Uint16(dataBuf[:2])
+		return header, mmess, nil
+	case OFFLINE:
 		mmess := new(FileDownRes)
 		mmess.OK = binary.BigEndian.Uint16(dataBuf[:2])
 		return header, mmess, nil
