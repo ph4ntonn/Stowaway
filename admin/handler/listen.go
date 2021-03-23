@@ -19,7 +19,7 @@ func LetListen(component *protocol.MessageComponent, route string, nodeID string
 		return
 	}
 
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
 
 	header := protocol.Header{
 		Sender:      protocol.ADMIN_UUID,

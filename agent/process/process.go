@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 15:27:30
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-23 14:24:46
+ * @LastEditTime: 2021-03-23 19:28:29
  */
 
 package process
@@ -73,9 +73,10 @@ func (agent *Agent) handleDataFromUpstream() {
 		UUID:   agent.UUID,
 	}
 
+	var socks *handler.Socks
 	shell := handler.NewShell()
 	mySSH := handler.NewSSH()
-	file := share.NewFile()
+	mgr := share.NewManager(share.NewFile())
 
 	for {
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
@@ -110,30 +111,37 @@ func (agent *Agent) handleDataFromUpstream() {
 				mySSH.Input(message.Command)
 			case protocol.FILESTATREQ:
 				message := fMessage.(*protocol.FileStatReq)
-				file.FileName = message.Filename
-				file.SliceNum = message.SliceNum
-				err := file.CheckFileStat(component, protocol.TEMP_ROUTE, protocol.ADMIN_UUID)
+				mgr.File.FileName = message.Filename
+				mgr.File.SliceNum = message.SliceNum
+				err := mgr.File.CheckFileStat(component, protocol.TEMP_ROUTE, protocol.ADMIN_UUID, share.AGENT)
 				if err == nil {
-					go file.Receive(component, protocol.TEMP_ROUTE, protocol.ADMIN_UUID, share.AGENT)
+					go mgr.File.Receive(component, protocol.TEMP_ROUTE, protocol.ADMIN_UUID, share.AGENT)
 				}
 			case protocol.FILESTATRES:
 				message := fMessage.(*protocol.FileStatRes)
 				if message.OK == 1 {
-					go file.Upload(component, protocol.TEMP_ROUTE, protocol.ADMIN_UUID, share.AGENT)
+					go mgr.File.Upload(component, protocol.TEMP_ROUTE, protocol.ADMIN_UUID, share.AGENT)
 				} else {
-					file.Handler.Close()
+					mgr.File.Handler.Close()
 				}
 			case protocol.FILEDATA:
 				message := fMessage.(*protocol.FileData)
-				file.DataChan <- message.Data
+				mgr.File.DataChan <- message.Data
 			case protocol.FILEERR:
 				// No need to check message
-				file.ErrChan <- true
+				mgr.File.ErrChan <- true
 			case protocol.FILEDOWNREQ:
 				message := fMessage.(*protocol.FileDownReq)
-				file.FilePath = message.FilePath
-				file.FileName = message.Filename
-				file.SendFileStat(component, protocol.TEMP_ROUTE, protocol.ADMIN_UUID, share.AGENT)
+				mgr.File.FilePath = message.FilePath
+				mgr.File.FileName = message.Filename
+				mgr.File.SendFileStat(component, protocol.TEMP_ROUTE, protocol.ADMIN_UUID, share.AGENT)
+			case protocol.SOCKSSTART:
+				message := fMessage.(*protocol.SocksStart)
+				socks = handler.NewSocks(message.Username, message.Password)
+				go socks.Start()
+			case protocol.SOCKSDATA:
+				// message := fMessage.(*protocol.SocksData)
+				// handler.
 			case protocol.OFFLINE:
 				// No need to check message
 				os.Exit(0)

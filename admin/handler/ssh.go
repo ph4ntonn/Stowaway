@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-19 12:24:52
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-20 13:36:10
+ * @LastEditTime: 2021-03-23 18:30:49
  */
 package handler
 
@@ -42,7 +42,7 @@ func (ssh *SSH) LetSSH(component *protocol.MessageComponent, route string, nodeI
 		}
 	}
 
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
 
 	header := protocol.Header{
 		Sender:      protocol.ADMIN_UUID,

@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 18:11:41
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-23 16:16:49
+ * @LastEditTime: 2021-03-23 19:03:32
  */
 package cli
 
@@ -39,8 +39,8 @@ type Console struct {
 	OK         chan bool
 	ready      chan bool
 	getCommand chan string
-	// elements that needs to be shared
-	MyFile *share.MyFile
+	// manager that needs to be shared with main thread
+	mgr *share.Manager
 }
 
 func NewConsole() *Console {
@@ -52,13 +52,13 @@ func NewConsole() *Console {
 	return console
 }
 
-func (console *Console) Init(tTopology *topology.Topology, file *share.MyFile, conn net.Conn, uuid string, secret string, cryptoSecret []byte) {
+func (console *Console) Init(tTopology *topology.Topology, myManager *share.Manager, conn net.Conn, uuid string, secret string, cryptoSecret []byte) {
 	console.UUID = uuid
 	console.Conn = conn
 	console.Secret = secret
 	console.CryptoSecret = cryptoSecret
 	console.Topology = tTopology
-	console.MyFile = file
+	console.mgr = myManager
 }
 
 func (console *Console) Run() {
@@ -366,21 +366,34 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 			console.ready <- true
 		case "socks":
 			if console.expectParamsNum(fCommand, 2, NODE, 1) {
-				break
+				if console.expectParamsNum(fCommand, 4, NODE, 1) {
+					break
+				}
 			}
+			socks := handler.NewSocks()
+			socks.Port, _ = utils.Str2Int(fCommand[1])
+			if len(fCommand) > 2 {
+				socks.Username = fCommand[2]
+				socks.Password = fCommand[3]
+			}
+
+			if err := socks.LetSocks(component, console.mgr, route, nodeID, idNum); err != nil {
+				fmt.Printf("\r\n[*]Error: %s", err.Error())
+			}
+			console.ready <- true
 		case "upload":
 			if console.expectParamsNum(fCommand, 3, NODE, 0) {
 				break
 			}
 
-			console.MyFile.FilePath = fCommand[1]
-			console.MyFile.FileName = fCommand[2]
+			console.mgr.File.FilePath = fCommand[1]
+			console.mgr.File.FileName = fCommand[2]
 
-			err := console.MyFile.SendFileStat(component, route, nodeID, share.ADMIN)
+			err := console.mgr.File.SendFileStat(component, route, nodeID, share.ADMIN)
 
 			if err == nil && <-console.OK {
-				go handler.StartBar(console.MyFile.StatusChan, console.MyFile.FileSize)
-				console.MyFile.Upload(component, route, nodeID, share.ADMIN)
+				go handler.StartBar(console.mgr.File.StatusChan, console.mgr.File.FileSize)
+				console.mgr.File.Upload(component, route, nodeID, share.ADMIN)
 			} else if err != nil {
 				fmt.Printf("\r\n[*]Error: %s", err.Error())
 			}
@@ -391,16 +404,16 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 				break
 			}
 
-			console.MyFile.FilePath = fCommand[1]
-			console.MyFile.FileName = fCommand[2]
+			console.mgr.File.FilePath = fCommand[1]
+			console.mgr.File.FileName = fCommand[2]
 
-			console.MyFile.Ask4Download(component, route, nodeID)
+			console.mgr.File.Ask4Download(component, route, nodeID)
 
 			if <-console.OK {
-				err := console.MyFile.CheckFileStat(component, route, nodeID)
+				err := console.mgr.File.CheckFileStat(component, route, nodeID, share.ADMIN)
 				if err == nil {
-					go handler.StartBar(console.MyFile.StatusChan, console.MyFile.FileSize)
-					console.MyFile.Receive(component, route, nodeID, share.ADMIN)
+					go handler.StartBar(console.mgr.File.StatusChan, console.mgr.File.FileSize)
+					console.mgr.File.Receive(component, route, nodeID, share.ADMIN)
 				}
 			}
 
@@ -436,7 +449,7 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 }
 
 func (console *Console) handleShellPanelCommand(component *protocol.MessageComponent, route string, nodeID string) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
 
 	header := protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
@@ -470,7 +483,7 @@ func (console *Console) handleShellPanelCommand(component *protocol.MessageCompo
 }
 
 func (console *Console) handleSSHPanelCommand(component *protocol.MessageComponent, route string, nodeID string) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
 
 	header := protocol.Header{
 		Sender:      protocol.ADMIN_UUID,

@@ -9,7 +9,7 @@ package handler
 import "Stowaway/protocol"
 
 func LetShellStart(component *protocol.MessageComponent, route string, nodeID string) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
 
 	header := protocol.Header{
 		Sender:      protocol.ADMIN_UUID,

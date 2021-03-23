@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-22 15:30:51
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-23 12:22:39
+ * @LastEditTime: 2021-03-23 18:33:53
  */
 package share
 
@@ -51,7 +51,12 @@ func NewFile() *MyFile {
 
 func (file *MyFile) SendFileStat(component *protocol.MessageComponent, route string, targetUUID string, identity int) error {
 	var err error
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+	var sMessage protocol.Message
+	if identity == ADMIN {
+		sMessage = protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
+	} else {
+		sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+	}
 
 	statHeader := protocol.Header{
 		Sender:      component.UUID,
@@ -111,9 +116,15 @@ func (file *MyFile) SendFileStat(component *protocol.MessageComponent, route str
 	return nil
 }
 
-func (file *MyFile) CheckFileStat(component *protocol.MessageComponent, route string, targetUUID string) error {
+func (file *MyFile) CheckFileStat(component *protocol.MessageComponent, route string, targetUUID string, identity int) error {
 	var err error
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+	var sMessage protocol.Message
+
+	if identity == ADMIN {
+		sMessage = protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
+	} else {
+		sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+	}
 
 	header := protocol.Header{
 		Sender:      component.UUID,
@@ -152,7 +163,12 @@ func (file *MyFile) CheckFileStat(component *protocol.MessageComponent, route st
 }
 
 func (file *MyFile) Upload(component *protocol.MessageComponent, route string, targetUUID string, identity int) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+	var sMessage protocol.Message
+	if identity == ADMIN {
+		sMessage = protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
+	} else {
+		sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+	}
 
 	dataHeader := protocol.Header{
 		Sender:      component.UUID,
@@ -242,7 +258,7 @@ func (file *MyFile) Receive(component *protocol.MessageComponent, route string, 
 }
 
 func (file *MyFile) Ask4Download(component *protocol.MessageComponent, route string, targetUUID string) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
 
 	header := protocol.Header{
 		Sender:      component.UUID,

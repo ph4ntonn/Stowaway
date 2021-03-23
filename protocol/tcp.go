@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-09 14:02:57
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-23 14:22:42
+ * @LastEditTime: 2021-03-23 19:20:32
  */
 package protocol
 
@@ -282,6 +282,35 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
 
 			dataBuffer.Write(OKBuf)
+		case SOCKSSTART:
+			mmess := mess.(SocksStart)
+			usernameLenBuf := make([]byte, 8)
+			binary.BigEndian.PutUint64(usernameLenBuf, mmess.UsernameLen)
+
+			usernameBuf := []byte(mmess.Username)
+
+			passwordLenBuf := make([]byte, 8)
+			binary.BigEndian.PutUint64(passwordLenBuf, mmess.PasswordLen)
+
+			passwordBuf := []byte(mmess.Password)
+
+			dataBuffer.Write(usernameLenBuf)
+			dataBuffer.Write(usernameBuf)
+			dataBuffer.Write(passwordLenBuf)
+			dataBuffer.Write(passwordBuf)
+		case SOCKSDATA:
+			mmess := mess.(SocksData)
+			idBuf := make([]byte, 8)
+			binary.BigEndian.PutUint64(idBuf, mmess.ID)
+
+			dataLenBuf := make([]byte, 8)
+			binary.BigEndian.PutUint64(dataLenBuf, mmess.DataLen)
+
+			dataBuf := mmess.Data
+
+			dataBuffer.Write(idBuf)
+			dataBuffer.Write(dataLenBuf)
+			dataBuffer.Write(dataBuf)
 		case OFFLINE:
 			mmess := mess.(Offline)
 			OKBuf := make([]byte, 2)
@@ -494,6 +523,19 @@ func (message *TCPMessage) DeconstructData() (Header, interface{}, error) {
 	case FILEDOWNRES:
 		mmess := new(FileDownRes)
 		mmess.OK = binary.BigEndian.Uint16(dataBuf[:2])
+		return header, mmess, nil
+	case SOCKSSTART:
+		mmess := new(SocksStart)
+		mmess.UsernameLen = binary.BigEndian.Uint64(dataBuf[:8])
+		mmess.Username = string(dataBuf[8 : 8+mmess.UsernameLen])
+		mmess.PasswordLen = binary.BigEndian.Uint64(dataBuf[8+mmess.UsernameLen : 16+mmess.UsernameLen])
+		mmess.Password = string(dataBuf[16+mmess.UsernameLen : 16+mmess.UsernameLen+mmess.PasswordLen])
+		return header, mmess, nil
+	case SOCKSDATA:
+		mmess := new(SocksData)
+		mmess.ID = binary.BigEndian.Uint64(dataBuf[:8])
+		mmess.DataLen = binary.BigEndian.Uint64(dataBuf[8:16])
+		mmess.Data = dataBuf[16 : 16+mmess.DataLen]
 		return header, mmess, nil
 	case OFFLINE:
 		mmess := new(FileDownRes)

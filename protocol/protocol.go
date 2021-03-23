@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-08 18:19:04
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-23 16:27:27
+ * @LastEditTime: 2021-03-23 19:17:13
  */
 package protocol
 
@@ -33,6 +33,8 @@ const (
 	FILEERR
 	FILEDOWNREQ
 	FILEDOWNRES
+	SOCKSSTART
+	SOCKSDATA
 	OFFLINE
 )
 
@@ -195,6 +197,19 @@ type FileDownRes struct {
 	OK uint16
 }
 
+type SocksStart struct {
+	UsernameLen uint64
+	Username    string
+	PasswordLen uint64
+	Password    string
+}
+
+type SocksData struct {
+	ID      uint64
+	DataLen uint64
+	Data    []byte
+}
+
 type Offline struct {
 	OK uint16
 }
@@ -225,12 +240,32 @@ func PrepareAndDecideWhichSProtoToUpper(conn net.Conn, secret string, uuid strin
 	return tMessage
 }
 
+func PrepareAndDecideWhichSProtoToLower(conn net.Conn, secret string, uuid string) Message {
+	// Now only apply tcp raw
+	// TODO: HTTP
+	tMessage := new(TCPMessage)
+	tMessage.Conn = conn
+	tMessage.UUID = uuid
+	tMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
+	return tMessage
+}
+
 /**
  * @description: Decide which transmission protocol you want to use for receving message,Never cross use the same "Message" !!!
  * @param {net.Conn} conn
  * @return {*}
  */
 func PrepareAndDecideWhichRProtoFromUpper(conn net.Conn, secret string, uuid string) Message {
+	// Now only apply tcp raw
+	// TODO: HTTP
+	tMessage := new(TCPMessage)
+	tMessage.Conn = conn
+	tMessage.UUID = uuid
+	tMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
+	return tMessage
+}
+
+func PrepareAndDecideWhichRProtoFromLower(conn net.Conn, secret string, uuid string) Message {
 	// Now only apply tcp raw
 	// TODO: HTTP
 	tMessage := new(TCPMessage)

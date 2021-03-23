@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-08 18:03:48
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-20 16:22:35
+ * @LastEditTime: 2021-03-23 18:30:57
  */
 package initial
 
@@ -32,7 +32,7 @@ func dispatchUUID(conn net.Conn, secret string) string {
 		Route:       protocol.TEMP_ROUTE,
 	}
 
-	sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(conn, secret, protocol.ADMIN_UUID)
+	sMessage = protocol.PrepareAndDecideWhichSProtoToLower(conn, secret, protocol.ADMIN_UUID)
 
 	protocol.ConstructMessage(sMessage, header, uuidMess)
 	sMessage.SendMessage()
@@ -88,7 +88,7 @@ func NormalActive(userOptions *Options, topo *topology.Topology) net.Conn {
 			log.Fatalf("[*]Error occured: %s", err.Error())
 		}
 
-		sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(conn, userOptions.Secret, protocol.ADMIN_UUID)
+		sMessage = protocol.PrepareAndDecideWhichSProtoToLower(conn, userOptions.Secret, protocol.ADMIN_UUID)
 
 		protocol.ConstructMessage(sMessage, header, hiMess)
 		sMessage.SendMessage()
@@ -181,7 +181,7 @@ func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 		if fHeader.MessageType == protocol.HI {
 			mmess := fMessage.(*protocol.HIMess)
 			if mmess.Greeting == "Shhh..." {
-				sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(conn, userOptions.Secret, protocol.ADMIN_UUID)
+				sMessage = protocol.PrepareAndDecideWhichSProtoToLower(conn, userOptions.Secret, protocol.ADMIN_UUID)
 				protocol.ConstructMessage(sMessage, header, hiMess)
 				sMessage.SendMessage()
 				node := topology.NewNode(dispatchUUID(conn, userOptions.Secret), conn.RemoteAddr().String())

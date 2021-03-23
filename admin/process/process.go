@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-16 16:10:23
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-22 20:04:19
+ * @LastEditTime: 2021-03-23 19:03:43
  */
 package process
 
@@ -25,6 +25,8 @@ type Admin struct {
 	CryptoSecret []byte
 	Topology     *topology.Topology
 	UserOptions  *initial.Options
+	// manager that needs to be shared with console
+	mgr *share.Manager
 }
 
 func NewAdmin(options *initial.Options) *Admin {
@@ -36,22 +38,20 @@ func NewAdmin(options *initial.Options) *Admin {
 }
 
 func (admin *Admin) Run() {
-	task := &topology.TopoTask{
-		Mode: topology.CALCULATE,
-	}
-	admin.Topology.TaskChan <- task
-	routeResult := <-admin.Topology.ResultChan
-
 	file := share.NewFile()
-	console := cli.NewConsole()
-	console.Init(admin.Topology, file, admin.Conn, admin.UUID, admin.UserOptions.Secret, admin.CryptoSecret)
 
-	go admin.handleDataFromDownstream(console, routeResult.RouteInfo)
+	admin.mgr = share.NewManager(file)
+	go admin.mgr.Run()
+
+	console := cli.NewConsole()
+	console.Init(admin.Topology, admin.mgr, admin.Conn, admin.UUID, admin.UserOptions.Secret, admin.CryptoSecret)
+
+	go admin.handleDataFromDownstream(console)
 
 	console.Run() // start interactive panel
 }
 
-func (admin *Admin) handleDataFromDownstream(console *cli.Console, routeMap map[int]string) {
+func (admin *Admin) handleDataFromDownstream(console *cli.Console) {
 	rMessage := protocol.PrepareAndDecideWhichRProtoFromUpper(admin.Conn, admin.UserOptions.Secret, protocol.ADMIN_UUID)
 	for {
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
@@ -103,8 +103,8 @@ func (admin *Admin) handleDataFromDownstream(console *cli.Console, routeMap map[
 			fmt.Printf("\r\n%s", console.Status)
 		case protocol.FILESTATREQ:
 			message := fMessage.(*protocol.FileStatReq)
-			console.MyFile.FileSize = int64(message.FileSize)
-			console.MyFile.SliceNum = message.SliceNum
+			admin.mgr.File.FileSize = int64(message.FileSize)
+			admin.mgr.File.SliceNum = message.SliceNum
 			console.OK <- true
 		case protocol.FILEDOWNRES:
 			// no need to check mess
@@ -116,15 +116,15 @@ func (admin *Admin) handleDataFromDownstream(console *cli.Console, routeMap map[
 				console.OK <- true
 			} else {
 				fmt.Print("\r\n[*]Fail to upload file!")
-				console.MyFile.Handler.Close()
+				admin.mgr.File.Handler.Close()
 				console.OK <- false
 			}
 		case protocol.FILEDATA:
 			message := fMessage.(*protocol.FileData)
-			console.MyFile.DataChan <- message.Data
+			admin.mgr.File.DataChan <- message.Data
 		case protocol.FILEERR:
 			// no need to check mess
-			console.MyFile.ErrChan <- true
+			admin.mgr.File.ErrChan <- true
 		default:
 			log.Print("\n[*]Unknown Message!")
 		}
