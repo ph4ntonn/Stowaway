@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-08 18:19:04
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-23 19:17:13
+ * @LastEditTime: 2021-03-26 16:41:00
  */
 package protocol
 
@@ -34,7 +34,9 @@ const (
 	FILEDOWNREQ
 	FILEDOWNRES
 	SOCKSSTART
-	SOCKSDATA
+	SOCKSTCPDATA
+	SOCKSUDPDATA
+	UDPASSSTART
 	OFFLINE
 )
 
@@ -44,10 +46,10 @@ const TEMP_ROUTE = "THEREISNOROUTE"
 
 type Message interface {
 	ConstructHeader()
-	ConstructData(Header, interface{})
+	ConstructData(*Header, interface{})
 	ConstructSuffix()
 	DeconstructHeader()
-	DeconstructData() (Header, interface{}, error)
+	DeconstructData() (*Header, interface{}, error)
 	DeconstructSuffix()
 	SendMessage()
 }
@@ -59,7 +61,7 @@ type Message interface {
  * @param {interface{}} mess
  * @return {*}
  */
-func ConstructMessage(message Message, header Header, mess interface{}) {
+func ConstructMessage(message Message, header *Header, mess interface{}) {
 	message.ConstructData(header, mess)
 	message.ConstructHeader()
 	message.ConstructSuffix()
@@ -70,7 +72,7 @@ func ConstructMessage(message Message, header Header, mess interface{}) {
  * @param {Message} message
  * @return {*}
  */
-func DestructMessage(message Message) (Header, interface{}, error) {
+func DestructMessage(message Message) (*Header, interface{}, error) {
 	message.DeconstructHeader()
 	header, mess, err := message.DeconstructData()
 	message.DeconstructSuffix()
@@ -204,10 +206,22 @@ type SocksStart struct {
 	Password    string
 }
 
-type SocksData struct {
-	ID      uint64
+type SocksTCPData struct {
+	Seq     uint64
 	DataLen uint64
 	Data    []byte
+}
+
+type SocksUDPData struct {
+	Seq     uint64
+	DataLen uint64
+	Data    []byte
+}
+
+type UDPAssStart struct {
+	Seq           uint64
+	SourceAddrLen uint16
+	SourceAddr    string
 }
 
 type Offline struct {

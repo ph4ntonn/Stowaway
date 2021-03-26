@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-18 18:56:20
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-22 16:12:34
+ * @LastEditTime: 2021-03-26 16:52:47
  */
 
 package handler
@@ -43,7 +43,7 @@ func (mySSH *SSH) Start(component *protocol.MessageComponent) {
 
 	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
 
-	sshResheader := protocol.Header{
+	sshResheader := &protocol.Header{
 		Sender:      component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.SSHRES,
@@ -51,7 +51,7 @@ func (mySSH *SSH) Start(component *protocol.MessageComponent) {
 		Route:       protocol.TEMP_ROUTE,
 	}
 
-	sshResultheader := protocol.Header{
+	sshResultheader := &protocol.Header{
 		Sender:      component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.SSHRESULT,
@@ -59,11 +59,11 @@ func (mySSH *SSH) Start(component *protocol.MessageComponent) {
 		Route:       protocol.TEMP_ROUTE,
 	}
 
-	sshResSuccMess := protocol.SSHRes{
+	sshResSuccMess := &protocol.SSHRes{
 		OK: 1,
 	}
 
-	sshResFailMess := protocol.SSHRes{
+	sshResFailMess := &protocol.SSHRes{
 		OK: 0,
 	}
 
@@ -128,7 +128,7 @@ func (mySSH *SSH) Start(component *protocol.MessageComponent) {
 			break
 		}
 
-		sshResultMess := protocol.SSHResult{
+		sshResultMess := &protocol.SSHResult{
 			ResultLen: uint64(length),
 			Result:    string(buffer[:length]),
 		}

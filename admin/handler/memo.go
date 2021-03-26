@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-18 16:59:46
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-23 18:30:34
+ * @LastEditTime: 2021-03-26 16:48:21
  */
 package handler
 
@@ -28,7 +28,7 @@ func AddMemo(component *protocol.MessageComponent, taskChan chan *topology.TopoT
 	}
 	taskChan <- topoTask
 
-	header := protocol.Header{
+	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
 		Accepter:    nodeID,
 		MessageType: protocol.MYMEMO,
@@ -36,7 +36,7 @@ func AddMemo(component *protocol.MessageComponent, taskChan chan *topology.TopoT
 		Route:       route,
 	}
 
-	myMemoMess := protocol.MyMemo{
+	myMemoMess := &protocol.MyMemo{
 		MemoLen: uint64(len(memo)),
 		Memo:    memo,
 	}
@@ -57,7 +57,7 @@ func DelMemo(component *protocol.MessageComponent, taskChan chan *topology.TopoT
 
 	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
 
-	header := protocol.Header{
+	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
 		Accepter:    nodeID,
 		MessageType: protocol.MYMEMO,
@@ -65,7 +65,7 @@ func DelMemo(component *protocol.MessageComponent, taskChan chan *topology.TopoT
 		Route:       route,
 	}
 
-	myMemoMess := protocol.MyMemo{
+	myMemoMess := &protocol.MyMemo{
 		MemoLen: uint64(len("")),
 		Memo:    "",
 	}

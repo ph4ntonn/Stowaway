@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-09 14:02:57
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-23 19:20:32
+ * @LastEditTime: 2021-03-26 16:45:52
  */
 package protocol
 
@@ -39,7 +39,7 @@ func (message *TCPMessage) ConstructHeader() {}
  * @param {*}
  * @return {*}
  */
-func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
+func (message *TCPMessage) ConstructData(header *Header, mess interface{}) {
 	var headerBuffer, dataBuffer bytes.Buffer
 	// First, construct own header
 	messageTypeBuf := make([]byte, 2)
@@ -61,7 +61,7 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 	} else {
 		switch header.MessageType {
 		case HI:
-			mmess := mess.(HIMess)
+			mmess := mess.(*HIMess)
 			greetingLenBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(greetingLenBuf, mmess.GreetingLen)
 
@@ -75,7 +75,7 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 			dataBuffer.Write(greetingBuf)
 			dataBuffer.Write(isAdminBuf)
 		case UUID:
-			mmess := mess.(UUIDMess)
+			mmess := mess.(*UUIDMess)
 			uuidLenBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(uuidLenBuf, mmess.UUIDLen)
 
@@ -84,13 +84,13 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 			dataBuffer.Write(uuidLenBuf)
 			dataBuffer.Write(uuidBuf)
 		case UUIDRET:
-			mmess := mess.(UUIDRetMess)
+			mmess := mess.(*UUIDRetMess)
 			OKBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
 
 			dataBuffer.Write(OKBuf)
 		case MYINFO:
-			mmess := mess.(MyInfo)
+			mmess := mess.(*MyInfo)
 			usernameLenBuf := make([]byte, 8)
 			binary.BigEndian.PutUint64(usernameLenBuf, mmess.UsernameLen)
 
@@ -106,7 +106,7 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 			dataBuffer.Write(hostnameLenBuf)
 			dataBuffer.Write(hostnameBuf)
 		case MYMEMO:
-			mmess := mess.(MyMemo)
+			mmess := mess.(*MyMemo)
 			memoLenBuf := make([]byte, 8)
 			binary.BigEndian.PutUint64(memoLenBuf, mmess.MemoLen)
 
@@ -115,19 +115,19 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 			dataBuffer.Write(memoLenBuf)
 			dataBuffer.Write(memoBuf)
 		case SHELLREQ:
-			mmess := mess.(ShellReq)
+			mmess := mess.(*ShellReq)
 			startBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(startBuf, mmess.Start)
 
 			dataBuffer.Write(startBuf)
 		case SHELLRES:
-			mmess := mess.(ShellRes)
+			mmess := mess.(*ShellRes)
 			OKBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
 
 			dataBuffer.Write(OKBuf)
 		case SHELLCOMMAND:
-			mmess := mess.(ShellCommand)
+			mmess := mess.(*ShellCommand)
 			commandLenBuf := make([]byte, 8)
 			binary.BigEndian.PutUint64(commandLenBuf, mmess.CommandLen)
 
@@ -136,7 +136,7 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 			dataBuffer.Write(commandLenBuf)
 			dataBuffer.Write(commandBuf)
 		case SHELLRESULT:
-			mmess := mess.(ShellResult)
+			mmess := mess.(*ShellResult)
 
 			resultLenBuf := make([]byte, 8)
 			binary.BigEndian.PutUint64(resultLenBuf, mmess.ResultLen)
@@ -146,7 +146,7 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 			dataBuffer.Write(resultLenBuf)
 			dataBuffer.Write(resultBuf)
 		case LISTENREQ:
-			mmess := mess.(ListenReq)
+			mmess := mess.(*ListenReq)
 			addrLenBuf := make([]byte, 8)
 			binary.BigEndian.PutUint64(addrLenBuf, mmess.AddrLen)
 
@@ -155,13 +155,13 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 			dataBuffer.Write(addrLenBuf)
 			dataBuffer.Write(addrBuf)
 		case LISTENRES:
-			mmess := mess.(ListenRes)
+			mmess := mess.(*ListenRes)
 			OKBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
 
 			dataBuffer.Write(OKBuf)
 		case SSHREQ:
-			mmess := mess.(SSHReq)
+			mmess := mess.(*SSHReq)
 			methodBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(methodBuf, mmess.Method)
 
@@ -195,13 +195,13 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 			dataBuffer.Write(certificateLenBuf)
 			dataBuffer.Write(certificateBuf)
 		case SSHRES:
-			mmess := mess.(SSHRes)
+			mmess := mess.(*SSHRes)
 			OKBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
 
 			dataBuffer.Write(OKBuf)
 		case SSHCOMMAND:
-			mmess := mess.(SSHCommand)
+			mmess := mess.(*SSHCommand)
 
 			commandLenBuf := make([]byte, 8)
 			binary.BigEndian.PutUint64(commandLenBuf, mmess.CommandLen)
@@ -211,7 +211,7 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 			dataBuffer.Write(commandLenBuf)
 			dataBuffer.Write(commandBuf)
 		case SSHRESULT:
-			mmess := mess.(SSHResult)
+			mmess := mess.(*SSHResult)
 
 			resultLenBuf := make([]byte, 8)
 			binary.BigEndian.PutUint64(resultLenBuf, mmess.ResultLen)
@@ -221,7 +221,7 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 			dataBuffer.Write(resultLenBuf)
 			dataBuffer.Write(resultBuf)
 		case FILESTATREQ:
-			mmess := mess.(FileStatReq)
+			mmess := mess.(*FileStatReq)
 
 			filenameLenBuf := make([]byte, 4)
 			binary.BigEndian.PutUint32(filenameLenBuf, mmess.FilenameLen)
@@ -239,13 +239,13 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 			dataBuffer.Write(fileSizeBuf)
 			dataBuffer.Write(sliceNumBuf)
 		case FILESTATRES:
-			mmess := mess.(FileStatRes)
+			mmess := mess.(*FileStatRes)
 			OKBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
 
 			dataBuffer.Write(OKBuf)
 		case FILEDATA:
-			mmess := mess.(FileData)
+			mmess := mess.(*FileData)
 			dataLenBuf := make([]byte, 8)
 			binary.BigEndian.PutUint64(dataLenBuf, mmess.DataLen)
 
@@ -254,13 +254,13 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 			dataBuffer.Write(dataLenBuf)
 			dataBuffer.Write(dataBuf)
 		case FILEERR:
-			mmess := mess.(FileErr)
+			mmess := mess.(*FileErr)
 			errorBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(errorBuf, mmess.Error)
 
 			dataBuffer.Write(errorBuf)
 		case FILEDOWNREQ:
-			mmess := mess.(FileDownReq)
+			mmess := mess.(*FileDownReq)
 
 			filePathLenBuf := make([]byte, 4)
 			binary.BigEndian.PutUint32(filePathLenBuf, mmess.FilePathLen)
@@ -277,13 +277,13 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 			dataBuffer.Write(filenameLenBuf)
 			dataBuffer.Write(filenameBuf)
 		case FILEDOWNRES:
-			mmess := mess.(FileDownRes)
+			mmess := mess.(*FileDownRes)
 			OKBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
 
 			dataBuffer.Write(OKBuf)
 		case SOCKSSTART:
-			mmess := mess.(SocksStart)
+			mmess := mess.(*SocksStart)
 			usernameLenBuf := make([]byte, 8)
 			binary.BigEndian.PutUint64(usernameLenBuf, mmess.UsernameLen)
 
@@ -298,21 +298,47 @@ func (message *TCPMessage) ConstructData(header Header, mess interface{}) {
 			dataBuffer.Write(usernameBuf)
 			dataBuffer.Write(passwordLenBuf)
 			dataBuffer.Write(passwordBuf)
-		case SOCKSDATA:
-			mmess := mess.(SocksData)
-			idBuf := make([]byte, 8)
-			binary.BigEndian.PutUint64(idBuf, mmess.ID)
+		case SOCKSTCPDATA:
+			mmess := mess.(*SocksTCPData)
+			seqBuf := make([]byte, 8)
+			binary.BigEndian.PutUint64(seqBuf, mmess.Seq)
 
 			dataLenBuf := make([]byte, 8)
 			binary.BigEndian.PutUint64(dataLenBuf, mmess.DataLen)
 
 			dataBuf := mmess.Data
 
-			dataBuffer.Write(idBuf)
+			dataBuffer.Write(seqBuf)
 			dataBuffer.Write(dataLenBuf)
 			dataBuffer.Write(dataBuf)
+		case SOCKSUDPDATA:
+			mmess := mess.(*SocksUDPData)
+			seqBuf := make([]byte, 8)
+			binary.BigEndian.PutUint64(seqBuf, mmess.Seq)
+
+			dataLenBuf := make([]byte, 8)
+			binary.BigEndian.PutUint64(dataLenBuf, mmess.DataLen)
+
+			dataBuf := mmess.Data
+
+			dataBuffer.Write(seqBuf)
+			dataBuffer.Write(dataLenBuf)
+			dataBuffer.Write(dataBuf)
+		case UDPASSSTART:
+			mmess := mess.(*UDPAssStart)
+			seqBuf := make([]byte, 8)
+			binary.BigEndian.PutUint64(seqBuf, mmess.Seq)
+
+			sourceAddrLenBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(sourceAddrLenBuf, mmess.SourceAddrLen)
+
+			sourceAddrBuf := []byte(mmess.SourceAddr)
+
+			dataBuffer.Write(seqBuf)
+			dataBuffer.Write(sourceAddrLenBuf)
+			dataBuffer.Write(sourceAddrBuf)
 		case OFFLINE:
-			mmess := mess.(Offline)
+			mmess := mess.(*Offline)
 			OKBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
 
@@ -349,9 +375,9 @@ func (message *TCPMessage) DeconstructHeader() {}
  * @param {*}
  * @return {*}
  */
-func (message *TCPMessage) DeconstructData() (Header, interface{}, error) {
+func (message *TCPMessage) DeconstructData() (*Header, interface{}, error) {
 	var (
-		header         = Header{}
+		header         = new(Header)
 		senderBuf      = make([]byte, 10)
 		accepterBuf    = make([]byte, 10)
 		messageTypeBuf = make([]byte, 2)
@@ -531,11 +557,23 @@ func (message *TCPMessage) DeconstructData() (Header, interface{}, error) {
 		mmess.PasswordLen = binary.BigEndian.Uint64(dataBuf[8+mmess.UsernameLen : 16+mmess.UsernameLen])
 		mmess.Password = string(dataBuf[16+mmess.UsernameLen : 16+mmess.UsernameLen+mmess.PasswordLen])
 		return header, mmess, nil
-	case SOCKSDATA:
-		mmess := new(SocksData)
-		mmess.ID = binary.BigEndian.Uint64(dataBuf[:8])
+	case SOCKSTCPDATA:
+		mmess := new(SocksTCPData)
+		mmess.Seq = binary.BigEndian.Uint64(dataBuf[:8])
 		mmess.DataLen = binary.BigEndian.Uint64(dataBuf[8:16])
 		mmess.Data = dataBuf[16 : 16+mmess.DataLen]
+		return header, mmess, nil
+	case SOCKSUDPDATA:
+		mmess := new(SocksUDPData)
+		mmess.Seq = binary.BigEndian.Uint64(dataBuf[:8])
+		mmess.DataLen = binary.BigEndian.Uint64(dataBuf[8:16])
+		mmess.Data = dataBuf[16 : 16+mmess.DataLen]
+		return header, mmess, nil
+	case UDPASSSTART:
+		mmess := new(UDPAssStart)
+		mmess.Seq = binary.BigEndian.Uint64(dataBuf[:8])
+		mmess.SourceAddrLen = binary.BigEndian.Uint16(dataBuf[8:10])
+		mmess.SourceAddr = string(dataBuf[10 : 10+mmess.SourceAddrLen])
 		return header, mmess, nil
 	case OFFLINE:
 		mmess := new(FileDownRes)

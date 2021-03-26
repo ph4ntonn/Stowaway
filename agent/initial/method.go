@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 15:28:20
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-18 18:51:02
+ * @LastEditTime: 2021-03-26 16:53:34
  */
 package initial
 
@@ -17,11 +17,11 @@ import (
 func achieveUUID(conn net.Conn, secret string) (uuid string) {
 	var sMessage, rMessage protocol.Message
 
-	uuidRetMess := protocol.UUIDRetMess{
+	uuidRetMess := &protocol.UUIDRetMess{
 		OK: 1,
 	}
 
-	header := protocol.Header{
+	header := &protocol.Header{
 		Sender:      protocol.TEMP_UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.UUIDRET,
@@ -53,13 +53,13 @@ func achieveUUID(conn net.Conn, secret string) (uuid string) {
 func NormalActive(userOptions *Options) (net.Conn, string) {
 	var sMessage, rMessage protocol.Message
 	// just say hi!
-	hiMess := protocol.HIMess{
+	hiMess := &protocol.HIMess{
 		GreetingLen: uint16(len("Shhh...")),
 		Greeting:    "Shhh...",
 		IsAdmin:     0,
 	}
 
-	header := protocol.Header{
+	header := &protocol.Header{
 		Sender:      protocol.TEMP_UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.HI,
@@ -121,13 +121,13 @@ func NormalPassive(userOptions *Options) (net.Conn, string) {
 
 	var sMessage, rMessage protocol.Message
 
-	hiMess := protocol.HIMess{
+	hiMess := &protocol.HIMess{
 		GreetingLen: uint16(len("Keep slient")),
 		Greeting:    "Keep slient",
 		IsAdmin:     0,
 	}
 
-	header := protocol.Header{
+	header := &protocol.Header{
 		Sender:      protocol.TEMP_UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.HI,

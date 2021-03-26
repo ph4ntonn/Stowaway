@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-17 18:38:28
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-23 18:31:16
+ * @LastEditTime: 2021-03-26 16:51:02
  */
 package handler
 
@@ -29,7 +29,7 @@ func (shell *Shell) Start(component *protocol.MessageComponent) {
 
 	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
 
-	shellResheader := protocol.Header{
+	shellResheader := &protocol.Header{
 		Sender:      component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.SHELLRES,
@@ -37,7 +37,7 @@ func (shell *Shell) Start(component *protocol.MessageComponent) {
 		Route:       protocol.TEMP_ROUTE,
 	}
 
-	shellResultHeader := protocol.Header{
+	shellResultHeader := &protocol.Header{
 		Sender:      component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.SHELLRESULT,
@@ -45,11 +45,11 @@ func (shell *Shell) Start(component *protocol.MessageComponent) {
 		Route:       protocol.TEMP_ROUTE,
 	}
 
-	shellResFailMess := protocol.ShellRes{
+	shellResFailMess := &protocol.ShellRes{
 		OK: 0,
 	}
 
-	shellResSuccMess := protocol.ShellRes{
+	shellResSuccMess := &protocol.ShellRes{
 		OK: 1,
 	}
 

@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-22 15:30:51
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-23 18:33:53
+ * @LastEditTime: 2021-03-26 16:55:38
  */
 package share
 
@@ -58,7 +58,7 @@ func (file *MyFile) SendFileStat(component *protocol.MessageComponent, route str
 		sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
 	}
 
-	statHeader := protocol.Header{
+	statHeader := &protocol.Header{
 		Sender:      component.UUID,
 		Accepter:    targetUUID,
 		MessageType: protocol.FILESTATREQ,
@@ -66,7 +66,7 @@ func (file *MyFile) SendFileStat(component *protocol.MessageComponent, route str
 		Route:       route,
 	}
 
-	downHeader := protocol.Header{
+	downHeader := &protocol.Header{
 		Sender:      component.UUID,
 		Accepter:    targetUUID,
 		MessageType: protocol.FILEDOWNRES,
@@ -76,7 +76,7 @@ func (file *MyFile) SendFileStat(component *protocol.MessageComponent, route str
 
 	defer func() {
 		if err != nil && identity == AGENT {
-			fileDownResMess := protocol.FileDownRes{
+			fileDownResMess := &protocol.FileDownRes{
 				OK: 0,
 			}
 			protocol.ConstructMessage(sMessage, downHeader, fileDownResMess)
@@ -103,7 +103,7 @@ func (file *MyFile) SendFileStat(component *protocol.MessageComponent, route str
 		fileSliceNum++
 	}
 
-	fileStatReqMess := protocol.FileStatReq{
+	fileStatReqMess := &protocol.FileStatReq{
 		FilenameLen: uint32(len([]byte(file.FileName))),
 		Filename:    file.FileName,
 		FileSize:    uint64(file.FileSize),
@@ -126,7 +126,7 @@ func (file *MyFile) CheckFileStat(component *protocol.MessageComponent, route st
 		sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
 	}
 
-	header := protocol.Header{
+	header := &protocol.Header{
 		Sender:      component.UUID,
 		Accepter:    targetUUID,
 		MessageType: protocol.FILESTATRES,
@@ -134,11 +134,11 @@ func (file *MyFile) CheckFileStat(component *protocol.MessageComponent, route st
 		Route:       route,
 	}
 
-	fileStatResSuccMess := protocol.FileStatRes{
+	fileStatResSuccMess := &protocol.FileStatRes{
 		OK: 1,
 	}
 
-	fileStatResFailMess := protocol.FileStatRes{
+	fileStatResFailMess := &protocol.FileStatRes{
 		OK: 0,
 	}
 
@@ -170,7 +170,7 @@ func (file *MyFile) Upload(component *protocol.MessageComponent, route string, t
 		sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
 	}
 
-	dataHeader := protocol.Header{
+	dataHeader := &protocol.Header{
 		Sender:      component.UUID,
 		Accepter:    targetUUID,
 		MessageType: protocol.FILEDATA,
@@ -178,7 +178,7 @@ func (file *MyFile) Upload(component *protocol.MessageComponent, route string, t
 		Route:       route,
 	}
 
-	errHeader := protocol.Header{
+	errHeader := &protocol.Header{
 		Sender:      component.UUID,
 		Accepter:    targetUUID,
 		MessageType: protocol.FILEERR,
@@ -186,7 +186,7 @@ func (file *MyFile) Upload(component *protocol.MessageComponent, route string, t
 		Route:       route,
 	}
 
-	fileErrMess := protocol.FileErr{
+	fileErrMess := &protocol.FileErr{
 		Error: 1,
 	}
 
@@ -215,7 +215,7 @@ func (file *MyFile) Upload(component *protocol.MessageComponent, route string, t
 			return
 		}
 
-		fileDataMess := protocol.FileData{
+		fileDataMess := &protocol.FileData{
 			DataLen: uint64(length),
 			Data:    buffer[:length],
 		}
@@ -260,7 +260,7 @@ func (file *MyFile) Receive(component *protocol.MessageComponent, route string, 
 func (file *MyFile) Ask4Download(component *protocol.MessageComponent, route string, targetUUID string) {
 	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
 
-	header := protocol.Header{
+	header := &protocol.Header{
 		Sender:      component.UUID,
 		Accepter:    targetUUID,
 		MessageType: protocol.FILEDOWNREQ,
@@ -268,7 +268,7 @@ func (file *MyFile) Ask4Download(component *protocol.MessageComponent, route str
 		Route:       route,
 	}
 
-	fileDownReqMess := protocol.FileDownReq{
+	fileDownReqMess := &protocol.FileDownReq{
 		FilePathLen: uint32(len([]byte(file.FilePath))),
 		FilePath:    file.FilePath,
 		FilenameLen: uint32(len([]byte(file.FileName))),

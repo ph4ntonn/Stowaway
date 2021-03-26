@@ -22,7 +22,7 @@ package handler
 // 		IsAdmin:     0,
 // 	}
 
-// 	header := protocol.Header{
+// 	header := &protocol.Header{
 // 		Sender:      protocol.TEMP_UUID,
 // 		Accepter:    protocol.ADMIN_UUID,
 // 		MessageType: protocol.HI,

@@ -2,13 +2,14 @@
  * @Author: ph4ntom
  * @Date: 2021-03-16 16:10:23
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-23 19:03:43
+ * @LastEditTime: 2021-03-26 16:39:41
  */
 package process
 
 import (
 	"Stowaway/admin/cli"
 	"Stowaway/admin/initial"
+	"Stowaway/admin/manager"
 	"Stowaway/admin/topology"
 	"Stowaway/crypto"
 	"Stowaway/protocol"
@@ -25,9 +26,13 @@ type Admin struct {
 	CryptoSecret []byte
 	Topology     *topology.Topology
 	UserOptions  *initial.Options
+
+	Buffer chan *BufferData
 	// manager that needs to be shared with console
-	mgr *share.Manager
+	mgr *manager.Manager
 }
+
+type BufferData struct{}
 
 func NewAdmin(options *initial.Options) *Admin {
 	admin := new(Admin)
@@ -40,7 +45,7 @@ func NewAdmin(options *initial.Options) *Admin {
 func (admin *Admin) Run() {
 	file := share.NewFile()
 
-	admin.mgr = share.NewManager(file)
+	admin.mgr = manager.NewManager(file)
 	go admin.mgr.Run()
 
 	console := cli.NewConsole()
@@ -125,6 +130,20 @@ func (admin *Admin) handleDataFromDownstream(console *cli.Console) {
 		case protocol.FILEERR:
 			// no need to check mess
 			admin.mgr.File.ErrChan <- true
+		case protocol.SOCKSTCPDATA:
+			message := fMessage.(*protocol.SocksTCPData)
+			task := &manager.ManagerTask{
+				Category: manager.SOCKS,
+				Seq:      message.Seq,
+				Mode:     manager.S_GETTCPDATACHAN_WITHOUTUUID,
+			}
+			admin.mgr.TaskChan <- task
+			result := <-admin.mgr.SocksResultChan
+			if result.OK {
+				result.TCPDataChan <- message.Data
+			}
+		case protocol.UDPASSSTART:
+
 		default:
 			log.Print("\n[*]Unknown Message!")
 		}

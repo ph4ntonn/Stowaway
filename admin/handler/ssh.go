@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-19 12:24:52
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-23 18:30:49
+ * @LastEditTime: 2021-03-26 16:49:12
  */
 package handler
 
@@ -44,7 +44,7 @@ func (ssh *SSH) LetSSH(component *protocol.MessageComponent, route string, nodeI
 
 	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
 
-	header := protocol.Header{
+	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
 		Accepter:    nodeID,
 		MessageType: protocol.SSHREQ,
@@ -52,7 +52,7 @@ func (ssh *SSH) LetSSH(component *protocol.MessageComponent, route string, nodeI
 		Route:       route,
 	}
 
-	sshReqMess := protocol.SSHReq{
+	sshReqMess := &protocol.SSHReq{
 		Method:         uint16(ssh.Method),
 		AddrLen:        uint64(len(ssh.Addr)),
 		Addr:           ssh.Addr,

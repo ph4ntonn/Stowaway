@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-23 14:20:35
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-23 18:30:41
+ * @LastEditTime: 2021-03-26 16:48:39
  */
 package handler
 
@@ -11,7 +11,7 @@ import "Stowaway/protocol"
 func LetOffline(component *protocol.MessageComponent, route string, nodeID string) {
 	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
 
-	header := protocol.Header{
+	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
 		Accepter:    nodeID,
 		MessageType: protocol.OFFLINE,
@@ -19,7 +19,7 @@ func LetOffline(component *protocol.MessageComponent, route string, nodeID strin
 		Route:       route,
 	}
 
-	offlineMess := protocol.Offline{
+	offlineMess := &protocol.Offline{
 		OK: 1,
 	}
 

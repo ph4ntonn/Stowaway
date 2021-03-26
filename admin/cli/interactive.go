@@ -2,12 +2,13 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 18:11:41
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-23 19:03:32
+ * @LastEditTime: 2021-03-26 16:47:56
  */
 package cli
 
 import (
 	"Stowaway/admin/handler"
+	"Stowaway/admin/manager"
 	"Stowaway/admin/topology"
 	"Stowaway/protocol"
 	"Stowaway/share"
@@ -40,7 +41,7 @@ type Console struct {
 	ready      chan bool
 	getCommand chan string
 	// manager that needs to be shared with main thread
-	mgr *share.Manager
+	mgr *manager.Manager
 }
 
 func NewConsole() *Console {
@@ -52,7 +53,7 @@ func NewConsole() *Console {
 	return console
 }
 
-func (console *Console) Init(tTopology *topology.Topology, myManager *share.Manager, conn net.Conn, uuid string, secret string, cryptoSecret []byte) {
+func (console *Console) Init(tTopology *topology.Topology, myManager *manager.Manager, conn net.Conn, uuid string, secret string, cryptoSecret []byte) {
 	console.UUID = uuid
 	console.Conn = conn
 	console.Secret = secret
@@ -451,7 +452,7 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 func (console *Console) handleShellPanelCommand(component *protocol.MessageComponent, route string, nodeID string) {
 	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
 
-	header := protocol.Header{
+	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
 		Accepter:    nodeID,
 		MessageType: protocol.SHELLCOMMAND,
@@ -472,7 +473,7 @@ func (console *Console) handleShellPanelCommand(component *protocol.MessageCompo
 
 		fCommand := tCommand + "\n"
 
-		shellCommandMess := protocol.ShellCommand{
+		shellCommandMess := &protocol.ShellCommand{
 			CommandLen: uint64(len(fCommand)),
 			Command:    fCommand,
 		}
@@ -485,7 +486,7 @@ func (console *Console) handleShellPanelCommand(component *protocol.MessageCompo
 func (console *Console) handleSSHPanelCommand(component *protocol.MessageComponent, route string, nodeID string) {
 	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
 
-	header := protocol.Header{
+	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
 		Accepter:    nodeID,
 		MessageType: protocol.SSHCOMMAND,
@@ -510,7 +511,7 @@ func (console *Console) handleSSHPanelCommand(component *protocol.MessageCompone
 
 		fCommand := tCommand + "\n"
 
-		sshCommandMess := protocol.SSHCommand{
+		sshCommandMess := &protocol.SSHCommand{
 			CommandLen: uint64(len(fCommand)),
 			Command:    fCommand,
 		}

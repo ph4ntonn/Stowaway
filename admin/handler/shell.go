@@ -11,7 +11,7 @@ import "Stowaway/protocol"
 func LetShellStart(component *protocol.MessageComponent, route string, nodeID string) {
 	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
 
-	header := protocol.Header{
+	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
 		Accepter:    nodeID,
 		MessageType: protocol.SHELLREQ,
@@ -19,7 +19,7 @@ func LetShellStart(component *protocol.MessageComponent, route string, nodeID st
 		Route:       route,
 	}
 
-	shellReqMess := protocol.ShellReq{
+	shellReqMess := &protocol.ShellReq{
 		Start: 1,
 	}
 

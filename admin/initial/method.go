@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-08 18:03:48
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-23 18:30:57
+ * @LastEditTime: 2021-03-26 16:50:20
  */
 package initial
 
@@ -19,12 +19,12 @@ func dispatchUUID(conn net.Conn, secret string) string {
 	var sMessage, rMessage protocol.Message
 
 	uuid := utils.GenerateUUID()
-	uuidMess := protocol.UUIDMess{
+	uuidMess := &protocol.UUIDMess{
 		UUIDLen: uint16(len(uuid)),
 		UUID:    uuid,
 	}
 
-	header := protocol.Header{
+	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
 		Accepter:    protocol.TEMP_UUID,
 		MessageType: protocol.UUID,
@@ -64,13 +64,13 @@ func NormalActive(userOptions *Options, topo *topology.Topology) net.Conn {
 
 	var sMessage, rMessage protocol.Message
 
-	hiMess := protocol.HIMess{
+	hiMess := &protocol.HIMess{
 		GreetingLen: uint16(len("Shhh...")),
 		Greeting:    "Shhh...",
 		IsAdmin:     1,
 	}
 
-	header := protocol.Header{
+	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
 		Accepter:    protocol.TEMP_UUID,
 		MessageType: protocol.HI,
@@ -143,13 +143,13 @@ func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 	var sMessage, rMessage protocol.Message
 
 	// just say hi!
-	hiMess := protocol.HIMess{
+	hiMess := &protocol.HIMess{
 		GreetingLen: uint16(len("Keep slient")),
 		Greeting:    "Keep slient",
 		IsAdmin:     1,
 	}
 
-	header := protocol.Header{
+	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
 		Accepter:    protocol.TEMP_UUID,
 		MessageType: protocol.HI,

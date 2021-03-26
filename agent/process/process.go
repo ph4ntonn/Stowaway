@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 15:27:30
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-23 19:28:29
+ * @LastEditTime: 2021-03-26 16:53:54
  */
 
 package process
@@ -10,6 +10,7 @@ package process
 import (
 	"Stowaway/agent/handler"
 	"Stowaway/agent/initial"
+	"Stowaway/agent/manager"
 	"Stowaway/crypto"
 	"Stowaway/protocol"
 	"Stowaway/share"
@@ -43,7 +44,7 @@ func (agent *Agent) Run() {
 
 func (agent *Agent) sendMyInfo() {
 	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(agent.Conn, agent.UserOptions.Secret, agent.UUID)
-	header := protocol.Header{
+	header := &protocol.Header{
 		Sender:      agent.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.MYINFO,
@@ -53,7 +54,7 @@ func (agent *Agent) sendMyInfo() {
 
 	hostname, username := utils.GetSystemInfo()
 
-	myInfoMess := protocol.MyInfo{
+	myInfoMess := &protocol.MyInfo{
 		UsernameLen: uint64(len(username)),
 		Username:    username,
 		HostnameLen: uint64(len(hostname)),
@@ -76,7 +77,7 @@ func (agent *Agent) handleDataFromUpstream() {
 	var socks *handler.Socks
 	shell := handler.NewShell()
 	mySSH := handler.NewSSH()
-	mgr := share.NewManager(share.NewFile())
+	mgr := manager.NewManager(share.NewFile())
 
 	for {
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
@@ -138,7 +139,7 @@ func (agent *Agent) handleDataFromUpstream() {
 			case protocol.SOCKSSTART:
 				message := fMessage.(*protocol.SocksStart)
 				socks = handler.NewSocks(message.Username, message.Password)
-				go socks.Start()
+				go socks.Start(mgr, component)
 			case protocol.SOCKSDATA:
 				// message := fMessage.(*protocol.SocksData)
 				// handler.
