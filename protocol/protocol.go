@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-08 18:19:04
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-26 16:41:00
+ * @LastEditTime: 2021-03-26 17:14:02
  */
 package protocol
 
@@ -37,6 +37,8 @@ const (
 	SOCKSTCPDATA
 	SOCKSUDPDATA
 	UDPASSSTART
+	SOCKSTCPFIN
+	SOCKSUDPFIN
 	OFFLINE
 )
 
@@ -222,6 +224,14 @@ type UDPAssStart struct {
 	Seq           uint64
 	SourceAddrLen uint16
 	SourceAddr    string
+}
+
+type SocksTCPFin struct {
+	Seq uint64
+}
+
+type SocksUDPFin struct {
+	Seq uint64
 }
 
 type Offline struct {

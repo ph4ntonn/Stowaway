@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-17 18:38:28
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-26 16:51:02
+ * @LastEditTime: 2021-03-26 17:24:25
  */
 package handler
 
@@ -29,7 +29,7 @@ func (shell *Shell) Start(component *protocol.MessageComponent) {
 
 	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
 
-	shellResheader := &protocol.Header{
+	shellResHeader := &protocol.Header{
 		Sender:      component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.SHELLRES,
@@ -55,7 +55,7 @@ func (shell *Shell) Start(component *protocol.MessageComponent) {
 
 	defer func() {
 		if err != nil {
-			protocol.ConstructMessage(sMessage, shellResheader, shellResFailMess)
+			protocol.ConstructMessage(sMessage, shellResHeader, shellResFailMess)
 			sMessage.SendMessage()
 		}
 	}()
@@ -88,7 +88,7 @@ func (shell *Shell) Start(component *protocol.MessageComponent) {
 		return
 	}
 
-	protocol.ConstructMessage(sMessage, shellResheader, shellResSuccMess)
+	protocol.ConstructMessage(sMessage, shellResHeader, shellResSuccMess)
 	sMessage.SendMessage()
 
 	buffer := make([]byte, 4096)

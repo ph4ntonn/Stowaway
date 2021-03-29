@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-23 18:57:46
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-26 16:52:38
+ * @LastEditTime: 2021-03-27 10:18:41
  */
 package handler
 
@@ -12,14 +12,11 @@ import (
 	"Stowaway/utils"
 	"fmt"
 	"net"
-	"strconv"
-	"strings"
 )
 
 type Socks struct {
-	Username    string
-	Password    string
-	TCPDataChan chan *protocol.SocksTCPData
+	Username string
+	Password string
 }
 
 type Setting struct {
@@ -28,35 +25,33 @@ type Setting struct {
 	tcpConnected bool
 	isUDP        bool
 	success      bool
+	tcpConn      net.Conn
 }
 
 func NewSocks(username, password string) *Socks {
 	socks := new(Socks)
 	socks.Username = username
 	socks.Password = password
-	socks.TCPDataChan = make(chan *protocol.SocksTCPData, 10)
 	return socks
 }
 
 func (socks *Socks) Start(mgr *manager.Manager, component *protocol.MessageComponent) {
 	for {
-		socksData := <-socks.TCPDataChan
-
+		socksData := <-mgr.Socks5TCPDataChan
 		// check if seq num has already existed
 		task := &manager.ManagerTask{
-			Mode:          manager.S_CHECKIFSEQEXIST,
+			Mode:          manager.S_GETTCPDATACHAN,
 			Category:      manager.SOCKS,
 			SocksSequence: socksData.Seq,
 		}
 		mgr.TaskChan <- task
 		result := <-mgr.SocksResultChan
 
+		result.DataChan <- socksData.Data
 		// if not exist
 		if !result.SocksSeqExist {
-			result.DataChan <- socksData.Data
 			go socks.handleSocks(mgr, component, result.DataChan, socksData.Seq)
 		}
-
 	}
 }
 
@@ -89,21 +84,19 @@ func (socks *Socks) handleSocks(mgr *manager.Manager, component *protocol.Messag
 			}
 
 		} else if setting.isAuthed == true && setting.tcpConnected == true && !setting.isUDP { //All done!
-			defer SendTCPFin(component, seq)
+			go ProxyC2STCP(setting.tcpConn, dataChan)
 
-			go ProxyC2STCP(info, server, checkNum)
-
-			if err := ProxyS2CTCP(ConnToAdmin, server, checkNum, AgentStatus.AESKey, currentid); err != nil {
+			if err := ProxyS2CTCP(component, setting.tcpConn, seq); err != nil {
 				return
 			}
-		} else if isAuthed == true && isUDP && success {
-			defer SendUDPFin(checkNum)
+		} else if setting.isAuthed == true && setting.isUDP && setting.success {
+			//defer SendUDPFin(checkNum)
 
-			go ProxyC2SUDP(checkNum)
+			//go ProxyC2SUDP(checkNum)
 
-			if err := ProxyS2CUDP(ConnToAdmin, checkNum, AgentStatus.AESKey, currentid); err != nil {
-				return
-			}
+			//if err := ProxyS2CUDP(ConnToAdmin, checkNum, AgentStatus.AESKey, currentid); err != nil {
+			//return
+			//}
 		} else {
 			return
 		}
@@ -236,8 +229,6 @@ func (socks *Socks) auth(component *protocol.MessageComponent, setting *Setting,
 }
 
 func buildConn(mgr *manager.Manager, component *protocol.MessageComponent, setting *Setting, data []byte, seq uint64) {
-	var connected, isUDP, success bool
-
 	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
 
 	header := &protocol.Header{
@@ -259,7 +250,6 @@ func buildConn(mgr *manager.Manager, component *protocol.MessageComponent, setti
 	if length <= 2 {
 		protocol.ConstructMessage(sMessage, header, failMess)
 		sMessage.SendMessage()
-		return connected, isUDP, success
 	}
 
 	if data[0] == 0x05 {
@@ -269,7 +259,7 @@ func buildConn(mgr *manager.Manager, component *protocol.MessageComponent, setti
 		case 0x02:
 			TCPBind(mgr, component, setting, data, seq, length)
 		case 0x03:
-			UDPAssociate(mgr, component, setting, data, seq, length)
+			//UDPAssociate(mgr, component, setting, data, seq, length)
 		default:
 			protocol.ConstructMessage(sMessage, header, failMess)
 			sMessage.SendMessage()
@@ -331,7 +321,7 @@ func TCPConnect(mgr *manager.Manager, component *protocol.MessageComponent, sett
 
 	port := utils.Int2Str(int(data[length-2])<<8 | int(data[length-1]))
 
-	conn, err = net.Dial("tcp", net.JoinHostPort(host, port))
+	setting.tcpConn, err = net.Dial("tcp", net.JoinHostPort(host, port))
 
 	if err != nil {
 		protocol.ConstructMessage(sMessage, header, failMess)
@@ -344,7 +334,7 @@ func TCPConnect(mgr *manager.Manager, component *protocol.MessageComponent, sett
 		Mode:          manager.S_UPDATETCP,
 		Category:      manager.SOCKS,
 		SocksSequence: seq,
-		SocksSocket:   setting.conn,
+		SocksSocket:   setting.tcpConn,
 	}
 	mgr.TaskChan <- task
 	<-mgr.SocksReadyChan
@@ -354,12 +344,68 @@ func TCPConnect(mgr *manager.Manager, component *protocol.MessageComponent, sett
 	setting.tcpConnected = true
 }
 
-// SendTCPFin 发送tcp server offline通知
+// SendTCPFin tell admin the conn is closed
 func SendTCPFin(component *protocol.MessageComponent, seq uint64) {
 	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
 
-	respData, _ := utils.ConstructPayload(utils.AdminId, "", "COMMAND", "FIN", " ", " ", num, AgentStatus.Nodeid, AgentStatus.AESKey, false)
-	AgentStuff.ProxyChan.ProxyChanToUpperNode <- respData
+	finHeader := &protocol.Header{
+		Sender:      component.UUID,
+		Accepter:    protocol.ADMIN_UUID,
+		MessageType: protocol.SOCKSTCPFIN,
+		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))), // No need to set route when agent send mess to admin
+		Route:       protocol.TEMP_ROUTE,
+	}
+
+	finMess := &protocol.SocksTCPFin{
+		Seq: seq,
+	}
+
+	protocol.ConstructMessage(sMessage, finHeader, finMess)
+	sMessage.SendMessage()
+}
+
+// ProxyC2STCP 转发C-->S流量
+func ProxyC2STCP(conn net.Conn, dataChan chan []byte) {
+	for {
+		data, ok := <-dataChan
+		if !ok {
+			return
+		}
+		conn.Write(data)
+	}
+}
+
+// ProxyS2CTCP 转发S-->C流量
+func ProxyS2CTCP(component *protocol.MessageComponent, conn net.Conn, seq uint64) error {
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+
+	header := &protocol.Header{
+		Sender:      component.UUID,
+		Accepter:    protocol.ADMIN_UUID,
+		MessageType: protocol.SOCKSTCPDATA,
+		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))), // No need to set route when agent send mess to admin
+		Route:       protocol.TEMP_ROUTE,
+	}
+
+	defer SendTCPFin(component, seq)
+
+	buffer := make([]byte, 20480)
+	for {
+		length, err := conn.Read(buffer)
+		if err != nil {
+			conn.Close() // close conn immediately
+			return err
+		}
+
+		dataMess := &protocol.SocksTCPData{
+			Seq:     seq,
+			DataLen: uint64(length),
+			Data:    buffer[:length],
+		}
+
+		protocol.ConstructMessage(sMessage, header, dataMess)
+		sMessage.SendMessage()
+	}
 }
 
 // TCPBind TCPBind方式
@@ -463,21 +509,21 @@ func UDPAssociate(mgr *manager.Manager, component *protocol.MessageComponent, se
 	protocol.ConstructMessage(sMessage, assHeader, assMess)
 	sMessage.SendMessage()
 
-	if adminResponse := <-AgentStuff.Socks5UDPAssociate.Info[checkNum].Ready; adminResponse != "" {
-		temp := strings.Split(adminResponse, ":")
-		adminAddr := temp[0]
-		adminPort, _ := strconv.Atoi(temp[1])
+	// if adminResponse := <-AgentStuff.Socks5UDPAssociate.Info[checkNum].Ready; adminResponse != "" {
+	// 	temp := strings.Split(adminResponse, ":")
+	// 	adminAddr := temp[0]
+	// 	adminPort, _ := strconv.Atoi(temp[1])
 
-		localAddr := utils.SocksLocalAddr{adminAddr, adminPort}
-		buf := make([]byte, 10)
-		copy(buf, []byte{0x05, 0x00, 0x00, 0x01})
-		copy(buf[4:], localAddr.ByteArray())
+	// 	localAddr := utils.SocksLocalAddr{adminAddr, adminPort}
+	// 	buf := make([]byte, 10)
+	// 	copy(buf, []byte{0x05, 0x00, 0x00, 0x01})
+	// 	copy(buf[4:], localAddr.ByteArray())
 
-		utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "TSOCKSDATARESP", " ", string(buf), checkNum, currentid, key, false)
-		setting.success = true
-		return
-	}
+	// 	utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "TSOCKSDATARESP", " ", string(buf), checkNum, currentid, key, false)
+	// 	setting.success = true
+	// 	return
+	// }
 
-	utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "TSOCKSDATARESP", " ", string([]byte{0x05, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}), checkNum, currentid, key, false)
-	setting.success = false
+	// utils.ConstructPayloadAndSend(connToUpper, utils.AdminId, "", "DATA", "TSOCKSDATARESP", " ", string([]byte{0x05, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}), checkNum, currentid, key, false)
+	// setting.success = false
 }

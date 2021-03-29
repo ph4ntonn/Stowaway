@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-16 16:10:23
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-26 16:39:41
+ * @LastEditTime: 2021-03-27 10:18:19
  */
 package process
 
@@ -27,18 +27,22 @@ type Admin struct {
 	Topology     *topology.Topology
 	UserOptions  *initial.Options
 
-	Buffer chan *BufferData
+	BufferChan chan *BufferData
 	// manager that needs to be shared with console
 	mgr *manager.Manager
 }
 
-type BufferData struct{}
+type BufferData struct {
+	fHeader  *protocol.Header
+	fMessage interface{}
+}
 
 func NewAdmin(options *initial.Options) *Admin {
 	admin := new(Admin)
 	admin.UUID = protocol.ADMIN_UUID
 	admin.CryptoSecret, _ = crypto.KeyPadding([]byte(options.Secret))
 	admin.UserOptions = options
+	admin.BufferChan = make(chan *BufferData, 10)
 	return admin
 }
 
@@ -51,31 +55,42 @@ func (admin *Admin) Run() {
 	console := cli.NewConsole()
 	console.Init(admin.Topology, admin.mgr, admin.Conn, admin.UUID, admin.UserOptions.Secret, admin.CryptoSecret)
 
+	go admin.handleConnFromDownstream(console)
 	go admin.handleDataFromDownstream(console)
 
 	console.Run() // start interactive panel
 }
 
-func (admin *Admin) handleDataFromDownstream(console *cli.Console) {
+func (admin *Admin) handleConnFromDownstream(console *cli.Console) {
 	rMessage := protocol.PrepareAndDecideWhichRProtoFromUpper(admin.Conn, admin.UserOptions.Secret, protocol.ADMIN_UUID)
 	for {
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 		if err != nil {
-			log.Print("\n[*]Peer node seems offline!")
+			log.Print("\n[*]Peer node seems offline!", err.Error())
 			os.Exit(0)
 		}
-		switch fHeader.MessageType {
+
+		admin.BufferChan <- &BufferData{fHeader: fHeader, fMessage: fMessage}
+	}
+
+}
+
+func (admin *Admin) handleDataFromDownstream(console *cli.Console) {
+	for {
+		data := <-admin.BufferChan
+
+		switch data.fHeader.MessageType {
 		case protocol.MYINFO:
-			message := fMessage.(*protocol.MyInfo)
+			message := data.fMessage.(*protocol.MyInfo)
 			task := &topology.TopoTask{
 				Mode:     topology.UPDATEDETAIL,
-				UUID:     fHeader.Sender,
+				UUID:     data.fHeader.Sender,
 				UserName: message.Username,
 				HostName: message.Hostname,
 			}
 			admin.Topology.TaskChan <- task
 		case protocol.SHELLRES:
-			message := fMessage.(*protocol.ShellRes)
+			message := data.fMessage.(*protocol.ShellRes)
 			if message.OK == 1 {
 				fmt.Print("\r\n[*]Shell is started successfully!\r\n")
 				console.OK <- true
@@ -84,17 +99,17 @@ func (admin *Admin) handleDataFromDownstream(console *cli.Console) {
 				console.OK <- false
 			}
 		case protocol.SHELLRESULT:
-			message := fMessage.(*protocol.ShellResult)
+			message := data.fMessage.(*protocol.ShellResult)
 			fmt.Print(message.Result)
 		case protocol.LISTENRES:
-			message := fMessage.(*protocol.ListenRes)
+			message := data.fMessage.(*protocol.ListenRes)
 			if message.OK == 1 {
 				fmt.Print("\n[*]Listen successfully!")
 			} else {
 				fmt.Print("\n[*]Listen failed!")
 			}
 		case protocol.SSHRES:
-			message := fMessage.(*protocol.SSHRes)
+			message := data.fMessage.(*protocol.SSHRes)
 			if message.OK == 1 {
 				fmt.Print("\r\n[*]Connect to target host via ssh successfully!")
 				console.OK <- true
@@ -103,11 +118,11 @@ func (admin *Admin) handleDataFromDownstream(console *cli.Console) {
 				console.OK <- false
 			}
 		case protocol.SSHRESULT:
-			message := fMessage.(*protocol.SSHResult)
-			fmt.Printf("\033[u\033[K\r%s", message.Result)
+			message := data.fMessage.(*protocol.SSHResult)
+			fmt.Printf("\033[K\r%s", message.Result)
 			fmt.Printf("\r\n%s", console.Status)
 		case protocol.FILESTATREQ:
-			message := fMessage.(*protocol.FileStatReq)
+			message := data.fMessage.(*protocol.FileStatReq)
 			admin.mgr.File.FileSize = int64(message.FileSize)
 			admin.mgr.File.SliceNum = message.SliceNum
 			console.OK <- true
@@ -116,7 +131,7 @@ func (admin *Admin) handleDataFromDownstream(console *cli.Console) {
 			fmt.Print("\r\n[*]Unable to download file!")
 			console.OK <- false
 		case protocol.FILESTATRES:
-			message := fMessage.(*protocol.FileStatRes)
+			message := data.fMessage.(*protocol.FileStatRes)
 			if message.OK == 1 {
 				console.OK <- true
 			} else {
@@ -125,24 +140,16 @@ func (admin *Admin) handleDataFromDownstream(console *cli.Console) {
 				console.OK <- false
 			}
 		case protocol.FILEDATA:
-			message := fMessage.(*protocol.FileData)
+			message := data.fMessage.(*protocol.FileData)
 			admin.mgr.File.DataChan <- message.Data
 		case protocol.FILEERR:
 			// no need to check mess
 			admin.mgr.File.ErrChan <- true
 		case protocol.SOCKSTCPDATA:
-			message := fMessage.(*protocol.SocksTCPData)
-			task := &manager.ManagerTask{
-				Category: manager.SOCKS,
-				Seq:      message.Seq,
-				Mode:     manager.S_GETTCPDATACHAN_WITHOUTUUID,
-			}
-			admin.mgr.TaskChan <- task
-			result := <-admin.mgr.SocksResultChan
-			if result.OK {
-				result.TCPDataChan <- message.Data
-			}
+			message := data.fMessage.(*protocol.SocksTCPData)
+			admin.mgr.Socks5TCPDataChan <- message
 		case protocol.UDPASSSTART:
+		case protocol.SOCKSTCPFIN:
 
 		default:
 			log.Print("\n[*]Unknown Message!")

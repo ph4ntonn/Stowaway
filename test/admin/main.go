@@ -2,11 +2,12 @@
  * @Author: ph4ntom
  * @Date: 2021-03-11 16:10:51
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-26 16:26:23
+ * @LastEditTime: 2021-03-26 17:39:03
  */
 package main
 
 import (
+	"Stowaway/utils"
 	"fmt"
 	"io"
 	"net"
@@ -20,7 +21,10 @@ type socks struct {
 }
 
 func main() {
-
+	var b int
+	fmt.Printf("addr is %p,b is %d\n", &b, b)
+	b, err := utils.Str2Int("1")
+	fmt.Printf("addr is %p,b is %d\n", &b, b)
 	mapa := make(map[int]*socks)
 	_, ok := mapa[1]
 	print("ok is", ok)

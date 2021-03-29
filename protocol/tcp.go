@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-09 14:02:57
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-26 16:45:52
+ * @LastEditTime: 2021-03-27 10:17:22
  */
 package protocol
 
@@ -337,6 +337,18 @@ func (message *TCPMessage) ConstructData(header *Header, mess interface{}) {
 			dataBuffer.Write(seqBuf)
 			dataBuffer.Write(sourceAddrLenBuf)
 			dataBuffer.Write(sourceAddrBuf)
+		case SOCKSTCPFIN:
+			mmess := mess.(*SocksTCPFin)
+			seqBuf := make([]byte, 8)
+			binary.BigEndian.PutUint64(seqBuf, mmess.Seq)
+
+			dataBuffer.Write(seqBuf)
+		case SOCKSUDPFIN:
+			mmess := mess.(*SocksUDPFin)
+			seqBuf := make([]byte, 8)
+			binary.BigEndian.PutUint64(seqBuf, mmess.Seq)
+
+			dataBuffer.Write(seqBuf)
 		case OFFLINE:
 			mmess := mess.(*Offline)
 			OKBuf := make([]byte, 2)
@@ -575,6 +587,14 @@ func (message *TCPMessage) DeconstructData() (*Header, interface{}, error) {
 		mmess.SourceAddrLen = binary.BigEndian.Uint16(dataBuf[8:10])
 		mmess.SourceAddr = string(dataBuf[10 : 10+mmess.SourceAddrLen])
 		return header, mmess, nil
+	case SOCKSTCPFIN:
+		mmess := new(SocksTCPFin)
+		mmess.Seq = binary.BigEndian.Uint64(dataBuf[:8])
+		return header, mmess, nil
+	case SOCKSUDPFIN:
+		mmess := new(SocksUDPFin)
+		mmess.Seq = binary.BigEndian.Uint64(dataBuf[:8])
+		return header, mmess, nil
 	case OFFLINE:
 		mmess := new(FileDownRes)
 		mmess.OK = binary.BigEndian.Uint16(dataBuf[:2])
@@ -598,8 +618,8 @@ func (message *TCPMessage) DeconstructSuffix() {}
  * @return {*}
  */
 func (message *TCPMessage) SendMessage() {
-	message.Conn.Write(message.HeaderBuffer)
-	message.Conn.Write(message.DataBuffer)
+	finalBuffer := append(message.HeaderBuffer, message.DataBuffer...)
+	message.Conn.Write(finalBuffer)
 	// Don't forget to set both Buffer to nil!!!
 	message.HeaderBuffer = nil
 	message.DataBuffer = nil

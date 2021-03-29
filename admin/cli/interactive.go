@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 18:11:41
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-26 16:47:56
+ * @LastEditTime: 2021-03-26 23:16:43
  */
 package cli
 
@@ -88,7 +88,7 @@ func (console *Console) mainPanel() {
 		}
 
 		if (event.Key != keyboard.KeyEnter && event.Rune >= 0x20 && event.Rune <= 0x7F) || event.Key == keyboard.KeySpace {
-			fmt.Print("\033[u\033[K\r")
+			fmt.Print("\033[K\r")
 			fmt.Print(console.Status)
 			if event.Key == keyboard.KeySpace {
 				leftCommand = leftCommand + " "
@@ -98,7 +98,7 @@ func (console *Console) mainPanel() {
 			fmt.Print(leftCommand + rightCommand)
 			fmt.Print(string(bytes.Repeat([]byte("\b"), len(rightCommand))))
 		} else if event.Key == keyboard.KeyBackspace2 || event.Key == keyboard.KeyBackspace {
-			fmt.Print("\033[u\033[K\r")
+			fmt.Print("\033[K\r")
 			fmt.Print(console.Status)
 			if len(leftCommand) >= 1 {
 				leftCommand = leftCommand[:len(leftCommand)-1]
@@ -118,7 +118,7 @@ func (console *Console) mainPanel() {
 			fmt.Print("\r\n")
 			fmt.Print(console.Status)
 		} else if event.Key == keyboard.KeyArrowUp {
-			fmt.Print("\033[u\033[K\r")
+			fmt.Print("\033[K\r")
 			fmt.Print(console.Status)
 			if !isGoingOn {
 				history.Search <- BEGIN
@@ -129,7 +129,7 @@ func (console *Console) mainPanel() {
 			leftCommand = <-history.Result
 			rightCommand = ""
 		} else if event.Key == keyboard.KeyArrowDown {
-			fmt.Print("\033[u\033[K\r")
+			fmt.Print("\033[K\r")
 			fmt.Print(console.Status)
 			if isGoingOn {
 				history.Search <- PREV
@@ -139,7 +139,7 @@ func (console *Console) mainPanel() {
 			}
 			rightCommand = ""
 		} else if event.Key == keyboard.KeyArrowLeft {
-			fmt.Print("\033[u\033[K\r")
+			fmt.Print("\033[K\r")
 			fmt.Print(console.Status)
 			if len(leftCommand) >= 1 {
 				rightCommand = leftCommand[len(leftCommand)-1:] + rightCommand
@@ -148,7 +148,7 @@ func (console *Console) mainPanel() {
 			fmt.Print(leftCommand + rightCommand)
 			fmt.Print(string(bytes.Repeat([]byte("\b"), len(rightCommand))))
 		} else if event.Key == keyboard.KeyArrowRight {
-			fmt.Print("\033[u\033[K\r")
+			fmt.Print("\033[K\r")
 			fmt.Print(console.Status)
 			if len(rightCommand) > 1 {
 				leftCommand = leftCommand + rightCommand[:1]
@@ -372,15 +372,14 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 				}
 			}
 			socks := handler.NewSocks()
-			socks.Port, _ = utils.Str2Int(fCommand[1])
+			socks.Port = fCommand[1]
 			if len(fCommand) > 2 {
 				socks.Username = fCommand[2]
 				socks.Password = fCommand[3]
 			}
 
-			if err := socks.LetSocks(component, console.mgr, route, nodeID, idNum); err != nil {
-				fmt.Printf("\r\n[*]Error: %s", err.Error())
-			}
+			go socks.LetSocks(component, console.mgr, route, nodeID, idNum)
+
 			console.ready <- true
 		case "upload":
 			if console.expectParamsNum(fCommand, 3, NODE, 0) {

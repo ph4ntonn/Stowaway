@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 15:27:30
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-26 16:53:54
+ * @LastEditTime: 2021-03-26 20:06:41
  */
 
 package process
@@ -26,6 +26,13 @@ type Agent struct {
 	Memo         string
 	CryptoSecret []byte
 	UserOptions  *initial.Options
+
+	BufferChan chan *BufferData
+}
+
+type BufferData struct {
+	fHeader  *protocol.Header
+	fMessage interface{}
 }
 
 func NewAgent(options *initial.Options) *Agent {
@@ -33,12 +40,18 @@ func NewAgent(options *initial.Options) *Agent {
 	agent.UUID = protocol.TEMP_UUID
 	agent.CryptoSecret, _ = crypto.KeyPadding([]byte(options.Secret))
 	agent.UserOptions = options
+	agent.BufferChan = make(chan *BufferData, 10)
 	return agent
 }
 
 func (agent *Agent) Run() {
 	agent.sendMyInfo()
-	agent.handleDataFromUpstream()
+
+	mgr := manager.NewManager(share.NewFile())
+	go mgr.Run()
+
+	go agent.handleConnFromUpstream(mgr)
+	agent.handleDataFromUpstream(mgr)
 	//agent.handleDataFromDownstream()
 }
 
@@ -65,8 +78,20 @@ func (agent *Agent) sendMyInfo() {
 	sMessage.SendMessage()
 }
 
-func (agent *Agent) handleDataFromUpstream() {
+func (agent *Agent) handleConnFromUpstream(mgr *manager.Manager) {
 	rMessage := protocol.PrepareAndDecideWhichRProtoFromUpper(agent.Conn, agent.UserOptions.Secret, agent.UUID)
+	for {
+		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
+		if err != nil {
+			log.Println("[*]Peer node seems offline!", err.Error())
+			os.Exit(0)
+		}
+
+		agent.BufferChan <- &BufferData{fHeader: fHeader, fMessage: fMessage}
+	}
+}
+
+func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager) {
 	//sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(agent.Conn, agent.UserOptions.Secret, agent.ID)
 	component := &protocol.MessageComponent{
 		Secret: agent.UserOptions.Secret,
@@ -74,33 +99,28 @@ func (agent *Agent) handleDataFromUpstream() {
 		UUID:   agent.UUID,
 	}
 
-	var socks *handler.Socks
 	shell := handler.NewShell()
 	mySSH := handler.NewSSH()
-	mgr := manager.NewManager(share.NewFile())
 
 	for {
-		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
-		if err != nil {
-			log.Println("[*]Peer node seems offline!")
-			break
-		}
-		if fHeader.Accepter == agent.UUID {
-			switch fHeader.MessageType {
+		data := <-agent.BufferChan
+
+		if data.fHeader.Accepter == agent.UUID {
+			switch data.fHeader.MessageType {
 			case protocol.MYMEMO:
-				message := fMessage.(*protocol.MyMemo)
+				message := data.fMessage.(*protocol.MyMemo)
 				agent.Memo = message.Memo
 			case protocol.SHELLREQ:
 				// No need to check member "start"
 				go shell.Start(component)
 			case protocol.SHELLCOMMAND:
-				message := fMessage.(*protocol.ShellCommand)
+				message := data.fMessage.(*protocol.ShellCommand)
 				shell.Input(message.Command)
 			case protocol.LISTENREQ:
 				//message := fMessage.(*protocol.ListenReq)
 				//go handler.StartListen(message.Addr)
 			case protocol.SSHREQ:
-				message := fMessage.(*protocol.SSHReq)
+				message := data.fMessage.(*protocol.SSHReq)
 				mySSH.Addr = message.Addr
 				mySSH.Method = int(message.Method)
 				mySSH.Username = message.Username
@@ -108,10 +128,10 @@ func (agent *Agent) handleDataFromUpstream() {
 				mySSH.Certificate = message.Certificate
 				go mySSH.Start(component)
 			case protocol.SSHCOMMAND:
-				message := fMessage.(*protocol.SSHCommand)
+				message := data.fMessage.(*protocol.SSHCommand)
 				mySSH.Input(message.Command)
 			case protocol.FILESTATREQ:
-				message := fMessage.(*protocol.FileStatReq)
+				message := data.fMessage.(*protocol.FileStatReq)
 				mgr.File.FileName = message.Filename
 				mgr.File.SliceNum = message.SliceNum
 				err := mgr.File.CheckFileStat(component, protocol.TEMP_ROUTE, protocol.ADMIN_UUID, share.AGENT)
@@ -119,30 +139,32 @@ func (agent *Agent) handleDataFromUpstream() {
 					go mgr.File.Receive(component, protocol.TEMP_ROUTE, protocol.ADMIN_UUID, share.AGENT)
 				}
 			case protocol.FILESTATRES:
-				message := fMessage.(*protocol.FileStatRes)
+				message := data.fMessage.(*protocol.FileStatRes)
 				if message.OK == 1 {
 					go mgr.File.Upload(component, protocol.TEMP_ROUTE, protocol.ADMIN_UUID, share.AGENT)
 				} else {
 					mgr.File.Handler.Close()
 				}
 			case protocol.FILEDATA:
-				message := fMessage.(*protocol.FileData)
+				message := data.fMessage.(*protocol.FileData)
 				mgr.File.DataChan <- message.Data
 			case protocol.FILEERR:
 				// No need to check message
 				mgr.File.ErrChan <- true
 			case protocol.FILEDOWNREQ:
-				message := fMessage.(*protocol.FileDownReq)
+				message := data.fMessage.(*protocol.FileDownReq)
 				mgr.File.FilePath = message.FilePath
 				mgr.File.FileName = message.Filename
 				mgr.File.SendFileStat(component, protocol.TEMP_ROUTE, protocol.ADMIN_UUID, share.AGENT)
 			case protocol.SOCKSSTART:
-				message := fMessage.(*protocol.SocksStart)
-				socks = handler.NewSocks(message.Username, message.Password)
+				message := data.fMessage.(*protocol.SocksStart)
+				socks := handler.NewSocks(message.Username, message.Password)
 				go socks.Start(mgr, component)
-			case protocol.SOCKSDATA:
-				// message := fMessage.(*protocol.SocksData)
-				// handler.
+			case protocol.SOCKSTCPDATA:
+				message := data.fMessage.(*protocol.SocksTCPData)
+				mgr.Socks5TCPDataChan <- message
+			case protocol.SOCKSTCPFIN:
+
 			case protocol.OFFLINE:
 				// No need to check message
 				os.Exit(0)
