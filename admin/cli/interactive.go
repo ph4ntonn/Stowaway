@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 18:11:41
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-30 13:45:58
+ * @LastEditTime: 2021-03-30 14:39:17
  */
 package cli
 
@@ -130,12 +130,12 @@ func (console *Console) mainPanel() {
 			if !console.shellMode {
 				// when hit enter,then concat left&&right command,create task to record it
 				command := leftCommand + rightCommand
-				task := &HistoryTask{
-					Mode:    RECORD,
-					Command: command,
-				}
 				// if command is not "",send it to history
 				if command != "" {
+					task := &HistoryTask{
+						Mode:    RECORD,
+						Command: command,
+					}
 					history.TaskChan <- task
 				}
 				// no matter what command is,send it to console to parse

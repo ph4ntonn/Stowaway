@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-11 14:59:13
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-30 13:04:18
+ * @LastEditTime: 2021-03-30 14:55:10
  */
 package cli
 
@@ -23,6 +23,7 @@ const (
 
 type History struct {
 	storeList *list.List
+	now       *list.Element
 	capacity  int
 
 	TaskChan   chan *HistoryTask
@@ -64,25 +65,23 @@ func (history *History) record(task *HistoryTask) {
 }
 
 func (history *History) search(task *HistoryTask) {
-	var now *list.Element
-
 	switch task.Order {
 	case BEGIN:
 		if history.storeList.Len() > 0 { // avoid list is empty
-			now = history.storeList.Front()
+			history.now = history.storeList.Front()
 		}
 	case PREV:
-		if now != nil && now.Prev() != nil {
-			now = now.Prev()
+		if history.now != nil && history.now.Prev() != nil {
+			history.now = history.now.Prev()
 		}
 	case NEXT:
-		if now != nil && now.Next() != nil {
-			now = now.Next()
+		if history.now != nil && history.now.Next() != nil {
+			history.now = history.now.Next()
 		}
 	}
 
-	if now != nil {
-		command := now.Value.(string)
+	if history.now != nil {
+		command := history.now.Value.(string)
 		history.display(command)
 		history.ResultChan <- command
 	}
