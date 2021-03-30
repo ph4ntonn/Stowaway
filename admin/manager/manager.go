@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-23 19:01:26
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-26 19:08:20
+ * @LastEditTime: 2021-03-29 17:02:20
  */
 package manager
 
@@ -19,18 +19,19 @@ const (
 	S_GETNEWSEQ
 	S_GETTCPDATACHAN
 	S_GETTCPDATACHAN_WITHOUTUUID
+	S_CLOSETCP
 )
 
 type Manager struct {
 	// File
 	File *share.MyFile
 	//Socks
-	socks5Seq         uint64
-	socks5SeqMap      map[uint64]int
-	socks5            map[int]*socks
-	socksTaskChan     chan *ManagerTask
-	Socks5TCPDataChan chan *protocol.SocksTCPData
-	SocksResultChan   chan *ManagerResult
+	socks5Seq        uint64
+	socks5SeqMap     map[uint64]int
+	socks5           map[int]*socks
+	socksTaskChan    chan *ManagerTask
+	SocksTCPDataChan chan *protocol.SocksTCPData
+	SocksResultChan  chan *ManagerResult
 	// share
 	TaskChan chan *ManagerTask
 }
@@ -83,7 +84,7 @@ func NewManager(file *share.MyFile) *Manager {
 	manager.File = file
 	manager.socks5 = make(map[int]*socks)
 	manager.socks5SeqMap = make(map[uint64]int)
-	manager.Socks5TCPDataChan = make(chan *protocol.SocksTCPData, 5)
+	manager.SocksTCPDataChan = make(chan *protocol.SocksTCPData, 5)
 	manager.TaskChan = make(chan *ManagerTask)
 	manager.socksTaskChan = make(chan *ManagerTask)
 	manager.SocksResultChan = make(chan *ManagerResult)
@@ -116,6 +117,8 @@ func (manager *Manager) socksRun() {
 			manager.getTCPDataChan(task)
 		case S_GETTCPDATACHAN_WITHOUTUUID:
 			manager.getTCPDataChanWithoutUUID(task)
+		case S_CLOSETCP:
+			manager.closeTCP(task)
 		}
 	}
 }
@@ -171,5 +174,17 @@ func (manager *Manager) getTCPDataChanWithoutUUID(task *ManagerTask) {
 		}
 	} else {
 		manager.SocksResultChan <- &ManagerResult{OK: false}
+	}
+}
+
+func (manager *Manager) closeTCP(task *ManagerTask) {
+	idNum := manager.socks5SeqMap[task.Seq]
+	if _, ok := manager.socks5[idNum]; ok { // check if node is still online
+		manager.socks5[idNum].SocksStatus[task.Seq].tcp.Conn.Close()
+		close(manager.socks5[idNum].SocksStatus[task.Seq].tcp.DataChan)
+		if manager.socks5[idNum].SocksStatus[task.Seq].IsUDP {
+			close(manager.socks5[idNum].SocksStatus[task.Seq].udp.DataChan)
+		}
+		delete(manager.socks5[idNum].SocksStatus, task.Seq)
 	}
 }

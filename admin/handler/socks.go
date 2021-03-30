@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-19 18:40:13
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-26 18:55:48
+ * @LastEditTime: 2021-03-30 12:26:29
  */
 package handler
 
@@ -31,7 +31,7 @@ func (socks *Socks) LetSocks(component *protocol.MessageComponent, mgr *manager.
 		return
 	}
 
-	//把此监听地址记录
+	// register brand new socks service
 	task := &manager.ManagerTask{
 		Category:      manager.SOCKS,
 		Mode:          manager.S_NEWSOCKS,
@@ -43,7 +43,7 @@ func (socks *Socks) LetSocks(component *protocol.MessageComponent, mgr *manager.
 
 	mgr.TaskChan <- task
 	result := <-mgr.SocksResultChan // wait for "add" done
-	if !result.OK {
+	if !result.OK {                 // node and socks service must be one-to-one
 		socksListener.Close()
 		fmt.Printf("\r\n[*]Error: Socks service has already running on this node!")
 		return
@@ -69,7 +69,8 @@ func (socks *Socks) LetSocks(component *protocol.MessageComponent, mgr *manager.
 	protocol.ConstructMessage(sMessage, header, socksStartMess)
 	sMessage.SendMessage()
 
-	go socks.dispathTCPData(mgr) // run a dispatcher
+	// run a dispatcher to dispatch all socks TCP data
+	go socks.dispathTCPData(mgr)
 
 	for {
 		conn, err := socksListener.Accept()
@@ -79,6 +80,7 @@ func (socks *Socks) LetSocks(component *protocol.MessageComponent, mgr *manager.
 			return
 		}
 
+		// ask new seq num
 		task := &manager.ManagerTask{
 			Category: manager.SOCKS,
 			Mode:     manager.S_GETNEWSEQ,
@@ -88,7 +90,7 @@ func (socks *Socks) LetSocks(component *protocol.MessageComponent, mgr *manager.
 		result := <-mgr.SocksResultChan
 		seq := result.SocksID
 
-		//有请求时记录此socket，并启动HandleNewSocksConn对此socket进行处理
+		// save the socket
 		task = &manager.ManagerTask{
 			Category:       manager.SOCKS,
 			UUIDNum:        idNum,
@@ -99,13 +101,14 @@ func (socks *Socks) LetSocks(component *protocol.MessageComponent, mgr *manager.
 		mgr.TaskChan <- task
 		<-mgr.SocksResultChan
 
+		// handle it!
 		go socks.handleSocks(component, mgr, conn, route, nodeID, idNum, seq)
 	}
 }
 
 func (socks *Socks) dispathTCPData(mgr *manager.Manager) {
 	for {
-		data, ok := <-mgr.Socks5TCPDataChan
+		data, ok := <-mgr.SocksTCPDataChan
 		if ok {
 			task := &manager.ManagerTask{
 				Category: manager.SOCKS,
@@ -145,7 +148,7 @@ func (socks *Socks) handleSocks(component *protocol.MessageComponent, mgr *manag
 
 	tcpDataChan := result.TCPDataChan
 
-	// handle received data
+	// handle data from dispatcher
 	go func() {
 		for {
 			if data, ok := <-tcpDataChan; ok {
@@ -156,9 +159,20 @@ func (socks *Socks) handleSocks(component *protocol.MessageComponent, mgr *manag
 		}
 	}()
 
+	var sendSth bool
+
+	// SendTCPFin after browser close the conn
 	defer func() {
-		// tell agent that the conn is closed
+		// check if "sendSth" is true
+		// if true, then tell agent that the conn is closed
 		// but keep "handle received data" working to achieve socksdata from agent that still on the way
+		// if false, don't tell agent and do cleanup alone
+		if !sendSth {
+			// call HandleTCPFin by myself
+			HandleTCPFin(mgr, seq)
+			return
+		}
+
 		finHeader := &protocol.Header{
 			Sender:      protocol.ADMIN_UUID,
 			Accepter:    nodeID,
@@ -173,12 +187,32 @@ func (socks *Socks) handleSocks(component *protocol.MessageComponent, mgr *manag
 		sMessage.SendMessage()
 	}()
 
-	// handle sended data
+	// handling data that comes from browser
 	buffer := make([]byte, 20480)
+
+	// try to receive first packet
+	// avoid browser to close the conn but sends nothing
+	length, err := conn.Read(buffer)
+	if err != nil {
+		conn.Close() // close conn immediately
+		return
+	}
+
+	socksDataMess := &protocol.SocksTCPData{
+		Seq:     seq,
+		DataLen: uint64(length),
+		Data:    buffer[:length],
+	}
+
+	protocol.ConstructMessage(sMessage, header, socksDataMess)
+	sMessage.SendMessage()
+
+	// browser sends sth, so handling conn normally and setting sendSth->true
 	for {
 		length, err := conn.Read(buffer)
 		if err != nil {
-			conn.Close() // close conn immediately
+			sendSth = true
+			conn.Close() // close conn immediately,in case of sth is sended after TCPFin
 			return
 		}
 
@@ -191,4 +225,13 @@ func (socks *Socks) handleSocks(component *protocol.MessageComponent, mgr *manag
 		protocol.ConstructMessage(sMessage, header, socksDataMess)
 		sMessage.SendMessage()
 	}
+}
+
+func HandleTCPFin(mgr *manager.Manager, seq uint64) {
+	task := &manager.ManagerTask{
+		Mode:     manager.S_CLOSETCP,
+		Category: manager.SOCKS,
+		Seq:      seq,
+	}
+	mgr.TaskChan <- task
 }

@@ -2,12 +2,13 @@
  * @Author: ph4ntom
  * @Date: 2021-03-16 16:10:23
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-27 10:18:19
+ * @LastEditTime: 2021-03-29 19:16:58
  */
 package process
 
 import (
 	"Stowaway/admin/cli"
+	"Stowaway/admin/handler"
 	"Stowaway/admin/initial"
 	"Stowaway/admin/manager"
 	"Stowaway/admin/topology"
@@ -66,7 +67,7 @@ func (admin *Admin) handleConnFromDownstream(console *cli.Console) {
 	for {
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 		if err != nil {
-			log.Print("\n[*]Peer node seems offline!", err.Error())
+			log.Print("\n[*]Peer node seems offline!")
 			os.Exit(0)
 		}
 
@@ -119,7 +120,7 @@ func (admin *Admin) handleDataFromDownstream(console *cli.Console) {
 			}
 		case protocol.SSHRESULT:
 			message := data.fMessage.(*protocol.SSHResult)
-			fmt.Printf("\033[K\r%s", message.Result)
+			fmt.Printf("\r\033[K%s", message.Result)
 			fmt.Printf("\r\n%s", console.Status)
 		case protocol.FILESTATREQ:
 			message := data.fMessage.(*protocol.FileStatReq)
@@ -147,9 +148,11 @@ func (admin *Admin) handleDataFromDownstream(console *cli.Console) {
 			admin.mgr.File.ErrChan <- true
 		case protocol.SOCKSTCPDATA:
 			message := data.fMessage.(*protocol.SocksTCPData)
-			admin.mgr.Socks5TCPDataChan <- message
+			admin.mgr.SocksTCPDataChan <- message
 		case protocol.UDPASSSTART:
 		case protocol.SOCKSTCPFIN:
+			message := data.fMessage.(*protocol.SocksTCPFin)
+			go handler.HandleTCPFin(admin.mgr, message.Seq)
 
 		default:
 			log.Print("\n[*]Unknown Message!")

@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-17 18:38:28
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-26 17:24:25
+ * @LastEditTime: 2021-03-29 18:51:51
  */
 package handler
 
@@ -99,7 +99,7 @@ func (shell *Shell) Start(component *protocol.MessageComponent) {
 			return
 		}
 
-		shellResultMess := protocol.ShellResult{
+		shellResultMess := &protocol.ShellResult{
 			ResultLen: uint64(count),
 			Result:    string(buffer[:count]),
 		}

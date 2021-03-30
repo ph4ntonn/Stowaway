@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 18:11:41
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-26 23:16:43
+ * @LastEditTime: 2021-03-30 13:45:58
  */
 package cli
 
@@ -18,7 +18,6 @@ import (
 	"net"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/eiannone/keyboard"
 )
@@ -40,6 +39,7 @@ type Console struct {
 	OK         chan bool
 	ready      chan bool
 	getCommand chan string
+	shellMode  bool
 	// manager that needs to be shared with main thread
 	mgr *manager.Manager
 }
@@ -76,7 +76,7 @@ func (console *Console) mainPanel() {
 	)
 
 	history := NewHistory()
-	history.Run()
+	go history.Run()
 
 	keysEvents, _ := keyboard.GetKeys(10)
 
@@ -87,79 +87,141 @@ func (console *Console) mainPanel() {
 			panic(event.Err)
 		}
 
+		// under shell mode,we cannot just erase the whole line and reprint,so there are two different way to handle input
+		// under shell mode, all arrow stuff will be abandoned
 		if (event.Key != keyboard.KeyEnter && event.Rune >= 0x20 && event.Rune <= 0x7F) || event.Key == keyboard.KeySpace {
-			fmt.Print("\033[K\r")
-			fmt.Print(console.Status)
-			if event.Key == keyboard.KeySpace {
-				leftCommand = leftCommand + " "
+			if !console.shellMode {
+				fmt.Print("\r\033[K")
+				fmt.Print(console.Status)
+				// save every single input
+				if event.Key == keyboard.KeySpace {
+					leftCommand = leftCommand + " "
+				} else {
+					leftCommand = leftCommand + string(event.Rune)
+				}
+				// print command && keep cursor at right position
+				fmt.Print(leftCommand + rightCommand)
+				fmt.Print(string(bytes.Repeat([]byte("\b"), len(rightCommand))))
 			} else {
-				leftCommand = leftCommand + string(event.Rune)
+				if event.Key == keyboard.KeySpace {
+					leftCommand = leftCommand + " "
+				} else {
+					leftCommand = leftCommand + string(event.Rune)
+				}
+				fmt.Print(string(event.Rune))
 			}
-			fmt.Print(leftCommand + rightCommand)
-			fmt.Print(string(bytes.Repeat([]byte("\b"), len(rightCommand))))
 		} else if event.Key == keyboard.KeyBackspace2 || event.Key == keyboard.KeyBackspace {
-			fmt.Print("\033[K\r")
-			fmt.Print(console.Status)
-			if len(leftCommand) >= 1 {
-				leftCommand = leftCommand[:len(leftCommand)-1]
+			if !console.shellMode {
+				fmt.Print("\r\033[K")
+				fmt.Print(console.Status)
+				// let leftcommand--
+				if len(leftCommand) >= 1 {
+					leftCommand = leftCommand[:len(leftCommand)-1]
+				}
+				fmt.Print(leftCommand + rightCommand)
+				fmt.Print(string(bytes.Repeat([]byte("\b"), len(rightCommand))))
+			} else {
+				if len(leftCommand) >= 1 {
+					leftCommand = leftCommand[:len(leftCommand)-1]
+				}
+				fmt.Print("\b \b")
 			}
-			fmt.Print(leftCommand + rightCommand)
-			fmt.Print(string(bytes.Repeat([]byte("\b"), len(rightCommand))))
 		} else if event.Key == keyboard.KeyEnter {
-			command := leftCommand + rightCommand
-			if command != "" {
-				history.Record <- command
-			}
-			console.getCommand <- command
-			isGoingOn = false
-			leftCommand = ""
-			rightCommand = ""
-			<-console.ready // avoid situation that console.Status is printed before it's changed
-			fmt.Print("\r\n")
-			fmt.Print(console.Status)
-		} else if event.Key == keyboard.KeyArrowUp {
-			fmt.Print("\033[K\r")
-			fmt.Print(console.Status)
-			if !isGoingOn {
-				history.Search <- BEGIN
-				isGoingOn = true
+			if !console.shellMode {
+				// when hit enter,then concat left&&right command,create task to record it
+				command := leftCommand + rightCommand
+				task := &HistoryTask{
+					Mode:    RECORD,
+					Command: command,
+				}
+				// if command is not "",send it to history
+				if command != "" {
+					history.TaskChan <- task
+				}
+				// no matter what command is,send it to console to parse
+				console.getCommand <- command
+				// set searching->false
+				isGoingOn = false
+				// set both left/right command -> "",new start!
+				leftCommand = ""
+				rightCommand = ""
+				// avoid scenario that console.Status is printed before it's changed
+				<-console.ready
+				fmt.Print("\r\n")
+				fmt.Print(console.Status)
 			} else {
-				history.Search <- NEXT
-			}
-			leftCommand = <-history.Result
-			rightCommand = ""
-		} else if event.Key == keyboard.KeyArrowDown {
-			fmt.Print("\033[K\r")
-			fmt.Print(console.Status)
-			if isGoingOn {
-				history.Search <- PREV
-				leftCommand = <-history.Result
-			} else {
+				fmt.Print("\r\n")
+				console.getCommand <- leftCommand
 				leftCommand = ""
 			}
-			rightCommand = ""
-		} else if event.Key == keyboard.KeyArrowLeft {
-			fmt.Print("\033[K\r")
-			fmt.Print(console.Status)
-			if len(leftCommand) >= 1 {
-				rightCommand = leftCommand[len(leftCommand)-1:] + rightCommand
-				leftCommand = leftCommand[:len(leftCommand)-1]
-			}
-			fmt.Print(leftCommand + rightCommand)
-			fmt.Print(string(bytes.Repeat([]byte("\b"), len(rightCommand))))
-		} else if event.Key == keyboard.KeyArrowRight {
-			fmt.Print("\033[K\r")
-			fmt.Print(console.Status)
-			if len(rightCommand) > 1 {
-				leftCommand = leftCommand + rightCommand[:1]
-				rightCommand = rightCommand[1:]
-			} else if len(rightCommand) == 1 {
-				leftCommand = leftCommand + rightCommand[:1]
+		} else if event.Key == keyboard.KeyArrowUp {
+			if !console.shellMode {
+				fmt.Print("\r\033[K")
+				fmt.Print(console.Status)
+				// new task
+				task := &HistoryTask{
+					Mode:  SEARCH,
+					Order: BEGIN,
+				}
+				// check if search has already begun
+				if !isGoingOn {
+					history.TaskChan <- task
+					isGoingOn = true
+				} else {
+					task.Order = NEXT
+					history.TaskChan <- task
+				}
+				// get the history command && set rightcommand -> ""
+				leftCommand = <-history.ResultChan
 				rightCommand = ""
 			}
-			fmt.Print(leftCommand + rightCommand)
-			fmt.Print(string(bytes.Repeat([]byte("\b"), len(rightCommand))))
+		} else if event.Key == keyboard.KeyArrowDown {
+			if !console.shellMode {
+				fmt.Print("\r\033[K")
+				fmt.Print(console.Status)
+				// check if searching has already begun
+				if isGoingOn {
+					task := &HistoryTask{
+						Mode:  SEARCH,
+						Order: PREV,
+					}
+					history.TaskChan <- task
+					leftCommand = <-history.ResultChan
+				} else {
+					// not started,then just erase user's input and output nothing
+					leftCommand = ""
+				}
+				rightCommand = ""
+			}
+		} else if event.Key == keyboard.KeyArrowLeft {
+			if !console.shellMode {
+				fmt.Print("\r\033[K")
+				fmt.Print(console.Status)
+				// concat left command's last character with right command
+				if len(leftCommand) >= 1 {
+					rightCommand = leftCommand[len(leftCommand)-1:] + rightCommand
+					leftCommand = leftCommand[:len(leftCommand)-1]
+				}
+				fmt.Print(leftCommand + rightCommand)
+				fmt.Print(string(bytes.Repeat([]byte("\b"), len(rightCommand))))
+			}
+		} else if event.Key == keyboard.KeyArrowRight {
+			if !console.shellMode {
+				fmt.Print("\r\033[K")
+				fmt.Print(console.Status)
+				// concat right command's first character with left command
+				if len(rightCommand) > 1 {
+					leftCommand = leftCommand + rightCommand[:1]
+					rightCommand = rightCommand[1:]
+				} else if len(rightCommand) == 1 {
+					leftCommand = leftCommand + rightCommand[:1]
+					rightCommand = ""
+				}
+				fmt.Print(leftCommand + rightCommand)
+				fmt.Print(string(bytes.Repeat([]byte("\b"), len(rightCommand))))
+			}
 		} else if event.Key == keyboard.KeyCtrlC {
+			// Ctrl+C? Then BYE!
 			fmt.Print("\n[*]BYE!")
 			keyboard.Close()
 			os.Exit(0)
@@ -281,16 +343,17 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 			}
 
 			handler.LetShellStart(component, route, nodeID)
-			console.Status = ""
 
 			fmt.Print("\r\n[*]Waiting for response.....")
+			fmt.Print("\r\n[*]MENTION!UNDER SHELL MODE ARROW UP/DOWN/LEFT/RIGHT ARE ALL ABANDONED!")
 
 			if <-console.OK {
+				console.Status = ""
+				console.shellMode = true
 				console.handleShellPanelCommand(component, route, nodeID)
+				console.shellMode = false
+				console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(idNum))
 			}
-
-			console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(idNum))
-			console.ready <- true
 		case "listen":
 			if console.expectParamsNum(fCommand, 2, NODE, 0) {
 				break
@@ -302,15 +365,12 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 				break
 			}
 
-			console.Status = "" // temporarily set status to ""
-			console.ready <- true
-
 			var err error
 			ssh := handler.NewSSH()
 			ssh.Addr = fCommand[1]
 
-			time.Sleep(300 * time.Millisecond) // sleep 300 ms to make sure ```fmt.Print("\r\n") fmt.Print(console.Status)``` run first!
-			fmt.Print("[*]Please choose the auth method(1.username/password 2.certificate): ")
+			console.Status = "[*]Please choose the auth method(1.username/password 2.certificate): "
+			console.ready <- true
 			firstChoice := console.pretreatInput()
 
 			if firstChoice == "1" {
@@ -318,38 +378,32 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 			} else if firstChoice == "2" {
 				ssh.Method = handler.CERMETHOD
 			} else {
-				time.Sleep(300 * time.Millisecond)
 				fmt.Print("\r\n[*]Please input 1 or 2!")
 				console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(idNum))
 				console.ready <- true
 				break
 			}
 
-			console.ready <- true
-
 			switch ssh.Method {
 			case handler.UPMETHOD:
-				time.Sleep(300 * time.Millisecond)
-				fmt.Print("[*]Please enter the username: ")
-				ssh.Username = console.pretreatInput()
+				console.Status = "[*]Please enter the username: "
 				console.ready <- true
-				time.Sleep(300 * time.Millisecond)
-				fmt.Print("[*]Please enter the password: ")
+				ssh.Username = console.pretreatInput()
+				console.Status = "[*]Please enter the password: "
+				console.ready <- true
 				ssh.Password = console.pretreatInput()
 				err = ssh.LetSSH(component, route, nodeID)
 			case handler.CERMETHOD:
-				time.Sleep(300 * time.Millisecond)
-				fmt.Print("[*]Please enter the username: ")
-				ssh.Username = console.pretreatInput()
+				console.Status = "[*]Please enter the username: "
 				console.ready <- true
-				time.Sleep(300 * time.Millisecond)
-				fmt.Print("[*]Please enter the filepath of the privkey: ")
+				ssh.Username = console.pretreatInput()
+				console.Status = "[*]Please enter the filepath of the privkey: "
+				console.ready <- true
 				ssh.CertificatePath = console.pretreatInput()
 				err = ssh.LetSSH(component, route, nodeID)
 			}
 
 			if err != nil {
-				time.Sleep(300 * time.Millisecond)
 				fmt.Printf("\r\n[*]Error: %s", err.Error())
 				console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(idNum))
 				console.ready <- true
@@ -461,14 +515,18 @@ func (console *Console) handleShellPanelCommand(component *protocol.MessageCompo
 
 	console.ready <- true
 
+	var done bool
 	for {
-		tCommand := <-console.getCommand
 
-		if tCommand == "exit" {
+		if done { // check if user has asked to exit
 			return
 		}
 
-		console.ready <- true
+		tCommand := <-console.getCommand
+
+		if tCommand == "exit" {
+			done = true
+		}
 
 		fCommand := tCommand + "\n"
 
@@ -495,14 +553,21 @@ func (console *Console) handleSSHPanelCommand(component *protocol.MessageCompone
 
 	console.ready <- true
 
+	var done bool
 	for {
-		tCommand := <-console.getCommand
-
-		if tCommand == "exit" {
+		if done { // check if user has asked to exit
 			return
 		}
 
-		console.ready <- true
+		tCommand := <-console.getCommand
+
+		if tCommand == "exit" {
+			done = true
+		}
+
+		if !done {
+			console.ready <- true
+		}
 
 		if tCommand == "" {
 			continue

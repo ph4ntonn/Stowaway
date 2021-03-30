@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-11 14:59:13
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-20 11:54:54
+ * @LastEditTime: 2021-03-30 13:04:18
  */
 package cli
 
@@ -12,89 +12,94 @@ import (
 )
 
 const (
-	BEGIN = iota
+	// Mode
+	RECORD = iota
+	SEARCH
+	// Order
+	BEGIN
 	PREV
 	NEXT
 )
 
 type History struct {
-	StoreList *list.List
-	Capacity  int
-	Record    chan string
-	Search    chan int
-	Display   chan interface{}
-	Result    chan string
+	storeList *list.List
+	capacity  int
+
+	TaskChan   chan *HistoryTask
+	ResultChan chan string
+}
+
+type HistoryTask struct {
+	Mode    int
+	Order   int
+	Command string
 }
 
 func NewHistory() *History {
 	history := new(History)
-	history.StoreList = list.New()
-	history.Capacity = 100
-	history.Record = make(chan string)
-	history.Search = make(chan int)
-	history.Display = make(chan interface{})
-	history.Result = make(chan string, 1)
+	history.storeList = list.New()
+	history.capacity = 100
+	history.TaskChan = make(chan *HistoryTask)
+	history.ResultChan = make(chan string)
 	return history
 }
 
 func (history *History) Run() {
-	go history.record()
-	go history.search()
-	go history.display()
-}
-
-func (history *History) record() {
 	for {
-		command := <-history.Record
-		history.StoreList.PushFront(command)
-		if history.StoreList.Len() > history.Capacity*2 {
-			history.clean()
+		task := <-history.TaskChan
+		switch task.Mode {
+		case RECORD:
+			history.record(task)
+		case SEARCH:
+			history.search(task)
 		}
 	}
 }
 
-func (history *History) search() {
+func (history *History) record(task *HistoryTask) {
+	history.storeList.PushFront(task.Command)
+	if history.storeList.Len() > history.capacity*2 {
+		history.clean()
+	}
+}
+
+func (history *History) search(task *HistoryTask) {
 	var now *list.Element
 
-	for {
-		switch <-history.Search {
-		case BEGIN:
-			if history.StoreList.Len() > 0 { // avoid list is empty
-				now = history.StoreList.Front()
-			}
-		case PREV:
-			if now != nil && now.Prev() != nil {
-				now = now.Prev()
-			}
-		case NEXT:
-			if now != nil && now.Next() != nil {
-				now = now.Next()
-			}
+	switch task.Order {
+	case BEGIN:
+		if history.storeList.Len() > 0 { // avoid list is empty
+			now = history.storeList.Front()
 		}
+	case PREV:
+		if now != nil && now.Prev() != nil {
+			now = now.Prev()
+		}
+	case NEXT:
+		if now != nil && now.Next() != nil {
+			now = now.Next()
+		}
+	}
 
-		if now != nil {
-			history.Display <- now.Value
-			history.Result <- now.Value.(string)
-		}
+	if now != nil {
+		command := now.Value.(string)
+		history.display(command)
+		history.ResultChan <- command
+	}
 
-		if history.StoreList.Len() == 0 { // avoid blocking the interactive panel if user press arrowup or arrowdown when no history node exists
-			history.Display <- ""
-			history.Result <- ""
-		}
+	if history.storeList.Len() == 0 { // avoid blocking the interactive panel if user press arrowup or arrowdown when no history node exists
+		history.display("")
+		history.ResultChan <- ""
 	}
 }
 
-func (history *History) display() {
-	for {
-		command := <-history.Display
-		fCommand := command.(string)
-		fmt.Print(fCommand)
-	}
+func (history *History) display(command string) {
+	fmt.Print(command)
 }
 
 func (history *History) clean() {
-	for elementsRemain := history.StoreList.Len() - history.Capacity; elementsRemain > 0; elementsRemain-- {
-		element := history.StoreList.Back()
-		history.StoreList.Remove(element)
+	for elementsRemain := history.storeList.Len() - history.capacity; elementsRemain > 0; elementsRemain-- {
+		element := history.storeList.Back()
+		history.storeList.Remove(element)
 	}
 }

@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-23 18:57:46
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-27 10:18:41
+ * @LastEditTime: 2021-03-30 12:27:24
  */
 package handler
 
@@ -37,12 +37,12 @@ func NewSocks(username, password string) *Socks {
 
 func (socks *Socks) Start(mgr *manager.Manager, component *protocol.MessageComponent) {
 	for {
-		socksData := <-mgr.Socks5TCPDataChan
+		socksData := <-mgr.SocksTCPDataChan
 		// check if seq num has already existed
 		task := &manager.ManagerTask{
-			Mode:          manager.S_GETTCPDATACHAN,
-			Category:      manager.SOCKS,
-			SocksSequence: socksData.Seq,
+			Mode:     manager.S_GETTCPDATACHAN,
+			Category: manager.SOCKS,
+			Seq:      socksData.Seq,
 		}
 		mgr.TaskChan <- task
 		result := <-mgr.SocksResultChan
@@ -132,7 +132,7 @@ func (socks *Socks) checkMethod(component *protocol.MessageComponent, setting *S
 		Data:    []byte{0x05, 0x00},
 	}
 
-	// avoid the situation that we can get full socks protocol header (rarely happen,just in case)
+	// avoid the scenario that we can get full socks protocol header (rarely happen,just in case)
 	defer func() {
 		if r := recover(); r != nil {
 			protocol.ConstructMessage(sMessage, header, failMess)
@@ -331,37 +331,26 @@ func TCPConnect(mgr *manager.Manager, component *protocol.MessageComponent, sett
 	}
 
 	task := &manager.ManagerTask{
-		Mode:          manager.S_UPDATETCP,
-		Category:      manager.SOCKS,
-		SocksSequence: seq,
-		SocksSocket:   setting.tcpConn,
+		Mode:        manager.S_UPDATETCP,
+		Category:    manager.SOCKS,
+		Seq:         seq,
+		SocksSocket: setting.tcpConn,
 	}
 	mgr.TaskChan <- task
-	<-mgr.SocksReadyChan
+	<-mgr.SocksResultChan
 
 	protocol.ConstructMessage(sMessage, header, succMess)
 	sMessage.SendMessage()
 	setting.tcpConnected = true
 }
 
-// SendTCPFin tell admin the conn is closed
-func SendTCPFin(component *protocol.MessageComponent, seq uint64) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
-
-	finHeader := &protocol.Header{
-		Sender:      component.UUID,
-		Accepter:    protocol.ADMIN_UUID,
-		MessageType: protocol.SOCKSTCPFIN,
-		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))), // No need to set route when agent send mess to admin
-		Route:       protocol.TEMP_ROUTE,
+func HandleTCPFin(mgr *manager.Manager, seq uint64) {
+	task := &manager.ManagerTask{
+		Mode:     manager.S_CLOSETCP,
+		Category: manager.SOCKS,
+		Seq:      seq,
 	}
-
-	finMess := &protocol.SocksTCPFin{
-		Seq: seq,
-	}
-
-	protocol.ConstructMessage(sMessage, finHeader, finMess)
-	sMessage.SendMessage()
+	mgr.TaskChan <- task
 }
 
 // ProxyC2STCP 转发C-->S流量
@@ -387,7 +376,23 @@ func ProxyS2CTCP(component *protocol.MessageComponent, conn net.Conn, seq uint64
 		Route:       protocol.TEMP_ROUTE,
 	}
 
-	defer SendTCPFin(component, seq)
+	// SendTCPFin
+	defer func() {
+		finHeader := &protocol.Header{
+			Sender:      component.UUID,
+			Accepter:    protocol.ADMIN_UUID,
+			MessageType: protocol.SOCKSTCPFIN,
+			RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))), // No need to set route when agent send mess to admin
+			Route:       protocol.TEMP_ROUTE,
+		}
+
+		finMess := &protocol.SocksTCPFin{
+			Seq: seq,
+		}
+
+		protocol.ConstructMessage(sMessage, finHeader, finMess)
+		sMessage.SendMessage()
+	}()
 
 	buffer := make([]byte, 20480)
 	for {
@@ -492,13 +497,13 @@ func UDPAssociate(mgr *manager.Manager, component *protocol.MessageComponent, se
 	task := &manager.ManagerTask{
 		Mode:            manager.S_UPDATEUDP,
 		Category:        manager.SOCKS,
-		SocksSequence:   seq,
+		Seq:             seq,
 		SocksListener:   udpListener,
 		SocksSourceAddr: sourceAddr,
 	}
 
 	mgr.TaskChan <- task
-	<-mgr.SocksReadyChan
+	<-mgr.SocksResultChan
 
 	assMess := &protocol.UDPAssStart{
 		Seq:           seq,
