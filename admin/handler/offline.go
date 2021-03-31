@@ -8,12 +8,12 @@ package handler
 
 import "Stowaway/protocol"
 
-func LetOffline(component *protocol.MessageComponent, route string, nodeID string) {
+func LetOffline(component *protocol.MessageComponent, route string, uuid string) {
 	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
 
 	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
-		Accepter:    nodeID,
+		Accepter:    uuid,
 		MessageType: protocol.OFFLINE,
 		RouteLen:    uint32(len([]byte(route))),
 		Route:       route,

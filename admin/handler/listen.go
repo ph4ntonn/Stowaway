@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-18 18:05:46
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-26 16:48:10
+ * @LastEditTime: 2021-03-30 16:40:07
  */
 package handler
 
@@ -12,7 +12,7 @@ import (
 	"fmt"
 )
 
-func LetListen(component *protocol.MessageComponent, route string, nodeID string, addr string) {
+func LetListen(component *protocol.MessageComponent, route string, uuid string, addr string) {
 	normalAddr, _, err := utils.CheckIPPort(addr)
 	if err != nil {
 		fmt.Printf("[*]Error: %s\n", err.Error())
@@ -23,7 +23,7 @@ func LetListen(component *protocol.MessageComponent, route string, nodeID string
 
 	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
-		Accepter:    nodeID,
+		Accepter:    uuid,
 		MessageType: protocol.LISTENREQ,
 		RouteLen:    uint32(len([]byte(route))),
 		Route:       route,

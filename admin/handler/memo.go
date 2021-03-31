@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-18 16:59:46
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-26 16:48:21
+ * @LastEditTime: 2021-03-30 16:40:15
  */
 package handler
 
@@ -12,7 +12,7 @@ import (
 	"fmt"
 )
 
-func AddMemo(component *protocol.MessageComponent, taskChan chan *topology.TopoTask, info []string, nodeID string, route string) {
+func AddMemo(component *protocol.MessageComponent, taskChan chan *topology.TopoTask, info []string, uuid string, route string) {
 	var memo string
 
 	for _, i := range info {
@@ -23,14 +23,14 @@ func AddMemo(component *protocol.MessageComponent, taskChan chan *topology.TopoT
 
 	topoTask := &topology.TopoTask{
 		Mode: topology.UPDATEMEMO,
-		UUID: nodeID,
+		UUID: uuid,
 		Memo: memo,
 	}
 	taskChan <- topoTask
 
 	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
-		Accepter:    nodeID,
+		Accepter:    uuid,
 		MessageType: protocol.MYMEMO,
 		RouteLen:    uint32(len([]byte(route))),
 		Route:       route,
@@ -47,10 +47,10 @@ func AddMemo(component *protocol.MessageComponent, taskChan chan *topology.TopoT
 	fmt.Print("\n[*]Memo added!")
 }
 
-func DelMemo(component *protocol.MessageComponent, taskChan chan *topology.TopoTask, nodeID string, route string) {
+func DelMemo(component *protocol.MessageComponent, taskChan chan *topology.TopoTask, uuid string, route string) {
 	topoTask := &topology.TopoTask{
 		Mode: topology.UPDATEMEMO,
-		UUID: nodeID,
+		UUID: uuid,
 		Memo: "",
 	}
 	taskChan <- topoTask
@@ -59,7 +59,7 @@ func DelMemo(component *protocol.MessageComponent, taskChan chan *topology.TopoT
 
 	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
-		Accepter:    nodeID,
+		Accepter:    uuid,
 		MessageType: protocol.MYMEMO,
 		RouteLen:    uint32(len([]byte(route))),
 		Route:       route,

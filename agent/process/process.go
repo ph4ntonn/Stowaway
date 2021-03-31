@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 15:27:30
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-29 16:36:27
+ * @LastEditTime: 2021-03-31 16:42:28
  */
 
 package process
@@ -86,7 +86,6 @@ func (agent *Agent) handleConnFromUpstream(mgr *manager.Manager) {
 			log.Println("[*]Peer node seems offline!")
 			os.Exit(0)
 		}
-
 		agent.BufferChan <- &BufferData{fHeader: fHeader, fMessage: fMessage}
 	}
 }
@@ -166,6 +165,12 @@ func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager) {
 			case protocol.SOCKSTCPFIN:
 				message := data.fMessage.(*protocol.SocksTCPFin)
 				go handler.HandleTCPFin(mgr, message.Seq)
+			case protocol.UDPASSRES:
+				message := data.fMessage.(*protocol.UDPAssRes)
+				mgr.SocksUDPReadyChan <- message
+			case protocol.SOCKSUDPDATA:
+				message := data.fMessage.(*protocol.SocksUDPData)
+				mgr.SocksUDPDataChan <- message
 			case protocol.OFFLINE:
 				// No need to check message
 				os.Exit(0)

@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-16 16:10:23
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-29 19:16:58
+ * @LastEditTime: 2021-03-31 16:30:17
  */
 package process
 
@@ -22,7 +22,6 @@ import (
 )
 
 type Admin struct {
-	UUID         string
 	Conn         net.Conn
 	CryptoSecret []byte
 	Topology     *topology.Topology
@@ -40,7 +39,6 @@ type BufferData struct {
 
 func NewAdmin(options *initial.Options) *Admin {
 	admin := new(Admin)
-	admin.UUID = protocol.ADMIN_UUID
 	admin.CryptoSecret, _ = crypto.KeyPadding([]byte(options.Secret))
 	admin.UserOptions = options
 	admin.BufferChan = make(chan *BufferData, 10)
@@ -54,7 +52,7 @@ func (admin *Admin) Run() {
 	go admin.mgr.Run()
 
 	console := cli.NewConsole()
-	console.Init(admin.Topology, admin.mgr, admin.Conn, admin.UUID, admin.UserOptions.Secret, admin.CryptoSecret)
+	console.Init(admin.Topology, admin.mgr, admin.Conn, admin.UserOptions.Secret, admin.CryptoSecret)
 
 	go admin.handleConnFromDownstream(console)
 	go admin.handleDataFromDownstream(console)
@@ -149,11 +147,15 @@ func (admin *Admin) handleDataFromDownstream(console *cli.Console) {
 		case protocol.SOCKSTCPDATA:
 			message := data.fMessage.(*protocol.SocksTCPData)
 			admin.mgr.SocksTCPDataChan <- message
-		case protocol.UDPASSSTART:
 		case protocol.SOCKSTCPFIN:
 			message := data.fMessage.(*protocol.SocksTCPFin)
 			go handler.HandleTCPFin(admin.mgr, message.Seq)
-
+		case protocol.UDPASSSTART:
+			message := data.fMessage.(*protocol.UDPAssStart)
+			go handler.StartUDPAss(admin.mgr, admin.Topology, admin.Conn, admin.UserOptions.Secret, message.Seq)
+		case protocol.SOCKSUDPDATA:
+			message := data.fMessage.(*protocol.SocksUDPData)
+			admin.mgr.SocksUDPDataChan <- message
 		default:
 			log.Print("\n[*]Unknown Message!")
 		}

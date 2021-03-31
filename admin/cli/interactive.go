@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 18:11:41
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-30 14:39:17
+ * @LastEditTime: 2021-03-30 16:57:27
  */
 package cli
 
@@ -29,7 +29,6 @@ const (
 
 type Console struct {
 	// Admin status
-	UUID         string
 	Conn         net.Conn
 	Secret       string
 	CryptoSecret []byte
@@ -53,8 +52,7 @@ func NewConsole() *Console {
 	return console
 }
 
-func (console *Console) Init(tTopology *topology.Topology, myManager *manager.Manager, conn net.Conn, uuid string, secret string, cryptoSecret []byte) {
-	console.UUID = uuid
+func (console *Console) Init(tTopology *topology.Topology, myManager *manager.Manager, conn net.Conn, secret string, cryptoSecret []byte) {
 	console.Conn = conn
 	console.Secret = secret
 	console.CryptoSecret = cryptoSecret
@@ -240,16 +238,16 @@ func (console *Console) handleMainPanelCommand() {
 			if console.expectParamsNum(fCommand, 2, MAIN, 1) {
 				break
 			}
-			idNum, _ := utils.Str2Int(fCommand[1])
+			uuidNum, _ := utils.Str2Int(fCommand[1])
 			task := &topology.TopoTask{
-				Mode:  topology.CHECKNODE,
-				IDNum: idNum,
+				Mode:    topology.CHECKNODE,
+				UUIDNum: uuidNum,
 			}
 			console.Topology.TaskChan <- task
 			result := <-console.Topology.ResultChan
 			if result.IsExist {
 				console.Status = fmt.Sprintf("(node %s) >> ", fCommand[1])
-				console.handleNodePanelCommand(idNum)
+				console.handleNodePanelCommand(uuidNum)
 				console.Status = "(admin) >> "
 			} else {
 				fmt.Printf("\n[*]Node %s doesn't exist!", fCommand[1])
@@ -300,26 +298,27 @@ func (console *Console) handleMainPanelCommand() {
 	}
 }
 
-func (console *Console) handleNodePanelCommand(idNum int) {
+func (console *Console) handleNodePanelCommand(uuidNum int) {
 	topoTask := &topology.TopoTask{
-		Mode: topology.CALCULATE,
-	}
-	console.Topology.TaskChan <- topoTask
-	routeResult := <-console.Topology.ResultChan
-	route := routeResult.RouteInfo[idNum]
-
-	topoTask = &topology.TopoTask{
-		Mode:  topology.GETNODEID,
-		IDNum: idNum,
+		Mode:    topology.GETROUTE,
+		UUIDNum: uuidNum,
 	}
 	console.Topology.TaskChan <- topoTask
 	topoResult := <-console.Topology.ResultChan
-	nodeID := topoResult.NodeID
+	route := topoResult.Route
+
+	topoTask = &topology.TopoTask{
+		Mode:    topology.GETUUID,
+		UUIDNum: uuidNum,
+	}
+	console.Topology.TaskChan <- topoTask
+	topoResult = <-console.Topology.ResultChan
+	uuid := topoResult.UUID
 
 	component := &protocol.MessageComponent{
 		Secret: console.Secret,
 		Conn:   console.Conn,
-		UUID:   console.UUID,
+		UUID:   protocol.ADMIN_UUID,
 	}
 
 	console.ready <- true
@@ -329,20 +328,20 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 		fCommand := strings.Split(tCommand, " ")
 		switch fCommand[0] {
 		case "addmemo":
-			handler.AddMemo(component, console.Topology.TaskChan, fCommand[1:], nodeID, route)
+			handler.AddMemo(component, console.Topology.TaskChan, fCommand[1:], uuid, route)
 			console.ready <- true
 		case "delmemo":
 			if console.expectParamsNum(fCommand, 1, NODE, 0) {
 				break
 			}
-			handler.DelMemo(component, console.Topology.TaskChan, nodeID, route)
+			handler.DelMemo(component, console.Topology.TaskChan, uuid, route)
 			console.ready <- true
 		case "shell":
 			if console.expectParamsNum(fCommand, 1, NODE, 0) {
 				break
 			}
 
-			handler.LetShellStart(component, route, nodeID)
+			handler.LetShellStart(component, route, uuid)
 
 			fmt.Print("\r\n[*]Waiting for response.....")
 			fmt.Print("\r\n[*]MENTION!UNDER SHELL MODE ARROW UP/DOWN/LEFT/RIGHT ARE ALL ABANDONED!")
@@ -350,15 +349,15 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 			if <-console.OK {
 				console.Status = ""
 				console.shellMode = true
-				console.handleShellPanelCommand(component, route, nodeID)
+				console.handleShellPanelCommand(component, route, uuid)
 				console.shellMode = false
-				console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(idNum))
+				console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
 			}
 		case "listen":
 			if console.expectParamsNum(fCommand, 2, NODE, 0) {
 				break
 			}
-			handler.LetListen(component, route, nodeID, fCommand[1])
+			handler.LetListen(component, route, uuid, fCommand[1])
 			console.ready <- true
 		case "ssh":
 			if console.expectParamsNum(fCommand, 2, NODE, 0) {
@@ -379,7 +378,7 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 				ssh.Method = handler.CERMETHOD
 			} else {
 				fmt.Print("\r\n[*]Please input 1 or 2!")
-				console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(idNum))
+				console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
 				console.ready <- true
 				break
 			}
@@ -392,7 +391,7 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 				console.Status = "[*]Please enter the password: "
 				console.ready <- true
 				ssh.Password = console.pretreatInput()
-				err = ssh.LetSSH(component, route, nodeID)
+				err = ssh.LetSSH(component, route, uuid)
 			case handler.CERMETHOD:
 				console.Status = "[*]Please enter the username: "
 				console.ready <- true
@@ -400,12 +399,12 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 				console.Status = "[*]Please enter the filepath of the privkey: "
 				console.ready <- true
 				ssh.CertificatePath = console.pretreatInput()
-				err = ssh.LetSSH(component, route, nodeID)
+				err = ssh.LetSSH(component, route, uuid)
 			}
 
 			if err != nil {
 				fmt.Printf("\r\n[*]Error: %s", err.Error())
-				console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(idNum))
+				console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
 				console.ready <- true
 				break
 			}
@@ -414,10 +413,10 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 
 			if <-console.OK {
 				console.Status = fmt.Sprintf("(ssh %s) >> ", ssh.Addr)
-				console.handleSSHPanelCommand(component, route, nodeID)
+				console.handleSSHPanelCommand(component, route, uuid)
 			}
 
-			console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(idNum))
+			console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
 			console.ready <- true
 		case "socks":
 			if console.expectParamsNum(fCommand, 2, NODE, 1) {
@@ -432,7 +431,7 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 				socks.Password = fCommand[3]
 			}
 
-			go socks.LetSocks(component, console.mgr, route, nodeID, idNum)
+			go socks.LetSocks(component, console.mgr, route, uuid, uuidNum)
 
 			console.ready <- true
 		case "upload":
@@ -443,11 +442,11 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 			console.mgr.File.FilePath = fCommand[1]
 			console.mgr.File.FileName = fCommand[2]
 
-			err := console.mgr.File.SendFileStat(component, route, nodeID, share.ADMIN)
+			err := console.mgr.File.SendFileStat(component, route, uuid, share.ADMIN)
 
 			if err == nil && <-console.OK {
 				go handler.StartBar(console.mgr.File.StatusChan, console.mgr.File.FileSize)
-				console.mgr.File.Upload(component, route, nodeID, share.ADMIN)
+				console.mgr.File.Upload(component, route, uuid, share.ADMIN)
 			} else if err != nil {
 				fmt.Printf("\r\n[*]Error: %s", err.Error())
 			}
@@ -461,13 +460,13 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 			console.mgr.File.FilePath = fCommand[1]
 			console.mgr.File.FileName = fCommand[2]
 
-			console.mgr.File.Ask4Download(component, route, nodeID)
+			console.mgr.File.Ask4Download(component, route, uuid)
 
 			if <-console.OK {
-				err := console.mgr.File.CheckFileStat(component, route, nodeID, share.ADMIN)
+				err := console.mgr.File.CheckFileStat(component, route, uuid, share.ADMIN)
 				if err == nil {
 					go handler.StartBar(console.mgr.File.StatusChan, console.mgr.File.FileSize)
-					console.mgr.File.Receive(component, route, nodeID, share.ADMIN)
+					console.mgr.File.Receive(component, route, uuid, share.ADMIN)
 				}
 			}
 
@@ -476,7 +475,7 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 			if console.expectParamsNum(fCommand, 1, NODE, 0) {
 				break
 			}
-			handler.LetOffline(component, route, nodeID)
+			handler.LetOffline(component, route, uuid)
 			console.ready <- true
 		case "":
 			if console.expectParamsNum(fCommand, 1, NODE, 0) {
@@ -502,12 +501,12 @@ func (console *Console) handleNodePanelCommand(idNum int) {
 	}
 }
 
-func (console *Console) handleShellPanelCommand(component *protocol.MessageComponent, route string, nodeID string) {
+func (console *Console) handleShellPanelCommand(component *protocol.MessageComponent, route string, uuid string) {
 	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
 
 	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
-		Accepter:    nodeID,
+		Accepter:    uuid,
 		MessageType: protocol.SHELLCOMMAND,
 		RouteLen:    uint32(len([]byte(route))),
 		Route:       route,
@@ -540,12 +539,12 @@ func (console *Console) handleShellPanelCommand(component *protocol.MessageCompo
 	}
 }
 
-func (console *Console) handleSSHPanelCommand(component *protocol.MessageComponent, route string, nodeID string) {
+func (console *Console) handleSSHPanelCommand(component *protocol.MessageComponent, route string, uuid string) {
 	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
 
 	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
-		Accepter:    nodeID,
+		Accepter:    uuid,
 		MessageType: protocol.SSHCOMMAND,
 		RouteLen:    uint32(len([]byte(route))),
 		Route:       route,

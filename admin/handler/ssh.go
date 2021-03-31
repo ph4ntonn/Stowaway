@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-19 12:24:52
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-26 16:49:12
+ * @LastEditTime: 2021-03-30 16:40:55
  */
 package handler
 
@@ -30,7 +30,7 @@ func NewSSH() *SSH {
 	return new(SSH)
 }
 
-func (ssh *SSH) LetSSH(component *protocol.MessageComponent, route string, nodeID string) error {
+func (ssh *SSH) LetSSH(component *protocol.MessageComponent, route string, uuid string) error {
 	_, _, err := utils.CheckIPPort(ssh.Addr)
 	if err != nil {
 		return err
@@ -46,7 +46,7 @@ func (ssh *SSH) LetSSH(component *protocol.MessageComponent, route string, nodeI
 
 	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
-		Accepter:    nodeID,
+		Accepter:    uuid,
 		MessageType: protocol.SSHREQ,
 		RouteLen:    uint32(len([]byte(route))),
 		Route:       route,
