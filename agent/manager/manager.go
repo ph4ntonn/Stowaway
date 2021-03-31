@@ -2,14 +2,13 @@
  * @Author: ph4ntom
  * @Date: 2021-03-23 19:01:26
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-31 16:23:59
+ * @LastEditTime: 2021-03-31 19:06:24
  */
 package manager
 
 import (
 	"Stowaway/protocol"
 	"Stowaway/share"
-	"fmt"
 	"net"
 )
 
@@ -102,8 +101,6 @@ func (manager *Manager) Run() {
 		switch task.Category {
 		case SOCKS:
 			manager.socksTaskChan <- task
-		default:
-			fmt.Println("unknown cate")
 		}
 	}
 }
@@ -128,8 +125,6 @@ func (manager *Manager) socksRun() {
 			manager.updateUDPHeader(task)
 		case S_CLOSETCP:
 			manager.closeTCP(task)
-		default:
-			fmt.Println("unknown mode")
 		}
 	}
 }
@@ -220,6 +215,7 @@ func (manager *Manager) closeTCP(task *ManagerTask) {
 		manager.socks[task.Seq].udp.Listener.Close()
 		close(manager.socks[task.Seq].udp.DataChan)
 		close(manager.socks[task.Seq].udp.ReadyChan)
+		manager.socks[task.Seq].udp.HeaderPairs = nil
 	}
 
 	delete(manager.socks, task.Seq) // upstream not waiting

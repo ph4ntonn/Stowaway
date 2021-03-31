@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-19 18:40:13
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-31 16:31:30
+ * @LastEditTime: 2021-03-31 19:01:13
  */
 package handler
 
@@ -124,6 +124,7 @@ func (socks *Socks) dispathTCPData(mgr *manager.Manager) {
 			if result.OK {
 				result.TCPDataChan <- data.Data
 			}
+			mgr.Done <- true
 		} else {
 			return
 		}
@@ -144,6 +145,7 @@ func (socks *Socks) dispathUDPData(mgr *manager.Manager) {
 			if result.OK {
 				result.UDPDataChan <- data.Data
 			}
+			mgr.Done <- true
 		} else {
 			return
 		}
@@ -373,18 +375,6 @@ func HandleUDPAss(mgr *manager.Manager, component *protocol.MessageComponent, li
 		Route:       route,
 	}
 
-	// finHeader := &protocol.Header{
-	// 	Sender:      protocol.ADMIN_UUID,
-	// 	Accepter:    uuid,
-	// 	MessageType: protocol.SOCKSUDPFIN,
-	// 	RouteLen:    uint32(len([]byte(route))),
-	// 	Route:       route,
-	// }
-
-	// finMess := &protocol.SocksUDPFin{
-	// 	Seq: seq,
-	// }
-
 	mgrTask := &manager.ManagerTask{
 		Category: manager.SOCKS,
 		UUIDNum:  uuidNum,
@@ -393,6 +383,7 @@ func HandleUDPAss(mgr *manager.Manager, component *protocol.MessageComponent, li
 	}
 	mgr.TaskChan <- mgrTask
 	result := <-mgr.SocksResultChan
+	mgr.Done <- true
 
 	udpDataChan := result.UDPDataChan
 
@@ -416,8 +407,6 @@ func HandleUDPAss(mgr *manager.Manager, component *protocol.MessageComponent, li
 
 		if err != nil {
 			listener.Close()
-			fmt.Print(err.Error())
-			// add udpfin
 			return
 		}
 

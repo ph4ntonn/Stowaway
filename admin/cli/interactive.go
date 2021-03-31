@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 18:11:41
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-30 16:57:27
+ * @LastEditTime: 2021-03-31 17:18:15
  */
 package cli
 
@@ -86,7 +86,7 @@ func (console *Console) mainPanel() {
 		}
 
 		// under shell mode,we cannot just erase the whole line and reprint,so there are two different way to handle input
-		// under shell mode, all arrow stuff will be abandoned
+		// BTW,all arrow stuff under shell mode will be abandoned
 		if (event.Key != keyboard.KeyEnter && event.Rune >= 0x20 && event.Rune <= 0x7F) || event.Key == keyboard.KeySpace {
 			if !console.shellMode {
 				fmt.Print("\r\033[K")
@@ -431,8 +431,8 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				socks.Password = fCommand[3]
 			}
 
+			fmt.Printf("\r\n[*]Socks now listening on 0.0.0.0:%s!", fCommand[1])
 			go socks.LetSocks(component, console.mgr, route, uuid, uuidNum)
-
 			console.ready <- true
 		case "upload":
 			if console.expectParamsNum(fCommand, 3, NODE, 0) {
@@ -450,7 +450,6 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			} else if err != nil {
 				fmt.Printf("\r\n[*]Error: %s", err.Error())
 			}
-
 			console.ready <- true
 		case "download":
 			if console.expectParamsNum(fCommand, 3, NODE, 0) {
@@ -469,7 +468,6 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 					console.mgr.File.Receive(component, route, uuid, share.ADMIN)
 				}
 			}
-
 			console.ready <- true
 		case "offline":
 			if console.expectParamsNum(fCommand, 1, NODE, 0) {

@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-23 18:57:46
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-31 16:37:16
+ * @LastEditTime: 2021-03-31 18:57:16
  */
 package handler
 
@@ -78,12 +78,10 @@ func (socks *Socks) dispathUDPData(mgr *manager.Manager, component *protocol.Mes
 		mgr.TaskChan <- mgrTask
 		result := <-mgr.SocksResultChan
 
-		if !result.OK {
-			mgr.Done <- true
-			continue
+		if result.OK {
+			result.DataChan <- socksData.Data
 		}
 
-		result.DataChan <- socksData.Data
 		mgr.Done <- true
 	}
 }
@@ -100,12 +98,10 @@ func (socks *Socks) dispathUDPReady(mgr *manager.Manager, component *protocol.Me
 		mgr.TaskChan <- mgrTask
 		result := <-mgr.SocksResultChan
 
-		if !result.OK {
-			mgr.Done <- true
-			continue
+		if result.OK {
+			result.ReadyChan <- socksReady.Addr
 		}
 
-		result.ReadyChan <- socksReady.Addr
 		mgr.Done <- true
 	}
 }
@@ -574,7 +570,7 @@ func UDPAssociate(mgr *manager.Manager, component *protocol.MessageComponent, se
 	}
 	mgr.TaskChan <- mgrTask
 	socksResult = <-mgr.SocksResultChan
-	mgr.Done <- true
+	mgr.Done <- true // give true immediately,cuz no need to ensure closeTCP() must after "readyChan := socksResult.ReadyChan" operation,trying to read data from a closed chan won't cause panic
 
 	if !socksResult.OK { // no need to close listener,cuz TCPFIN has helped us
 		setting.success = false
@@ -632,7 +628,7 @@ func ProxyC2SUDP(mgr *manager.Manager, listener *net.UDPConn, seq uint64) {
 	mgr.TaskChan <- mgrTask
 	result := <-mgr.SocksResultChan
 	mgr.Done <- true
-
+	// no need to check if OK,cuz if not,"data, ok := <-dataChan" will help us to exit
 	dataChan := result.DataChan
 
 	defer func() {

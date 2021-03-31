@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-23 19:01:26
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-30 18:31:26
+ * @LastEditTime: 2021-03-31 18:52:29
  */
 package manager
 
@@ -39,6 +39,7 @@ type Manager struct {
 	SocksResultChan  chan *ManagerResult
 	// share
 	TaskChan chan *ManagerTask
+	Done     chan bool // try to avoid this situation: A routine ask to get chan -> after that a TCPFIN message come and closeTCP() is called to close chan -> routine doesn't know chan is closed,so continue to input message into it -> panic
 }
 
 type ManagerTask struct {
@@ -100,6 +101,7 @@ func NewManager(file *share.MyFile) *Manager {
 	manager.SocksTCPDataChan = make(chan *protocol.SocksTCPData, 5)
 	manager.SocksUDPDataChan = make(chan *protocol.SocksUDPData, 5)
 	manager.TaskChan = make(chan *ManagerTask)
+	manager.Done = make(chan bool)
 	manager.socksTaskChan = make(chan *ManagerTask)
 	manager.SocksResultChan = make(chan *ManagerResult)
 	return manager
@@ -131,10 +133,13 @@ func (manager *Manager) socksRun() {
 			manager.getTCPDataChan(task)
 		case S_GETUDPDATACHAN:
 			manager.getUDPDataChan(task)
+			<-manager.Done
 		case S_GETTCPDATACHAN_WITHOUTUUID:
 			manager.getTCPDataChanWithoutUUID(task)
+			<-manager.Done
 		case S_GETUDPDATACHAN_WITHOUTUUID:
 			manager.getUDPDataChanWithoutUUID(task)
+			<-manager.Done
 		case S_CLOSETCP:
 			manager.closeTCP(task)
 		case S_GETUDPSTARTINFO:
@@ -235,7 +240,7 @@ func (manager *Manager) getUDPDataChanWithoutUUID(task *ManagerTask) {
 func (manager *Manager) closeTCP(task *ManagerTask) {
 	uuidNum := manager.socks5SeqMap[task.Seq]
 	if _, ok := manager.socks5[uuidNum]; ok { // check if node is still online
-		manager.socks5[uuidNum].SocksStatus[task.Seq].tcp.Conn.Close()
+		manager.socks5[uuidNum].SocksStatus[task.Seq].tcp.Conn.Close() // SocksStatus[task.Seq] must exist, no need to check
 		close(manager.socks5[uuidNum].SocksStatus[task.Seq].tcp.DataChan)
 		if manager.socks5[uuidNum].SocksStatus[task.Seq].IsUDP {
 			manager.socks5[uuidNum].SocksStatus[task.Seq].udp.Listener.Close()
