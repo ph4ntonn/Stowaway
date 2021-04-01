@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-23 18:57:46
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-01 14:16:39
+ * @LastEditTime: 2021-04-01 19:15:14
  */
 package handler
 
@@ -39,45 +39,81 @@ func NewSocks(username, password string) *Socks {
 }
 
 func (socks *Socks) Start(mgr *manager.Manager, component *protocol.MessageComponent) {
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+	header := &protocol.Header{
+		Sender:      component.UUID,
+		Accepter:    protocol.ADMIN_UUID,
+		MessageType: protocol.SOCKSREADY,
+		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))), // No need to set route when agent send mess to admin
+		Route:       protocol.TEMP_ROUTE,
+	}
+
+	succMess := &protocol.SocksReady{
+		OK: 1,
+	}
+
+	failMess := &protocol.SocksReady{
+		OK: 0,
+	}
+
+	mgrTask := &manager.ManagerTask{
+		Mode:     manager.S_CHECKSOCKSREADY, // to make sure the map is clean
+		Category: manager.SOCKS,
+	}
+	mgr.TaskChan <- mgrTask
+	result := <-mgr.ResultChan
+	if !result.OK {
+		protocol.ConstructMessage(sMessage, header, failMess)
+		sMessage.SendMessage()
+		return
+	}
+
+	protocol.ConstructMessage(sMessage, header, succMess)
+	sMessage.SendMessage()
+
+	close(mgr.SocksTCPDataChan) // close old chan,to make sure only one routine can get data from mgr.SocksTCPDataChan
+	mgr.SocksTCPDataChan = make(chan interface{}, 5)
 	go socks.dispathTCPData(mgr, component)
-	go socks.dispathUDPData(mgr, component)
-	go socks.dispathUDPReady(mgr, component)
 }
 
 func (socks *Socks) dispathTCPData(mgr *manager.Manager, component *protocol.MessageComponent) {
 	for {
-		socksData := <-mgr.SocksTCPDataChan
-		switch socksData.(type) {
-		case *protocol.SocksTCPData:
-			message := socksData.(*protocol.SocksTCPData)
-			mgrTask := &manager.ManagerTask{
-				Mode:     manager.S_GETTCPDATACHAN,
-				Category: manager.SOCKS,
-				Seq:      message.Seq,
-			}
-			mgr.TaskChan <- mgrTask
-			result := <-mgr.ResultChan
+		socksData, ok := <-mgr.SocksTCPDataChan // if new "socks start" command come and call the socks.Start(),then the old chan will be closed and current routine must exit immediately
+		if ok {
+			switch socksData.(type) {
+			case *protocol.SocksTCPData:
+				message := socksData.(*protocol.SocksTCPData)
+				mgrTask := &manager.ManagerTask{
+					Mode:     manager.S_GETTCPDATACHAN,
+					Category: manager.SOCKS,
+					Seq:      message.Seq,
+				}
+				mgr.TaskChan <- mgrTask
+				result := <-mgr.ResultChan
 
-			result.DataChan <- message.Data
-			mgr.Done <- true
+				result.DataChan <- message.Data
+				mgr.Done <- true
 
-			// if not exist
-			if !result.SocksSeqExist {
-				go socks.handleSocks(mgr, component, result.DataChan, message.Seq)
+				// if not exist
+				if !result.SocksSeqExist {
+					go socks.handleSocks(mgr, component, result.DataChan, message.Seq)
+				}
+			case *protocol.SocksTCPFin:
+				message := socksData.(*protocol.SocksTCPFin)
+				mgrTask := &manager.ManagerTask{
+					Mode:     manager.S_CLOSETCP,
+					Category: manager.SOCKS,
+					Seq:      message.Seq,
+				}
+				mgr.TaskChan <- mgrTask
 			}
-		case *protocol.SocksTCPFin:
-			message := socksData.(*protocol.SocksTCPFin)
-			mgrTask := &manager.ManagerTask{
-				Mode:     manager.S_CLOSETCP,
-				Category: manager.SOCKS,
-				Seq:      message.Seq,
-			}
-			mgr.TaskChan <- mgrTask
+		} else {
+			return
 		}
 	}
 }
 
-func (socks *Socks) dispathUDPData(mgr *manager.Manager, component *protocol.MessageComponent) {
+func DispathUDPData(mgr *manager.Manager) {
 	for {
 		socksData := <-mgr.SocksUDPDataChan
 		// check if seq num has already existed
@@ -97,7 +133,7 @@ func (socks *Socks) dispathUDPData(mgr *manager.Manager, component *protocol.Mes
 	}
 }
 
-func (socks *Socks) dispathUDPReady(mgr *manager.Manager, component *protocol.MessageComponent) {
+func DispathUDPReady(mgr *manager.Manager) {
 	for {
 		socksReady := <-mgr.SocksUDPReadyChan
 		// check if seq num has already existed

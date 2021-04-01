@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 15:27:30
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-01 11:55:28
+ * @LastEditTime: 2021-04-01 18:37:06
  */
 
 package process
@@ -45,11 +45,15 @@ func NewAgent(options *initial.Options) *Agent {
 }
 
 func (agent *Agent) Run() {
+	// send agent info first
 	agent.sendMyInfo()
-
+	// run manager
 	mgr := manager.NewManager(share.NewFile())
 	go mgr.Run()
-
+	// run dispatcher expect tcp,cuz tcp dispatcher can not be confirmed because of the username/password changing
+	go handler.DispathUDPData(mgr)
+	go handler.DispathUDPReady(mgr)
+	// process data from upstream
 	go agent.handleConnFromUpstream(mgr)
 	agent.handleDataFromUpstream(mgr)
 	//agent.handleDataFromDownstream()

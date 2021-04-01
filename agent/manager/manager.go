@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-23 19:01:26
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-01 14:19:09
+ * @LastEditTime: 2021-04-01 18:11:52
  */
 package manager
 
@@ -21,6 +21,7 @@ const (
 	S_GETUDPCHANS
 	S_GETUDPHEADER
 	S_CLOSETCP
+	S_CHECKSOCKSREADY
 )
 
 type Manager struct {
@@ -113,6 +114,8 @@ func (manager *Manager) Run() {
 				manager.updateUDPHeader(task)
 			case S_CLOSETCP:
 				manager.closeTCP(task)
+			case S_CHECKSOCKSREADY:
+				manager.checkSocksReady()
 			}
 		}
 	}
@@ -208,4 +211,12 @@ func (manager *Manager) closeTCP(task *ManagerTask) {
 	}
 
 	delete(manager.socks, task.Seq) // upstream not waiting
+}
+
+func (manager *Manager) checkSocksReady() {
+	if len(manager.socks) == 0 {
+		manager.ResultChan <- &ManagerResult{OK: true}
+	} else {
+		manager.ResultChan <- &ManagerResult{OK: false}
+	}
 }

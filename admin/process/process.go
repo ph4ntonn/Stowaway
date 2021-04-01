@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-16 16:10:23
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-01 15:32:59
+ * @LastEditTime: 2021-04-01 19:38:11
  */
 package process
 
@@ -47,17 +47,20 @@ func NewAdmin(options *initial.Options) *Admin {
 
 func (admin *Admin) Run() {
 	file := share.NewFile()
-
+	// Run a manager
 	admin.mgr = manager.NewManager(file)
 	go admin.mgr.Run()
-
+	// Init console
 	console := cli.NewConsole()
 	console.Init(admin.Topology, admin.mgr, admin.Conn, admin.UserOptions.Secret, admin.CryptoSecret)
-
+	// hanle all message comes from downstream
 	go admin.handleConnFromDownstream(console)
 	go admin.handleDataFromDownstream(console)
-
-	console.Run() // start interactive panel
+	// run a dispatcher to dispatch all socks TCP/UDP data
+	go handler.DispathTCPData(admin.mgr)
+	go handler.DispathUDPData(admin.mgr)
+	// start interactive panel
+	console.Run()
 }
 
 func (admin *Admin) handleConnFromDownstream(console *cli.Console) {
@@ -66,7 +69,7 @@ func (admin *Admin) handleConnFromDownstream(console *cli.Console) {
 	for {
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 		if err != nil {
-			log.Print("\n[*]Peer node seems offline!")
+			log.Print("\r\n[*]Peer node seems offline!")
 			os.Exit(0)
 		}
 
@@ -146,6 +149,13 @@ func (admin *Admin) handleDataFromDownstream(console *cli.Console) {
 		case protocol.FILEERR:
 			// no need to check mess
 			admin.mgr.File.ErrChan <- true
+		case protocol.SOCKSREADY:
+			message := data.fMessage.(*protocol.SocksReady)
+			if message.OK == 1 {
+				admin.mgr.SocksReady <- true
+			} else {
+				admin.mgr.SocksReady <- false
+			}
 		case protocol.SOCKSTCPDATA:
 			message := data.fMessage.(*protocol.SocksTCPData)
 			admin.mgr.SocksTCPDataChan <- message

@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 18:11:41
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-01 15:31:02
+ * @LastEditTime: 2021-04-01 19:40:56
  */
 package cli
 
@@ -450,9 +450,39 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				socks.Password = fCommand[3]
 			}
 
-			fmt.Printf("\r\n[*]Socks now listening on 0.0.0.0:%s!", fCommand[1])
+			fmt.Printf("\r\n[*]Trying to listen on 0.0.0.0:%s......", fCommand[1])
+			fmt.Printf("\r\n[*]Waiting for agent's response......")
 
-			go socks.LetSocks(component, console.mgr, route, uuid, uuidNum)
+			err := socks.LetSocks(component, console.mgr, route, uuid, uuidNum)
+
+			if err != nil {
+				fmt.Printf("\r\n%s", err.Error())
+			} else {
+				fmt.Print("\r\n[*]Socks start successfully!")
+			}
+
+			console.ready <- true
+		case "stopsocks":
+			if console.expectParamsNum(fCommand, 1, NODE, 0) {
+				break
+			}
+
+			IsRunning := handler.GetSocksInfo(console.mgr, uuidNum)
+
+			if IsRunning {
+				console.Status = "[*]Do you really want to shutdown socks?(yes/no): "
+				console.ready <- true
+				option := console.pretreatInput()
+				if option == "yes" {
+					fmt.Printf("\r\n[*]Closing......")
+					handler.StopSocks(component, console.mgr, route, uuid, uuidNum)
+					fmt.Printf("\r\n[*]Socks service has been closed successfully!")
+				} else if option == "no" {
+				} else {
+					fmt.Printf("\r\n[*]Please input yes/no!")
+				}
+				console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+			}
 
 			console.ready <- true
 		case "upload":

@@ -2,13 +2,14 @@
  * @Author: ph4ntom
  * @Date: 2021-03-23 19:01:26
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-01 15:20:49
+ * @LastEditTime: 2021-04-01 21:13:46
  */
 package manager
 
 import (
 	"Stowaway/protocol"
 	"Stowaway/share"
+	"fmt"
 	"net"
 )
 
@@ -24,6 +25,8 @@ const (
 	S_CLOSETCP
 	S_GETUDPSTARTINFO
 	S_UPDATEUDP
+	S_GETSOCKSINFO
+	S_CLOSESOCKS
 )
 
 type Manager struct {
@@ -35,6 +38,7 @@ type Manager struct {
 	socks5           map[int]*socks
 	SocksTCPDataChan chan interface{} // accept both data and fin mess
 	SocksUDPDataChan chan *protocol.SocksUDPData
+	SocksReady       chan bool
 	// share
 	TaskChan   chan *ManagerTask
 	ResultChan chan *ManagerResult
@@ -64,6 +68,7 @@ type ManagerResult struct {
 	TCPDataChan chan []byte
 	UDPDataChan chan []byte
 	TCPAddr     string
+	SocksInfo   string
 }
 
 type socks struct {
@@ -99,6 +104,7 @@ func NewManager(file *share.MyFile) *Manager {
 	manager.socks5SeqMap = make(map[uint64]int)
 	manager.SocksTCPDataChan = make(chan interface{}, 5)
 	manager.SocksUDPDataChan = make(chan *protocol.SocksUDPData, 5)
+	manager.SocksReady = make(chan bool, 1)
 	manager.TaskChan = make(chan *ManagerTask)
 	manager.Done = make(chan bool)
 	manager.ResultChan = make(chan *ManagerResult)
@@ -134,20 +140,22 @@ func (manager *Manager) Run() {
 				manager.getUDPStartInfo(task)
 			case S_UPDATEUDP:
 				manager.updateUDP(task)
+			case S_GETSOCKSINFO:
+				manager.getSocksInfo(task)
+			case S_CLOSESOCKS:
+				manager.closeSocks(task)
 			}
 		}
 	}
 }
 
-func (manager *Manager) ifSocksExist(uuidNum int) bool {
-	if _, ok := manager.socks5[uuidNum]; ok { // check if element exist
-		return true
-	}
-	return false
-}
-
+/**
+ * @description: register a new socks;If manager.socks5[task.UUIDNum] not exist(!ok),register a new one,otherwise return false
+ * @param {*ManagerTask} task
+ * @return {*}
+ */
 func (manager *Manager) newSocks(task *ManagerTask) {
-	if !manager.ifSocksExist(task.UUIDNum) {
+	if _, ok := manager.socks5[task.UUIDNum]; !ok {
 		manager.socks5[task.UUIDNum] = new(socks)
 		manager.socks5[task.UUIDNum].Port = task.SocksPort
 		manager.socks5[task.UUIDNum].Username = task.SocksUsername
@@ -160,24 +168,55 @@ func (manager *Manager) newSocks(task *ManagerTask) {
 	}
 }
 
+/**
+ * @description: add a new TCP conn;If manager.socks5[task.UUIDNum] exist(ok),register a new conn,otherwise return false
+ * @param {*ManagerTask} task
+ * @return {*}
+ */
 func (manager *Manager) addSocksTCPSocket(task *ManagerTask) {
-	manager.socks5[task.UUIDNum].SocksStatus[task.Seq] = new(socksStatus)
-	manager.socks5[task.UUIDNum].SocksStatus[task.Seq].tcp = new(tcpSocks) // no need to check if SocksStatus[task.Seq] exist,because it must exist
-	manager.socks5[task.UUIDNum].SocksStatus[task.Seq].tcp.DataChan = make(chan []byte)
-	manager.socks5[task.UUIDNum].SocksStatus[task.Seq].tcp.Conn = task.SocksTCPSocket
-	manager.ResultChan <- &ManagerResult{}
+	if _, ok := manager.socks5[task.UUIDNum]; ok {
+		manager.socks5[task.UUIDNum].SocksStatus[task.Seq] = new(socksStatus)
+		manager.socks5[task.UUIDNum].SocksStatus[task.Seq].tcp = new(tcpSocks) // no need to check if SocksStatus[task.Seq] exist,because it must exist
+		manager.socks5[task.UUIDNum].SocksStatus[task.Seq].tcp.DataChan = make(chan []byte)
+		manager.socks5[task.UUIDNum].SocksStatus[task.Seq].tcp.Conn = task.SocksTCPSocket
+		manager.ResultChan <- &ManagerResult{OK: true}
+	} else {
+		manager.ResultChan <- &ManagerResult{OK: false}
+	}
 }
 
+/**
+ * @description: receive a valid socks seq num
+ * @param {*ManagerTask} task
+ * @return {*}
+ */
 func (manager *Manager) getSocksSeq(task *ManagerTask) {
 	manager.socks5SeqMap[manager.socks5Seq] = task.UUIDNum
 	manager.ResultChan <- &ManagerResult{SocksID: manager.socks5Seq}
 	manager.socks5Seq++
 }
 
+/**
+ * @description: get a TCP corresponding datachan;If manager.socks5[task.UUIDNum] exist(ok),return the corresponding datachan,otherwise return false
+ * @param {*ManagerTask} task
+ * @return {*}
+ */
 func (manager *Manager) getTCPDataChan(task *ManagerTask) {
-	manager.ResultChan <- &ManagerResult{TCPDataChan: manager.socks5[task.UUIDNum].SocksStatus[task.Seq].tcp.DataChan} // no need to check if SocksStatus[task.Seq] exist,because it must exist
+	if _, ok := manager.socks5[task.UUIDNum]; ok {
+		manager.ResultChan <- &ManagerResult{
+			OK:          true,
+			TCPDataChan: manager.socks5[task.UUIDNum].SocksStatus[task.Seq].tcp.DataChan,
+		}
+	} else {
+		manager.ResultChan <- &ManagerResult{OK: false}
+	}
 }
 
+/**
+ * @description: get a UDP corresponding datachan;If manager.socks5[task.UUIDNum] exist(ok),return the corresponding datachan,otherwise return false
+ * @param {*ManagerTask} task
+ * @return {*}
+ */
 func (manager *Manager) getUDPDataChan(task *ManagerTask) {
 	if _, ok := manager.socks5[task.UUIDNum]; ok {
 		if _, ok := manager.socks5[task.UUIDNum].SocksStatus[task.Seq]; ok {
@@ -193,32 +232,46 @@ func (manager *Manager) getUDPDataChan(task *ManagerTask) {
 	}
 }
 
+/**
+ * @description: get a TCP corresponding datachan without requiring uuid;If manager.socks5SeqMap[task.Seq] exist(ok),return the corresponding datachan,otherwise return false
+ * @param {*ManagerTask} task
+ * @return {*}
+ */
 func (manager *Manager) getTCPDataChanWithoutUUID(task *ManagerTask) {
-	uuidNum := manager.socks5SeqMap[task.Seq] // no need to check if SocksStatus[task.Seq] exist,because it must exist
-	if _, ok := manager.socks5[uuidNum]; ok { // Must check if element is really exist!
-		if _, ok := manager.socks5[uuidNum].SocksStatus[task.Seq]; ok {
-			manager.ResultChan <- &ManagerResult{
-				OK:          true,
-				TCPDataChan: manager.socks5[uuidNum].SocksStatus[task.Seq].tcp.DataChan,
-			}
-		} else {
-			manager.ResultChan <- &ManagerResult{OK: false}
+	if _, ok := manager.socks5SeqMap[task.Seq]; !ok {
+		manager.ResultChan <- &ManagerResult{OK: false}
+		return
+	}
+
+	uuidNum := manager.socks5SeqMap[task.Seq]
+
+	if _, ok := manager.socks5[uuidNum].SocksStatus[task.Seq]; ok {
+		manager.ResultChan <- &ManagerResult{
+			OK:          true,
+			TCPDataChan: manager.socks5[uuidNum].SocksStatus[task.Seq].tcp.DataChan,
 		}
 	} else {
 		manager.ResultChan <- &ManagerResult{OK: false}
 	}
 }
 
+/**
+ * @description: get a UDP corresponding datachan without requiring uuid;If manager.socks5SeqMap[task.Seq] exist(ok),return the corresponding datachan,otherwise return false
+ * @param {*ManagerTask} task
+ * @return {*}
+ */
 func (manager *Manager) getUDPDataChanWithoutUUID(task *ManagerTask) {
+	if _, ok := manager.socks5SeqMap[task.Seq]; !ok {
+		manager.ResultChan <- &ManagerResult{OK: false}
+		return
+	}
+
 	uuidNum := manager.socks5SeqMap[task.Seq]
-	if _, ok := manager.socks5[uuidNum]; ok {
-		if _, ok := manager.socks5[uuidNum].SocksStatus[task.Seq]; ok {
-			manager.ResultChan <- &ManagerResult{
-				OK:          true,
-				UDPDataChan: manager.socks5[uuidNum].SocksStatus[task.Seq].udp.DataChan,
-			}
-		} else {
-			manager.ResultChan <- &ManagerResult{OK: false}
+	// manager.socks5[uuidNum] must exist if manager.socks5SeqMap[task.Seq] exist
+	if _, ok := manager.socks5[uuidNum].SocksStatus[task.Seq]; ok {
+		manager.ResultChan <- &ManagerResult{
+			OK:          true,
+			UDPDataChan: manager.socks5[uuidNum].SocksStatus[task.Seq].udp.DataChan,
 		}
 	} else {
 		manager.ResultChan <- &ManagerResult{OK: false}
@@ -227,40 +280,39 @@ func (manager *Manager) getUDPDataChanWithoutUUID(task *ManagerTask) {
 
 // close TCP include close UDP,cuz UDP's control channel is TCP,if TCP broken,UDP is also forced to be shutted down
 func (manager *Manager) closeTCP(task *ManagerTask) {
-	uuidNum := manager.socks5SeqMap[task.Seq]
-	if _, ok := manager.socks5[uuidNum]; ok { // check if node is still online
-		manager.socks5[uuidNum].SocksStatus[task.Seq].tcp.Conn.Close() // SocksStatus[task.Seq] must exist, no need to check(error)
-		close(manager.socks5[uuidNum].SocksStatus[task.Seq].tcp.DataChan)
-
-		if manager.socks5[uuidNum].SocksStatus[task.Seq].IsUDP {
-			manager.socks5[uuidNum].SocksStatus[task.Seq].udp.Listener.Close()
-			close(manager.socks5[uuidNum].SocksStatus[task.Seq].udp.DataChan)
-		}
-
-		delete(manager.socks5[uuidNum].SocksStatus, task.Seq)
+	if _, ok := manager.socks5SeqMap[task.Seq]; !ok {
+		return
 	}
+
+	uuidNum := manager.socks5SeqMap[task.Seq]
+
+	manager.socks5[uuidNum].SocksStatus[task.Seq].tcp.Conn.Close() // SocksStatus[task.Seq] must exist, no need to check(error)
+	close(manager.socks5[uuidNum].SocksStatus[task.Seq].tcp.DataChan)
+
+	if manager.socks5[uuidNum].SocksStatus[task.Seq].IsUDP {
+		manager.socks5[uuidNum].SocksStatus[task.Seq].udp.Listener.Close()
+		close(manager.socks5[uuidNum].SocksStatus[task.Seq].udp.DataChan)
+	}
+
+	delete(manager.socks5[uuidNum].SocksStatus, task.Seq)
 }
 
 func (manager *Manager) getUDPStartInfo(task *ManagerTask) {
+	if _, ok := manager.socks5SeqMap[task.Seq]; !ok {
+		manager.ResultChan <- &ManagerResult{OK: false}
+		return
+	}
+
 	uuidNum := manager.socks5SeqMap[task.Seq]
-	if _, ok := manager.socks5[uuidNum]; ok { // check if node is still online
-		if _, ok := manager.socks5[uuidNum].SocksStatus[task.Seq]; ok {
-			manager.ResultChan <- &ManagerResult{
-				OK:      true,
-				TCPAddr: manager.socks5[uuidNum].SocksStatus[task.Seq].tcp.Conn.LocalAddr().(*net.TCPAddr).IP.String(),
-				UUIDNum: uuidNum,
-			}
-		} else {
-			manager.ResultChan <- &ManagerResult{
-				OK:      false,
-				UUIDNum: uuidNum,
-			}
-		}
-	} else {
+
+	if _, ok := manager.socks5[uuidNum].SocksStatus[task.Seq]; ok {
 		manager.ResultChan <- &ManagerResult{
-			OK:      false,
+			OK:      true,
+			TCPAddr: manager.socks5[uuidNum].SocksStatus[task.Seq].tcp.Conn.LocalAddr().(*net.TCPAddr).IP.String(),
 			UUIDNum: uuidNum,
 		}
+	} else {
+		manager.ResultChan <- &ManagerResult{OK: false}
 	}
 }
 
@@ -278,4 +330,56 @@ func (manager *Manager) updateUDP(task *ManagerTask) {
 	} else {
 		manager.ResultChan <- &ManagerResult{OK: false}
 	}
+}
+
+func (manager *Manager) getSocksInfo(task *ManagerTask) {
+	if _, ok := manager.socks5[task.UUIDNum]; ok {
+		if manager.socks5[task.UUIDNum].Username == "" && manager.socks5[task.UUIDNum].Password == "" {
+			info := fmt.Sprintf("\r\nSocks Info ---> ListenAddr: 0.0.0.0:%s    Username: <null>    Password: <null>",
+				manager.socks5[task.UUIDNum].Port,
+			)
+			manager.ResultChan <- &ManagerResult{
+				OK:        true,
+				SocksInfo: info,
+			}
+		} else {
+			info := fmt.Sprintf("\r\nSocks Info ---> ListenAddr: 0.0.0.0:%s    Username: %s    Password: %s",
+				manager.socks5[task.UUIDNum].Port,
+				manager.socks5[task.UUIDNum].Username,
+				manager.socks5[task.UUIDNum].Password,
+			)
+			manager.ResultChan <- &ManagerResult{
+				OK:        true,
+				SocksInfo: info,
+			}
+		}
+	} else {
+		info := fmt.Sprint("\r\nSocks service isn't running!")
+		manager.ResultChan <- &ManagerResult{
+			OK:        false,
+			SocksInfo: info,
+		}
+	}
+}
+
+func (manager *Manager) closeSocks(task *ManagerTask) {
+	manager.socks5[task.UUIDNum].Listener.Close()
+	for seq, status := range manager.socks5[task.UUIDNum].SocksStatus {
+		status.tcp.Conn.Close()
+		close(status.tcp.DataChan)
+		if status.IsUDP {
+			status.udp.Listener.Close()
+			close(status.udp.DataChan)
+		}
+		delete(manager.socks5[task.UUIDNum].SocksStatus, seq)
+	}
+
+	for seq, uuidNum := range manager.socks5SeqMap {
+		if uuidNum == task.UUIDNum {
+			delete(manager.socks5SeqMap, seq)
+		}
+	}
+
+	delete(manager.socks5, task.UUIDNum) // we delete corresponding "socks5"
+	manager.ResultChan <- &ManagerResult{OK: true}
 }
