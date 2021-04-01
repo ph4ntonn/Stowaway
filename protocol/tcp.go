@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-09 14:02:57
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-30 18:28:44
+ * @LastEditTime: 2021-04-01 15:34:50
  */
 package protocol
 
@@ -329,14 +329,7 @@ func (message *TCPMessage) ConstructData(header *Header, mess interface{}) {
 			seqBuf := make([]byte, 8)
 			binary.BigEndian.PutUint64(seqBuf, mmess.Seq)
 
-			sourceAddrLenBuf := make([]byte, 2)
-			binary.BigEndian.PutUint16(sourceAddrLenBuf, mmess.SourceAddrLen)
-
-			sourceAddrBuf := []byte(mmess.SourceAddr)
-
 			dataBuffer.Write(seqBuf)
-			dataBuffer.Write(sourceAddrLenBuf)
-			dataBuffer.Write(sourceAddrBuf)
 		case UDPASSRES:
 			mmess := mess.(*UDPAssRes)
 			seqBuf := make([]byte, 8)
@@ -595,8 +588,6 @@ func (message *TCPMessage) DeconstructData() (*Header, interface{}, error) {
 	case UDPASSSTART:
 		mmess := new(UDPAssStart)
 		mmess.Seq = binary.BigEndian.Uint64(dataBuf[:8])
-		mmess.SourceAddrLen = binary.BigEndian.Uint16(dataBuf[8:10])
-		mmess.SourceAddr = string(dataBuf[10 : 10+mmess.SourceAddrLen])
 		return header, mmess, nil
 	case UDPASSRES:
 		mmess := new(UDPAssRes)

@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-23 19:01:26
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-01 14:16:03
+ * @LastEditTime: 2021-04-01 15:20:49
  */
 package manager
 
@@ -33,7 +33,7 @@ type Manager struct {
 	socks5Seq        uint64
 	socks5SeqMap     map[uint64]int
 	socks5           map[int]*socks
-	SocksTCPDataChan chan interface{}
+	SocksTCPDataChan chan interface{} // accept both data and fin mess
 	SocksUDPDataChan chan *protocol.SocksUDPData
 	// share
 	TaskChan   chan *ManagerTask

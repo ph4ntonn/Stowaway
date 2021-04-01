@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-11 19:10:16
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-30 16:58:36
+ * @LastEditTime: 2021-04-01 15:29:23
  */
 package topology
 
@@ -120,19 +120,15 @@ func (topology *Topology) idNum2ID(uuidNum int) string {
 }
 
 func (topology *Topology) getUUID(task *TopoTask) {
-	result := &TopoResult{
-		UUID: topology.idNum2ID(task.UUIDNum),
-	}
-	topology.ResultChan <- result
+	topology.ResultChan <- &TopoResult{UUID: topology.idNum2ID(task.UUIDNum)}
 }
 
 func (topology *Topology) checkNode(task *TopoTask) {
-	result := new(TopoResult)
-	_, ok := topology.nodes[task.UUIDNum]
-	if ok {
-		result.IsExist = true
+	if _, ok := topology.nodes[task.UUIDNum]; ok {
+		topology.ResultChan <- &TopoResult{IsExist: true}
+	} else {
+		topology.ResultChan <- &TopoResult{IsExist: false}
 	}
-	topology.ResultChan <- result
 }
 
 func (topology *Topology) addNode(task *TopoTask) {
@@ -146,6 +142,7 @@ func (topology *Topology) addNode(task *TopoTask) {
 
 	topology.nodes[topology.currentIDNum] = task.Target
 	topology.currentIDNum++
+
 	topology.ResultChan <- &TopoResult{} // Just tell upstream: work done!
 }
 
@@ -204,6 +201,7 @@ func (topology *Topology) showDetail() {
 			node.memo,
 		)
 	}
+
 	topology.ResultChan <- &TopoResult{} // Just tell upstream: work done!
 }
 
@@ -214,6 +212,7 @@ func (topology *Topology) showTree() {
 			fmt.Printf("Node[%s]\n", utils.Int2Str(topology.id2IDNum(child)))
 		}
 	}
+
 	topology.ResultChan <- &TopoResult{} // Just tell upstream: work done!
 }
 

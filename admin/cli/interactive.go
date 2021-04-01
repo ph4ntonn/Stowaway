@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 18:11:41
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-31 19:13:47
+ * @LastEditTime: 2021-04-01 15:31:02
  */
 package cli
 
@@ -72,7 +72,7 @@ func (console *Console) mainPanel() {
 		leftCommand  string
 		rightCommand string
 	)
-
+	// start history
 	history := NewHistory()
 	go history.Run()
 
@@ -200,6 +200,7 @@ func (console *Console) mainPanel() {
 					rightCommand = leftCommand[len(leftCommand)-1:] + rightCommand
 					leftCommand = leftCommand[:len(leftCommand)-1]
 				}
+
 				fmt.Print(leftCommand + rightCommand)
 				fmt.Print(string(bytes.Repeat([]byte("\b"), len(rightCommand))))
 			}
@@ -215,6 +216,7 @@ func (console *Console) mainPanel() {
 					leftCommand = leftCommand + rightCommand[:1]
 					rightCommand = ""
 				}
+
 				fmt.Print(leftCommand + rightCommand)
 				fmt.Print(string(bytes.Repeat([]byte("\b"), len(rightCommand))))
 			}
@@ -238,12 +240,14 @@ func (console *Console) handleMainPanelCommand() {
 			if console.expectParamsNum(fCommand, 2, MAIN, 1) {
 				break
 			}
+
 			uuidNum, _ := utils.Str2Int(fCommand[1])
 			task := &topology.TopoTask{
 				Mode:    topology.CHECKNODE,
 				UUIDNum: uuidNum,
 			}
 			console.Topology.TaskChan <- task
+
 			result := <-console.Topology.ResultChan
 			if result.IsExist {
 				console.Status = fmt.Sprintf("(node %s) >> ", fCommand[1])
@@ -252,26 +256,32 @@ func (console *Console) handleMainPanelCommand() {
 			} else {
 				fmt.Printf("\n[*]Node %s doesn't exist!", fCommand[1])
 			}
+
 			console.ready <- true
 		case "detail":
 			if console.expectParamsNum(fCommand, 1, MAIN, 0) {
 				break
 			}
+
 			task := &topology.TopoTask{
 				Mode: topology.SHOWDETAIL,
 			}
+
 			console.Topology.TaskChan <- task
 			<-console.Topology.ResultChan
+
 			console.ready <- true
 		case "tree":
 			if console.expectParamsNum(fCommand, 1, MAIN, 0) {
 				break
 			}
+
 			task := &topology.TopoTask{
 				Mode: topology.SHOWTREE,
 			}
 			console.Topology.TaskChan <- task
 			<-console.Topology.ResultChan
+
 			console.ready <- true
 		case "":
 			if console.expectParamsNum(fCommand, 1, MAIN, 0) {
@@ -282,7 +292,9 @@ func (console *Console) handleMainPanelCommand() {
 			if console.expectParamsNum(fCommand, 1, MAIN, 0) {
 				break
 			}
+
 			ShowMainHelp()
+
 			console.ready <- true
 		case "exit":
 			if console.expectParamsNum(fCommand, 1, MAIN, 0) {
@@ -326,15 +338,19 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 	for {
 		tCommand := console.pretreatInput()
 		fCommand := strings.Split(tCommand, " ")
+
 		switch fCommand[0] {
 		case "addmemo":
 			handler.AddMemo(component, console.Topology.TaskChan, fCommand[1:], uuid, route)
+
 			console.ready <- true
 		case "delmemo":
 			if console.expectParamsNum(fCommand, 1, NODE, 0) {
 				break
 			}
+
 			handler.DelMemo(component, console.Topology.TaskChan, uuid, route)
+
 			console.ready <- true
 		case "shell":
 			if console.expectParamsNum(fCommand, 1, NODE, 0) {
@@ -357,7 +373,9 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			if console.expectParamsNum(fCommand, 2, NODE, 0) {
 				break
 			}
+
 			handler.LetListen(component, route, uuid, fCommand[1])
+
 			console.ready <- true
 		case "ssh":
 			if console.expectParamsNum(fCommand, 2, NODE, 0) {
@@ -365,13 +383,14 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			}
 
 			var err error
+
 			ssh := handler.NewSSH()
 			ssh.Addr = fCommand[1]
 
 			console.Status = "[*]Please choose the auth method(1.username/password 2.certificate): "
 			console.ready <- true
-			firstChoice := console.pretreatInput()
 
+			firstChoice := console.pretreatInput()
 			if firstChoice == "1" {
 				ssh.Method = handler.UPMETHOD
 			} else if firstChoice == "2" {
@@ -417,8 +436,13 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			}
 
 			console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+
 			console.ready <- true
 		case "socks":
+			if console.expectParamsNum(fCommand, []int{2, 4}, NODE, 0) {
+				break
+			}
+
 			socks := handler.NewSocks()
 			socks.Port = fCommand[1]
 			if len(fCommand) > 2 {
@@ -427,7 +451,9 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			}
 
 			fmt.Printf("\r\n[*]Socks now listening on 0.0.0.0:%s!", fCommand[1])
+
 			go socks.LetSocks(component, console.mgr, route, uuid, uuidNum)
+
 			console.ready <- true
 		case "upload":
 			if console.expectParamsNum(fCommand, 3, NODE, 0) {
@@ -445,6 +471,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			} else if err != nil {
 				fmt.Printf("\r\n[*]Error: %s", err.Error())
 			}
+
 			console.ready <- true
 		case "download":
 			if console.expectParamsNum(fCommand, 3, NODE, 0) {
@@ -463,23 +490,29 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 					console.mgr.File.Receive(component, route, uuid, share.ADMIN)
 				}
 			}
+
 			console.ready <- true
 		case "offline":
 			if console.expectParamsNum(fCommand, 1, NODE, 0) {
 				break
 			}
+
 			handler.LetOffline(component, route, uuid)
+
 			console.ready <- true
 		case "":
 			if console.expectParamsNum(fCommand, 1, NODE, 0) {
 				break
 			}
+
 			console.ready <- true
 		case "help":
 			if console.expectParamsNum(fCommand, 1, NODE, 0) {
 				break
 			}
+
 			ShowNodeHelp()
+
 			console.ready <- true
 		case "exit":
 			if console.expectParamsNum(fCommand, 1, NODE, 0) {
@@ -577,16 +610,39 @@ func (console *Console) handleSSHPanelCommand(component *protocol.MessageCompone
 	}
 }
 
-func (console *Console) expectParamsNum(params []string, num int, mode int, needToBeInt int) bool {
-	if len(params) != num {
-		fmt.Print("\n[*]Format error!\n")
-		if mode == MAIN {
-			ShowMainHelp()
-		} else {
-			ShowNodeHelp()
+func (console *Console) expectParamsNum(params []string, numbers interface{}, mode int, needToBeInt int) bool {
+	switch numbers.(type) {
+	case int:
+		num := numbers.(int)
+		if len(params) != num {
+			fmt.Print("\n[*]Format error!\n")
+			if mode == MAIN {
+				ShowMainHelp()
+			} else {
+				ShowNodeHelp()
+			}
+			console.ready <- true
+			return true
 		}
-		console.ready <- true
-		return true
+	case []int:
+		nums := numbers.([]int)
+		var ok bool
+		for _, num := range nums {
+			if len(params) == num {
+				ok = true
+			}
+		}
+
+		if !ok {
+			fmt.Print("\n[*]Format error!\n")
+			if mode == MAIN {
+				ShowMainHelp()
+			} else {
+				ShowNodeHelp()
+			}
+			console.ready <- true
+			return true
+		}
 	}
 
 	if needToBeInt != 0 {

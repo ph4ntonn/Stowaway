@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-08 18:19:04
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-30 18:28:26
+ * @LastEditTime: 2021-04-01 15:34:28
  */
 package protocol
 
@@ -221,9 +221,7 @@ type SocksUDPData struct {
 }
 
 type UDPAssStart struct {
-	Seq           uint64
-	SourceAddrLen uint16
-	SourceAddr    string
+	Seq uint64
 }
 
 type UDPAssRes struct {

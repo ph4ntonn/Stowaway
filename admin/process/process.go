@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-16 16:10:23
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-01 12:01:01
+ * @LastEditTime: 2021-04-01 15:32:59
  */
 package process
 
@@ -62,6 +62,7 @@ func (admin *Admin) Run() {
 
 func (admin *Admin) handleConnFromDownstream(console *cli.Console) {
 	rMessage := protocol.PrepareAndDecideWhichRProtoFromUpper(admin.Conn, admin.UserOptions.Secret, protocol.ADMIN_UUID)
+
 	for {
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 		if err != nil {
@@ -81,6 +82,7 @@ func (admin *Admin) handleDataFromDownstream(console *cli.Console) {
 		switch data.fHeader.MessageType {
 		case protocol.MYINFO:
 			message := data.fMessage.(*protocol.MyInfo)
+			// register new node
 			task := &topology.TopoTask{
 				Mode:     topology.UPDATEDETAIL,
 				UUID:     data.fHeader.Sender,
