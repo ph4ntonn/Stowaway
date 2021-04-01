@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-16 16:10:23
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-31 16:30:17
+ * @LastEditTime: 2021-04-01 12:01:01
  */
 package process
 
@@ -149,7 +149,7 @@ func (admin *Admin) handleDataFromDownstream(console *cli.Console) {
 			admin.mgr.SocksTCPDataChan <- message
 		case protocol.SOCKSTCPFIN:
 			message := data.fMessage.(*protocol.SocksTCPFin)
-			go handler.HandleTCPFin(admin.mgr, message.Seq)
+			admin.mgr.SocksTCPDataChan <- message
 		case protocol.UDPASSSTART:
 			message := data.fMessage.(*protocol.UDPAssStart)
 			go handler.StartUDPAss(admin.mgr, admin.Topology, admin.Conn, admin.UserOptions.Secret, message.Seq)

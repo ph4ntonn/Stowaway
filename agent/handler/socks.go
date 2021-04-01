@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-23 18:57:46
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-31 18:57:16
+ * @LastEditTime: 2021-04-01 14:16:39
  */
 package handler
 
@@ -47,21 +47,32 @@ func (socks *Socks) Start(mgr *manager.Manager, component *protocol.MessageCompo
 func (socks *Socks) dispathTCPData(mgr *manager.Manager, component *protocol.MessageComponent) {
 	for {
 		socksData := <-mgr.SocksTCPDataChan
-		// check if seq num has already existed
-		mgrTask := &manager.ManagerTask{
-			Mode:     manager.S_GETTCPDATACHAN,
-			Category: manager.SOCKS,
-			Seq:      socksData.Seq,
-		}
-		mgr.TaskChan <- mgrTask
-		result := <-mgr.SocksResultChan
+		switch socksData.(type) {
+		case *protocol.SocksTCPData:
+			message := socksData.(*protocol.SocksTCPData)
+			mgrTask := &manager.ManagerTask{
+				Mode:     manager.S_GETTCPDATACHAN,
+				Category: manager.SOCKS,
+				Seq:      message.Seq,
+			}
+			mgr.TaskChan <- mgrTask
+			result := <-mgr.ResultChan
 
-		result.DataChan <- socksData.Data
-		mgr.Done <- true
+			result.DataChan <- message.Data
+			mgr.Done <- true
 
-		// if not exist
-		if !result.SocksSeqExist {
-			go socks.handleSocks(mgr, component, result.DataChan, socksData.Seq)
+			// if not exist
+			if !result.SocksSeqExist {
+				go socks.handleSocks(mgr, component, result.DataChan, message.Seq)
+			}
+		case *protocol.SocksTCPFin:
+			message := socksData.(*protocol.SocksTCPFin)
+			mgrTask := &manager.ManagerTask{
+				Mode:     manager.S_CLOSETCP,
+				Category: manager.SOCKS,
+				Seq:      message.Seq,
+			}
+			mgr.TaskChan <- mgrTask
 		}
 	}
 }
@@ -76,7 +87,7 @@ func (socks *Socks) dispathUDPData(mgr *manager.Manager, component *protocol.Mes
 			Seq:      socksData.Seq,
 		}
 		mgr.TaskChan <- mgrTask
-		result := <-mgr.SocksResultChan
+		result := <-mgr.ResultChan
 
 		if result.OK {
 			result.DataChan <- socksData.Data
@@ -96,7 +107,7 @@ func (socks *Socks) dispathUDPReady(mgr *manager.Manager, component *protocol.Me
 			Seq:      socksReady.Seq,
 		}
 		mgr.TaskChan <- mgrTask
-		result := <-mgr.SocksResultChan
+		result := <-mgr.ResultChan
 
 		if result.OK {
 			result.ReadyChan <- socksReady.Addr
@@ -193,7 +204,7 @@ func (socks *Socks) checkMethod(component *protocol.MessageComponent, setting *S
 	passMess := &protocol.SocksTCPData{
 		Seq:     seq,
 		DataLen: uint64(len([]byte{0x05, 0x02})),
-		Data:    []byte{0x05, 0x00},
+		Data:    []byte{0x05, 0x02},
 	}
 
 	// avoid the scenario that we can get full socks protocol header (rarely happen,just in case)
@@ -222,6 +233,7 @@ func (socks *Socks) checkMethod(component *protocol.MessageComponent, setting *S
 			protocol.ConstructMessage(sMessage, header, failMess)
 			sMessage.SendMessage()
 			setting.method = "ILLEGAL"
+			return
 		}
 
 		if noAuthFinded && (socks.Username == "" && socks.Password == "") {
@@ -229,14 +241,17 @@ func (socks *Socks) checkMethod(component *protocol.MessageComponent, setting *S
 			sMessage.SendMessage()
 			setting.method = "NONE"
 			setting.isAuthed = true
+			return
 		} else if userPassFinded && (socks.Username != "" && socks.Password != "") {
 			protocol.ConstructMessage(sMessage, header, passMess)
 			sMessage.SendMessage()
 			setting.method = "PASSWORD"
+			return
 		} else {
 			protocol.ConstructMessage(sMessage, header, failMess)
 			sMessage.SendMessage()
 			setting.method = "ILLEGAL"
+			return
 		}
 	}
 	// send nothing
@@ -281,6 +296,7 @@ func (socks *Socks) auth(component *protocol.MessageComponent, setting *Setting,
 		protocol.ConstructMessage(sMessage, header, failMess)
 		sMessage.SendMessage()
 		setting.isAuthed = false
+		return
 	}
 	// username && password all fits!
 	protocol.ConstructMessage(sMessage, header, succMess)
@@ -310,6 +326,7 @@ func buildConn(mgr *manager.Manager, component *protocol.MessageComponent, setti
 	if length <= 2 {
 		protocol.ConstructMessage(sMessage, header, failMess)
 		sMessage.SendMessage()
+		return
 	}
 
 	if data[0] == 0x05 {
@@ -395,7 +412,7 @@ func TCPConnect(mgr *manager.Manager, component *protocol.MessageComponent, sett
 		SocksSocket: setting.tcpConn,
 	}
 	mgr.TaskChan <- mgrTask
-	socksResult := <-mgr.SocksResultChan
+	socksResult := <-mgr.ResultChan
 	if !socksResult.OK { // if admin has already send fin,then close the conn and set setting.tcpConnected -> false
 		setting.tcpConn.Close()
 		setting.tcpConnected = false
@@ -405,15 +422,6 @@ func TCPConnect(mgr *manager.Manager, component *protocol.MessageComponent, sett
 	protocol.ConstructMessage(sMessage, header, succMess)
 	sMessage.SendMessage()
 	setting.tcpConnected = true
-}
-
-func HandleTCPFin(mgr *manager.Manager, seq uint64) {
-	mgrTask := &manager.ManagerTask{
-		Mode:     manager.S_CLOSETCP,
-		Category: manager.SOCKS,
-		Seq:      seq,
-	}
-	mgr.TaskChan <- mgrTask
 }
 
 func ProxyC2STCP(conn net.Conn, dataChan chan []byte) {
@@ -556,7 +564,7 @@ func UDPAssociate(mgr *manager.Manager, component *protocol.MessageComponent, se
 	}
 
 	mgr.TaskChan <- mgrTask
-	socksResult := <-mgr.SocksResultChan
+	socksResult := <-mgr.ResultChan
 	if !socksResult.OK {
 		udpListener.Close() // close listener,because tcp conn is closed
 		setting.success = false
@@ -569,7 +577,7 @@ func UDPAssociate(mgr *manager.Manager, component *protocol.MessageComponent, se
 		Seq:      seq,
 	}
 	mgr.TaskChan <- mgrTask
-	socksResult = <-mgr.SocksResultChan
+	socksResult = <-mgr.ResultChan
 	mgr.Done <- true // give true immediately,cuz no need to ensure closeTCP() must after "readyChan := socksResult.ReadyChan" operation,trying to read data from a closed chan won't cause panic
 
 	if !socksResult.OK { // no need to close listener,cuz TCPFIN has helped us
@@ -609,7 +617,6 @@ func UDPAssociate(mgr *manager.Manager, component *protocol.MessageComponent, se
 
 		setting.udpListener = udpListener
 		setting.success = true
-
 		return
 	}
 
@@ -626,7 +633,7 @@ func ProxyC2SUDP(mgr *manager.Manager, listener *net.UDPConn, seq uint64) {
 		Seq:      seq,
 	}
 	mgr.TaskChan <- mgrTask
-	result := <-mgr.SocksResultChan
+	result := <-mgr.ResultChan
 	mgr.Done <- true
 	// no need to check if OK,cuz if not,"data, ok := <-dataChan" will help us to exit
 	dataChan := result.DataChan
@@ -698,7 +705,7 @@ func ProxyC2SUDP(mgr *manager.Manager, listener *net.UDPConn, seq uint64) {
 			SocksHeader:     udpHeader,
 		}
 		mgr.TaskChan <- mgrTask
-		<-mgr.SocksResultChan
+		<-mgr.ResultChan
 
 		listener.WriteToUDP(udpData, remoteAddr)
 	}
@@ -723,6 +730,7 @@ func ProxyS2CUDP(mgr *manager.Manager, component *protocol.MessageComponent, lis
 	for {
 		length, addr, err := listener.ReadFromUDP(buffer)
 		if err != nil {
+			listener.Close()
 			return
 		}
 
@@ -732,7 +740,7 @@ func ProxyS2CUDP(mgr *manager.Manager, component *protocol.MessageComponent, lis
 			SocksHeaderAddr: addr.String(),
 		}
 		mgr.TaskChan <- mgrTask
-		result := <-mgr.SocksResultChan
+		result := <-mgr.ResultChan
 		if result.OK {
 			finalLength = len(result.SocksUDPHeader) + length
 			data = make([]byte, 0, finalLength)

@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-19 18:40:13
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-31 19:01:13
+ * @LastEditTime: 2021-04-01 14:14:38
  */
 package handler
 
@@ -45,8 +45,8 @@ func (socks *Socks) LetSocks(component *protocol.MessageComponent, mgr *manager.
 	}
 
 	mgr.TaskChan <- mgrTask
-	result := <-mgr.SocksResultChan // wait for "add" done
-	if !result.OK {                 // node and socks service must be one-to-one
+	result := <-mgr.ResultChan // wait for "add" done
+	if !result.OK {            // node and socks service must be one-to-one
 		socksListener.Close()
 		fmt.Printf("\r\n[*]Error: Socks service has already running on this node!")
 		return
@@ -91,7 +91,7 @@ func (socks *Socks) LetSocks(component *protocol.MessageComponent, mgr *manager.
 			UUIDNum:  uuidNum,
 		}
 		mgr.TaskChan <- mgrTask
-		result := <-mgr.SocksResultChan
+		result := <-mgr.ResultChan
 		seq := result.SocksID
 
 		// save the socket
@@ -103,7 +103,7 @@ func (socks *Socks) LetSocks(component *protocol.MessageComponent, mgr *manager.
 			SocksTCPSocket: conn,
 		}
 		mgr.TaskChan <- mgrTask
-		<-mgr.SocksResultChan
+		<-mgr.ResultChan
 
 		// handle it!
 		go socks.handleSocks(component, mgr, conn, route, uuid, uuidNum, seq)
@@ -114,17 +114,29 @@ func (socks *Socks) dispathTCPData(mgr *manager.Manager) {
 	for {
 		data, ok := <-mgr.SocksTCPDataChan
 		if ok {
-			mgrTask := &manager.ManagerTask{
-				Category: manager.SOCKS,
-				Seq:      data.Seq,
-				Mode:     manager.S_GETTCPDATACHAN_WITHOUTUUID,
+			switch data.(type) {
+			case *protocol.SocksTCPData:
+				message := data.(*protocol.SocksTCPData)
+				mgrTask := &manager.ManagerTask{
+					Category: manager.SOCKS,
+					Seq:      message.Seq,
+					Mode:     manager.S_GETTCPDATACHAN_WITHOUTUUID,
+				}
+				mgr.TaskChan <- mgrTask
+				result := <-mgr.ResultChan
+				if result.OK {
+					result.TCPDataChan <- message.Data
+				}
+				mgr.Done <- true
+			case *protocol.SocksTCPFin:
+				message := data.(*protocol.SocksTCPFin)
+				mgrTask := &manager.ManagerTask{
+					Mode:     manager.S_CLOSETCP,
+					Category: manager.SOCKS,
+					Seq:      message.Seq,
+				}
+				mgr.TaskChan <- mgrTask
 			}
-			mgr.TaskChan <- mgrTask
-			result := <-mgr.SocksResultChan
-			if result.OK {
-				result.TCPDataChan <- data.Data
-			}
-			mgr.Done <- true
 		} else {
 			return
 		}
@@ -141,7 +153,7 @@ func (socks *Socks) dispathUDPData(mgr *manager.Manager) {
 				Mode:     manager.S_GETUDPDATACHAN_WITHOUTUUID,
 			}
 			mgr.TaskChan <- mgrTask
-			result := <-mgr.SocksResultChan
+			result := <-mgr.ResultChan
 			if result.OK {
 				result.UDPDataChan <- data.Data
 			}
@@ -170,7 +182,7 @@ func (socks *Socks) handleSocks(component *protocol.MessageComponent, mgr *manag
 		Mode:     manager.S_GETTCPDATACHAN,
 	}
 	mgr.TaskChan <- mgrTask
-	result := <-mgr.SocksResultChan
+	result := <-mgr.ResultChan
 
 	tcpDataChan := result.TCPDataChan
 
@@ -195,7 +207,12 @@ func (socks *Socks) handleSocks(component *protocol.MessageComponent, mgr *manag
 		// if false, don't tell agent and do cleanup alone
 		if !sendSth {
 			// call HandleTCPFin by myself
-			HandleTCPFin(mgr, seq)
+			mgrTask := &manager.ManagerTask{
+				Mode:     manager.S_CLOSETCP,
+				Category: manager.SOCKS,
+				Seq:      seq,
+			}
+			mgr.TaskChan <- mgrTask
 			return
 		}
 
@@ -209,6 +226,7 @@ func (socks *Socks) handleSocks(component *protocol.MessageComponent, mgr *manag
 		finMess := &protocol.SocksTCPFin{
 			Seq: seq,
 		}
+
 		protocol.ConstructMessage(sMessage, finHeader, finMess)
 		sMessage.SendMessage()
 	}()
@@ -253,15 +271,6 @@ func (socks *Socks) handleSocks(component *protocol.MessageComponent, mgr *manag
 	}
 }
 
-func HandleTCPFin(mgr *manager.Manager, seq uint64) {
-	mgrTask := &manager.ManagerTask{
-		Mode:     manager.S_CLOSETCP,
-		Category: manager.SOCKS,
-		Seq:      seq,
-	}
-	mgr.TaskChan <- mgrTask
-}
-
 func StartUDPAss(mgr *manager.Manager, topo *topology.Topology, conn net.Conn, secret string, seq uint64) {
 	var (
 		err             error
@@ -281,7 +290,7 @@ func StartUDPAss(mgr *manager.Manager, topo *topology.Topology, conn net.Conn, s
 		Seq:      seq,
 	}
 	mgr.TaskChan <- mgrTask
-	socksResult := <-mgr.SocksResultChan
+	socksResult := <-mgr.ResultChan
 	uuidNum := socksResult.UUIDNum
 
 	topoTask := &topology.TopoTask{
@@ -341,7 +350,7 @@ func StartUDPAss(mgr *manager.Manager, topo *topology.Topology, conn net.Conn, s
 			SocksUDPListener:   udpListener,
 		}
 		mgr.TaskChan <- mgrTask
-		socksResult = <-mgr.SocksResultChan
+		socksResult = <-mgr.ResultChan
 		if !socksResult.OK {
 			err = errors.New("TCP conn seems disconnected!")
 			return
@@ -382,7 +391,7 @@ func HandleUDPAss(mgr *manager.Manager, component *protocol.MessageComponent, li
 		Mode:     manager.S_GETUDPDATACHAN,
 	}
 	mgr.TaskChan <- mgrTask
-	result := <-mgr.SocksResultChan
+	result := <-mgr.ResultChan
 	mgr.Done <- true
 
 	udpDataChan := result.UDPDataChan

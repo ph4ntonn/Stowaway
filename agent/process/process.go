@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 15:27:30
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-31 16:42:28
+ * @LastEditTime: 2021-04-01 11:55:28
  */
 
 package process
@@ -164,7 +164,7 @@ func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager) {
 				mgr.SocksTCPDataChan <- message
 			case protocol.SOCKSTCPFIN:
 				message := data.fMessage.(*protocol.SocksTCPFin)
-				go handler.HandleTCPFin(mgr, message.Seq)
+				mgr.SocksTCPDataChan <- message
 			case protocol.UDPASSRES:
 				message := data.fMessage.(*protocol.UDPAssRes)
 				mgr.SocksUDPReadyChan <- message

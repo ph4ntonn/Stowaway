@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 18:11:41
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-31 17:18:15
+ * @LastEditTime: 2021-03-31 19:13:47
  */
 package cli
 
@@ -419,11 +419,6 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
 			console.ready <- true
 		case "socks":
-			if console.expectParamsNum(fCommand, 2, NODE, 1) {
-				if console.expectParamsNum(fCommand, 4, NODE, 1) {
-					break
-				}
-			}
 			socks := handler.NewSocks()
 			socks.Port = fCommand[1]
 			if len(fCommand) > 2 {
