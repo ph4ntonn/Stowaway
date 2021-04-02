@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-08 18:19:04
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-01 18:06:23
+ * @LastEditTime: 2021-04-02 13:58:05
  */
 package protocol
 
@@ -40,6 +40,8 @@ const (
 	UDPASSRES
 	SOCKSTCPFIN
 	SOCKSREADY
+	FORWARDSTART
+	FORWARDREADY
 	OFFLINE
 )
 
@@ -239,6 +241,16 @@ type SocksTCPFin struct {
 }
 
 type SocksReady struct {
+	OK uint16
+}
+
+type ForwardStart struct {
+	Seq     uint64
+	AddrLen uint16
+	Addr    string
+}
+
+type ForwardReady struct {
 	OK uint16
 }
 

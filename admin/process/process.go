@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-16 16:10:23
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-01 19:38:11
+ * @LastEditTime: 2021-04-02 16:49:08
  */
 package process
 
@@ -152,22 +152,29 @@ func (admin *Admin) handleDataFromDownstream(console *cli.Console) {
 		case protocol.SOCKSREADY:
 			message := data.fMessage.(*protocol.SocksReady)
 			if message.OK == 1 {
-				admin.mgr.SocksReady <- true
+				admin.mgr.SocksManager.SocksReady <- true
 			} else {
-				admin.mgr.SocksReady <- false
+				admin.mgr.SocksManager.SocksReady <- false
 			}
 		case protocol.SOCKSTCPDATA:
 			message := data.fMessage.(*protocol.SocksTCPData)
-			admin.mgr.SocksTCPDataChan <- message
+			admin.mgr.SocksManager.SocksTCPDataChan <- message
 		case protocol.SOCKSTCPFIN:
 			message := data.fMessage.(*protocol.SocksTCPFin)
-			admin.mgr.SocksTCPDataChan <- message
+			admin.mgr.SocksManager.SocksTCPDataChan <- message
 		case protocol.UDPASSSTART:
 			message := data.fMessage.(*protocol.UDPAssStart)
 			go handler.StartUDPAss(admin.mgr, admin.Topology, admin.Conn, admin.UserOptions.Secret, message.Seq)
 		case protocol.SOCKSUDPDATA:
 			message := data.fMessage.(*protocol.SocksUDPData)
-			admin.mgr.SocksUDPDataChan <- message
+			admin.mgr.SocksManager.SocksUDPDataChan <- message
+		case protocol.FORWARDREADY:
+			message := data.fMessage.(*protocol.ForwardReady)
+			if message.OK == 1 {
+				admin.mgr.ForwardManager.ForwardReady <- true
+			} else {
+				admin.mgr.ForwardManager.ForwardReady <- false
+			}
 		default:
 			log.Print("\n[*]Unknown Message!")
 		}

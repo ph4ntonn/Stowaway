@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 18:11:41
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-01 19:40:56
+ * @LastEditTime: 2021-04-02 15:41:19
  */
 package cli
 
@@ -485,6 +485,12 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			}
 
 			console.ready <- true
+		case "forward":
+			if console.expectParamsNum(fCommand, 3, NODE, 1) {
+				break
+			}
+
+			// err := handler.LetForward(component, console.mgr, fCommand[1], fCommand[2], route, uuid, uuidNum)
 		case "upload":
 			if console.expectParamsNum(fCommand, 3, NODE, 0) {
 				break

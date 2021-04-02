@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-19 18:40:13
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-01 19:37:29
+ * @LastEditTime: 2021-04-02 16:47:37
  */
 package handler
 
@@ -46,7 +46,7 @@ func (socks *Socks) LetSocks(component *protocol.MessageComponent, mgr *manager.
 	protocol.ConstructMessage(sMessage, header, socksStartMess)
 	sMessage.SendMessage()
 
-	if ready := <-mgr.SocksReady; !ready {
+	if ready := <-mgr.SocksManager.SocksReady; !ready {
 		err := errors.New("[*]Fail to start socks.If you just stop socks service,please wait for the cleanup done")
 		return err
 	}
@@ -58,8 +58,7 @@ func (socks *Socks) LetSocks(component *protocol.MessageComponent, mgr *manager.
 	}
 
 	// register brand new socks service
-	mgrTask := &manager.ManagerTask{
-		Category:         manager.SOCKS,
+	mgrTask := &manager.SocksTask{
 		Mode:             manager.S_NEWSOCKS,
 		UUIDNum:          uuidNum,
 		SocksPort:        socks.Port,
@@ -68,9 +67,9 @@ func (socks *Socks) LetSocks(component *protocol.MessageComponent, mgr *manager.
 		SocksTCPListener: listener,
 	}
 
-	mgr.TaskChan <- mgrTask
-	result := <-mgr.ResultChan // wait for "add" done
-	if !result.OK {            // node and socks service must be one-to-one
+	mgr.SocksManager.TaskChan <- mgrTask
+	result := <-mgr.SocksManager.ResultChan // wait for "add" done
+	if !result.OK {                         // node and socks service must be one-to-one
 		listener.Close()
 		return err
 	}
@@ -89,25 +88,23 @@ func (socks *Socks) handleListener(component *protocol.MessageComponent, mgr *ma
 		}
 
 		// ask new seq num
-		mgrTask := &manager.ManagerTask{
-			Category: manager.SOCKS,
-			Mode:     manager.S_GETNEWSEQ,
-			UUIDNum:  uuidNum,
+		mgrTask := &manager.SocksTask{
+			Mode:    manager.S_GETNEWSEQ,
+			UUIDNum: uuidNum,
 		}
-		mgr.TaskChan <- mgrTask
-		result := <-mgr.ResultChan
-		seq := result.SocksID
+		mgr.SocksManager.TaskChan <- mgrTask
+		result := <-mgr.SocksManager.ResultChan
+		seq := result.SocksSeq
 
 		// save the socket
-		mgrTask = &manager.ManagerTask{
-			Category:       manager.SOCKS,
+		mgrTask = &manager.SocksTask{
+			Mode:           manager.S_ADDTCPSOCKET,
 			UUIDNum:        uuidNum,
 			Seq:            seq,
-			Mode:           manager.S_ADDTCPSOCKET,
 			SocksTCPSocket: conn,
 		}
-		mgr.TaskChan <- mgrTask
-		result = <-mgr.ResultChan
+		mgr.SocksManager.TaskChan <- mgrTask
+		result = <-mgr.SocksManager.ResultChan
 		if !result.OK {
 			return
 		}
@@ -128,14 +125,13 @@ func (socks *Socks) handleSocks(component *protocol.MessageComponent, mgr *manag
 		Route:       route,
 	}
 
-	mgrTask := &manager.ManagerTask{
-		Category: manager.SOCKS,
-		UUIDNum:  uuidNum,
-		Seq:      seq,
-		Mode:     manager.S_GETTCPDATACHAN,
+	mgrTask := &manager.SocksTask{
+		Mode:    manager.S_GETTCPDATACHAN,
+		UUIDNum: uuidNum,
+		Seq:     seq,
 	}
-	mgr.TaskChan <- mgrTask
-	result := <-mgr.ResultChan
+	mgr.SocksManager.TaskChan <- mgrTask
+	result := <-mgr.SocksManager.ResultChan
 	if !result.OK {
 		return
 	}
@@ -163,12 +159,11 @@ func (socks *Socks) handleSocks(component *protocol.MessageComponent, mgr *manag
 		// if false, don't tell agent and do cleanup alone
 		if !sendSth {
 			// call HandleTCPFin by myself
-			mgrTask := &manager.ManagerTask{
-				Mode:     manager.S_CLOSETCP,
-				Category: manager.SOCKS,
-				Seq:      seq,
+			mgrTask := &manager.SocksTask{
+				Mode: manager.S_CLOSETCP,
+				Seq:  seq,
 			}
-			mgr.TaskChan <- mgrTask
+			mgr.SocksManager.TaskChan <- mgrTask
 			return
 		}
 
@@ -240,13 +235,12 @@ func StartUDPAss(mgr *manager.Manager, topo *topology.Topology, conn net.Conn, s
 		UUID:   protocol.ADMIN_UUID,
 	}
 
-	mgrTask := &manager.ManagerTask{
-		Category: manager.SOCKS,
-		Mode:     manager.S_GETUDPSTARTINFO,
-		Seq:      seq,
+	mgrTask := &manager.SocksTask{
+		Mode: manager.S_GETUDPSTARTINFO,
+		Seq:  seq,
 	}
-	mgr.TaskChan <- mgrTask
-	socksResult := <-mgr.ResultChan
+	mgr.SocksManager.TaskChan <- mgrTask
+	socksResult := <-mgr.SocksManager.ResultChan
 	uuidNum := socksResult.UUIDNum
 
 	topoTask := &topology.TopoTask{
@@ -298,15 +292,13 @@ func StartUDPAss(mgr *manager.Manager, topo *topology.Topology, conn net.Conn, s
 			return
 		}
 
-		mgrTask = &manager.ManagerTask{
-			Category:           manager.SOCKS,
-			Mode:               manager.S_UPDATEUDP,
-			Seq:                seq,
-			SocksUDPListenAddr: udpListener.LocalAddr().String(),
-			SocksUDPListener:   udpListener,
+		mgrTask = &manager.SocksTask{
+			Mode:             manager.S_UPDATEUDP,
+			Seq:              seq,
+			SocksUDPListener: udpListener,
 		}
-		mgr.TaskChan <- mgrTask
-		socksResult = <-mgr.ResultChan
+		mgr.SocksManager.TaskChan <- mgrTask
+		socksResult = <-mgr.SocksManager.ResultChan
 		if !socksResult.OK {
 			err = errors.New("TCP conn seems disconnected!")
 			return
@@ -340,15 +332,14 @@ func HandleUDPAss(mgr *manager.Manager, component *protocol.MessageComponent, li
 		Route:       route,
 	}
 
-	mgrTask := &manager.ManagerTask{
-		Category: manager.SOCKS,
-		UUIDNum:  uuidNum,
-		Seq:      seq,
-		Mode:     manager.S_GETUDPDATACHAN,
+	mgrTask := &manager.SocksTask{
+		Mode:    manager.S_GETUDPDATACHAN,
+		UUIDNum: uuidNum,
+		Seq:     seq,
 	}
-	mgr.TaskChan <- mgrTask
-	result := <-mgr.ResultChan
-	mgr.Done <- true
+	mgr.SocksManager.TaskChan <- mgrTask
+	result := <-mgr.SocksManager.ResultChan
+	mgr.SocksManager.Done <- true
 
 	if !result.OK {
 		return
@@ -392,60 +383,56 @@ func HandleUDPAss(mgr *manager.Manager, component *protocol.MessageComponent, li
 
 func DispathTCPData(mgr *manager.Manager) {
 	for {
-		data := <-mgr.SocksTCPDataChan
+		data := <-mgr.SocksManager.SocksTCPDataChan
 
 		switch data.(type) {
 		case *protocol.SocksTCPData:
 			message := data.(*protocol.SocksTCPData)
-			mgrTask := &manager.ManagerTask{
-				Category: manager.SOCKS,
-				Seq:      message.Seq,
-				Mode:     manager.S_GETTCPDATACHAN_WITHOUTUUID,
+			mgrTask := &manager.SocksTask{
+				Mode: manager.S_GETTCPDATACHAN_WITHOUTUUID,
+				Seq:  message.Seq,
 			}
-			mgr.TaskChan <- mgrTask
-			result := <-mgr.ResultChan
+			mgr.SocksManager.TaskChan <- mgrTask
+			result := <-mgr.SocksManager.ResultChan
 			if result.OK {
 				result.TCPDataChan <- message.Data
 			}
-			mgr.Done <- true
+			mgr.SocksManager.Done <- true
 		case *protocol.SocksTCPFin:
 			message := data.(*protocol.SocksTCPFin)
-			mgrTask := &manager.ManagerTask{
-				Mode:     manager.S_CLOSETCP,
-				Category: manager.SOCKS,
-				Seq:      message.Seq,
+			mgrTask := &manager.SocksTask{
+				Mode: manager.S_CLOSETCP,
+				Seq:  message.Seq,
 			}
-			mgr.TaskChan <- mgrTask
+			mgr.SocksManager.TaskChan <- mgrTask
 		}
 	}
 }
 
 func DispathUDPData(mgr *manager.Manager) {
 	for {
-		data := <-mgr.SocksUDPDataChan
+		data := <-mgr.SocksManager.SocksUDPDataChan
 
-		mgrTask := &manager.ManagerTask{
-			Category: manager.SOCKS,
-			Seq:      data.Seq,
-			Mode:     manager.S_GETUDPDATACHAN_WITHOUTUUID,
+		mgrTask := &manager.SocksTask{
+			Mode: manager.S_GETUDPDATACHAN_WITHOUTUUID,
+			Seq:  data.Seq,
 		}
-		mgr.TaskChan <- mgrTask
-		result := <-mgr.ResultChan
+		mgr.SocksManager.TaskChan <- mgrTask
+		result := <-mgr.SocksManager.ResultChan
 		if result.OK {
 			result.UDPDataChan <- data.Data
 		}
-		mgr.Done <- true
+		mgr.SocksManager.Done <- true
 	}
 }
 
 func GetSocksInfo(mgr *manager.Manager, uuidNum int) bool {
-	mgrTask := &manager.ManagerTask{
-		Category: manager.SOCKS,
-		UUIDNum:  uuidNum,
-		Mode:     manager.S_GETSOCKSINFO,
+	mgrTask := &manager.SocksTask{
+		Mode:    manager.S_GETSOCKSINFO,
+		UUIDNum: uuidNum,
 	}
-	mgr.TaskChan <- mgrTask
-	result := <-mgr.ResultChan
+	mgr.SocksManager.TaskChan <- mgrTask
+	result := <-mgr.SocksManager.ResultChan
 
 	fmt.Print(result.SocksInfo)
 
@@ -453,11 +440,10 @@ func GetSocksInfo(mgr *manager.Manager, uuidNum int) bool {
 }
 
 func StopSocks(component *protocol.MessageComponent, mgr *manager.Manager, route string, uuid string, uuidNum int) {
-	mgrTask := &manager.ManagerTask{
-		Category: manager.SOCKS,
-		UUIDNum:  uuidNum,
-		Mode:     manager.S_CLOSESOCKS,
+	mgrTask := &manager.SocksTask{
+		Mode:    manager.S_CLOSESOCKS,
+		UUIDNum: uuidNum,
 	}
-	mgr.TaskChan <- mgrTask
-	<-mgr.ResultChan
+	mgr.SocksManager.TaskChan <- mgrTask
+	<-mgr.SocksManager.ResultChan
 }

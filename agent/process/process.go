@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 15:27:30
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-01 18:37:06
+ * @LastEditTime: 2021-04-02 17:21:47
  */
 
 package process
@@ -165,16 +165,19 @@ func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager) {
 				go socks.Start(mgr, component)
 			case protocol.SOCKSTCPDATA:
 				message := data.fMessage.(*protocol.SocksTCPData)
-				mgr.SocksTCPDataChan <- message
+				mgr.SocksManager.SocksTCPDataChan <- message
 			case protocol.SOCKSTCPFIN:
 				message := data.fMessage.(*protocol.SocksTCPFin)
-				mgr.SocksTCPDataChan <- message
+				mgr.SocksManager.SocksTCPDataChan <- message
 			case protocol.UDPASSRES:
 				message := data.fMessage.(*protocol.UDPAssRes)
-				mgr.SocksUDPReadyChan <- message
+				mgr.SocksManager.SocksUDPReadyChan <- message
 			case protocol.SOCKSUDPDATA:
 				message := data.fMessage.(*protocol.SocksUDPData)
-				mgr.SocksUDPDataChan <- message
+				mgr.SocksManager.SocksUDPDataChan <- message
+			case protocol.FORWARDSTART:
+				message := data.fMessage.(*protocol.ForwardStart)
+				go handler.StartForward(mgr, component, message.Addr, message.Seq)
 			case protocol.OFFLINE:
 				// No need to check message
 				os.Exit(0)

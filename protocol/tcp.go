@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-09 14:02:57
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-01 18:06:40
+ * @LastEditTime: 2021-04-02 13:58:42
  */
 package protocol
 
@@ -366,6 +366,25 @@ func (message *TCPMessage) ConstructData(header *Header, mess interface{}) {
 			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
 
 			dataBuffer.Write(OKBuf)
+		case FORWARDSTART:
+			mmess := mess.(*ForwardStart)
+			seqBuf := make([]byte, 8)
+			binary.BigEndian.PutUint64(seqBuf, mmess.Seq)
+
+			addrLenBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(addrLenBuf, mmess.AddrLen)
+
+			addrBuf := []byte(mmess.Addr)
+
+			dataBuffer.Write(seqBuf)
+			dataBuffer.Write(addrLenBuf)
+			dataBuffer.Write(addrBuf)
+		case FORWARDREADY:
+			mmess := mess.(*ForwardReady)
+			OKBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
+
+			dataBuffer.Write(OKBuf)
 		case OFFLINE:
 			mmess := mess.(*Offline)
 			OKBuf := make([]byte, 2)
@@ -617,6 +636,16 @@ func (message *TCPMessage) DeconstructData() (*Header, interface{}, error) {
 		return header, mmess, nil
 	case SOCKSREADY:
 		mmess := new(SocksReady)
+		mmess.OK = binary.BigEndian.Uint16(dataBuf[:2])
+		return header, mmess, nil
+	case FORWARDSTART:
+		mmess := new(ForwardStart)
+		mmess.Seq = binary.BigEndian.Uint64(dataBuf[:8])
+		mmess.AddrLen = binary.BigEndian.Uint16(dataBuf[8:10])
+		mmess.Addr = string(dataBuf[10 : 10+mmess.AddrLen])
+		return header, mmess, nil
+	case FORWARDREADY:
+		mmess := new(ForwardReady)
 		mmess.OK = binary.BigEndian.Uint16(dataBuf[:2])
 		return header, mmess, nil
 	case OFFLINE:
