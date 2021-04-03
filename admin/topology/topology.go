@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-11 19:10:16
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-01 15:29:23
+ * @LastEditTime: 2021-04-03 13:26:10
  */
 package topology
 
@@ -28,14 +28,14 @@ const (
 )
 
 type Topology struct {
-	nodes        map[int]*Node
+	nodes        map[int]*node
 	currentIDNum int
 	route        map[int]string
 	TaskChan     chan *TopoTask
-	ResultChan   chan *TopoResult
+	ResultChan   chan *topoResult
 }
 
-type Node struct {
+type node struct {
 	uuid            string
 	parentUUID      string
 	childrenUUID    []string
@@ -49,14 +49,14 @@ type TopoTask struct {
 	Mode     int
 	UUID     string
 	UUIDNum  int
-	Target   *Node
+	Target   *node
 	HostName string
 	UserName string
 	Memo     string
 	IsFirst  bool
 }
 
-type TopoResult struct {
+type topoResult struct {
 	IsExist bool
 	UUID    string
 	Route   string
@@ -64,16 +64,16 @@ type TopoResult struct {
 
 func NewTopology() *Topology {
 	topology := new(Topology)
-	topology.nodes = make(map[int]*Node)
+	topology.nodes = make(map[int]*node)
 	topology.route = make(map[int]string)
 	topology.currentIDNum = 0
 	topology.TaskChan = make(chan *TopoTask)
-	topology.ResultChan = make(chan *TopoResult)
+	topology.ResultChan = make(chan *topoResult)
 	return topology
 }
 
-func NewNode(uuid string, ip string) *Node {
-	node := new(Node)
+func NewNode(uuid string, ip string) *node {
+	node := new(node)
 	node.uuid = uuid
 	node.currentIP = ip
 	return node
@@ -120,14 +120,14 @@ func (topology *Topology) idNum2ID(uuidNum int) string {
 }
 
 func (topology *Topology) getUUID(task *TopoTask) {
-	topology.ResultChan <- &TopoResult{UUID: topology.idNum2ID(task.UUIDNum)}
+	topology.ResultChan <- &topoResult{UUID: topology.idNum2ID(task.UUIDNum)}
 }
 
 func (topology *Topology) checkNode(task *TopoTask) {
 	if _, ok := topology.nodes[task.UUIDNum]; ok {
-		topology.ResultChan <- &TopoResult{IsExist: true}
+		topology.ResultChan <- &topoResult{IsExist: true}
 	} else {
-		topology.ResultChan <- &TopoResult{IsExist: false}
+		topology.ResultChan <- &topoResult{IsExist: false}
 	}
 }
 
@@ -143,7 +143,7 @@ func (topology *Topology) addNode(task *TopoTask) {
 	topology.nodes[topology.currentIDNum] = task.Target
 	topology.currentIDNum++
 
-	topology.ResultChan <- &TopoResult{} // Just tell upstream: work done!
+	topology.ResultChan <- &topoResult{} // Just tell upstream: work done!
 }
 
 func (topology *Topology) calculate() {
@@ -178,11 +178,11 @@ func (topology *Topology) calculate() {
 
 	topology.route = newRouteInfo
 
-	topology.ResultChan <- &TopoResult{} // Just tell upstream: work done!
+	topology.ResultChan <- &topoResult{} // Just tell upstream: work done!
 }
 
 func (topology *Topology) getRoute(task *TopoTask) {
-	topology.ResultChan <- &TopoResult{Route: topology.route[task.UUIDNum]}
+	topology.ResultChan <- &topoResult{Route: topology.route[task.UUIDNum]}
 }
 
 func (topology *Topology) updateDetail(task *TopoTask) {
@@ -202,7 +202,7 @@ func (topology *Topology) showDetail() {
 		)
 	}
 
-	topology.ResultChan <- &TopoResult{} // Just tell upstream: work done!
+	topology.ResultChan <- &topoResult{} // Just tell upstream: work done!
 }
 
 func (topology *Topology) showTree() {
@@ -213,7 +213,7 @@ func (topology *Topology) showTree() {
 		}
 	}
 
-	topology.ResultChan <- &TopoResult{} // Just tell upstream: work done!
+	topology.ResultChan <- &topoResult{} // Just tell upstream: work done!
 }
 
 func (topology *Topology) updateMemo(task *TopoTask) {

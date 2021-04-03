@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-09 14:02:57
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-02 13:58:42
+ * @LastEditTime: 2021-04-03 13:22:01
  */
 package protocol
 
@@ -15,7 +15,7 @@ import (
 	"net"
 )
 
-type TCPMessage struct {
+type RawMessage struct {
 	// Essential component to apply a Message
 	UUID         string
 	Conn         net.Conn
@@ -32,14 +32,14 @@ type TCPMessage struct {
  * @param {*}
  * @return {*}
  */
-func (message *TCPMessage) ConstructHeader() {}
+func (message *RawMessage) ConstructHeader() {}
 
 /**
  * @description: Construct our own raw tcp data
  * @param {*}
  * @return {*}
  */
-func (message *TCPMessage) ConstructData(header *Header, mess interface{}) {
+func (message *RawMessage) ConstructData(header *Header, mess interface{}) {
 	var headerBuffer, dataBuffer bytes.Buffer
 	// First, construct own header
 	messageTypeBuf := make([]byte, 2)
@@ -368,15 +368,12 @@ func (message *TCPMessage) ConstructData(header *Header, mess interface{}) {
 			dataBuffer.Write(OKBuf)
 		case FORWARDSTART:
 			mmess := mess.(*ForwardStart)
-			seqBuf := make([]byte, 8)
-			binary.BigEndian.PutUint64(seqBuf, mmess.Seq)
 
 			addrLenBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(addrLenBuf, mmess.AddrLen)
 
 			addrBuf := []byte(mmess.Addr)
 
-			dataBuffer.Write(seqBuf)
 			dataBuffer.Write(addrLenBuf)
 			dataBuffer.Write(addrBuf)
 		case FORWARDREADY:
@@ -409,21 +406,21 @@ func (message *TCPMessage) ConstructData(header *Header, mess interface{}) {
  * @param {*}
  * @return {*}
  */
-func (message *TCPMessage) ConstructSuffix() {}
+func (message *RawMessage) ConstructSuffix() {}
 
 /**
  * @description: Tcp raw meesage do not need to deconstruct special header
  * @param {*}
  * @return {*}
  */
-func (message *TCPMessage) DeconstructHeader() {}
+func (message *RawMessage) DeconstructHeader() {}
 
 /**
  * @description: Deconstruct our own raw tcp data
  * @param {*}
  * @return {*}
  */
-func (message *TCPMessage) DeconstructData() (*Header, interface{}, error) {
+func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 	var (
 		header         = new(Header)
 		senderBuf      = make([]byte, 10)
@@ -640,9 +637,8 @@ func (message *TCPMessage) DeconstructData() (*Header, interface{}, error) {
 		return header, mmess, nil
 	case FORWARDSTART:
 		mmess := new(ForwardStart)
-		mmess.Seq = binary.BigEndian.Uint64(dataBuf[:8])
-		mmess.AddrLen = binary.BigEndian.Uint16(dataBuf[8:10])
-		mmess.Addr = string(dataBuf[10 : 10+mmess.AddrLen])
+		mmess.AddrLen = binary.BigEndian.Uint16(dataBuf[:2])
+		mmess.Addr = string(dataBuf[2 : 2+mmess.AddrLen])
 		return header, mmess, nil
 	case FORWARDREADY:
 		mmess := new(ForwardReady)
@@ -663,14 +659,14 @@ func (message *TCPMessage) DeconstructData() (*Header, interface{}, error) {
  * @param {*}
  * @return {*}
  */
-func (message *TCPMessage) DeconstructSuffix() {}
+func (message *RawMessage) DeconstructSuffix() {}
 
 /**
  * @description: Send message to peer node
  * @param {*}
  * @return {*}
  */
-func (message *TCPMessage) SendMessage() {
+func (message *RawMessage) SendMessage() {
 	finalBuffer := append(message.HeaderBuffer, message.DataBuffer...)
 	message.Conn.Write(finalBuffer)
 	// Don't forget to set both Buffer to nil!!!

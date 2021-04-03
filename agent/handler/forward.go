@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-04-02 14:22:02
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-02 17:18:31
+ * @LastEditTime: 2021-04-02 17:39:46
  */
 package handler
 
@@ -22,7 +22,7 @@ func DispatchForwardData(mgr *manager.Manager) {
 	}
 }
 
-func StartForward(mgr *manager.Manager, component *protocol.MessageComponent, addr string, seq uint64) {
+func TestForward(component *protocol.MessageComponent, addr string) {
 	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
 
 	header := &protocol.Header{
@@ -47,13 +47,6 @@ func StartForward(mgr *manager.Manager, component *protocol.MessageComponent, ad
 		sMessage.SendMessage()
 		return
 	}
-
-	mgrTask := &manager.ForwardTask{
-		Mode: manager.F_NEWFORWARD,
-		Seq:  seq,
-	}
-	mgr.ForwardManager.TaskChan <- mgrTask
-	<-mgr.ForwardManager.ResultChan
 
 	conn.Close()
 

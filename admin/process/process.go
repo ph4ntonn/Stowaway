@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-16 16:10:23
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-02 16:49:08
+ * @LastEditTime: 2021-04-03 16:09:06
  */
 package process
 
@@ -96,10 +96,8 @@ func (admin *Admin) handleDataFromDownstream(console *cli.Console) {
 		case protocol.SHELLRES:
 			message := data.fMessage.(*protocol.ShellRes)
 			if message.OK == 1 {
-				fmt.Print("\r\n[*]Shell is started successfully!\r\n")
 				console.OK <- true
 			} else {
-				fmt.Print("\r\n[*]Shell cannot be started!")
 				console.OK <- false
 			}
 		case protocol.SHELLRESULT:
@@ -115,10 +113,8 @@ func (admin *Admin) handleDataFromDownstream(console *cli.Console) {
 		case protocol.SSHRES:
 			message := data.fMessage.(*protocol.SSHRes)
 			if message.OK == 1 {
-				fmt.Print("\r\n[*]Connect to target host via ssh successfully!")
 				console.OK <- true
 			} else {
-				fmt.Print("\r\n[*]Fail to connect to target host via ssh!")
 				console.OK <- false
 			}
 		case protocol.SSHRESULT:
@@ -132,14 +128,12 @@ func (admin *Admin) handleDataFromDownstream(console *cli.Console) {
 			console.OK <- true
 		case protocol.FILEDOWNRES:
 			// no need to check mess
-			fmt.Print("\r\n[*]Unable to download file!")
 			console.OK <- false
 		case protocol.FILESTATRES:
 			message := data.fMessage.(*protocol.FileStatRes)
 			if message.OK == 1 {
 				console.OK <- true
 			} else {
-				fmt.Print("\r\n[*]Fail to upload file!")
 				admin.mgr.File.Handler.Close()
 				console.OK <- false
 			}

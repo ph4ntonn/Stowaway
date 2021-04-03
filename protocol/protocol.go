@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-08 18:19:04
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-02 13:58:05
+ * @LastEditTime: 2021-04-03 13:21:39
  */
 package protocol
 
@@ -245,7 +245,6 @@ type SocksReady struct {
 }
 
 type ForwardStart struct {
-	Seq     uint64
 	AddrLen uint16
 	Addr    string
 }
@@ -277,7 +276,7 @@ type MessageComponent struct {
 func PrepareAndDecideWhichSProtoToUpper(conn net.Conn, secret string, uuid string) Message {
 	// Now only apply tcp raw
 	// TODO: HTTP
-	tMessage := new(TCPMessage)
+	tMessage := new(RawMessage)
 	tMessage.Conn = conn
 	tMessage.UUID = uuid
 	tMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
@@ -287,7 +286,7 @@ func PrepareAndDecideWhichSProtoToUpper(conn net.Conn, secret string, uuid strin
 func PrepareAndDecideWhichSProtoToLower(conn net.Conn, secret string, uuid string) Message {
 	// Now only apply tcp raw
 	// TODO: HTTP
-	tMessage := new(TCPMessage)
+	tMessage := new(RawMessage)
 	tMessage.Conn = conn
 	tMessage.UUID = uuid
 	tMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
@@ -302,7 +301,7 @@ func PrepareAndDecideWhichSProtoToLower(conn net.Conn, secret string, uuid strin
 func PrepareAndDecideWhichRProtoFromUpper(conn net.Conn, secret string, uuid string) Message {
 	// Now only apply tcp raw
 	// TODO: HTTP
-	tMessage := new(TCPMessage)
+	tMessage := new(RawMessage)
 	tMessage.Conn = conn
 	tMessage.UUID = uuid
 	tMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
@@ -312,7 +311,7 @@ func PrepareAndDecideWhichRProtoFromUpper(conn net.Conn, secret string, uuid str
 func PrepareAndDecideWhichRProtoFromLower(conn net.Conn, secret string, uuid string) Message {
 	// Now only apply tcp raw
 	// TODO: HTTP
-	tMessage := new(TCPMessage)
+	tMessage := new(RawMessage)
 	tMessage.Conn = conn
 	tMessage.UUID = uuid
 	tMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))

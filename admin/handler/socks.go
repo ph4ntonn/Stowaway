@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-19 18:40:13
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-02 16:47:37
+ * @LastEditTime: 2021-04-03 13:28:55
  */
 package handler
 
@@ -74,12 +74,12 @@ func (socks *Socks) LetSocks(component *protocol.MessageComponent, mgr *manager.
 		return err
 	}
 
-	go socks.handleListener(component, mgr, listener, route, uuid, uuidNum)
+	go socks.handleSocksListener(component, mgr, listener, route, uuid, uuidNum)
 
 	return nil
 }
 
-func (socks *Socks) handleListener(component *protocol.MessageComponent, mgr *manager.Manager, listener net.Listener, route string, uuid string, uuidNum int) {
+func (socks *Socks) handleSocksListener(component *protocol.MessageComponent, mgr *manager.Manager, listener net.Listener, route string, uuid string, uuidNum int) {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -304,7 +304,7 @@ func StartUDPAss(mgr *manager.Manager, topo *topology.Topology, conn net.Conn, s
 			return
 		}
 
-		go HandleUDPAss(mgr, component, udpListener, route, uuid, uuidNum, seq)
+		go handleUDPAss(mgr, component, udpListener, route, uuid, uuidNum, seq)
 
 		succMess := &protocol.UDPAssRes{
 			Seq:     seq,
@@ -321,7 +321,7 @@ func StartUDPAss(mgr *manager.Manager, topo *topology.Topology, conn net.Conn, s
 	}
 }
 
-func HandleUDPAss(mgr *manager.Manager, component *protocol.MessageComponent, listener *net.UDPConn, route string, uuid string, uuidNum int, seq uint64) {
+func handleUDPAss(mgr *manager.Manager, component *protocol.MessageComponent, listener *net.UDPConn, route string, uuid string, uuidNum int, seq uint64) {
 	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
 
 	dataHeader := &protocol.Header{

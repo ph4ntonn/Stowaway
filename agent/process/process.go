@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 15:27:30
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-02 17:21:47
+ * @LastEditTime: 2021-04-03 13:47:15
  */
 
 package process
@@ -158,7 +158,7 @@ func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager) {
 				message := data.fMessage.(*protocol.FileDownReq)
 				mgr.File.FilePath = message.FilePath
 				mgr.File.FileName = message.Filename
-				mgr.File.SendFileStat(component, protocol.TEMP_ROUTE, protocol.ADMIN_UUID, share.AGENT)
+				go mgr.File.SendFileStat(component, protocol.TEMP_ROUTE, protocol.ADMIN_UUID, share.AGENT)
 			case protocol.SOCKSSTART:
 				message := data.fMessage.(*protocol.SocksStart)
 				socks := handler.NewSocks(message.Username, message.Password)
@@ -177,7 +177,7 @@ func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager) {
 				mgr.SocksManager.SocksUDPDataChan <- message
 			case protocol.FORWARDSTART:
 				message := data.fMessage.(*protocol.ForwardStart)
-				go handler.StartForward(mgr, component, message.Addr, message.Seq)
+				go handler.TestForward(component, message.Addr)
 			case protocol.OFFLINE:
 				// No need to check message
 				os.Exit(0)

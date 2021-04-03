@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 18:11:41
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-02 15:41:19
+ * @LastEditTime: 2021-04-03 16:08:45
  */
 package cli
 
@@ -363,11 +363,15 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			fmt.Print("\r\n[*]MENTION!UNDER SHELL MODE ARROW UP/DOWN/LEFT/RIGHT ARE ALL ABANDONED!")
 
 			if <-console.OK {
+				fmt.Print("\r\n[*]Shell is started successfully!\r\n")
 				console.Status = ""
 				console.shellMode = true
 				console.handleShellPanelCommand(component, route, uuid)
 				console.shellMode = false
 				console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+			} else {
+				fmt.Print("\r\n[*]Shell cannot be started!")
+				console.ready <- true
 			}
 		case "listen":
 			if console.expectParamsNum(fCommand, 2, NODE, 0) {
@@ -431,8 +435,11 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			fmt.Print("\r\n[*]Waiting for response.....")
 
 			if <-console.OK {
+				fmt.Print("\r\n[*]Connect to target host via ssh successfully!")
 				console.Status = fmt.Sprintf("(ssh %s) >> ", ssh.Addr)
 				console.handleSSHPanelCommand(component, route, uuid)
+			} else {
+				fmt.Print("\r\n[*]Fail to connect to target host via ssh!")
 			}
 
 			console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
@@ -456,7 +463,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			err := socks.LetSocks(component, console.mgr, route, uuid, uuidNum)
 
 			if err != nil {
-				fmt.Printf("\r\n%s", err.Error())
+				fmt.Printf("\r\n[*]Error: %s", err.Error())
 			} else {
 				fmt.Print("\r\n[*]Socks start successfully!")
 			}
@@ -490,7 +497,17 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				break
 			}
 
-			// err := handler.LetForward(component, console.mgr, fCommand[1], fCommand[2], route, uuid, uuidNum)
+			fmt.Printf("\r\n[*]Trying to listen on 0.0.0.0:%s......", fCommand[1])
+			fmt.Printf("\r\n[*]Waiting for agent's response......")
+
+			err := handler.LetForward(component, console.mgr, fCommand[1], fCommand[2], route, uuid, uuidNum)
+			if err != nil {
+				fmt.Printf("\r\n[*]Error: %s", err.Error())
+			} else {
+				fmt.Print("\r\n[*]Forward start successfully!")
+			}
+
+			console.ready <- true
 		case "upload":
 			if console.expectParamsNum(fCommand, 3, NODE, 0) {
 				break
@@ -506,6 +523,8 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				console.mgr.File.Upload(component, route, uuid, share.ADMIN)
 			} else if err != nil {
 				fmt.Printf("\r\n[*]Error: %s", err.Error())
+			} else {
+				fmt.Print("\r\n[*]Fail to upload file!")
 			}
 
 			console.ready <- true
@@ -525,6 +544,8 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 					go handler.StartBar(console.mgr.File.StatusChan, console.mgr.File.FileSize)
 					console.mgr.File.Receive(component, route, uuid, share.ADMIN)
 				}
+			} else {
+				fmt.Print("\r\n[*]Unable to download file!")
 			}
 
 			console.ready <- true
