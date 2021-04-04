@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 18:11:41
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-04 11:45:38
+ * @LastEditTime: 2021-04-04 15:45:17
  */
 package cli
 
@@ -38,6 +38,7 @@ type Console struct {
 	ready      chan bool
 	getCommand chan string
 	shellMode  bool
+	sshMode    bool
 	nodeMode   bool
 	// manager that needs to be shared with main thread
 	mgr *manager.Manager
@@ -86,7 +87,7 @@ func (console *Console) mainPanel() {
 		if event.Err != nil {
 			panic(event.Err)
 		}
-		// under shell mode,we cannot just erase the whole line and reprint,so there are two different way to handle input
+		// under shell mode,we cannot just erase the whole line and reprint,so there are two different ways to handle input
 		// BTW,all arrow stuff under shell mode will be abandoned
 		if (event.Key != keyboard.KeyEnter && event.Rune >= 0x20 && event.Rune <= 0x7F) || event.Key == keyboard.KeySpace {
 			if !console.shellMode {
@@ -222,8 +223,8 @@ func (console *Console) mainPanel() {
 				fmt.Print(string(bytes.Repeat([]byte("\b"), len(rightCommand))))
 			}
 		} else if event.Key == keyboard.KeyTab {
-			// if user move the cursor or under shellMode,tab is abandoned
-			if rightCommand != "" || console.shellMode {
+			// if user move the cursor or under shellMode(sshMode),tab is abandoned
+			if rightCommand != "" || console.shellMode || console.sshMode {
 				continue
 			}
 			// Tell helper the scenario
@@ -251,7 +252,7 @@ func (console *Console) mainPanel() {
 			}
 		} else if event.Key == keyboard.KeyCtrlC {
 			// Ctrl+C? Then BYE!
-			fmt.Print("\n[*]BYE!")
+			fmt.Print("\r\n[*]BYE!")
 			keyboard.Close()
 			os.Exit(0)
 		} else {
@@ -468,7 +469,9 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			if <-console.OK {
 				fmt.Print("\r\n[*]Connect to target host via ssh successfully!")
 				console.Status = fmt.Sprintf("(ssh %s) >> ", ssh.Addr)
+				console.sshMode = true
 				console.handleSSHPanelCommand(component, route, uuid)
+				console.sshMode = false
 			} else {
 				fmt.Print("\r\n[*]Fail to connect to target host via ssh!")
 			}
