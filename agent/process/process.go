@@ -11,7 +11,6 @@ import (
 	"Stowaway/agent/handler"
 	"Stowaway/agent/initial"
 	"Stowaway/agent/manager"
-	"Stowaway/crypto"
 	"Stowaway/protocol"
 	"Stowaway/share"
 	"Stowaway/utils"
@@ -21,11 +20,10 @@ import (
 )
 
 type Agent struct {
-	UUID         string
-	Conn         net.Conn
-	Memo         string
-	CryptoSecret []byte
-	UserOptions  *initial.Options
+	UUID        string
+	Conn        net.Conn
+	Memo        string
+	UserOptions *initial.Options
 
 	BufferChan chan *BufferData
 }
@@ -38,7 +36,6 @@ type BufferData struct {
 func NewAgent(options *initial.Options) *Agent {
 	agent := new(Agent)
 	agent.UUID = protocol.TEMP_UUID
-	agent.CryptoSecret, _ = crypto.KeyPadding([]byte(options.Secret))
 	agent.UserOptions = options
 	agent.BufferChan = make(chan *BufferData, 10)
 	return agent

@@ -183,6 +183,7 @@ func (manager *socksManager) addSocksTCPSocket(task *SocksTask) {
  * @return {*}
  */
 func (manager *socksManager) getSocksSeq(task *SocksTask) {
+	// Use seqmap to record the UUIDNum <-> Seq relationship to make search quicker
 	manager.socksSeqMap[manager.socksSeq] = task.UUIDNum
 	manager.ResultChan <- &socksResult{SocksSeq: manager.socksSeq}
 	manager.socksSeq++

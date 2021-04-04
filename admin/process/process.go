@@ -12,7 +12,6 @@ import (
 	"Stowaway/admin/initial"
 	"Stowaway/admin/manager"
 	"Stowaway/admin/topology"
-	"Stowaway/crypto"
 	"Stowaway/protocol"
 	"Stowaway/share"
 	"fmt"
@@ -22,10 +21,9 @@ import (
 )
 
 type Admin struct {
-	Conn         net.Conn
-	CryptoSecret []byte
-	Topology     *topology.Topology
-	UserOptions  *initial.Options
+	Conn        net.Conn
+	Topology    *topology.Topology
+	UserOptions *initial.Options
 
 	BufferChan chan *BufferData
 	// manager that needs to be shared with console
@@ -39,16 +37,14 @@ type BufferData struct {
 
 func NewAdmin(options *initial.Options) *Admin {
 	admin := new(Admin)
-	admin.CryptoSecret, _ = crypto.KeyPadding([]byte(options.Secret))
 	admin.UserOptions = options
 	admin.BufferChan = make(chan *BufferData, 10)
 	return admin
 }
 
 func (admin *Admin) Run() {
-	file := share.NewFile()
 	// Run a manager
-	admin.mgr = manager.NewManager(file)
+	admin.mgr = manager.NewManager(share.NewFile())
 	go admin.mgr.Run()
 	// Init console
 	console := cli.NewConsole()
@@ -72,7 +68,7 @@ func (admin *Admin) handleConnFromDownstream(console *cli.Console) {
 			log.Print("\r\n[*]Peer node seems offline!")
 			os.Exit(0)
 		}
-
+		// Buffer chan to let data processing quicker, handleConnFromDownstream && handleDataFromDownstream can cooperate
 		admin.BufferChan <- &BufferData{fHeader: fHeader, fMessage: fMessage}
 	}
 
