@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-16 16:10:23
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-03 16:09:06
+ * @LastEditTime: 2021-04-04 11:45:55
  */
 package process
 
@@ -52,7 +52,7 @@ func (admin *Admin) Run() {
 	go admin.mgr.Run()
 	// Init console
 	console := cli.NewConsole()
-	console.Init(admin.Topology, admin.mgr, admin.Conn, admin.UserOptions.Secret, admin.CryptoSecret)
+	console.Init(admin.Topology, admin.mgr, admin.Conn, admin.UserOptions.Secret)
 	// hanle all message comes from downstream
 	go admin.handleConnFromDownstream(console)
 	go admin.handleDataFromDownstream(console)

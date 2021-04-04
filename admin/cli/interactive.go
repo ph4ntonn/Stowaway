@@ -2,7 +2,7 @@
  * @Author: ph4ntom
  * @Date: 2021-03-10 18:11:41
  * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-03 16:08:45
+ * @LastEditTime: 2021-04-04 11:45:38
  */
 package cli
 
@@ -29,16 +29,16 @@ const (
 
 type Console struct {
 	// Admin status
-	Conn         net.Conn
-	Secret       string
-	CryptoSecret []byte
-	Topology     *topology.Topology
+	Conn     net.Conn
+	Secret   string
+	Topology *topology.Topology
 	// console original status
 	Status     string
 	OK         chan bool
 	ready      chan bool
 	getCommand chan string
 	shellMode  bool
+	nodeMode   bool
 	// manager that needs to be shared with main thread
 	mgr *manager.Manager
 }
@@ -52,10 +52,9 @@ func NewConsole() *Console {
 	return console
 }
 
-func (console *Console) Init(tTopology *topology.Topology, myManager *manager.Manager, conn net.Conn, secret string, cryptoSecret []byte) {
+func (console *Console) Init(tTopology *topology.Topology, myManager *manager.Manager, conn net.Conn, secret string) {
 	console.Conn = conn
 	console.Secret = secret
-	console.CryptoSecret = cryptoSecret
 	console.Topology = tTopology
 	console.mgr = myManager
 }
@@ -75,16 +74,18 @@ func (console *Console) mainPanel() {
 	// start history
 	history := NewHistory()
 	go history.Run()
-
+	// start helper
+	helper := NewHelper()
+	go helper.Run()
+	// init keyEvents
 	keysEvents, _ := keyboard.GetKeys(10)
-
+	// BEGIN TO WORK!!!!!!!!
 	fmt.Print(console.Status)
 	for {
 		event := <-keysEvents
 		if event.Err != nil {
 			panic(event.Err)
 		}
-
 		// under shell mode,we cannot just erase the whole line and reprint,so there are two different way to handle input
 		// BTW,all arrow stuff under shell mode will be abandoned
 		if (event.Key != keyboard.KeyEnter && event.Rune >= 0x20 && event.Rune <= 0x7F) || event.Key == keyboard.KeySpace {
@@ -220,6 +221,34 @@ func (console *Console) mainPanel() {
 				fmt.Print(leftCommand + rightCommand)
 				fmt.Print(string(bytes.Repeat([]byte("\b"), len(rightCommand))))
 			}
+		} else if event.Key == keyboard.KeyTab {
+			// if user move the cursor or under shellMode,tab is abandoned
+			if rightCommand != "" || console.shellMode {
+				continue
+			}
+			// Tell helper the scenario
+			task := &HelperTask{
+				IsNodeMode: console.nodeMode,
+				Uncomplete: leftCommand,
+			}
+			helper.TaskChan <- task
+			compelete := <-helper.ResultChan
+			// if only one match,then just print it
+			if len(compelete) == 1 {
+				fmt.Print("\r\033[K")
+				fmt.Print(console.Status)
+				fmt.Print(compelete[0])
+				leftCommand = compelete[0]
+			} else if len(compelete) > 1 {
+				// if multiple matches,then mimic linux's style
+				fmt.Print("\r\n")
+				for _, command := range compelete {
+					fmt.Print(command + "    ")
+				}
+				fmt.Print("\r\n")
+				fmt.Print(console.Status)
+				fmt.Print(leftCommand)
+			}
 		} else if event.Key == keyboard.KeyCtrlC {
 			// Ctrl+C? Then BYE!
 			fmt.Print("\n[*]BYE!")
@@ -250,9 +279,11 @@ func (console *Console) handleMainPanelCommand() {
 
 			result := <-console.Topology.ResultChan
 			if result.IsExist {
+				console.nodeMode = true
 				console.Status = fmt.Sprintf("(node %s) >> ", fCommand[1])
 				console.handleNodePanelCommand(uuidNum)
 				console.Status = "(admin) >> "
+				console.nodeMode = false
 			} else {
 				fmt.Printf("\n[*]Node %s doesn't exist!", fCommand[1])
 			}
