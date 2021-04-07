@@ -197,12 +197,12 @@ func (socks *Socks) handleSocks(mgr *manager.Manager, component *protocol.Messag
 				return
 			}
 		} else if setting.isAuthed == true && setting.tcpConnected == true && !setting.isUDP { //All done!
-			go ProxyC2STCP(setting.tcpConn, dataChan)
-			ProxyS2CTCP(component, setting.tcpConn, seq)
+			go proxyC2STCP(setting.tcpConn, dataChan)
+			proxyS2CTCP(component, setting.tcpConn, seq)
 			return
 		} else if setting.isAuthed == true && setting.isUDP && setting.success {
-			go ProxyC2SUDP(mgr, setting.udpListener, seq)
-			ProxyS2CUDP(mgr, component, setting.udpListener, seq)
+			go proxyC2SUDP(mgr, setting.udpListener, seq)
+			proxyS2CUDP(mgr, component, setting.udpListener, seq)
 			return
 		} else {
 			return
@@ -457,7 +457,7 @@ func TCPConnect(mgr *manager.Manager, component *protocol.MessageComponent, sett
 	setting.tcpConnected = true
 }
 
-func ProxyC2STCP(conn net.Conn, dataChan chan []byte) {
+func proxyC2STCP(conn net.Conn, dataChan chan []byte) {
 	for {
 		data, ok := <-dataChan
 		if !ok { // no need to send FIN actively
@@ -467,7 +467,7 @@ func ProxyC2STCP(conn net.Conn, dataChan chan []byte) {
 	}
 }
 
-func ProxyS2CTCP(component *protocol.MessageComponent, conn net.Conn, seq uint64) {
+func proxyS2CTCP(component *protocol.MessageComponent, conn net.Conn, seq uint64) {
 	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
 
 	header := &protocol.Header{
@@ -503,12 +503,12 @@ func TCPBind(mgr *manager.Manager, component *protocol.MessageComponent, setting
 	setting.tcpConnected = false
 }
 
-type SocksLocalAddr struct {
+type socksLocalAddr struct {
 	Host string
 	Port int
 }
 
-func (addr *SocksLocalAddr) ByteArray() []byte {
+func (addr *socksLocalAddr) byteArray() []byte {
 	bytes := make([]byte, 6)
 	copy(bytes[:4], net.ParseIP(addr.Host).To4())
 	bytes[4] = byte(addr.Port >> 8)
@@ -636,10 +636,10 @@ func UDPAssociate(mgr *manager.Manager, component *protocol.MessageComponent, se
 		adminAddr := temp[0]
 		adminPort, _ := strconv.Atoi(temp[1])
 
-		localAddr := SocksLocalAddr{adminAddr, adminPort}
+		localAddr := socksLocalAddr{adminAddr, adminPort}
 		buf := make([]byte, 10)
 		copy(buf, []byte{0x05, 0x00, 0x00, 0x01})
-		copy(buf[4:], localAddr.ByteArray())
+		copy(buf[4:], localAddr.byteArray())
 
 		dataMess := &protocol.SocksTCPData{
 			Seq:     seq,
@@ -660,8 +660,8 @@ func UDPAssociate(mgr *manager.Manager, component *protocol.MessageComponent, se
 	setting.success = false
 }
 
-// ProxyC2SUDP 代理C-->Sudp流量
-func ProxyC2SUDP(mgr *manager.Manager, listener *net.UDPConn, seq uint64) {
+// proxyC2SUDP 代理C-->Sudp流量
+func proxyC2SUDP(mgr *manager.Manager, listener *net.UDPConn, seq uint64) {
 	mgrTask := &manager.SocksTask{
 		Mode: manager.S_GETUDPCHANS,
 		Seq:  seq,
@@ -744,8 +744,8 @@ func ProxyC2SUDP(mgr *manager.Manager, listener *net.UDPConn, seq uint64) {
 	}
 }
 
-// ProxyS2CUDP 代理S-->Cudp流量
-func ProxyS2CUDP(mgr *manager.Manager, component *protocol.MessageComponent, listener *net.UDPConn, seq uint64) {
+// proxyS2CUDP 代理S-->Cudp流量
+func proxyS2CUDP(mgr *manager.Manager, component *protocol.MessageComponent, listener *net.UDPConn, seq uint64) {
 	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
 
 	header := &protocol.Header{

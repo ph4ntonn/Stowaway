@@ -50,6 +50,7 @@ func (agent *Agent) Run() {
 	go mgr.Run()
 	// run dispatcher expect tcp,cuz tcp dispatcher can not be confirmed because of the username/password changing
 	go handler.DispathSocksUDPData(mgr)
+	// run a dispatcher to dispatch all forward data
 	go handler.DispatchForwardData(mgr, component)
 	// process data from upstream
 	go agent.handleConnFromUpstream(mgr)

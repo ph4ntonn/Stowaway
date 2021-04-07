@@ -389,6 +389,13 @@ func DispathTCPData(mgr *manager.Manager) {
 		data := <-mgr.SocksManager.SocksTCPDataChan
 
 		switch data.(type) {
+		case *protocol.SocksReady:
+			message := data.(*protocol.SocksReady)
+			if message.OK == 1 {
+				mgr.SocksManager.SocksReady <- true
+			} else {
+				mgr.SocksManager.SocksReady <- false
+			}
 		case *protocol.SocksTCPData:
 			message := data.(*protocol.SocksTCPData)
 			mgrTask := &manager.SocksTask{

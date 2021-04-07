@@ -201,6 +201,13 @@ func DispatchForwardData(mgr *manager.Manager) {
 		data := <-mgr.ForwardManager.ForwardDataChan
 
 		switch data.(type) {
+		case *protocol.ForwardReady:
+			message := data.(*protocol.ForwardReady)
+			if message.OK == 1 {
+				mgr.ForwardManager.ForwardReady <- true
+			} else {
+				mgr.ForwardManager.ForwardReady <- false
+			}
 		case *protocol.ForwardData:
 			message := data.(*protocol.ForwardData)
 			mgrTask := &manager.ForwardTask{

@@ -125,7 +125,6 @@ func (admin *Admin) handleDataFromDownstream(console *cli.Console) {
 			admin.mgr.File.SliceNum = message.SliceNum
 			console.OK <- true
 		case protocol.FILEDOWNRES:
-			// no need to check mess
 			console.OK <- false
 		case protocol.FILESTATRES:
 			message := data.fMessage.(*protocol.FileStatRes)
@@ -139,21 +138,13 @@ func (admin *Admin) handleDataFromDownstream(console *cli.Console) {
 			message := data.fMessage.(*protocol.FileData)
 			admin.mgr.File.DataChan <- message.Data
 		case protocol.FILEERR:
-			// no need to check mess
 			admin.mgr.File.ErrChan <- true
 		case protocol.SOCKSREADY:
-			message := data.fMessage.(*protocol.SocksReady)
-			if message.OK == 1 {
-				admin.mgr.SocksManager.SocksReady <- true
-			} else {
-				admin.mgr.SocksManager.SocksReady <- false
-			}
+			fallthrough
 		case protocol.SOCKSTCPDATA:
-			message := data.fMessage.(*protocol.SocksTCPData)
-			admin.mgr.SocksManager.SocksTCPDataChan <- message
+			fallthrough
 		case protocol.SOCKSTCPFIN:
-			message := data.fMessage.(*protocol.SocksTCPFin)
-			admin.mgr.SocksManager.SocksTCPDataChan <- message
+			admin.mgr.SocksManager.SocksTCPDataChan <- data.fMessage
 		case protocol.UDPASSSTART:
 			message := data.fMessage.(*protocol.UDPAssStart)
 			go handler.StartUDPAss(admin.mgr, admin.Topology, admin.Conn, admin.UserOptions.Secret, message.Seq)
@@ -161,12 +152,7 @@ func (admin *Admin) handleDataFromDownstream(console *cli.Console) {
 			message := data.fMessage.(*protocol.SocksUDPData)
 			admin.mgr.SocksManager.SocksUDPDataChan <- message
 		case protocol.FORWARDREADY:
-			message := data.fMessage.(*protocol.ForwardReady)
-			if message.OK == 1 {
-				admin.mgr.ForwardManager.ForwardReady <- true
-			} else {
-				admin.mgr.ForwardManager.ForwardReady <- false
-			}
+			fallthrough
 		case protocol.FORWARDDATA:
 			fallthrough
 		case protocol.FORWARDFIN:
