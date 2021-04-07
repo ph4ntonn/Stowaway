@@ -42,17 +42,18 @@ func NewAgent(options *initial.Options) *Agent {
 }
 
 func (agent *Agent) Run() {
+	component := &protocol.MessageComponent{Secret: agent.UserOptions.Secret, Conn: agent.Conn, UUID: agent.UUID}
 	// send agent info first
 	agent.sendMyInfo()
 	// run manager
 	mgr := manager.NewManager(share.NewFile())
 	go mgr.Run()
 	// run dispatcher expect tcp,cuz tcp dispatcher can not be confirmed because of the username/password changing
-	go handler.DispathUDPData(mgr)
-	go handler.DispathUDPReady(mgr)
+	go handler.DispathSocksUDPData(mgr)
+	go handler.DispatchForwardData(mgr, component)
 	// process data from upstream
-	go agent.handleConnFromUpstream(mgr)
-	agent.handleDataFromUpstream(mgr)
+	go agent.handleConnFromUpstream(mgr, component)
+	agent.handleDataFromUpstream(mgr, component)
 	//agent.handleDataFromDownstream()
 }
 
@@ -79,7 +80,7 @@ func (agent *Agent) sendMyInfo() {
 	sMessage.SendMessage()
 }
 
-func (agent *Agent) handleConnFromUpstream(mgr *manager.Manager) {
+func (agent *Agent) handleConnFromUpstream(mgr *manager.Manager, component *protocol.MessageComponent) {
 	rMessage := protocol.PrepareAndDecideWhichRProtoFromUpper(agent.Conn, agent.UserOptions.Secret, agent.UUID)
 	for {
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
@@ -91,14 +92,8 @@ func (agent *Agent) handleConnFromUpstream(mgr *manager.Manager) {
 	}
 }
 
-func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager) {
+func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager, component *protocol.MessageComponent) {
 	//sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(agent.Conn, agent.UserOptions.Secret, agent.ID)
-	component := &protocol.MessageComponent{
-		Secret: agent.UserOptions.Secret,
-		Conn:   agent.Conn,
-		UUID:   agent.UUID,
-	}
-
 	shell := handler.NewShell()
 	mySSH := handler.NewSSH()
 
@@ -161,22 +156,23 @@ func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager) {
 				socks := handler.NewSocks(message.Username, message.Password)
 				go socks.Start(mgr, component)
 			case protocol.SOCKSTCPDATA:
-				message := data.fMessage.(*protocol.SocksTCPData)
-				mgr.SocksManager.SocksTCPDataChan <- message
+				fallthrough
 			case protocol.SOCKSTCPFIN:
-				message := data.fMessage.(*protocol.SocksTCPFin)
-				mgr.SocksManager.SocksTCPDataChan <- message
-			case protocol.UDPASSRES:
-				message := data.fMessage.(*protocol.UDPAssRes)
-				mgr.SocksManager.SocksUDPReadyChan <- message
-			case protocol.SOCKSUDPDATA:
-				message := data.fMessage.(*protocol.SocksUDPData)
-				mgr.SocksManager.SocksUDPDataChan <- message
-			case protocol.FORWARDSTART:
-				message := data.fMessage.(*protocol.ForwardStart)
-				go handler.TestForward(component, message.Addr)
-			case protocol.OFFLINE:
 				// No need to check message
+				mgr.ForwardManager.ForwardDataChan <- data.fMessage
+			case protocol.UDPASSRES:
+				fallthrough
+			case protocol.SOCKSUDPDATA:
+				mgr.SocksManager.SocksUDPDataChan <- data.fMessage
+			case protocol.FORWARDTEST:
+				fallthrough
+			case protocol.FORWARDSTART:
+				fallthrough
+			case protocol.FORWARDDATA:
+				fallthrough
+			case protocol.FORWARDFIN:
+				mgr.ForwardManager.ForwardDataChan <- data.fMessage
+			case protocol.OFFLINE:
 				os.Exit(0)
 			default:
 				log.Println("[*]Unknown Message!")

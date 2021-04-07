@@ -420,8 +420,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 
 			var err error
 
-			ssh := handler.NewSSH()
-			ssh.Addr = fCommand[1]
+			ssh := handler.NewSSH(fCommand[1])
 
 			console.Status = "[*]Please choose the auth method(1.username/password 2.certificate): "
 			console.ready <- true
@@ -484,8 +483,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				break
 			}
 
-			socks := handler.NewSocks()
-			socks.Port = fCommand[1]
+			socks := handler.NewSocks(fCommand[1])
 			if len(fCommand) > 2 {
 				socks.Username = fCommand[2]
 				socks.Password = fCommand[3]
@@ -534,7 +532,9 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			fmt.Printf("\r\n[*]Trying to listen on 0.0.0.0:%s......", fCommand[1])
 			fmt.Printf("\r\n[*]Waiting for agent's response......")
 
-			err := handler.LetForward(component, console.mgr, fCommand[1], fCommand[2], route, uuid, uuidNum)
+			forward := handler.NewForward(fCommand[1], fCommand[2])
+
+			err := forward.LetForward(component, console.mgr, route, uuid, uuidNum)
 			if err != nil {
 				fmt.Printf("\r\n[*]Error: %s", err.Error())
 			} else {

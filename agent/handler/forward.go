@@ -13,16 +13,107 @@ import (
 	"time"
 )
 
-func DispatchForwardData(mgr *manager.Manager) {
-	for {
-		forwardData := <-mgr.ForwardManager.ForwardDataChan
-		switch forwardData.(type) {
+type Forward struct {
+	Seq  uint64
+	Addr string
+}
 
+func newForward(seq uint64, addr string) *Forward {
+	forward := new(Forward)
+	forward.Seq = seq
+	forward.Addr = addr
+	return forward
+}
+
+func (forward *Forward) start(mgr *manager.Manager, component *protocol.MessageComponent) {
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+
+	dataHeader := &protocol.Header{
+		Sender:      component.UUID,
+		Accepter:    protocol.ADMIN_UUID,
+		MessageType: protocol.FORWARDDATA,
+		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
+		Route:       protocol.TEMP_ROUTE,
+	}
+
+	finHeader := &protocol.Header{
+		Sender:      component.UUID,
+		Accepter:    protocol.ADMIN_UUID,
+		MessageType: protocol.FORWARDFIN,
+		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
+		Route:       protocol.TEMP_ROUTE,
+	}
+
+	finMess := &protocol.ForwardFin{
+		Seq: forward.Seq,
+	}
+
+	defer func() {
+		protocol.ConstructMessage(sMessage, finHeader, finMess)
+		sMessage.SendMessage()
+	}()
+
+	conn, err := net.DialTimeout("tcp", forward.Addr, 10*time.Second)
+	if err != nil {
+		return
+	}
+
+	task := &manager.ForwardTask{
+		Mode:          manager.F_UPDATEFORWARD,
+		Seq:           forward.Seq,
+		ForwardSocket: conn,
+	}
+	mgr.ForwardManager.TaskChan <- task
+	result := <-mgr.ForwardManager.ResultChan
+	if !result.OK {
+		conn.Close()
+		return
+	}
+
+	task = &manager.ForwardTask{
+		Mode: manager.F_GETDATACHAN,
+		Seq:  forward.Seq,
+	}
+	mgr.ForwardManager.TaskChan <- task
+	result = <-mgr.ForwardManager.ResultChan
+	mgr.ForwardManager.Done <- true
+	if !result.OK {
+		return
+	}
+
+	dataChan := result.DataChan
+
+	go func() {
+		for {
+			if data, ok := <-dataChan; ok {
+				conn.Write(data)
+			} else {
+				return
+			}
 		}
+	}()
+
+	buffer := make([]byte, 20480)
+
+	for {
+		length, err := conn.Read(buffer)
+		if err != nil {
+			conn.Close()
+			return
+		}
+
+		forwardDataMess := &protocol.ForwardData{
+			Seq:     forward.Seq,
+			DataLen: uint64(length),
+			Data:    buffer[:length],
+		}
+
+		protocol.ConstructMessage(sMessage, dataHeader, forwardDataMess)
+		sMessage.SendMessage()
 	}
 }
 
-func TestForward(component *protocol.MessageComponent, addr string) {
+func testForward(component *protocol.MessageComponent, addr string) {
 	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
 
 	header := &protocol.Header{
@@ -52,4 +143,44 @@ func TestForward(component *protocol.MessageComponent, addr string) {
 
 	protocol.ConstructMessage(sMessage, header, succMess)
 	sMessage.SendMessage()
+}
+
+func DispatchForwardData(mgr *manager.Manager, component *protocol.MessageComponent) {
+	for {
+		data := <-mgr.ForwardManager.ForwardDataChan
+		switch data.(type) {
+		case *protocol.ForwardTest:
+			message := data.(*protocol.ForwardTest)
+			go testForward(component, message.Addr)
+		case *protocol.ForwardStart:
+			message := data.(*protocol.ForwardStart)
+			task := &manager.ForwardTask{
+				Mode: manager.F_NEWFORWARD,
+				Seq:  message.Seq,
+			}
+			mgr.ForwardManager.TaskChan <- task
+			<-mgr.ForwardManager.ResultChan
+			forward := newForward(message.Seq, message.Addr)
+			go forward.start(mgr, component)
+		case *protocol.ForwardData:
+			message := data.(*protocol.ForwardData)
+			mgrTask := &manager.ForwardTask{
+				Mode: manager.F_GETDATACHAN,
+				Seq:  message.Seq,
+			}
+			mgr.ForwardManager.TaskChan <- mgrTask
+			result := <-mgr.ForwardManager.ResultChan
+			if result.OK {
+				result.DataChan <- message.Data
+			}
+			mgr.ForwardManager.Done <- true
+		case *protocol.ForwardFin:
+			message := data.(*protocol.ForwardFin)
+			mgrTask := &manager.ForwardTask{
+				Mode: manager.F_CLOSETCP,
+				Seq:  message.Seq,
+			}
+			mgr.ForwardManager.TaskChan <- mgrTask
+		}
+	}
 }

@@ -21,8 +21,10 @@ type Socks struct {
 	Port     string
 }
 
-func NewSocks() *Socks {
-	return new(Socks)
+func NewSocks(port string) *Socks {
+	socks := new(Socks)
+	socks.Port = port
+	return socks
 }
 
 func (socks *Socks) LetSocks(component *protocol.MessageComponent, mgr *manager.Manager, route string, uuid string, uuidNum int) error {
@@ -106,6 +108,7 @@ func (socks *Socks) handleSocksListener(component *protocol.MessageComponent, mg
 		mgr.SocksManager.TaskChan <- mgrTask
 		result = <-mgr.SocksManager.ResultChan
 		if !result.OK {
+			conn.Close()
 			return
 		}
 

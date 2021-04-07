@@ -14,19 +14,19 @@ import (
 )
 
 type Forward struct {
-	UUIDNum int
-	Port    string
+	Addr string
+	Port string
 }
 
-func NewForward(uuidNum int, port string) *Forward {
+func NewForward(port, addr string) *Forward {
 	forward := new(Forward)
-	forward.UUIDNum = uuidNum
 	forward.Port = port
+	forward.Addr = addr
 	return forward
 }
 
-func LetForward(component *protocol.MessageComponent, mgr *manager.Manager, port string, addr string, route string, uuid string, uuidNum int) error {
-	listenAddr := fmt.Sprintf("0.0.0.0:%s", port)
+func (forward *Forward) LetForward(component *protocol.MessageComponent, mgr *manager.Manager, route string, uuid string, uuidNum int) error {
+	listenAddr := fmt.Sprintf("0.0.0.0:%s", forward.Port)
 	listener, err := net.Listen("tcp", listenAddr)
 	if err != nil {
 		return err
@@ -37,22 +37,22 @@ func LetForward(component *protocol.MessageComponent, mgr *manager.Manager, port
 	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
 		Accepter:    uuid,
-		MessageType: protocol.FORWARDSTART,
+		MessageType: protocol.FORWARDTEST,
 		RouteLen:    uint32(len([]byte(route))),
 		Route:       route,
 	}
 
-	startMess := &protocol.ForwardStart{
-		AddrLen: uint16(len([]byte(addr))),
-		Addr:    addr,
+	testMess := &protocol.ForwardTest{
+		AddrLen: uint16(len([]byte(forward.Addr))),
+		Addr:    forward.Addr,
 	}
 
-	protocol.ConstructMessage(sMessage, header, startMess)
+	protocol.ConstructMessage(sMessage, header, testMess)
 	sMessage.SendMessage()
 
 	if ready := <-mgr.ForwardManager.ForwardReady; !ready {
 		listener.Close()
-		err := fmt.Errorf("[*]Fail to forward port %s to remote addr %s", port, addr)
+		err := fmt.Errorf("Fail to forward port %s to remote addr %s,remote addr is not responding", forward.Port, forward.Addr)
 		return err
 	}
 
@@ -60,49 +60,166 @@ func LetForward(component *protocol.MessageComponent, mgr *manager.Manager, port
 		Mode:     manager.F_NEWFORWARD,
 		UUIDNum:  uuidNum,
 		Listener: listener,
-		Port:     port,
+		Port:     forward.Port,
 	}
 
 	mgr.ForwardManager.TaskChan <- mgrTask
 	<-mgr.ForwardManager.ResultChan
 
-	go handleForwardListener(component, mgr, listener, port, route, uuid, uuidNum)
+	go forward.handleForwardListener(component, mgr, listener, route, uuid, uuidNum)
 
 	return nil
 }
 
-func handleForwardListener(component *protocol.MessageComponent, mgr *manager.Manager, listener net.Listener, port string, route string, uuid string, uuidNum int) {
+func (forward *Forward) handleForwardListener(component *protocol.MessageComponent, mgr *manager.Manager, listener net.Listener, route string, uuid string, uuidNum int) {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			listener.Close()
+			listener.Close() // todo:map没有释放
 			return
 		}
 
-		// ask new seq num
 		mgrTask := &manager.ForwardTask{
 			Mode:    manager.F_GETNEWSEQ,
 			UUIDNum: uuidNum,
+			Port:    forward.Port,
 		}
 		mgr.ForwardManager.TaskChan <- mgrTask
 		result := <-mgr.ForwardManager.ResultChan
 		seq := result.ForwardSeq
 
-		// save the socket
 		mgrTask = &manager.ForwardTask{
 			Mode:    manager.F_ADDCONN,
 			UUIDNum: uuidNum,
 			Seq:     seq,
-			Port:    port,
+			Port:    forward.Port,
 			Conn:    conn,
 		}
 		mgr.ForwardManager.TaskChan <- mgrTask
 		result = <-mgr.ForwardManager.ResultChan
 		if !result.OK {
+			conn.Close()
 			return
 		}
 
-		// handle it!
-		// go socks.handleSocks(component, mgr, conn, route, uuid, uuidNum, seq)
+		go forward.handleForward(component, mgr, conn, route, uuid, uuidNum, seq)
+	}
+}
+
+func (forward *Forward) handleForward(component *protocol.MessageComponent, mgr *manager.Manager, conn net.Conn, route string, uuid string, uuidNum int, seq uint64) {
+	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
+	// tell agent to start
+	startHeader := &protocol.Header{
+		Sender:      protocol.ADMIN_UUID,
+		Accepter:    uuid,
+		MessageType: protocol.FORWARDSTART,
+		RouteLen:    uint32(len([]byte(route))),
+		Route:       route,
+	}
+
+	startMess := &protocol.ForwardStart{
+		Seq:     seq,
+		AddrLen: uint16(len([]byte(forward.Addr))),
+		Addr:    forward.Addr,
+	}
+
+	protocol.ConstructMessage(sMessage, startHeader, startMess)
+	sMessage.SendMessage()
+
+	// begin to work
+	dataHeader := &protocol.Header{
+		Sender:      protocol.ADMIN_UUID,
+		Accepter:    uuid,
+		MessageType: protocol.FORWARDDATA,
+		RouteLen:    uint32(len([]byte(route))),
+		Route:       route,
+	}
+
+	mgrTask := &manager.ForwardTask{
+		Mode:    manager.F_GETDATACHAN,
+		UUIDNum: uuidNum,
+		Seq:     seq,
+		Port:    forward.Port,
+	}
+
+	mgr.ForwardManager.TaskChan <- mgrTask
+	result := <-mgr.ForwardManager.ResultChan
+	if !result.OK {
+		return
+	}
+
+	dataChan := result.DataChan
+
+	go func() {
+		for {
+			if data, ok := <-dataChan; ok {
+				conn.Write(data)
+			} else {
+				return
+			}
+		}
+	}()
+
+	defer func() {
+		finHeader := &protocol.Header{
+			Sender:      protocol.ADMIN_UUID,
+			Accepter:    uuid,
+			MessageType: protocol.FORWARDFIN,
+			RouteLen:    uint32(len([]byte(route))),
+			Route:       route,
+		}
+		finMess := &protocol.ForwardFin{
+			Seq: seq,
+		}
+
+		protocol.ConstructMessage(sMessage, finHeader, finMess)
+		sMessage.SendMessage()
+	}()
+
+	buffer := make([]byte, 20480)
+
+	for {
+		length, err := conn.Read(buffer)
+		if err != nil {
+			conn.Close()
+			return
+		}
+
+		forwardDataMess := &protocol.ForwardData{
+			Seq:     seq,
+			DataLen: uint64(length),
+			Data:    buffer[:length],
+		}
+
+		protocol.ConstructMessage(sMessage, dataHeader, forwardDataMess)
+		sMessage.SendMessage()
+	}
+}
+
+func DispatchForwardData(mgr *manager.Manager) {
+	for {
+		data := <-mgr.ForwardManager.ForwardDataChan
+
+		switch data.(type) {
+		case *protocol.ForwardData:
+			message := data.(*protocol.ForwardData)
+			mgrTask := &manager.ForwardTask{
+				Mode: manager.F_GETDATACHAN_WITHOUTUUID,
+				Seq:  message.Seq,
+			}
+			mgr.ForwardManager.TaskChan <- mgrTask
+			result := <-mgr.ForwardManager.ResultChan
+			if result.OK {
+				result.DataChan <- message.Data
+			}
+			mgr.ForwardManager.Done <- true
+		case *protocol.ForwardFin:
+			message := data.(*protocol.ForwardFin)
+			mgrTask := &manager.ForwardTask{
+				Mode: manager.F_CLOSETCP,
+				Seq:  message.Seq,
+			}
+			mgr.ForwardManager.TaskChan <- mgrTask
+		}
 	}
 }

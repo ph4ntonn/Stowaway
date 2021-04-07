@@ -26,8 +26,10 @@ type SSH struct {
 	Certificate     []byte
 }
 
-func NewSSH() *SSH {
-	return new(SSH)
+func NewSSH(addr string) *SSH {
+	ssh := new(SSH)
+	ssh.Addr = addr
+	return ssh
 }
 
 func (ssh *SSH) LetSSH(component *protocol.MessageComponent, route string, uuid string) error {

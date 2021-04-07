@@ -366,8 +366,8 @@ func (message *RawMessage) ConstructData(header *Header, mess interface{}) {
 			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
 
 			dataBuffer.Write(OKBuf)
-		case FORWARDSTART:
-			mmess := mess.(*ForwardStart)
+		case FORWARDTEST:
+			mmess := mess.(*ForwardTest)
 
 			addrLenBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(addrLenBuf, mmess.AddrLen)
@@ -376,12 +376,45 @@ func (message *RawMessage) ConstructData(header *Header, mess interface{}) {
 
 			dataBuffer.Write(addrLenBuf)
 			dataBuffer.Write(addrBuf)
+		case FORWARDSTART:
+			mmess := mess.(*ForwardStart)
+
+			seqBuf := make([]byte, 8)
+			binary.BigEndian.PutUint64(seqBuf, mmess.Seq)
+
+			addrLenBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(addrLenBuf, mmess.AddrLen)
+
+			addrBuf := []byte(mmess.Addr)
+
+			dataBuffer.Write(seqBuf)
+			dataBuffer.Write(addrLenBuf)
+			dataBuffer.Write(addrBuf)
 		case FORWARDREADY:
 			mmess := mess.(*ForwardReady)
 			OKBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
 
 			dataBuffer.Write(OKBuf)
+		case FORWARDDATA:
+			mmess := mess.(*ForwardData)
+			seqBuf := make([]byte, 8)
+			binary.BigEndian.PutUint64(seqBuf, mmess.Seq)
+
+			dataLenBuf := make([]byte, 8)
+			binary.BigEndian.PutUint64(dataLenBuf, mmess.DataLen)
+
+			dataBuf := mmess.Data
+
+			dataBuffer.Write(seqBuf)
+			dataBuffer.Write(dataLenBuf)
+			dataBuffer.Write(dataBuf)
+		case FORWARDFIN:
+			mmess := mess.(*ForwardFin)
+			seqBuf := make([]byte, 8)
+			binary.BigEndian.PutUint64(seqBuf, mmess.Seq)
+
+			dataBuffer.Write(seqBuf)
 		case OFFLINE:
 			mmess := mess.(*Offline)
 			OKBuf := make([]byte, 2)
@@ -635,14 +668,30 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 		mmess := new(SocksReady)
 		mmess.OK = binary.BigEndian.Uint16(dataBuf[:2])
 		return header, mmess, nil
-	case FORWARDSTART:
-		mmess := new(ForwardStart)
+	case FORWARDTEST:
+		mmess := new(ForwardTest)
 		mmess.AddrLen = binary.BigEndian.Uint16(dataBuf[:2])
 		mmess.Addr = string(dataBuf[2 : 2+mmess.AddrLen])
+		return header, mmess, nil
+	case FORWARDSTART:
+		mmess := new(ForwardStart)
+		mmess.Seq = binary.BigEndian.Uint64(dataBuf[:8])
+		mmess.AddrLen = binary.BigEndian.Uint16(dataBuf[8:10])
+		mmess.Addr = string(dataBuf[10 : 10+mmess.AddrLen])
 		return header, mmess, nil
 	case FORWARDREADY:
 		mmess := new(ForwardReady)
 		mmess.OK = binary.BigEndian.Uint16(dataBuf[:2])
+		return header, mmess, nil
+	case FORWARDDATA:
+		mmess := new(ForwardData)
+		mmess.Seq = binary.BigEndian.Uint64(dataBuf[:8])
+		mmess.DataLen = binary.BigEndian.Uint64(dataBuf[8:16])
+		mmess.Data = dataBuf[16 : 16+mmess.DataLen]
+		return header, mmess, nil
+	case FORWARDFIN:
+		mmess := new(ForwardFin)
+		mmess.Seq = binary.BigEndian.Uint64(dataBuf[:8])
 		return header, mmess, nil
 	case OFFLINE:
 		mmess := new(FileDownRes)

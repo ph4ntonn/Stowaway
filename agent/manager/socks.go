@@ -7,7 +7,6 @@
 package manager
 
 import (
-	"Stowaway/protocol"
 	"net"
 )
 
@@ -23,10 +22,9 @@ const (
 )
 
 type socksManager struct {
-	socksStatusMap    map[uint64]*socksStatus
-	SocksTCPDataChan  chan interface{}
-	SocksUDPDataChan  chan *protocol.SocksUDPData
-	SocksUDPReadyChan chan *protocol.UDPAssRes
+	socksStatusMap   map[uint64]*socksStatus
+	SocksTCPDataChan chan interface{}
+	SocksUDPDataChan chan interface{}
 
 	TaskChan   chan *SocksTask
 	ResultChan chan *socksResult
@@ -76,8 +74,7 @@ func newSocksManager() *socksManager {
 
 	manager.socksStatusMap = make(map[uint64]*socksStatus)
 	manager.SocksTCPDataChan = make(chan interface{}, 5)
-	manager.SocksUDPReadyChan = make(chan *protocol.UDPAssRes, 1)
-	manager.SocksUDPDataChan = make(chan *protocol.SocksUDPData, 5)
+	manager.SocksUDPDataChan = make(chan interface{}, 5)
 
 	manager.ResultChan = make(chan *socksResult)
 	manager.TaskChan = make(chan *SocksTask)

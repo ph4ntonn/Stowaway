@@ -55,6 +55,8 @@ func (admin *Admin) Run() {
 	// run a dispatcher to dispatch all socks TCP/UDP data
 	go handler.DispathTCPData(admin.mgr)
 	go handler.DispathUDPData(admin.mgr)
+	// run a dispatcher to dispatch all forward data
+	go handler.DispatchForwardData(admin.mgr)
 	// start interactive panel
 	console.Run()
 }
@@ -165,6 +167,10 @@ func (admin *Admin) handleDataFromDownstream(console *cli.Console) {
 			} else {
 				admin.mgr.ForwardManager.ForwardReady <- false
 			}
+		case protocol.FORWARDDATA:
+			fallthrough
+		case protocol.FORWARDFIN:
+			admin.mgr.ForwardManager.ForwardDataChan <- data.fMessage
 		default:
 			log.Print("\n[*]Unknown Message!")
 		}

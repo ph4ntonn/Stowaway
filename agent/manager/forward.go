@@ -10,6 +10,9 @@ import "net"
 
 const (
 	F_NEWFORWARD = iota
+	F_GETDATACHAN
+	F_UPDATEFORWARD
+	F_CLOSETCP
 )
 
 type forwardManager struct {
@@ -22,15 +25,16 @@ type forwardManager struct {
 }
 
 type ForwardTask struct {
-	Category int
-	Mode     int
-	Seq      uint64
+	Mode int
+	Seq  uint64
 
 	ForwardSocket net.Conn
 }
 
 type forwardResult struct {
 	OK bool
+
+	DataChan chan []byte
 }
 
 type forwardStatus struct {
@@ -58,6 +62,13 @@ func (manager *forwardManager) run() {
 		switch task.Mode {
 		case F_NEWFORWARD:
 			manager.newForward(task)
+		case F_GETDATACHAN:
+			manager.getDataChan(task)
+			<-manager.Done
+		case F_UPDATEFORWARD:
+			manager.updateForward(task)
+		case F_CLOSETCP:
+			manager.closeTCP(task)
 		}
 	}
 }
@@ -65,6 +76,35 @@ func (manager *forwardManager) run() {
 func (manager *forwardManager) newForward(task *ForwardTask) {
 	manager.forwardStatusMap[task.Seq] = new(forwardStatus)
 	manager.forwardStatusMap[task.Seq].dataChan = make(chan []byte, 5)
-	manager.forwardStatusMap[task.Seq].conn = task.ForwardSocket
 	manager.ResultChan <- &forwardResult{OK: true}
+}
+
+func (manager *forwardManager) updateForward(task *ForwardTask) {
+	if _, ok := manager.forwardStatusMap[task.Seq]; ok {
+		manager.forwardStatusMap[task.Seq].conn = task.ForwardSocket
+		manager.ResultChan <- &forwardResult{OK: true}
+	} else {
+		manager.ResultChan <- &forwardResult{OK: false}
+	}
+}
+
+func (manager *forwardManager) getDataChan(task *ForwardTask) {
+	if _, ok := manager.forwardStatusMap[task.Seq]; ok {
+		manager.ResultChan <- &forwardResult{
+			OK:       true,
+			DataChan: manager.forwardStatusMap[task.Seq].dataChan,
+		}
+	} else {
+		manager.ResultChan <- &forwardResult{OK: false}
+	}
+}
+
+func (manager *forwardManager) closeTCP(task *ForwardTask) {
+	if manager.forwardStatusMap[task.Seq].conn != nil {
+		manager.forwardStatusMap[task.Seq].conn.Close()
+	}
+
+	close(manager.forwardStatusMap[task.Seq].dataChan)
+
+	delete(manager.forwardStatusMap, task.Seq)
 }

@@ -40,8 +40,11 @@ const (
 	UDPASSRES
 	SOCKSTCPFIN
 	SOCKSREADY
+	FORWARDTEST
 	FORWARDSTART
 	FORWARDREADY
+	FORWARDDATA
+	FORWARDFIN
 	OFFLINE
 )
 
@@ -244,13 +247,29 @@ type SocksReady struct {
 	OK uint16
 }
 
+type ForwardTest struct {
+	AddrLen uint16
+	Addr    string
+}
+
 type ForwardStart struct {
+	Seq     uint64
 	AddrLen uint16
 	Addr    string
 }
 
 type ForwardReady struct {
 	OK uint16
+}
+
+type ForwardData struct {
+	Seq     uint64
+	DataLen uint64
+	Data    []byte
+}
+
+type ForwardFin struct {
+	Seq uint64
 }
 
 type Offline struct {

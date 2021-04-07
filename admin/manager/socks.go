@@ -279,7 +279,7 @@ func (manager *socksManager) closeTCP(task *SocksTask) {
 
 	uuidNum := manager.socksSeqMap[task.Seq]
 
-	manager.socksMap[uuidNum].socksStatusMap[task.Seq].tcp.conn.Close() // socksStatusMap[task.Seq] must exist, no need to check(error)
+	manager.socksMap[uuidNum].socksStatusMap[task.Seq].tcp.conn.Close() // socksStatusMap[task.Seq] must exist, no need to check
 	close(manager.socksMap[uuidNum].socksStatusMap[task.Seq].tcp.dataChan)
 
 	if manager.socksMap[uuidNum].socksStatusMap[task.Seq].isUDP {
