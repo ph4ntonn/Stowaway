@@ -127,13 +127,22 @@ func (forward *Forward) handleForward(component *protocol.MessageComponent, mgr 
 	sMessage.SendMessage()
 
 	// begin to work
-	dataHeader := &protocol.Header{
-		Sender:      protocol.ADMIN_UUID,
-		Accepter:    uuid,
-		MessageType: protocol.FORWARDDATA,
-		RouteLen:    uint32(len([]byte(route))),
-		Route:       route,
-	}
+	defer func() {
+		finHeader := &protocol.Header{
+			Sender:      protocol.ADMIN_UUID,
+			Accepter:    uuid,
+			MessageType: protocol.FORWARDFIN,
+			RouteLen:    uint32(len([]byte(route))),
+			Route:       route,
+		}
+
+		finMess := &protocol.ForwardFin{
+			Seq: seq,
+		}
+
+		protocol.ConstructMessage(sMessage, finHeader, finMess)
+		sMessage.SendMessage()
+	}()
 
 	mgrTask := &manager.ForwardTask{
 		Mode:    manager.F_GETDATACHAN,
@@ -141,7 +150,6 @@ func (forward *Forward) handleForward(component *protocol.MessageComponent, mgr 
 		Seq:     seq,
 		Port:    forward.Port,
 	}
-
 	mgr.ForwardManager.TaskChan <- mgrTask
 	result := <-mgr.ForwardManager.ResultChan
 	if !result.OK {
@@ -160,21 +168,13 @@ func (forward *Forward) handleForward(component *protocol.MessageComponent, mgr 
 		}
 	}()
 
-	defer func() {
-		finHeader := &protocol.Header{
-			Sender:      protocol.ADMIN_UUID,
-			Accepter:    uuid,
-			MessageType: protocol.FORWARDFIN,
-			RouteLen:    uint32(len([]byte(route))),
-			Route:       route,
-		}
-		finMess := &protocol.ForwardFin{
-			Seq: seq,
-		}
-
-		protocol.ConstructMessage(sMessage, finHeader, finMess)
-		sMessage.SendMessage()
-	}()
+	dataHeader := &protocol.Header{
+		Sender:      protocol.ADMIN_UUID,
+		Accepter:    uuid,
+		MessageType: protocol.FORWARDDATA,
+		RouteLen:    uint32(len([]byte(route))),
+		Route:       route,
+	}
 
 	buffer := make([]byte, 20480)
 

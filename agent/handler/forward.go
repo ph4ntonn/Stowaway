@@ -28,14 +28,6 @@ func newForward(seq uint64, addr string) *Forward {
 func (forward *Forward) start(mgr *manager.Manager, component *protocol.MessageComponent) {
 	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
 
-	dataHeader := &protocol.Header{
-		Sender:      component.UUID,
-		Accepter:    protocol.ADMIN_UUID,
-		MessageType: protocol.FORWARDDATA,
-		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
-		Route:       protocol.TEMP_ROUTE,
-	}
-
 	finHeader := &protocol.Header{
 		Sender:      component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
@@ -77,7 +69,7 @@ func (forward *Forward) start(mgr *manager.Manager, component *protocol.MessageC
 	mgr.ForwardManager.TaskChan <- task
 	result = <-mgr.ForwardManager.ResultChan
 	mgr.ForwardManager.Done <- true
-	if !result.OK {
+	if !result.OK { // no need to close conn,cuz conn has been already recorded,so if FIN occur between F_UPDATEFORWARD and F_GETDATACHAN,closeTCP will help us to close the conn
 		return
 	}
 
@@ -92,6 +84,14 @@ func (forward *Forward) start(mgr *manager.Manager, component *protocol.MessageC
 			}
 		}
 	}()
+
+	dataHeader := &protocol.Header{
+		Sender:      component.UUID,
+		Accepter:    protocol.ADMIN_UUID,
+		MessageType: protocol.FORWARDDATA,
+		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
+		Route:       protocol.TEMP_ROUTE,
+	}
 
 	buffer := make([]byte, 20480)
 
@@ -120,7 +120,7 @@ func testForward(component *protocol.MessageComponent, addr string) {
 		Sender:      component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.FORWARDREADY,
-		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))), // No need to set route when agent send mess to admin
+		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
 		Route:       protocol.TEMP_ROUTE,
 	}
 

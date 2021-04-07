@@ -461,7 +461,6 @@ func ProxyC2STCP(conn net.Conn, dataChan chan []byte) {
 	for {
 		data, ok := <-dataChan
 		if !ok { // no need to send FIN actively
-			conn.Close()
 			return
 		}
 		conn.Write(data)

@@ -52,7 +52,7 @@ func (agent *Agent) Run() {
 	go handler.DispathSocksUDPData(mgr)
 	go handler.DispatchForwardData(mgr, component)
 	// process data from upstream
-	go agent.handleConnFromUpstream(mgr, component)
+	go agent.handleConnFromUpstream(mgr)
 	agent.handleDataFromUpstream(mgr, component)
 	//agent.handleDataFromDownstream()
 }
@@ -80,7 +80,7 @@ func (agent *Agent) sendMyInfo() {
 	sMessage.SendMessage()
 }
 
-func (agent *Agent) handleConnFromUpstream(mgr *manager.Manager, component *protocol.MessageComponent) {
+func (agent *Agent) handleConnFromUpstream(mgr *manager.Manager) {
 	rMessage := protocol.PrepareAndDecideWhichRProtoFromUpper(agent.Conn, agent.UserOptions.Secret, agent.UUID)
 	for {
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
@@ -93,7 +93,6 @@ func (agent *Agent) handleConnFromUpstream(mgr *manager.Manager, component *prot
 }
 
 func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager, component *protocol.MessageComponent) {
-	//sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(agent.Conn, agent.UserOptions.Secret, agent.ID)
 	shell := handler.NewShell()
 	mySSH := handler.NewSSH()
 
@@ -106,7 +105,6 @@ func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager, component *prot
 				message := data.fMessage.(*protocol.MyMemo)
 				agent.Memo = message.Memo
 			case protocol.SHELLREQ:
-				// No need to check member "start"
 				go shell.Start(component)
 			case protocol.SHELLCOMMAND:
 				message := data.fMessage.(*protocol.ShellCommand)
@@ -144,7 +142,6 @@ func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager, component *prot
 				message := data.fMessage.(*protocol.FileData)
 				mgr.File.DataChan <- message.Data
 			case protocol.FILEERR:
-				// No need to check message
 				mgr.File.ErrChan <- true
 			case protocol.FILEDOWNREQ:
 				message := data.fMessage.(*protocol.FileDownReq)
@@ -158,8 +155,7 @@ func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager, component *prot
 			case protocol.SOCKSTCPDATA:
 				fallthrough
 			case protocol.SOCKSTCPFIN:
-				// No need to check message
-				mgr.ForwardManager.ForwardDataChan <- data.fMessage
+				mgr.SocksManager.SocksTCPDataChan <- data.fMessage
 			case protocol.UDPASSRES:
 				fallthrough
 			case protocol.SOCKSUDPDATA:
