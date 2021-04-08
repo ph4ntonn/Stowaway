@@ -7,6 +7,7 @@
 package handler
 
 import (
+	"Stowaway/agent/manager"
 	"Stowaway/protocol"
 	"Stowaway/utils"
 	"io"
@@ -19,11 +20,11 @@ type Shell struct {
 	stdout io.Reader
 }
 
-func NewShell() *Shell {
+func newShell() *Shell {
 	return new(Shell)
 }
 
-func (shell *Shell) Start(component *protocol.MessageComponent) {
+func (shell *Shell) start(component *protocol.MessageComponent) {
 	var cmd *exec.Cmd
 	var err error
 
@@ -109,6 +110,22 @@ func (shell *Shell) Start(component *protocol.MessageComponent) {
 	}
 }
 
-func (shell *Shell) Input(command string) {
+func (shell *Shell) input(command string) {
 	shell.stdin.Write([]byte(command))
+}
+
+func DispatchShellMess(mgr *manager.Manager, component *protocol.MessageComponent) {
+	shell := newShell()
+
+	for {
+		message := <-mgr.ShellManager.ShellMessChan
+
+		switch message.(type) {
+		case *protocol.ShellReq:
+			go shell.start(component)
+		case *protocol.ShellCommand:
+			mess := message.(*protocol.ShellCommand)
+			shell.input(mess.Command)
+		}
+	}
 }

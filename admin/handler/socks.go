@@ -28,6 +28,30 @@ func NewSocks(port string) *Socks {
 }
 
 func (socks *Socks) LetSocks(component *protocol.MessageComponent, mgr *manager.Manager, route string, uuid string) error {
+	addr := fmt.Sprintf("0.0.0.0:%s", socks.Port)
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
+	}
+
+	// register brand new socks service
+	mgrTask := &manager.SocksTask{
+		Mode:             manager.S_NEWSOCKS,
+		UUID:             uuid,
+		SocksPort:        socks.Port,
+		SocksUsername:    socks.Username,
+		SocksPassword:    socks.Password,
+		SocksTCPListener: listener,
+	}
+
+	mgr.SocksManager.TaskChan <- mgrTask
+	result := <-mgr.SocksManager.ResultChan // wait for "add" done
+	if !result.OK {                         // node and socks service must be one-to-one
+		err := errors.New("Socks has already running on current node! Use 'stopsocks' to stop the old one")
+		listener.Close()
+		return err
+	}
+
 	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
 
 	header := &protocol.Header{
@@ -49,30 +73,8 @@ func (socks *Socks) LetSocks(component *protocol.MessageComponent, mgr *manager.
 	sMessage.SendMessage()
 
 	if ready := <-mgr.SocksManager.SocksReady; !ready {
-		err := errors.New("[*]Fail to start socks.If you just stop socks service,please wait for the cleanup done")
-		return err
-	}
-
-	addr := fmt.Sprintf("0.0.0.0:%s", socks.Port)
-	listener, err := net.Listen("tcp", addr)
-	if err != nil {
-		return err
-	}
-
-	// register brand new socks service
-	mgrTask := &manager.SocksTask{
-		Mode:             manager.S_NEWSOCKS,
-		UUID:             uuid,
-		SocksPort:        socks.Port,
-		SocksUsername:    socks.Username,
-		SocksPassword:    socks.Password,
-		SocksTCPListener: listener,
-	}
-
-	mgr.SocksManager.TaskChan <- mgrTask
-	result := <-mgr.SocksManager.ResultChan // wait for "add" done
-	if !result.OK {                         // node and socks service must be one-to-one
-		listener.Close()
+		err := errors.New("Fail to start socks.If you just stop socks service,please wait for the cleanup done")
+		StopSocks(mgr, uuid)
 		return err
 	}
 
@@ -389,7 +391,7 @@ func GetSocksInfo(mgr *manager.Manager, uuid string) bool {
 	return result.OK
 }
 
-func StopSocks(component *protocol.MessageComponent, mgr *manager.Manager, route string, uuid string) {
+func StopSocks(mgr *manager.Manager, uuid string) {
 	mgrTask := &manager.SocksTask{
 		Mode: manager.S_CLOSESOCKS,
 		UUID: uuid,

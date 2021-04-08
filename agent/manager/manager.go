@@ -11,16 +11,20 @@ import (
 )
 
 type Manager struct {
-	File           *share.MyFile
+	FileManager    *fileManager
 	SocksManager   *socksManager
 	ForwardManager *forwardManager
+	SSHManager     *sshManager
+	ShellManager   *shellManager
 }
 
 func NewManager(file *share.MyFile) *Manager {
 	manager := new(Manager)
-	manager.File = file
+	manager.FileManager = newFileManager(file)
 	manager.SocksManager = newSocksManager()
 	manager.ForwardManager = newForwardManager()
+	manager.SSHManager = newSSHManager()
+	manager.ShellManager = newShellManager()
 	return manager
 }
 

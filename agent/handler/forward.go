@@ -145,40 +145,40 @@ func testForward(component *protocol.MessageComponent, addr string) {
 	sMessage.SendMessage()
 }
 
-func DispatchForwardData(mgr *manager.Manager, component *protocol.MessageComponent) {
+func DispatchForwardMess(mgr *manager.Manager, component *protocol.MessageComponent) {
 	for {
-		data := <-mgr.ForwardManager.ForwardDataChan
-		switch data.(type) {
+		message := <-mgr.ForwardManager.ForwardMessChan
+		switch message.(type) {
 		case *protocol.ForwardTest:
-			message := data.(*protocol.ForwardTest)
-			go testForward(component, message.Addr)
+			mess := message.(*protocol.ForwardTest)
+			go testForward(component, mess.Addr)
 		case *protocol.ForwardStart:
-			message := data.(*protocol.ForwardStart)
+			mess := message.(*protocol.ForwardStart)
 			task := &manager.ForwardTask{
 				Mode: manager.F_NEWFORWARD,
-				Seq:  message.Seq,
+				Seq:  mess.Seq,
 			}
 			mgr.ForwardManager.TaskChan <- task
 			<-mgr.ForwardManager.ResultChan
-			forward := newForward(message.Seq, message.Addr)
+			forward := newForward(mess.Seq, mess.Addr)
 			go forward.start(mgr, component)
 		case *protocol.ForwardData:
-			message := data.(*protocol.ForwardData)
+			mess := message.(*protocol.ForwardData)
 			mgrTask := &manager.ForwardTask{
 				Mode: manager.F_GETDATACHAN,
-				Seq:  message.Seq,
+				Seq:  mess.Seq,
 			}
 			mgr.ForwardManager.TaskChan <- mgrTask
 			result := <-mgr.ForwardManager.ResultChan
 			if result.OK {
-				result.DataChan <- message.Data
+				result.DataChan <- mess.Data
 			}
 			mgr.ForwardManager.Done <- true
 		case *protocol.ForwardFin:
-			message := data.(*protocol.ForwardFin)
+			mess := message.(*protocol.ForwardFin)
 			mgrTask := &manager.ForwardTask{
 				Mode: manager.F_CLOSETCP,
-				Seq:  message.Seq,
+				Seq:  mess.Seq,
 			}
 			mgr.ForwardManager.TaskChan <- mgrTask
 		}

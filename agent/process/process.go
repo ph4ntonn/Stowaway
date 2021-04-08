@@ -20,40 +20,34 @@ import (
 )
 
 type Agent struct {
-	UUID        string
+	UUID string
+	Memo string
+
 	Conn        net.Conn
-	Memo        string
 	UserOptions *initial.Options
-
-	BufferChan chan *BufferData
-}
-
-type BufferData struct {
-	fHeader  *protocol.Header
-	fMessage interface{}
 }
 
 func NewAgent(options *initial.Options) *Agent {
 	agent := new(Agent)
 	agent.UUID = protocol.TEMP_UUID
 	agent.UserOptions = options
-	agent.BufferChan = make(chan *BufferData, 10)
 	return agent
 }
 
 func (agent *Agent) Run() {
 	component := &protocol.MessageComponent{Secret: agent.UserOptions.Secret, Conn: agent.Conn, UUID: agent.UUID}
-	// send agent info first
 	agent.sendMyInfo()
 	// run manager
 	mgr := manager.NewManager(share.NewFile())
 	go mgr.Run()
-	// run dispatcher expect tcp,cuz tcp dispatcher can not be confirmed because of the username/password changing
-	go handler.DispathSocksUDPData(mgr)
-	// run a dispatcher to dispatch all forward data
-	go handler.DispatchForwardData(mgr, component)
+	// run dispatchers to dispatch all kinds of message
+	go handler.DispathSocksTCPMess(mgr, component)
+	go handler.DispathSocksUDPMess(mgr)
+	go handler.DispatchForwardMess(mgr, component)
+	go handler.DispatchFileMess(mgr, component)
+	go handler.DispatchSSHMess(mgr, component)
+	go handler.DispatchShellMess(mgr, component)
 	// process data from upstream
-	go agent.handleConnFromUpstream(mgr)
 	agent.handleDataFromUpstream(mgr, component)
 	//agent.handleDataFromDownstream()
 }
@@ -81,86 +75,49 @@ func (agent *Agent) sendMyInfo() {
 	sMessage.SendMessage()
 }
 
-func (agent *Agent) handleConnFromUpstream(mgr *manager.Manager) {
+func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager, component *protocol.MessageComponent) {
 	rMessage := protocol.PrepareAndDecideWhichRProtoFromUpper(agent.Conn, agent.UserOptions.Secret, agent.UUID)
+
 	for {
-		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
+		header, message, err := protocol.DestructMessage(rMessage)
 		if err != nil {
 			log.Println("[*]Peer node seems offline!")
 			os.Exit(0)
 		}
-		agent.BufferChan <- &BufferData{fHeader: fHeader, fMessage: fMessage}
-	}
-}
 
-func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager, component *protocol.MessageComponent) {
-	shell := handler.NewShell()
-	mySSH := handler.NewSSH()
-
-	for {
-		data := <-agent.BufferChan
-
-		if data.fHeader.Accepter == agent.UUID {
-			switch data.fHeader.MessageType {
+		if header.Accepter == agent.UUID {
+			switch header.MessageType {
 			case protocol.MYMEMO:
-				message := data.fMessage.(*protocol.MyMemo)
-				agent.Memo = message.Memo
+				message := message.(*protocol.MyMemo)
+				agent.Memo = message.Memo // no need to pass this like message below,just change memo directly
 			case protocol.SHELLREQ:
-				go shell.Start(component)
+				fallthrough
 			case protocol.SHELLCOMMAND:
-				message := data.fMessage.(*protocol.ShellCommand)
-				shell.Input(message.Command)
-			case protocol.LISTENREQ:
-				//message := fMessage.(*protocol.ListenReq)
-				//go handler.StartListen(message.Addr)
+				mgr.ShellManager.ShellMessChan <- message
 			case protocol.SSHREQ:
-				message := data.fMessage.(*protocol.SSHReq)
-				mySSH.Addr = message.Addr
-				mySSH.Method = int(message.Method)
-				mySSH.Username = message.Username
-				mySSH.Password = message.Password
-				mySSH.Certificate = message.Certificate
-				go mySSH.Start(component)
+				fallthrough
 			case protocol.SSHCOMMAND:
-				message := data.fMessage.(*protocol.SSHCommand)
-				mySSH.Input(message.Command)
+				mgr.SSHManager.SSHMessChan <- message
 			case protocol.FILESTATREQ:
-				message := data.fMessage.(*protocol.FileStatReq)
-				mgr.File.FileName = message.Filename
-				mgr.File.SliceNum = message.SliceNum
-				err := mgr.File.CheckFileStat(component, protocol.TEMP_ROUTE, protocol.ADMIN_UUID, share.AGENT)
-				if err == nil {
-					go mgr.File.Receive(component, protocol.TEMP_ROUTE, protocol.ADMIN_UUID, share.AGENT)
-				}
+				fallthrough
 			case protocol.FILESTATRES:
-				message := data.fMessage.(*protocol.FileStatRes)
-				if message.OK == 1 {
-					go mgr.File.Upload(component, protocol.TEMP_ROUTE, protocol.ADMIN_UUID, share.AGENT)
-				} else {
-					mgr.File.Handler.Close()
-				}
+				fallthrough
 			case protocol.FILEDATA:
-				message := data.fMessage.(*protocol.FileData)
-				mgr.File.DataChan <- message.Data
+				fallthrough
 			case protocol.FILEERR:
-				mgr.File.ErrChan <- true
+				fallthrough
 			case protocol.FILEDOWNREQ:
-				message := data.fMessage.(*protocol.FileDownReq)
-				mgr.File.FilePath = message.FilePath
-				mgr.File.FileName = message.Filename
-				go mgr.File.SendFileStat(component, protocol.TEMP_ROUTE, protocol.ADMIN_UUID, share.AGENT)
+				mgr.FileManager.FileMessChan <- message
 			case protocol.SOCKSSTART:
-				message := data.fMessage.(*protocol.SocksStart)
-				socks := handler.NewSocks(message.Username, message.Password)
-				go socks.Start(mgr, component)
+				fallthrough
 			case protocol.SOCKSTCPDATA:
 				fallthrough
 			case protocol.SOCKSTCPFIN:
-				mgr.SocksManager.SocksTCPDataChan <- data.fMessage
+				mgr.SocksManager.SocksTCPMessChan <- message
 			case protocol.UDPASSRES:
 				fallthrough
 			case protocol.SOCKSUDPDATA:
-				mgr.SocksManager.SocksUDPDataChan <- data.fMessage
+				mgr.SocksManager.SocksUDPMessChan <- message
 			case protocol.FORWARDTEST:
 				fallthrough
 			case protocol.FORWARDSTART:
@@ -168,7 +125,7 @@ func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager, component *prot
 			case protocol.FORWARDDATA:
 				fallthrough
 			case protocol.FORWARDFIN:
-				mgr.ForwardManager.ForwardDataChan <- data.fMessage
+				mgr.ForwardManager.ForwardMessChan <- message
 			case protocol.OFFLINE:
 				os.Exit(0)
 			default:

@@ -17,7 +17,7 @@ const (
 
 type forwardManager struct {
 	forwardStatusMap map[uint64]*forwardStatus
-	ForwardDataChan  chan interface{}
+	ForwardMessChan  chan interface{}
 
 	TaskChan   chan *ForwardTask
 	ResultChan chan *forwardResult
@@ -46,7 +46,7 @@ func newForwardManager() *forwardManager {
 	manager := new(forwardManager)
 
 	manager.forwardStatusMap = make(map[uint64]*forwardStatus)
-	manager.ForwardDataChan = make(chan interface{}, 5)
+	manager.ForwardMessChan = make(chan interface{}, 5)
 
 	manager.ResultChan = make(chan *forwardResult)
 	manager.TaskChan = make(chan *ForwardTask)

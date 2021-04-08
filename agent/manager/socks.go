@@ -23,8 +23,8 @@ const (
 
 type socksManager struct {
 	socksStatusMap   map[uint64]*socksStatus
-	SocksTCPDataChan chan interface{}
-	SocksUDPDataChan chan interface{}
+	SocksTCPMessChan chan interface{}
+	SocksUDPMessChan chan interface{}
 
 	TaskChan   chan *SocksTask
 	ResultChan chan *socksResult
@@ -73,8 +73,8 @@ func newSocksManager() *socksManager {
 	manager := new(socksManager)
 
 	manager.socksStatusMap = make(map[uint64]*socksStatus)
-	manager.SocksTCPDataChan = make(chan interface{}, 5)
-	manager.SocksUDPDataChan = make(chan interface{}, 5)
+	manager.SocksTCPMessChan = make(chan interface{}, 5)
+	manager.SocksUDPMessChan = make(chan interface{}, 5)
 
 	manager.ResultChan = make(chan *socksResult)
 	manager.TaskChan = make(chan *SocksTask)

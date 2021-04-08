@@ -58,23 +58,23 @@ func (admin *Admin) handleMessFromDownstream(console *cli.Console) {
 	rMessage := protocol.PrepareAndDecideWhichRProtoFromUpper(admin.Conn, admin.UserOptions.Secret, protocol.ADMIN_UUID)
 
 	for {
-		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
+		header, message, err := protocol.DestructMessage(rMessage)
 		if err != nil {
 			log.Print("\r\n[*]Peer node seems offline!")
 			os.Exit(0)
 		}
 
-		switch fHeader.MessageType {
+		switch header.MessageType {
 		case protocol.MYINFO:
-			admin.mgr.InfoManager.InfoMessChan <- &manager.InfoMess{UUID: fHeader.Sender, Mess: fMessage}
+			admin.mgr.InfoManager.InfoMessChan <- &manager.InfoMess{UUID: header.Sender, Mess: message}
 		case protocol.SHELLRES:
 			fallthrough
 		case protocol.SHELLRESULT:
-			admin.mgr.ShellManager.ShellMessChan <- fMessage
+			admin.mgr.ShellManager.ShellMessChan <- message
 		case protocol.SSHRES:
 			fallthrough
 		case protocol.SSHRESULT:
-			admin.mgr.SSHManager.SSHMessChan <- fMessage
+			admin.mgr.SSHManager.SSHMessChan <- message
 		case protocol.FILESTATREQ:
 			fallthrough
 		case protocol.FILEDOWNRES:
@@ -84,23 +84,23 @@ func (admin *Admin) handleMessFromDownstream(console *cli.Console) {
 		case protocol.FILEDATA:
 			fallthrough
 		case protocol.FILEERR:
-			admin.mgr.FileManager.FileMessChan <- fMessage
+			admin.mgr.FileManager.FileMessChan <- message
 		case protocol.SOCKSREADY:
 			fallthrough
 		case protocol.SOCKSTCPDATA:
 			fallthrough
 		case protocol.SOCKSTCPFIN:
-			admin.mgr.SocksManager.SocksTCPMessChan <- fMessage
+			admin.mgr.SocksManager.SocksTCPMessChan <- message
 		case protocol.UDPASSSTART:
 			fallthrough
 		case protocol.SOCKSUDPDATA:
-			admin.mgr.SocksManager.SocksUDPMessChan <- fMessage
+			admin.mgr.SocksManager.SocksUDPMessChan <- message
 		case protocol.FORWARDREADY:
 			fallthrough
 		case protocol.FORWARDDATA:
 			fallthrough
 		case protocol.FORWARDFIN:
-			admin.mgr.ForwardManager.ForwardMessChan <- fMessage
+			admin.mgr.ForwardManager.ForwardMessChan <- message
 		default:
 			log.Print("\n[*]Unknown Message!")
 		}

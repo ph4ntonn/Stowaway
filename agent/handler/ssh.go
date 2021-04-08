@@ -10,6 +10,7 @@ package handler
 import (
 	"io"
 
+	"Stowaway/agent/manager"
 	"Stowaway/protocol"
 	"Stowaway/utils"
 
@@ -33,12 +34,12 @@ type SSH struct {
 	Certificate     []byte
 }
 
-func NewSSH() *SSH {
+func newSSH() *SSH {
 	return new(SSH)
 }
 
 // StartSSH 启动ssh
-func (mySSH *SSH) Start(component *protocol.MessageComponent) {
+func (mySSH *SSH) start(component *protocol.MessageComponent) {
 	var authPayload ssh.AuthMethod
 	var err error
 
@@ -162,6 +163,28 @@ func (mySSH *SSH) Start(component *protocol.MessageComponent) {
 }
 
 // WriteCommand 写入command
-func (mySSH *SSH) Input(command string) {
+func (mySSH *SSH) input(command string) {
 	mySSH.stdin.Write([]byte(command))
+}
+
+func DispatchSSHMess(mgr *manager.Manager, component *protocol.MessageComponent) {
+	mySSH := newSSH()
+
+	for {
+		message := <-mgr.SSHManager.SSHMessChan
+
+		switch message.(type) {
+		case *protocol.SSHReq:
+			mess := message.(*protocol.SSHReq)
+			mySSH.Addr = mess.Addr
+			mySSH.Method = int(mess.Method)
+			mySSH.Username = mess.Username
+			mySSH.Password = mess.Password
+			mySSH.Certificate = mess.Certificate
+			go mySSH.start(component)
+		case *protocol.SSHCommand:
+			mess := message.(*protocol.SSHCommand)
+			mySSH.input(mess.Command)
+		}
+	}
 }

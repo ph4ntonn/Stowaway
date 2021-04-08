@@ -508,7 +508,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				option := console.pretreatInput()
 				if option == "yes" {
 					fmt.Printf("\r\n[*]Closing......")
-					handler.StopSocks(component, console.mgr, route, uuid)
+					handler.StopSocks(console.mgr, uuid)
 					fmt.Printf("\r\n[*]Socks service has been closed successfully!")
 				} else if option == "no" {
 				} else {
