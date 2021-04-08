@@ -344,20 +344,20 @@ func (console *Console) handleMainPanelCommand() {
 
 func (console *Console) handleNodePanelCommand(uuidNum int) {
 	topoTask := &topology.TopoTask{
-		Mode:    topology.GETROUTE,
-		UUIDNum: uuidNum,
-	}
-	console.Topology.TaskChan <- topoTask
-	topoResult := <-console.Topology.ResultChan
-	route := topoResult.Route
-
-	topoTask = &topology.TopoTask{
 		Mode:    topology.GETUUID,
 		UUIDNum: uuidNum,
 	}
 	console.Topology.TaskChan <- topoTask
-	topoResult = <-console.Topology.ResultChan
+	topoResult := <-console.Topology.ResultChan
 	uuid := topoResult.UUID
+
+	topoTask = &topology.TopoTask{
+		Mode: topology.GETROUTE,
+		UUID: uuid,
+	}
+	console.Topology.TaskChan <- topoTask
+	topoResult = <-console.Topology.ResultChan
+	route := topoResult.Route
 
 	component := &protocol.MessageComponent{
 		Secret: console.Secret,
@@ -492,7 +492,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			fmt.Printf("\r\n[*]Trying to listen on 0.0.0.0:%s......", fCommand[1])
 			fmt.Printf("\r\n[*]Waiting for agent's response......")
 
-			err := socks.LetSocks(component, console.mgr, route, uuid, uuidNum)
+			err := socks.LetSocks(component, console.mgr, route, uuid)
 
 			if err != nil {
 				fmt.Printf("\r\n[*]Error: %s", err.Error())
@@ -506,7 +506,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				break
 			}
 
-			IsRunning := handler.GetSocksInfo(console.mgr, uuidNum)
+			IsRunning := handler.GetSocksInfo(console.mgr, uuid)
 
 			if IsRunning {
 				console.Status = "[*]Do you really want to shutdown socks?(yes/no): "
@@ -514,7 +514,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				option := console.pretreatInput()
 				if option == "yes" {
 					fmt.Printf("\r\n[*]Closing......")
-					handler.StopSocks(component, console.mgr, route, uuid, uuidNum)
+					handler.StopSocks(component, console.mgr, route, uuid)
 					fmt.Printf("\r\n[*]Socks service has been closed successfully!")
 				} else if option == "no" {
 				} else {
@@ -534,7 +534,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 
 			forward := handler.NewForward(fCommand[1], fCommand[2])
 
-			err := forward.LetForward(component, console.mgr, route, uuid, uuidNum)
+			err := forward.LetForward(component, console.mgr, route, uuid)
 			if err != nil {
 				fmt.Printf("\r\n[*]Error: %s", err.Error())
 			} else {

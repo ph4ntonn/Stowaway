@@ -27,7 +27,7 @@ func NewSocks(port string) *Socks {
 	return socks
 }
 
-func (socks *Socks) LetSocks(component *protocol.MessageComponent, mgr *manager.Manager, route string, uuid string, uuidNum int) error {
+func (socks *Socks) LetSocks(component *protocol.MessageComponent, mgr *manager.Manager, route string, uuid string) error {
 	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
 
 	header := &protocol.Header{
@@ -62,7 +62,7 @@ func (socks *Socks) LetSocks(component *protocol.MessageComponent, mgr *manager.
 	// register brand new socks service
 	mgrTask := &manager.SocksTask{
 		Mode:             manager.S_NEWSOCKS,
-		UUIDNum:          uuidNum,
+		UUID:             uuid,
 		SocksPort:        socks.Port,
 		SocksUsername:    socks.Username,
 		SocksPassword:    socks.Password,
@@ -76,12 +76,12 @@ func (socks *Socks) LetSocks(component *protocol.MessageComponent, mgr *manager.
 		return err
 	}
 
-	go socks.handleSocksListener(component, mgr, listener, route, uuid, uuidNum)
+	go socks.handleSocksListener(component, mgr, listener, route, uuid)
 
 	return nil
 }
 
-func (socks *Socks) handleSocksListener(component *protocol.MessageComponent, mgr *manager.Manager, listener net.Listener, route string, uuid string, uuidNum int) {
+func (socks *Socks) handleSocksListener(component *protocol.MessageComponent, mgr *manager.Manager, listener net.Listener, route string, uuid string) {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -91,8 +91,8 @@ func (socks *Socks) handleSocksListener(component *protocol.MessageComponent, mg
 
 		// ask new seq num
 		mgrTask := &manager.SocksTask{
-			Mode:    manager.S_GETNEWSEQ,
-			UUIDNum: uuidNum,
+			Mode: manager.S_GETNEWSEQ,
+			UUID: uuid,
 		}
 		mgr.SocksManager.TaskChan <- mgrTask
 		result := <-mgr.SocksManager.ResultChan
@@ -101,7 +101,7 @@ func (socks *Socks) handleSocksListener(component *protocol.MessageComponent, mg
 		// save the socket
 		mgrTask = &manager.SocksTask{
 			Mode:           manager.S_ADDTCPSOCKET,
-			UUIDNum:        uuidNum,
+			UUID:           uuid,
 			Seq:            seq,
 			SocksTCPSocket: conn,
 		}
@@ -113,11 +113,11 @@ func (socks *Socks) handleSocksListener(component *protocol.MessageComponent, mg
 		}
 
 		// handle it!
-		go socks.handleSocks(component, mgr, conn, route, uuid, uuidNum, seq)
+		go socks.handleSocks(component, mgr, conn, route, uuid, seq)
 	}
 }
 
-func (socks *Socks) handleSocks(component *protocol.MessageComponent, mgr *manager.Manager, conn net.Conn, route string, uuid string, uuidNum int, seq uint64) {
+func (socks *Socks) handleSocks(component *protocol.MessageComponent, mgr *manager.Manager, conn net.Conn, route string, uuid string, seq uint64) {
 	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
 
 	header := &protocol.Header{
@@ -129,9 +129,9 @@ func (socks *Socks) handleSocks(component *protocol.MessageComponent, mgr *manag
 	}
 
 	mgrTask := &manager.SocksTask{
-		Mode:    manager.S_GETTCPDATACHAN,
-		UUIDNum: uuidNum,
-		Seq:     seq,
+		Mode: manager.S_GETTCPDATACHAN,
+		UUID: uuid,
+		Seq:  seq,
 	}
 	mgr.SocksManager.TaskChan <- mgrTask
 	result := <-mgr.SocksManager.ResultChan
@@ -244,22 +244,14 @@ func StartUDPAss(mgr *manager.Manager, topo *topology.Topology, conn net.Conn, s
 	}
 	mgr.SocksManager.TaskChan <- mgrTask
 	socksResult := <-mgr.SocksManager.ResultChan
-	uuidNum := socksResult.UUIDNum
+	uuid := socksResult.UUID
 
 	topoTask := &topology.TopoTask{
-		Mode:    topology.GETUUID,
-		UUIDNum: uuidNum,
+		Mode: topology.GETROUTE,
+		UUID: uuid,
 	}
 	topo.TaskChan <- topoTask
 	topoResult := <-topo.ResultChan
-	uuid := topoResult.UUID
-
-	topoTask = &topology.TopoTask{
-		Mode:    topology.GETROUTE,
-		UUIDNum: uuidNum,
-	}
-	topo.TaskChan <- topoTask
-	topoResult = <-topo.ResultChan
 	route := topoResult.Route
 
 	header := &protocol.Header{
@@ -307,7 +299,7 @@ func StartUDPAss(mgr *manager.Manager, topo *topology.Topology, conn net.Conn, s
 			return
 		}
 
-		go handleUDPAss(mgr, component, udpListener, route, uuid, uuidNum, seq)
+		go handleUDPAss(mgr, component, udpListener, route, uuid, seq)
 
 		succMess := &protocol.UDPAssRes{
 			Seq:     seq,
@@ -324,7 +316,7 @@ func StartUDPAss(mgr *manager.Manager, topo *topology.Topology, conn net.Conn, s
 	}
 }
 
-func handleUDPAss(mgr *manager.Manager, component *protocol.MessageComponent, listener *net.UDPConn, route string, uuid string, uuidNum int, seq uint64) {
+func handleUDPAss(mgr *manager.Manager, component *protocol.MessageComponent, listener *net.UDPConn, route string, uuid string, seq uint64) {
 	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
 
 	dataHeader := &protocol.Header{
@@ -336,9 +328,9 @@ func handleUDPAss(mgr *manager.Manager, component *protocol.MessageComponent, li
 	}
 
 	mgrTask := &manager.SocksTask{
-		Mode:    manager.S_GETUDPDATACHAN,
-		UUIDNum: uuidNum,
-		Seq:     seq,
+		Mode: manager.S_GETUDPDATACHAN,
+		UUID: uuid,
+		Seq:  seq,
 	}
 	mgr.SocksManager.TaskChan <- mgrTask
 	result := <-mgr.SocksManager.ResultChan
@@ -436,10 +428,10 @@ func DispathUDPData(mgr *manager.Manager) {
 	}
 }
 
-func GetSocksInfo(mgr *manager.Manager, uuidNum int) bool {
+func GetSocksInfo(mgr *manager.Manager, uuid string) bool {
 	mgrTask := &manager.SocksTask{
-		Mode:    manager.S_GETSOCKSINFO,
-		UUIDNum: uuidNum,
+		Mode: manager.S_GETSOCKSINFO,
+		UUID: uuid,
 	}
 	mgr.SocksManager.TaskChan <- mgrTask
 	result := <-mgr.SocksManager.ResultChan
@@ -449,10 +441,10 @@ func GetSocksInfo(mgr *manager.Manager, uuidNum int) bool {
 	return result.OK
 }
 
-func StopSocks(component *protocol.MessageComponent, mgr *manager.Manager, route string, uuid string, uuidNum int) {
+func StopSocks(component *protocol.MessageComponent, mgr *manager.Manager, route string, uuid string) {
 	mgrTask := &manager.SocksTask{
-		Mode:    manager.S_CLOSESOCKS,
-		UUIDNum: uuidNum,
+		Mode: manager.S_CLOSESOCKS,
+		UUID: uuid,
 	}
 	mgr.SocksManager.TaskChan <- mgrTask
 	<-mgr.SocksManager.ResultChan

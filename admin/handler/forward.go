@@ -25,7 +25,7 @@ func NewForward(port, addr string) *Forward {
 	return forward
 }
 
-func (forward *Forward) LetForward(component *protocol.MessageComponent, mgr *manager.Manager, route string, uuid string, uuidNum int) error {
+func (forward *Forward) LetForward(component *protocol.MessageComponent, mgr *manager.Manager, route string, uuid string) error {
 	listenAddr := fmt.Sprintf("0.0.0.0:%s", forward.Port)
 	listener, err := net.Listen("tcp", listenAddr)
 	if err != nil {
@@ -58,7 +58,7 @@ func (forward *Forward) LetForward(component *protocol.MessageComponent, mgr *ma
 
 	mgrTask := &manager.ForwardTask{
 		Mode:     manager.F_NEWFORWARD,
-		UUIDNum:  uuidNum,
+		UUID:     uuid,
 		Listener: listener,
 		Port:     forward.Port,
 	}
@@ -66,12 +66,12 @@ func (forward *Forward) LetForward(component *protocol.MessageComponent, mgr *ma
 	mgr.ForwardManager.TaskChan <- mgrTask
 	<-mgr.ForwardManager.ResultChan
 
-	go forward.handleForwardListener(component, mgr, listener, route, uuid, uuidNum)
+	go forward.handleForwardListener(component, mgr, listener, route, uuid)
 
 	return nil
 }
 
-func (forward *Forward) handleForwardListener(component *protocol.MessageComponent, mgr *manager.Manager, listener net.Listener, route string, uuid string, uuidNum int) {
+func (forward *Forward) handleForwardListener(component *protocol.MessageComponent, mgr *manager.Manager, listener net.Listener, route string, uuid string) {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -80,20 +80,20 @@ func (forward *Forward) handleForwardListener(component *protocol.MessageCompone
 		}
 
 		mgrTask := &manager.ForwardTask{
-			Mode:    manager.F_GETNEWSEQ,
-			UUIDNum: uuidNum,
-			Port:    forward.Port,
+			Mode: manager.F_GETNEWSEQ,
+			UUID: uuid,
+			Port: forward.Port,
 		}
 		mgr.ForwardManager.TaskChan <- mgrTask
 		result := <-mgr.ForwardManager.ResultChan
 		seq := result.ForwardSeq
 
 		mgrTask = &manager.ForwardTask{
-			Mode:    manager.F_ADDCONN,
-			UUIDNum: uuidNum,
-			Seq:     seq,
-			Port:    forward.Port,
-			Conn:    conn,
+			Mode: manager.F_ADDCONN,
+			UUID: uuid,
+			Seq:  seq,
+			Port: forward.Port,
+			Conn: conn,
 		}
 		mgr.ForwardManager.TaskChan <- mgrTask
 		result = <-mgr.ForwardManager.ResultChan
@@ -102,11 +102,11 @@ func (forward *Forward) handleForwardListener(component *protocol.MessageCompone
 			return
 		}
 
-		go forward.handleForward(component, mgr, conn, route, uuid, uuidNum, seq)
+		go forward.handleForward(component, mgr, conn, route, uuid, seq)
 	}
 }
 
-func (forward *Forward) handleForward(component *protocol.MessageComponent, mgr *manager.Manager, conn net.Conn, route string, uuid string, uuidNum int, seq uint64) {
+func (forward *Forward) handleForward(component *protocol.MessageComponent, mgr *manager.Manager, conn net.Conn, route string, uuid string, seq uint64) {
 	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
 	// tell agent to start
 	startHeader := &protocol.Header{
@@ -145,10 +145,10 @@ func (forward *Forward) handleForward(component *protocol.MessageComponent, mgr 
 	}()
 
 	mgrTask := &manager.ForwardTask{
-		Mode:    manager.F_GETDATACHAN,
-		UUIDNum: uuidNum,
-		Seq:     seq,
-		Port:    forward.Port,
+		Mode: manager.F_GETDATACHAN,
+		UUID: uuid,
+		Seq:  seq,
+		Port: forward.Port,
 	}
 	mgr.ForwardManager.TaskChan <- mgrTask
 	result := <-mgr.ForwardManager.ResultChan

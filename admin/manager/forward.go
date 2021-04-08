@@ -20,7 +20,7 @@ const (
 type forwardManager struct {
 	forwardSeq      uint64
 	forwardSeqMap   map[uint64]*seqRelationship
-	forwardMap      map[int]map[string]*forward
+	forwardMap      map[string]map[string]*forward
 	ForwardDataChan chan interface{}
 	ForwardReady    chan bool
 
@@ -30,9 +30,9 @@ type forwardManager struct {
 }
 
 type ForwardTask struct {
-	Mode    int
-	UUIDNum int    // node uuidNum
-	Seq     uint64 // seq
+	Mode int
+	UUID string // node uuid
+	Seq  uint64 // seq
 
 	Port     string
 	Listener net.Listener
@@ -40,8 +40,7 @@ type ForwardTask struct {
 }
 
 type forwardResult struct {
-	OK      bool
-	UUIDNum int
+	OK bool
 
 	ForwardSeq uint64
 	DataChan   chan []byte
@@ -59,17 +58,17 @@ type forwardStatus struct {
 }
 
 type seqRelationship struct {
-	uuidNum int
-	port    string
+	uuid string
+	port string
 }
 
 func newForwardManager() *forwardManager {
 	manager := new(forwardManager)
 
-	manager.forwardMap = make(map[int]map[string]*forward)
+	manager.forwardMap = make(map[string]map[string]*forward)
 	manager.forwardSeqMap = make(map[uint64]*seqRelationship)
 	manager.ForwardDataChan = make(chan interface{}, 5)
-	manager.ForwardReady = make(chan bool, 1)
+	manager.ForwardReady = make(chan bool)
 
 	manager.TaskChan = make(chan *ForwardTask)
 	manager.Done = make(chan bool)
@@ -92,7 +91,7 @@ func (manager *forwardManager) run() {
 		case F_GETDATACHAN:
 			manager.getDatachan(task)
 		case F_GETDATACHAN_WITHOUTUUID:
-			manager.getDatachanWithouUUID(task)
+			manager.getDatachanWithoutUUID(task)
 			<-manager.Done
 		case F_CLOSETCP:
 			manager.closeTCP(task)
@@ -101,29 +100,29 @@ func (manager *forwardManager) run() {
 }
 
 func (manager *forwardManager) newForward(task *ForwardTask) {
-	if _, ok := manager.forwardMap[task.UUIDNum]; !ok {
-		manager.forwardMap = make(map[int]map[string]*forward)
-		manager.forwardMap[task.UUIDNum] = make(map[string]*forward)
+	if _, ok := manager.forwardMap[task.UUID]; !ok {
+		manager.forwardMap = make(map[string]map[string]*forward)
+		manager.forwardMap[task.UUID] = make(map[string]*forward)
 	}
 	// task.Port must exist
-	manager.forwardMap[task.UUIDNum][task.Port] = new(forward)
-	manager.forwardMap[task.UUIDNum][task.Port].listener = task.Listener
-	manager.forwardMap[task.UUIDNum][task.Port].forwardStatusMap = make(map[uint64]*forwardStatus)
+	manager.forwardMap[task.UUID][task.Port] = new(forward)
+	manager.forwardMap[task.UUID][task.Port].listener = task.Listener
+	manager.forwardMap[task.UUID][task.Port].forwardStatusMap = make(map[uint64]*forwardStatus)
 
 	manager.ResultChan <- &forwardResult{OK: true}
 }
 
 func (manager *forwardManager) getNewSeq(task *ForwardTask) {
-	manager.forwardSeqMap[manager.forwardSeq] = &seqRelationship{uuidNum: task.UUIDNum, port: task.Port}
+	manager.forwardSeqMap[manager.forwardSeq] = &seqRelationship{uuid: task.UUID, port: task.Port}
 	manager.ResultChan <- &forwardResult{ForwardSeq: manager.forwardSeq}
 	manager.forwardSeq++
 }
 
 func (manager *forwardManager) addConn(task *ForwardTask) {
-	if _, ok := manager.forwardMap[task.UUIDNum][task.Port]; ok {
-		manager.forwardMap[task.UUIDNum][task.Port].forwardStatusMap[task.Seq] = new(forwardStatus)
-		manager.forwardMap[task.UUIDNum][task.Port].forwardStatusMap[task.Seq].conn = task.Conn
-		manager.forwardMap[task.UUIDNum][task.Port].forwardStatusMap[task.Seq].dataChan = make(chan []byte)
+	if _, ok := manager.forwardMap[task.UUID][task.Port]; ok {
+		manager.forwardMap[task.UUID][task.Port].forwardStatusMap[task.Seq] = new(forwardStatus)
+		manager.forwardMap[task.UUID][task.Port].forwardStatusMap[task.Seq].conn = task.Conn
+		manager.forwardMap[task.UUID][task.Port].forwardStatusMap[task.Seq].dataChan = make(chan []byte)
 		manager.ResultChan <- &forwardResult{OK: true}
 	} else {
 		manager.ResultChan <- &forwardResult{OK: false}
@@ -131,29 +130,29 @@ func (manager *forwardManager) addConn(task *ForwardTask) {
 }
 
 func (manager *forwardManager) getDatachan(task *ForwardTask) {
-	if _, ok := manager.forwardMap[task.UUIDNum][task.Port]; ok {
+	if _, ok := manager.forwardMap[task.UUID][task.Port]; ok {
 		manager.ResultChan <- &forwardResult{
 			OK:       true,
-			DataChan: manager.forwardMap[task.UUIDNum][task.Port].forwardStatusMap[task.Seq].dataChan, // no need to check forwardStatusMap[task.Seq]
+			DataChan: manager.forwardMap[task.UUID][task.Port].forwardStatusMap[task.Seq].dataChan, // no need to check forwardStatusMap[task.Seq]
 		}
 	} else {
 		manager.ResultChan <- &forwardResult{OK: false}
 	}
 }
 
-func (manager *forwardManager) getDatachanWithouUUID(task *ForwardTask) {
+func (manager *forwardManager) getDatachanWithoutUUID(task *ForwardTask) {
 	if _, ok := manager.forwardSeqMap[task.Seq]; !ok {
 		manager.ResultChan <- &forwardResult{OK: false}
 		return
 	}
 
-	uuidNum := manager.forwardSeqMap[task.Seq].uuidNum
+	uuid := manager.forwardSeqMap[task.Seq].uuid
 	port := manager.forwardSeqMap[task.Seq].port
 
-	if _, ok := manager.forwardMap[uuidNum][port].forwardStatusMap[task.Seq]; ok {
+	if _, ok := manager.forwardMap[uuid][port].forwardStatusMap[task.Seq]; ok {
 		manager.ResultChan <- &forwardResult{
 			OK:       true,
-			DataChan: manager.forwardMap[uuidNum][port].forwardStatusMap[task.Seq].dataChan,
+			DataChan: manager.forwardMap[uuid][port].forwardStatusMap[task.Seq].dataChan,
 		}
 	} else {
 		manager.ResultChan <- &forwardResult{OK: false}
@@ -165,11 +164,11 @@ func (manager *forwardManager) closeTCP(task *ForwardTask) {
 		return
 	}
 
-	uuidNum := manager.forwardSeqMap[task.Seq].uuidNum
+	uuid := manager.forwardSeqMap[task.Seq].uuid
 	port := manager.forwardSeqMap[task.Seq].port
 
-	manager.forwardMap[uuidNum][port].forwardStatusMap[task.Seq].conn.Close()
-	close(manager.forwardMap[uuidNum][port].forwardStatusMap[task.Seq].dataChan)
+	manager.forwardMap[uuid][port].forwardStatusMap[task.Seq].conn.Close()
+	close(manager.forwardMap[uuid][port].forwardStatusMap[task.Seq].dataChan)
 
-	delete(manager.forwardMap[uuidNum][port].forwardStatusMap, task.Seq)
+	delete(manager.forwardMap[uuid][port].forwardStatusMap, task.Seq)
 }

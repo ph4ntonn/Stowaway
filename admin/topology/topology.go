@@ -30,7 +30,7 @@ const (
 type Topology struct {
 	nodes        map[int]*node
 	currentIDNum int
-	route        map[int]string
+	route        map[string]string
 	TaskChan     chan *TopoTask
 	ResultChan   chan *topoResult
 }
@@ -65,7 +65,7 @@ type topoResult struct {
 func NewTopology() *Topology {
 	topology := new(Topology)
 	topology.nodes = make(map[int]*node)
-	topology.route = make(map[int]string)
+	topology.route = make(map[string]string)
 	topology.currentIDNum = 0
 	topology.TaskChan = make(chan *TopoTask)
 	topology.ResultChan = make(chan *topoResult)
@@ -147,23 +147,24 @@ func (topology *Topology) addNode(task *TopoTask) {
 }
 
 func (topology *Topology) calculate() {
-	newRouteInfo := make(map[int]string) // Create brand new routeInfo
+	newRouteInfo := make(map[string]string) // Create brand new routeInfo
 
-	for currentID := range topology.nodes {
+	for currentIDNum := range topology.nodes {
 		var tempRoute []string
-		tempID := currentID
+		currentID := topology.nodes[currentIDNum].uuid
+		tempIDNum := currentIDNum
 
-		if topology.nodes[currentID].parentUUID == protocol.ADMIN_UUID {
+		if topology.nodes[currentIDNum].parentUUID == protocol.ADMIN_UUID {
 			newRouteInfo[currentID] = ""
 			continue
 		}
 
 		for {
-			if topology.nodes[tempID].parentUUID != protocol.ADMIN_UUID {
-				tempRoute = append(tempRoute, topology.nodes[tempID].parentUUID)
+			if topology.nodes[tempIDNum].parentUUID != protocol.ADMIN_UUID {
+				tempRoute = append(tempRoute, topology.nodes[tempIDNum].parentUUID)
 				for i := 0; i < len(topology.nodes); i++ {
-					if topology.nodes[i].uuid == topology.nodes[tempID].parentUUID {
-						tempID = i
+					if topology.nodes[i].uuid == topology.nodes[tempIDNum].parentUUID {
+						tempIDNum = i
 						break
 					}
 				}
@@ -182,7 +183,7 @@ func (topology *Topology) calculate() {
 }
 
 func (topology *Topology) getRoute(task *TopoTask) {
-	topology.ResultChan <- &topoResult{Route: topology.route[task.UUIDNum]}
+	topology.ResultChan <- &topoResult{Route: topology.route[task.UUID]}
 }
 
 func (topology *Topology) updateDetail(task *TopoTask) {
