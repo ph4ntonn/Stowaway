@@ -14,7 +14,6 @@ import (
 	"Stowaway/admin/topology"
 	"Stowaway/protocol"
 	"Stowaway/share"
-	"fmt"
 	"log"
 	"net"
 	"os"
@@ -25,43 +24,37 @@ type Admin struct {
 	Topology    *topology.Topology
 	UserOptions *initial.Options
 
-	BufferChan chan *BufferData
 	// manager that needs to be shared with console
 	mgr *manager.Manager
-}
-
-type BufferData struct {
-	fHeader  *protocol.Header
-	fMessage interface{}
 }
 
 func NewAdmin(options *initial.Options) *Admin {
 	admin := new(Admin)
 	admin.UserOptions = options
-	admin.BufferChan = make(chan *BufferData, 10)
 	return admin
 }
 
 func (admin *Admin) Run() {
-	// Run a manager
 	admin.mgr = manager.NewManager(share.NewFile())
 	go admin.mgr.Run()
 	// Init console
 	console := cli.NewConsole()
 	console.Init(admin.Topology, admin.mgr, admin.Conn, admin.UserOptions.Secret)
 	// hanle all message comes from downstream
-	go admin.handleConnFromDownstream(console)
-	go admin.handleDataFromDownstream(console)
-	// run a dispatcher to dispatch all socks TCP/UDP mess
+	go admin.handleMessFromDownstream(console)
+	// run a dispatcher to dispatch different kinds of message
 	go handler.DispathSocksTCPMess(admin.mgr)
 	go handler.DispathSocksUDPMess(admin.mgr, admin.Topology, admin.Conn, admin.UserOptions.Secret)
-	// run a dispatcher to dispatch all forward mess
 	go handler.DispatchForwardMess(admin.mgr)
+	go handler.DispatchFileMess(admin.mgr)
+	go handler.DispatchSSHMess(admin.mgr)
+	go handler.DispatchShellMess(admin.mgr)
+	go handler.DispatchInfoMess(admin.mgr, admin.Topology)
 	// start interactive panel
 	console.Run()
 }
 
-func (admin *Admin) handleConnFromDownstream(console *cli.Console) {
+func (admin *Admin) handleMessFromDownstream(console *cli.Console) {
 	rMessage := protocol.PrepareAndDecideWhichRProtoFromUpper(admin.Conn, admin.UserOptions.Secret, protocol.ADMIN_UUID)
 
 	for {
@@ -70,90 +63,44 @@ func (admin *Admin) handleConnFromDownstream(console *cli.Console) {
 			log.Print("\r\n[*]Peer node seems offline!")
 			os.Exit(0)
 		}
-		// Buffer chan to let data processing quicker, handleConnFromDownstream && handleDataFromDownstream can cooperate
-		admin.BufferChan <- &BufferData{fHeader: fHeader, fMessage: fMessage}
-	}
 
-}
-
-func (admin *Admin) handleDataFromDownstream(console *cli.Console) {
-	for {
-		data := <-admin.BufferChan
-
-		switch data.fHeader.MessageType {
+		switch fHeader.MessageType {
 		case protocol.MYINFO:
-			message := data.fMessage.(*protocol.MyInfo)
-			// register new node
-			task := &topology.TopoTask{
-				Mode:     topology.UPDATEDETAIL,
-				UUID:     data.fHeader.Sender,
-				UserName: message.Username,
-				HostName: message.Hostname,
-			}
-			admin.Topology.TaskChan <- task
+			admin.mgr.InfoManager.InfoMessChan <- &manager.InfoMess{UUID: fHeader.Sender, Mess: fMessage}
 		case protocol.SHELLRES:
-			message := data.fMessage.(*protocol.ShellRes)
-			if message.OK == 1 {
-				console.OK <- true
-			} else {
-				console.OK <- false
-			}
+			fallthrough
 		case protocol.SHELLRESULT:
-			message := data.fMessage.(*protocol.ShellResult)
-			fmt.Print(message.Result)
-		case protocol.LISTENRES:
-			message := data.fMessage.(*protocol.ListenRes)
-			if message.OK == 1 {
-				fmt.Print("\n[*]Listen successfully!")
-			} else {
-				fmt.Print("\n[*]Listen failed!")
-			}
+			admin.mgr.ShellManager.ShellMessChan <- fMessage
 		case protocol.SSHRES:
-			message := data.fMessage.(*protocol.SSHRes)
-			if message.OK == 1 {
-				console.OK <- true
-			} else {
-				console.OK <- false
-			}
+			fallthrough
 		case protocol.SSHRESULT:
-			message := data.fMessage.(*protocol.SSHResult)
-			fmt.Print(message.Result)
+			admin.mgr.SSHManager.SSHMessChan <- fMessage
 		case protocol.FILESTATREQ:
-			message := data.fMessage.(*protocol.FileStatReq)
-			admin.mgr.File.FileSize = int64(message.FileSize)
-			admin.mgr.File.SliceNum = message.SliceNum
-			console.OK <- true
+			fallthrough
 		case protocol.FILEDOWNRES:
-			console.OK <- false
+			fallthrough
 		case protocol.FILESTATRES:
-			message := data.fMessage.(*protocol.FileStatRes)
-			if message.OK == 1 {
-				console.OK <- true
-			} else {
-				admin.mgr.File.Handler.Close()
-				console.OK <- false
-			}
+			fallthrough
 		case protocol.FILEDATA:
-			message := data.fMessage.(*protocol.FileData)
-			admin.mgr.File.DataChan <- message.Data
+			fallthrough
 		case protocol.FILEERR:
-			admin.mgr.File.ErrChan <- true
+			admin.mgr.FileManager.FileMessChan <- fMessage
 		case protocol.SOCKSREADY:
 			fallthrough
 		case protocol.SOCKSTCPDATA:
 			fallthrough
 		case protocol.SOCKSTCPFIN:
-			admin.mgr.SocksManager.SocksTCPMessChan <- data.fMessage
+			admin.mgr.SocksManager.SocksTCPMessChan <- fMessage
 		case protocol.UDPASSSTART:
 			fallthrough
 		case protocol.SOCKSUDPDATA:
-			admin.mgr.SocksManager.SocksUDPMessChan <- data.fMessage
+			admin.mgr.SocksManager.SocksUDPMessChan <- fMessage
 		case protocol.FORWARDREADY:
 			fallthrough
 		case protocol.FORWARDDATA:
 			fallthrough
 		case protocol.FORWARDFIN:
-			admin.mgr.ForwardManager.ForwardMessChan <- data.fMessage
+			admin.mgr.ForwardManager.ForwardMessChan <- fMessage
 		default:
 			log.Print("\n[*]Unknown Message!")
 		}

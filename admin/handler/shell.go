@@ -6,7 +6,11 @@
  */
 package handler
 
-import "Stowaway/protocol"
+import (
+	"Stowaway/admin/manager"
+	"Stowaway/protocol"
+	"fmt"
+)
 
 func LetShellStart(component *protocol.MessageComponent, route string, uuid string) {
 	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
@@ -25,4 +29,23 @@ func LetShellStart(component *protocol.MessageComponent, route string, uuid stri
 
 	protocol.ConstructMessage(sMessage, header, shellReqMess)
 	sMessage.SendMessage()
+}
+
+func DispatchShellMess(mgr *manager.Manager) {
+	for {
+		message := <-mgr.ShellManager.ShellMessChan
+
+		switch message.(type) {
+		case *protocol.ShellRes:
+			mess := message.(*protocol.ShellRes)
+			if mess.OK == 1 {
+				mgr.ConsoleManager.OK <- true
+			} else {
+				mgr.ConsoleManager.OK <- false
+			}
+		case *protocol.ShellResult:
+			mess := message.(*protocol.ShellResult)
+			fmt.Print(mess.Result)
+		}
+	}
 }

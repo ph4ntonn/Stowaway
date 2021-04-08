@@ -13,41 +13,6 @@ import (
 	"net"
 )
 
-func DispatchForwardMess(mgr *manager.Manager) {
-	for {
-		message := <-mgr.ForwardManager.ForwardMessChan
-
-		switch message.(type) {
-		case *protocol.ForwardReady:
-			mess := message.(*protocol.ForwardReady)
-			if mess.OK == 1 {
-				mgr.ForwardManager.ForwardReady <- true
-			} else {
-				mgr.ForwardManager.ForwardReady <- false
-			}
-		case *protocol.ForwardData:
-			mess := message.(*protocol.ForwardData)
-			mgrTask := &manager.ForwardTask{
-				Mode: manager.F_GETDATACHAN_WITHOUTUUID,
-				Seq:  mess.Seq,
-			}
-			mgr.ForwardManager.TaskChan <- mgrTask
-			result := <-mgr.ForwardManager.ResultChan
-			if result.OK {
-				result.DataChan <- mess.Data
-			}
-			mgr.ForwardManager.Done <- true
-		case *protocol.ForwardFin:
-			mess := message.(*protocol.ForwardFin)
-			mgrTask := &manager.ForwardTask{
-				Mode: manager.F_CLOSETCP,
-				Seq:  mess.Seq,
-			}
-			mgr.ForwardManager.TaskChan <- mgrTask
-		}
-	}
-}
-
 type Forward struct {
 	Addr string
 	Port string
@@ -228,5 +193,40 @@ func (forward *Forward) handleForward(component *protocol.MessageComponent, mgr 
 
 		protocol.ConstructMessage(sMessage, dataHeader, forwardDataMess)
 		sMessage.SendMessage()
+	}
+}
+
+func DispatchForwardMess(mgr *manager.Manager) {
+	for {
+		message := <-mgr.ForwardManager.ForwardMessChan
+
+		switch message.(type) {
+		case *protocol.ForwardReady:
+			mess := message.(*protocol.ForwardReady)
+			if mess.OK == 1 {
+				mgr.ForwardManager.ForwardReady <- true
+			} else {
+				mgr.ForwardManager.ForwardReady <- false
+			}
+		case *protocol.ForwardData:
+			mess := message.(*protocol.ForwardData)
+			mgrTask := &manager.ForwardTask{
+				Mode: manager.F_GETDATACHAN_WITHOUTUUID,
+				Seq:  mess.Seq,
+			}
+			mgr.ForwardManager.TaskChan <- mgrTask
+			result := <-mgr.ForwardManager.ResultChan
+			if result.OK {
+				result.DataChan <- mess.Data
+			}
+			mgr.ForwardManager.Done <- true
+		case *protocol.ForwardFin:
+			mess := message.(*protocol.ForwardFin)
+			mgrTask := &manager.ForwardTask{
+				Mode: manager.F_CLOSETCP,
+				Seq:  mess.Seq,
+			}
+			mgr.ForwardManager.TaskChan <- mgrTask
+		}
 	}
 }

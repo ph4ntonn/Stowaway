@@ -7,6 +7,7 @@
 package handler
 
 import (
+	"Stowaway/admin/manager"
 	"Stowaway/admin/topology"
 	"Stowaway/protocol"
 	"fmt"
@@ -74,4 +75,23 @@ func DelMemo(component *protocol.MessageComponent, taskChan chan *topology.TopoT
 	sMessage.SendMessage()
 
 	fmt.Print("\n[*]Memo deleted!")
+}
+
+func DispatchInfoMess(mgr *manager.Manager, topo *topology.Topology) {
+	for {
+		message := <-mgr.InfoManager.InfoMessChan
+
+		switch message.Mess.(type) {
+		case *protocol.MyInfo:
+			mess := message.Mess.(*protocol.MyInfo)
+
+			task := &topology.TopoTask{
+				Mode:     topology.UPDATEDETAIL,
+				UUID:     message.UUID,
+				UserName: mess.Username,
+				HostName: mess.Hostname,
+			}
+			topo.TaskChan <- task
+		}
+	}
 }

@@ -29,12 +29,11 @@ const (
 
 type Console struct {
 	// Admin status
-	Conn     net.Conn
-	Secret   string
-	Topology *topology.Topology
-	// console original status
-	Status     string
-	OK         chan bool
+	conn     net.Conn
+	secret   string
+	topology *topology.Topology
+	// console internal elements
+	status     string
 	ready      chan bool
 	getCommand chan string
 	shellMode  bool
@@ -46,17 +45,16 @@ type Console struct {
 
 func NewConsole() *Console {
 	console := new(Console)
-	console.Status = "(admin) >> "
-	console.OK = make(chan bool)
+	console.status = "(admin) >> "
 	console.ready = make(chan bool)
 	console.getCommand = make(chan string)
 	return console
 }
 
 func (console *Console) Init(tTopology *topology.Topology, myManager *manager.Manager, conn net.Conn, secret string) {
-	console.Conn = conn
-	console.Secret = secret
-	console.Topology = tTopology
+	console.conn = conn
+	console.secret = secret
+	console.topology = tTopology
 	console.mgr = myManager
 }
 
@@ -81,18 +79,18 @@ func (console *Console) mainPanel() {
 	// init keyEvents
 	keysEvents, _ := keyboard.GetKeys(10)
 	// BEGIN TO WORK!!!!!!!!
-	fmt.Print(console.Status)
+	fmt.Print(console.status)
 	for {
 		event := <-keysEvents
 		if event.Err != nil {
 			panic(event.Err)
 		}
-		// under shell mode,we cannot just erase the whole line and reprint,so there are two different ways to handle input
-		// BTW,all arrow stuff under shell mode will be abandoned
+		// under shell&&ssh mode,we cannot just erase the whole line and reprint,so there are two different ways to handle input
+		// BTW,all arrow stuff under shell&&ssh mode will be abandoned
 		if (event.Key != keyboard.KeyEnter && event.Rune >= 0x20 && event.Rune <= 0x7F) || event.Key == keyboard.KeySpace {
 			if !console.shellMode && !console.sshMode {
 				fmt.Print("\r\033[K")
-				fmt.Print(console.Status)
+				fmt.Print(console.status)
 				// save every single input
 				if event.Key == keyboard.KeySpace {
 					leftCommand = leftCommand + " "
@@ -113,7 +111,7 @@ func (console *Console) mainPanel() {
 		} else if event.Key == keyboard.KeyBackspace2 || event.Key == keyboard.KeyBackspace {
 			if !console.shellMode && !console.sshMode {
 				fmt.Print("\r\033[K")
-				fmt.Print(console.Status)
+				fmt.Print(console.status)
 				// let leftcommand--
 				if len(leftCommand) >= 1 {
 					leftCommand = leftCommand[:len(leftCommand)-1]
@@ -145,10 +143,10 @@ func (console *Console) mainPanel() {
 				// set both left/right command -> "",new start!
 				leftCommand = ""
 				rightCommand = ""
-				// avoid scenario that console.Status is printed before it's changed
+				// avoid scenario that console.status is printed before it's changed
 				<-console.ready
 				fmt.Print("\r\n")
-				fmt.Print(console.Status)
+				fmt.Print(console.status)
 			} else {
 				fmt.Print("\r\n")
 				console.getCommand <- leftCommand
@@ -157,7 +155,7 @@ func (console *Console) mainPanel() {
 		} else if event.Key == keyboard.KeyArrowUp {
 			if !console.shellMode && !console.sshMode {
 				fmt.Print("\r\033[K")
-				fmt.Print(console.Status)
+				fmt.Print(console.status)
 				// new task
 				task := &HistoryTask{
 					Mode:  SEARCH,
@@ -178,7 +176,7 @@ func (console *Console) mainPanel() {
 		} else if event.Key == keyboard.KeyArrowDown {
 			if !console.shellMode && !console.sshMode {
 				fmt.Print("\r\033[K")
-				fmt.Print(console.Status)
+				fmt.Print(console.status)
 				// check if searching has already begun
 				if isGoingOn {
 					task := &HistoryTask{
@@ -196,7 +194,7 @@ func (console *Console) mainPanel() {
 		} else if event.Key == keyboard.KeyArrowLeft {
 			if !console.shellMode && !console.sshMode {
 				fmt.Print("\r\033[K")
-				fmt.Print(console.Status)
+				fmt.Print(console.status)
 				// concat left command's last character with right command
 				if len(leftCommand) >= 1 {
 					rightCommand = leftCommand[len(leftCommand)-1:] + rightCommand
@@ -209,7 +207,7 @@ func (console *Console) mainPanel() {
 		} else if event.Key == keyboard.KeyArrowRight {
 			if !console.shellMode && !console.sshMode {
 				fmt.Print("\r\033[K")
-				fmt.Print(console.Status)
+				fmt.Print(console.status)
 				// concat right command's first character with left command
 				if len(rightCommand) > 1 {
 					leftCommand = leftCommand + rightCommand[:1]
@@ -237,7 +235,7 @@ func (console *Console) mainPanel() {
 			// if only one match,then just print it
 			if len(compelete) == 1 {
 				fmt.Print("\r\033[K")
-				fmt.Print(console.Status)
+				fmt.Print(console.status)
 				fmt.Print(compelete[0])
 				leftCommand = compelete[0]
 			} else if len(compelete) > 1 {
@@ -247,7 +245,7 @@ func (console *Console) mainPanel() {
 					fmt.Print(command + "    ")
 				}
 				fmt.Print("\r\n")
-				fmt.Print(console.Status)
+				fmt.Print(console.status)
 				fmt.Print(leftCommand)
 			}
 		} else if event.Key == keyboard.KeyCtrlC {
@@ -276,14 +274,14 @@ func (console *Console) handleMainPanelCommand() {
 				Mode:    topology.CHECKNODE,
 				UUIDNum: uuidNum,
 			}
-			console.Topology.TaskChan <- task
+			console.topology.TaskChan <- task
 
-			result := <-console.Topology.ResultChan
+			result := <-console.topology.ResultChan
 			if result.IsExist {
 				console.nodeMode = true
-				console.Status = fmt.Sprintf("(node %s) >> ", fCommand[1])
+				console.status = fmt.Sprintf("(node %s) >> ", fCommand[1])
 				console.handleNodePanelCommand(uuidNum)
-				console.Status = "(admin) >> "
+				console.status = "(admin) >> "
 				console.nodeMode = false
 			} else {
 				fmt.Printf("\n[*]Node %s doesn't exist!", fCommand[1])
@@ -299,8 +297,8 @@ func (console *Console) handleMainPanelCommand() {
 				Mode: topology.SHOWDETAIL,
 			}
 
-			console.Topology.TaskChan <- task
-			<-console.Topology.ResultChan
+			console.topology.TaskChan <- task
+			<-console.topology.ResultChan
 
 			console.ready <- true
 		case "tree":
@@ -311,8 +309,8 @@ func (console *Console) handleMainPanelCommand() {
 			task := &topology.TopoTask{
 				Mode: topology.SHOWTREE,
 			}
-			console.Topology.TaskChan <- task
-			<-console.Topology.ResultChan
+			console.topology.TaskChan <- task
+			<-console.topology.ResultChan
 
 			console.ready <- true
 		case "":
@@ -347,21 +345,21 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 		Mode:    topology.GETUUID,
 		UUIDNum: uuidNum,
 	}
-	console.Topology.TaskChan <- topoTask
-	topoResult := <-console.Topology.ResultChan
+	console.topology.TaskChan <- topoTask
+	topoResult := <-console.topology.ResultChan
 	uuid := topoResult.UUID
 
 	topoTask = &topology.TopoTask{
 		Mode: topology.GETROUTE,
 		UUID: uuid,
 	}
-	console.Topology.TaskChan <- topoTask
-	topoResult = <-console.Topology.ResultChan
+	console.topology.TaskChan <- topoTask
+	topoResult = <-console.topology.ResultChan
 	route := topoResult.Route
 
 	component := &protocol.MessageComponent{
-		Secret: console.Secret,
-		Conn:   console.Conn,
+		Secret: console.secret,
+		Conn:   console.conn,
 		UUID:   protocol.ADMIN_UUID,
 	}
 
@@ -373,7 +371,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 
 		switch fCommand[0] {
 		case "addmemo":
-			handler.AddMemo(component, console.Topology.TaskChan, fCommand[1:], uuid, route)
+			handler.AddMemo(component, console.topology.TaskChan, fCommand[1:], uuid, route)
 
 			console.ready <- true
 		case "delmemo":
@@ -381,7 +379,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				break
 			}
 
-			handler.DelMemo(component, console.Topology.TaskChan, uuid, route)
+			handler.DelMemo(component, console.topology.TaskChan, uuid, route)
 
 			console.ready <- true
 		case "shell":
@@ -394,13 +392,13 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			fmt.Print("\r\n[*]Waiting for response.....")
 			fmt.Print("\r\n[*]MENTION!UNDER SHELL MODE ARROW UP/DOWN/LEFT/RIGHT ARE ALL ABANDONED!")
 
-			if <-console.OK {
+			if <-console.mgr.ConsoleManager.OK {
 				fmt.Print("\r\n[*]Shell is started successfully!\r\n")
-				console.Status = ""
+				console.status = ""
 				console.shellMode = true
 				console.handleShellPanelCommand(component, route, uuid)
 				console.shellMode = false
-				console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+				console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
 			} else {
 				fmt.Print("\r\n[*]Shell cannot be started!")
 				console.ready <- true
@@ -418,11 +416,9 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				break
 			}
 
-			var err error
-
 			ssh := handler.NewSSH(fCommand[1])
 
-			console.Status = "[*]Please choose the auth method(1.username/password 2.certificate): "
+			console.status = "[*]Please choose the auth method(1.username/password 2.certificate): "
 			console.ready <- true
 
 			firstChoice := console.pretreatInput()
@@ -432,49 +428,48 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				ssh.Method = handler.CERMETHOD
 			} else {
 				fmt.Print("\r\n[*]Please input 1 or 2!")
-				console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+				console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
 				console.ready <- true
 				break
 			}
 
 			switch ssh.Method {
 			case handler.UPMETHOD:
-				console.Status = "[*]Please enter the username: "
+				console.status = "[*]Please enter the username: "
 				console.ready <- true
 				ssh.Username = console.pretreatInput()
-				console.Status = "[*]Please enter the password: "
+				console.status = "[*]Please enter the password: "
 				console.ready <- true
 				ssh.Password = console.pretreatInput()
-				err = ssh.LetSSH(component, route, uuid)
 			case handler.CERMETHOD:
-				console.Status = "[*]Please enter the username: "
+				console.status = "[*]Please enter the username: "
 				console.ready <- true
 				ssh.Username = console.pretreatInput()
-				console.Status = "[*]Please enter the filepath of the privkey: "
+				console.status = "[*]Please enter the filepath of the privkey: "
 				console.ready <- true
 				ssh.CertificatePath = console.pretreatInput()
-				err = ssh.LetSSH(component, route, uuid)
 			}
 
+			err := ssh.LetSSH(component, route, uuid)
 			if err != nil {
 				fmt.Printf("\r\n[*]Error: %s", err.Error())
-				console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+				console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
 				console.ready <- true
 				break
 			}
 
 			fmt.Print("\r\n[*]Waiting for response.....")
 
-			if <-console.OK {
+			if <-console.mgr.ConsoleManager.OK {
 				fmt.Print("\r\n[*]Connect to target host via ssh successfully!")
-				console.Status = ""
+				console.status = ""
 				console.sshMode = true
 				console.handleSSHPanelCommand(component, route, uuid)
-				console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+				console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
 				console.sshMode = false
 			} else {
 				fmt.Print("\r\n[*]Fail to connect to target host via ssh!")
-				console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+				console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
 				console.ready <- true
 			}
 		case "socks":
@@ -508,7 +503,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			IsRunning := handler.GetSocksInfo(console.mgr, uuid)
 
 			if IsRunning {
-				console.Status = "[*]Do you really want to shutdown socks?(yes/no): "
+				console.status = "[*]Do you really want to shutdown socks?(yes/no): "
 				console.ready <- true
 				option := console.pretreatInput()
 				if option == "yes" {
@@ -519,7 +514,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				} else {
 					fmt.Printf("\r\n[*]Please input yes/no!")
 				}
-				console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+				console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
 			}
 
 			console.ready <- true
@@ -546,14 +541,14 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				break
 			}
 
-			console.mgr.File.FilePath = fCommand[1]
-			console.mgr.File.FileName = fCommand[2]
+			console.mgr.FileManager.File.FilePath = fCommand[1]
+			console.mgr.FileManager.File.FileName = fCommand[2]
 
-			err := console.mgr.File.SendFileStat(component, route, uuid, share.ADMIN)
+			err := console.mgr.FileManager.File.SendFileStat(component, route, uuid, share.ADMIN)
 
-			if err == nil && <-console.OK {
-				go handler.StartBar(console.mgr.File.StatusChan, console.mgr.File.FileSize)
-				console.mgr.File.Upload(component, route, uuid, share.ADMIN)
+			if err == nil && <-console.mgr.ConsoleManager.OK {
+				go handler.StartBar(console.mgr.FileManager.File.StatusChan, console.mgr.FileManager.File.FileSize)
+				console.mgr.FileManager.File.Upload(component, route, uuid, share.ADMIN)
 			} else if err != nil {
 				fmt.Printf("\r\n[*]Error: %s", err.Error())
 			} else {
@@ -566,16 +561,16 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				break
 			}
 
-			console.mgr.File.FilePath = fCommand[1]
-			console.mgr.File.FileName = fCommand[2]
+			console.mgr.FileManager.File.FilePath = fCommand[1]
+			console.mgr.FileManager.File.FileName = fCommand[2]
 
-			console.mgr.File.Ask4Download(component, route, uuid)
+			console.mgr.FileManager.File.Ask4Download(component, route, uuid)
 
-			if <-console.OK {
-				err := console.mgr.File.CheckFileStat(component, route, uuid, share.ADMIN)
+			if <-console.mgr.ConsoleManager.OK {
+				err := console.mgr.FileManager.File.CheckFileStat(component, route, uuid, share.ADMIN)
 				if err == nil {
-					go handler.StartBar(console.mgr.File.StatusChan, console.mgr.File.FileSize)
-					console.mgr.File.Receive(component, route, uuid, share.ADMIN)
+					go handler.StartBar(console.mgr.FileManager.File.StatusChan, console.mgr.FileManager.File.FileSize)
+					console.mgr.FileManager.File.Receive(component, route, uuid, share.ADMIN)
 				}
 			} else {
 				fmt.Print("\r\n[*]Unable to download file!")
