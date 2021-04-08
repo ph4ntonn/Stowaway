@@ -11,6 +11,7 @@ import (
 )
 
 type Manager struct {
+	ConsoleManager *consoleManager
 	File           *share.MyFile
 	SocksManager   *socksManager
 	ForwardManager *forwardManager
@@ -18,6 +19,7 @@ type Manager struct {
 
 func NewManager(file *share.MyFile) *Manager {
 	manager := new(Manager)
+	manager.ConsoleManager = newConsoleManager()
 	manager.File = file
 	manager.SocksManager = newSocksManager()
 	manager.ForwardManager = newForwardManager()

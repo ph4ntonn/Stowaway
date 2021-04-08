@@ -27,10 +27,11 @@ const (
 )
 
 type socksManager struct {
-	socksSeq         uint64
-	socksSeqMap      map[uint64]string // map[seq]uuid
-	socksMap         map[string]*socks // map[uuid]socks's detail
-	SocksTCPMessChan chan interface{}  // accept both data and fin mess
+	socksSeq    uint64
+	socksSeqMap map[uint64]string // map[seq]uuid
+	socksMap    map[string]*socks // map[uuid]socks's detail
+
+	SocksTCPMessChan chan interface{}
 	SocksUDPMessChan chan interface{}
 	SocksReady       chan bool
 

@@ -90,7 +90,7 @@ func (console *Console) mainPanel() {
 		// under shell mode,we cannot just erase the whole line and reprint,so there are two different ways to handle input
 		// BTW,all arrow stuff under shell mode will be abandoned
 		if (event.Key != keyboard.KeyEnter && event.Rune >= 0x20 && event.Rune <= 0x7F) || event.Key == keyboard.KeySpace {
-			if !console.shellMode {
+			if !console.shellMode && !console.sshMode {
 				fmt.Print("\r\033[K")
 				fmt.Print(console.Status)
 				// save every single input
@@ -111,7 +111,7 @@ func (console *Console) mainPanel() {
 				fmt.Print(string(event.Rune))
 			}
 		} else if event.Key == keyboard.KeyBackspace2 || event.Key == keyboard.KeyBackspace {
-			if !console.shellMode {
+			if !console.shellMode && !console.sshMode {
 				fmt.Print("\r\033[K")
 				fmt.Print(console.Status)
 				// let leftcommand--
@@ -123,11 +123,11 @@ func (console *Console) mainPanel() {
 			} else {
 				if len(leftCommand) >= 1 {
 					leftCommand = leftCommand[:len(leftCommand)-1]
+					fmt.Print("\b \b")
 				}
-				fmt.Print("\b \b")
 			}
 		} else if event.Key == keyboard.KeyEnter {
-			if !console.shellMode {
+			if !console.shellMode && !console.sshMode {
 				// when hit enter,then concat left&&right command,create task to record it
 				command := leftCommand + rightCommand
 				// if command is not "",send it to history
@@ -155,7 +155,7 @@ func (console *Console) mainPanel() {
 				leftCommand = ""
 			}
 		} else if event.Key == keyboard.KeyArrowUp {
-			if !console.shellMode {
+			if !console.shellMode && !console.sshMode {
 				fmt.Print("\r\033[K")
 				fmt.Print(console.Status)
 				// new task
@@ -176,7 +176,7 @@ func (console *Console) mainPanel() {
 				rightCommand = ""
 			}
 		} else if event.Key == keyboard.KeyArrowDown {
-			if !console.shellMode {
+			if !console.shellMode && !console.sshMode {
 				fmt.Print("\r\033[K")
 				fmt.Print(console.Status)
 				// check if searching has already begun
@@ -194,7 +194,7 @@ func (console *Console) mainPanel() {
 				rightCommand = ""
 			}
 		} else if event.Key == keyboard.KeyArrowLeft {
-			if !console.shellMode {
+			if !console.shellMode && !console.sshMode {
 				fmt.Print("\r\033[K")
 				fmt.Print(console.Status)
 				// concat left command's last character with right command
@@ -207,7 +207,7 @@ func (console *Console) mainPanel() {
 				fmt.Print(string(bytes.Repeat([]byte("\b"), len(rightCommand))))
 			}
 		} else if event.Key == keyboard.KeyArrowRight {
-			if !console.shellMode {
+			if !console.shellMode && !console.sshMode {
 				fmt.Print("\r\033[K")
 				fmt.Print(console.Status)
 				// concat right command's first character with left command
@@ -467,17 +467,16 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 
 			if <-console.OK {
 				fmt.Print("\r\n[*]Connect to target host via ssh successfully!")
-				console.Status = fmt.Sprintf("(ssh %s) >> ", ssh.Addr)
+				console.Status = ""
 				console.sshMode = true
 				console.handleSSHPanelCommand(component, route, uuid)
+				console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
 				console.sshMode = false
 			} else {
 				fmt.Print("\r\n[*]Fail to connect to target host via ssh!")
+				console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+				console.ready <- true
 			}
-
-			console.Status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
-
-			console.ready <- true
 		case "socks":
 			if console.expectParamsNum(fCommand, []int{2, 4}, NODE, 0) {
 				break
@@ -679,14 +678,6 @@ func (console *Console) handleSSHPanelCommand(component *protocol.MessageCompone
 
 		if tCommand == "exit" {
 			done = true
-		}
-
-		if !done {
-			console.ready <- true
-		}
-
-		if tCommand == "" {
-			continue
 		}
 
 		fCommand := tCommand + "\n"

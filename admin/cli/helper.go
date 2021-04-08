@@ -28,6 +28,7 @@ type HelperTask struct {
 }
 
 type tireNode struct {
+	isEnd    bool
 	children map[int]*tireNode
 }
 
@@ -107,6 +108,7 @@ func (helper *Helper) insertAdmin() {
 				continue
 			}
 		}
+		node.isEnd = true
 		node = helper.adminTree.root
 	}
 }
@@ -126,6 +128,7 @@ func (helper *Helper) insertNode() {
 				continue
 			}
 		}
+		node.isEnd = true
 		node = helper.nodeTree.root
 	}
 }
@@ -177,6 +180,10 @@ func (helper *Helper) search(task *HelperTask) []string {
 }
 
 func (helper *Helper) getSuffix(node *tireNode, suffix *[]string, tSuffix string) {
+	if node.isEnd && len(node.children) != 0 {
+		*suffix = append(*suffix, tSuffix)
+	}
+
 	if len(node.children) != 0 {
 		for char := range node.children {
 			ttSuffix := tSuffix + string(char)

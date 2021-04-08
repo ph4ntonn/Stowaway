@@ -43,12 +43,12 @@ func NewAdmin(options *initial.Options) *Admin {
 }
 
 func (admin *Admin) Run() {
-	// Init console
-	console := cli.NewConsole()
-	console.Init(admin.Topology, admin.mgr, admin.Conn, admin.UserOptions.Secret)
 	// Run a manager
 	admin.mgr = manager.NewManager(share.NewFile())
 	go admin.mgr.Run()
+	// Init console
+	console := cli.NewConsole()
+	console.Init(admin.Topology, admin.mgr, admin.Conn, admin.UserOptions.Secret)
 	// hanle all message comes from downstream
 	go admin.handleConnFromDownstream(console)
 	go admin.handleDataFromDownstream(console)
@@ -117,8 +117,7 @@ func (admin *Admin) handleDataFromDownstream(console *cli.Console) {
 			}
 		case protocol.SSHRESULT:
 			message := data.fMessage.(*protocol.SSHResult)
-			fmt.Printf("\r\033[K%s", message.Result)
-			fmt.Printf("\r\n%s", console.Status)
+			fmt.Print(message.Result)
 		case protocol.FILESTATREQ:
 			message := data.fMessage.(*protocol.FileStatReq)
 			admin.mgr.File.FileSize = int64(message.FileSize)

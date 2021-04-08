@@ -18,9 +18,10 @@ const (
 )
 
 type forwardManager struct {
-	forwardSeq      uint64
-	forwardSeqMap   map[uint64]*seqRelationship
-	forwardMap      map[string]map[string]*forward // map[uuid]map[port]*forward's detail
+	forwardSeq    uint64
+	forwardSeqMap map[uint64]*seqRelationship
+	forwardMap    map[string]map[string]*forward // map[uuid]map[port]*forward's detail
+
 	ForwardMessChan chan interface{}
 	ForwardReady    chan bool
 

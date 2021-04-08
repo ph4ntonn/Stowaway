@@ -29,11 +29,12 @@ const (
 
 // IDNum is only for user-friendly,uuid is used internally
 type Topology struct {
-	nodes        map[int]*node // we use uuidNum as the map's key,that's the only special excpection
 	currentIDNum int
+	nodes        map[int]*node     // we use uuidNum as the map's key,that's the only special excpection
 	route        map[string]string // map[uuid]route
-	TaskChan     chan *TopoTask
-	ResultChan   chan *topoResult
+
+	TaskChan   chan *TopoTask
+	ResultChan chan *topoResult
 }
 
 type node struct {

@@ -11,6 +11,7 @@ import (
 	"io"
 
 	"Stowaway/protocol"
+	"Stowaway/utils"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -111,6 +112,28 @@ func (mySSH *SSH) Start(component *protocol.MessageComponent) {
 	}
 
 	mySSH.sshHost.Stderr = mySSH.sshHost.Stdout
+
+	modes := ssh.TerminalModes{
+		ssh.ECHO:          0,
+		ssh.TTY_OP_ISPEED: 14400,
+		ssh.TTY_OP_OSPEED: 14400,
+	}
+
+	var term string
+
+	switch utils.CheckSystem() {
+	case 0x01:
+		term = ""
+	case 0x02:
+		term = "linux"
+	case 0x03:
+		term = "xterm"
+	}
+
+	err = mySSH.sshHost.RequestPty(term, 25, 80, modes)
+	if err != nil {
+		return
+	}
 
 	err = mySSH.sshHost.Shell()
 	if err != nil {

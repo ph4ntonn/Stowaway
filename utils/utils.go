@@ -67,8 +67,10 @@ func CheckSystem() (sysType uint32) {
 	switch os {
 	case "windows":
 		sysType = 0x01
+	case "linux":
+		sysType = 0x02
 	default:
-		sysType = 0xff
+		sysType = 0x03
 	}
 	return
 }
