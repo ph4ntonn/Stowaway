@@ -20,8 +20,8 @@ const (
 type forwardManager struct {
 	forwardSeq      uint64
 	forwardSeqMap   map[uint64]*seqRelationship
-	forwardMap      map[string]map[string]*forward
-	ForwardDataChan chan interface{}
+	forwardMap      map[string]map[string]*forward // map[uuid]map[port]*forward's detail
+	ForwardMessChan chan interface{}
 	ForwardReady    chan bool
 
 	TaskChan   chan *ForwardTask
@@ -67,7 +67,7 @@ func newForwardManager() *forwardManager {
 
 	manager.forwardMap = make(map[string]map[string]*forward)
 	manager.forwardSeqMap = make(map[uint64]*seqRelationship)
-	manager.ForwardDataChan = make(chan interface{}, 5)
+	manager.ForwardMessChan = make(chan interface{}, 5)
 	manager.ForwardReady = make(chan bool)
 
 	manager.TaskChan = make(chan *ForwardTask)

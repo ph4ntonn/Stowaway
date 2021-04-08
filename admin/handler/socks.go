@@ -15,6 +15,65 @@ import (
 	"net"
 )
 
+func DispathTCPMess(mgr *manager.Manager) {
+	for {
+		message := <-mgr.SocksManager.SocksTCPMessChan
+
+		switch message.(type) {
+		case *protocol.SocksReady:
+			mess := message.(*protocol.SocksReady)
+			if mess.OK == 1 {
+				mgr.SocksManager.SocksReady <- true
+			} else {
+				mgr.SocksManager.SocksReady <- false
+			}
+		case *protocol.SocksTCPData:
+			mess := message.(*protocol.SocksTCPData)
+			mgrTask := &manager.SocksTask{
+				Mode: manager.S_GETTCPDATACHAN_WITHOUTUUID,
+				Seq:  mess.Seq,
+			}
+			mgr.SocksManager.TaskChan <- mgrTask
+			result := <-mgr.SocksManager.ResultChan
+			if result.OK {
+				result.TCPDataChan <- mess.Data
+			}
+			mgr.SocksManager.Done <- true
+		case *protocol.SocksTCPFin:
+			mess := message.(*protocol.SocksTCPFin)
+			mgrTask := &manager.SocksTask{
+				Mode: manager.S_CLOSETCP,
+				Seq:  mess.Seq,
+			}
+			mgr.SocksManager.TaskChan <- mgrTask
+		}
+	}
+}
+
+func DispathUDPMess(mgr *manager.Manager, topo *topology.Topology, conn net.Conn, secret string) {
+	for {
+		message := <-mgr.SocksManager.SocksUDPMessChan
+
+		switch message.(type) {
+		case *protocol.UDPAssStart:
+			mess := message.(*protocol.UDPAssStart)
+			go startUDPAss(mgr, topo, conn, secret, mess.Seq)
+		case *protocol.SocksUDPData:
+			mess := message.(*protocol.SocksUDPData)
+			mgrTask := &manager.SocksTask{
+				Mode: manager.S_GETUDPDATACHAN_WITHOUTUUID,
+				Seq:  mess.Seq,
+			}
+			mgr.SocksManager.TaskChan <- mgrTask
+			result := <-mgr.SocksManager.ResultChan
+			if result.OK {
+				result.UDPDataChan <- mess.Data
+			}
+			mgr.SocksManager.Done <- true
+		}
+	}
+}
+
 type Socks struct {
 	Username string
 	Password string
@@ -225,7 +284,7 @@ func (socks *Socks) handleSocks(component *protocol.MessageComponent, mgr *manag
 	}
 }
 
-func StartUDPAss(mgr *manager.Manager, topo *topology.Topology, conn net.Conn, secret string, seq uint64) {
+func startUDPAss(mgr *manager.Manager, topo *topology.Topology, conn net.Conn, secret string, seq uint64) {
 	var (
 		err             error
 		udpListenerAddr *net.UDPAddr
@@ -373,58 +432,6 @@ func handleUDPAss(mgr *manager.Manager, component *protocol.MessageComponent, li
 
 		protocol.ConstructMessage(sMessage, dataHeader, udpDataMess)
 		sMessage.SendMessage()
-	}
-}
-
-func DispathTCPData(mgr *manager.Manager) {
-	for {
-		data := <-mgr.SocksManager.SocksTCPDataChan
-
-		switch data.(type) {
-		case *protocol.SocksReady:
-			message := data.(*protocol.SocksReady)
-			if message.OK == 1 {
-				mgr.SocksManager.SocksReady <- true
-			} else {
-				mgr.SocksManager.SocksReady <- false
-			}
-		case *protocol.SocksTCPData:
-			message := data.(*protocol.SocksTCPData)
-			mgrTask := &manager.SocksTask{
-				Mode: manager.S_GETTCPDATACHAN_WITHOUTUUID,
-				Seq:  message.Seq,
-			}
-			mgr.SocksManager.TaskChan <- mgrTask
-			result := <-mgr.SocksManager.ResultChan
-			if result.OK {
-				result.TCPDataChan <- message.Data
-			}
-			mgr.SocksManager.Done <- true
-		case *protocol.SocksTCPFin:
-			message := data.(*protocol.SocksTCPFin)
-			mgrTask := &manager.SocksTask{
-				Mode: manager.S_CLOSETCP,
-				Seq:  message.Seq,
-			}
-			mgr.SocksManager.TaskChan <- mgrTask
-		}
-	}
-}
-
-func DispathUDPData(mgr *manager.Manager) {
-	for {
-		data := <-mgr.SocksManager.SocksUDPDataChan
-
-		mgrTask := &manager.SocksTask{
-			Mode: manager.S_GETUDPDATACHAN_WITHOUTUUID,
-			Seq:  data.Seq,
-		}
-		mgr.SocksManager.TaskChan <- mgrTask
-		result := <-mgr.SocksManager.ResultChan
-		if result.OK {
-			result.UDPDataChan <- data.Data
-		}
-		mgr.SocksManager.Done <- true
 	}
 }
 

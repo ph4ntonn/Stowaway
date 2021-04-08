@@ -52,11 +52,11 @@ func (admin *Admin) Run() {
 	// hanle all message comes from downstream
 	go admin.handleConnFromDownstream(console)
 	go admin.handleDataFromDownstream(console)
-	// run a dispatcher to dispatch all socks TCP/UDP data
-	go handler.DispathTCPData(admin.mgr)
-	go handler.DispathUDPData(admin.mgr)
-	// run a dispatcher to dispatch all forward data
-	go handler.DispatchForwardData(admin.mgr)
+	// run a dispatcher to dispatch all socks TCP/UDP mess
+	go handler.DispathTCPMess(admin.mgr)
+	go handler.DispathUDPMess(admin.mgr, admin.Topology, admin.Conn, admin.UserOptions.Secret)
+	// run a dispatcher to dispatch all forward mess
+	go handler.DispatchForwardMess(admin.mgr)
 	// start interactive panel
 	console.Run()
 }
@@ -144,19 +144,17 @@ func (admin *Admin) handleDataFromDownstream(console *cli.Console) {
 		case protocol.SOCKSTCPDATA:
 			fallthrough
 		case protocol.SOCKSTCPFIN:
-			admin.mgr.SocksManager.SocksTCPDataChan <- data.fMessage
+			admin.mgr.SocksManager.SocksTCPMessChan <- data.fMessage
 		case protocol.UDPASSSTART:
-			message := data.fMessage.(*protocol.UDPAssStart)
-			go handler.StartUDPAss(admin.mgr, admin.Topology, admin.Conn, admin.UserOptions.Secret, message.Seq)
+			fallthrough
 		case protocol.SOCKSUDPDATA:
-			message := data.fMessage.(*protocol.SocksUDPData)
-			admin.mgr.SocksManager.SocksUDPDataChan <- message
+			admin.mgr.SocksManager.SocksUDPMessChan <- data.fMessage
 		case protocol.FORWARDREADY:
 			fallthrough
 		case protocol.FORWARDDATA:
 			fallthrough
 		case protocol.FORWARDFIN:
-			admin.mgr.ForwardManager.ForwardDataChan <- data.fMessage
+			admin.mgr.ForwardManager.ForwardMessChan <- data.fMessage
 		default:
 			log.Print("\n[*]Unknown Message!")
 		}

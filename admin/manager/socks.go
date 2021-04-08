@@ -7,7 +7,6 @@
 package manager
 
 import (
-	"Stowaway/protocol"
 	"fmt"
 	"net"
 )
@@ -29,10 +28,10 @@ const (
 
 type socksManager struct {
 	socksSeq         uint64
-	socksSeqMap      map[uint64]string
-	socksMap         map[string]*socks
-	SocksTCPDataChan chan interface{} // accept both data and fin mess
-	SocksUDPDataChan chan *protocol.SocksUDPData
+	socksSeqMap      map[uint64]string // map[seq]uuid
+	socksMap         map[string]*socks // map[uuid]socks's detail
+	SocksTCPMessChan chan interface{}  // accept both data and fin mess
+	SocksUDPMessChan chan interface{}
 	SocksReady       chan bool
 
 	TaskChan   chan *SocksTask
@@ -94,8 +93,8 @@ func newSocksManager() *socksManager {
 
 	manager.socksMap = make(map[string]*socks)
 	manager.socksSeqMap = make(map[uint64]string)
-	manager.SocksTCPDataChan = make(chan interface{}, 5)
-	manager.SocksUDPDataChan = make(chan *protocol.SocksUDPData, 5)
+	manager.SocksTCPMessChan = make(chan interface{}, 5)
+	manager.SocksUDPMessChan = make(chan interface{}, 5)
 	manager.SocksReady = make(chan bool)
 
 	manager.TaskChan = make(chan *SocksTask)
