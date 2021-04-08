@@ -43,18 +43,18 @@ func NewAdmin(options *initial.Options) *Admin {
 }
 
 func (admin *Admin) Run() {
-	// Run a manager
-	admin.mgr = manager.NewManager(share.NewFile())
-	go admin.mgr.Run()
 	// Init console
 	console := cli.NewConsole()
 	console.Init(admin.Topology, admin.mgr, admin.Conn, admin.UserOptions.Secret)
+	// Run a manager
+	admin.mgr = manager.NewManager(share.NewFile())
+	go admin.mgr.Run()
 	// hanle all message comes from downstream
 	go admin.handleConnFromDownstream(console)
 	go admin.handleDataFromDownstream(console)
 	// run a dispatcher to dispatch all socks TCP/UDP mess
-	go handler.DispathTCPMess(admin.mgr)
-	go handler.DispathUDPMess(admin.mgr, admin.Topology, admin.Conn, admin.UserOptions.Secret)
+	go handler.DispathSocksTCPMess(admin.mgr)
+	go handler.DispathSocksUDPMess(admin.mgr, admin.Topology, admin.Conn, admin.UserOptions.Secret)
 	// run a dispatcher to dispatch all forward mess
 	go handler.DispatchForwardMess(admin.mgr)
 	// start interactive panel

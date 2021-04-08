@@ -15,7 +15,7 @@ import (
 	"net"
 )
 
-func DispathTCPMess(mgr *manager.Manager) {
+func DispathSocksTCPMess(mgr *manager.Manager) {
 	for {
 		message := <-mgr.SocksManager.SocksTCPMessChan
 
@@ -50,7 +50,7 @@ func DispathTCPMess(mgr *manager.Manager) {
 	}
 }
 
-func DispathUDPMess(mgr *manager.Manager, topo *topology.Topology, conn net.Conn, secret string) {
+func DispathSocksUDPMess(mgr *manager.Manager, topo *topology.Topology, conn net.Conn, secret string) {
 	for {
 		message := <-mgr.SocksManager.SocksUDPMessChan
 
