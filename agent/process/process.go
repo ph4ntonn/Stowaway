@@ -41,8 +41,7 @@ func (agent *Agent) Run() {
 	mgr := manager.NewManager(share.NewFile())
 	go mgr.Run()
 	// run dispatchers to dispatch all kinds of message
-	go handler.DispathSocksTCPMess(mgr, component)
-	go handler.DispathSocksUDPMess(mgr)
+	go handler.DispathSocksMess(mgr, component)
 	go handler.DispatchForwardMess(mgr, component)
 	go handler.DispatchFileMess(mgr, component)
 	go handler.DispatchSSHMess(mgr, component)
@@ -89,7 +88,7 @@ func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager, component *prot
 			switch header.MessageType {
 			case protocol.MYMEMO:
 				message := message.(*protocol.MyMemo)
-				agent.Memo = message.Memo // no need to pass this like message below,just change memo directly
+				agent.Memo = message.Memo // no need to pass this like all the message below,just change memo directly
 			case protocol.SHELLREQ:
 				fallthrough
 			case protocol.SHELLCOMMAND:
@@ -113,11 +112,11 @@ func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager, component *prot
 			case protocol.SOCKSTCPDATA:
 				fallthrough
 			case protocol.SOCKSTCPFIN:
-				mgr.SocksManager.SocksTCPMessChan <- message
+				mgr.SocksManager.SocksMessChan <- message
 			case protocol.UDPASSRES:
 				fallthrough
 			case protocol.SOCKSUDPDATA:
-				mgr.SocksManager.SocksUDPMessChan <- message
+				mgr.SocksManager.SocksMessChan <- message
 			case protocol.FORWARDTEST:
 				fallthrough
 			case protocol.FORWARDSTART:

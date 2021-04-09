@@ -372,7 +372,6 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 		switch fCommand[0] {
 		case "addmemo":
 			handler.AddMemo(component, console.topology.TaskChan, fCommand[1:], uuid, route)
-
 			console.ready <- true
 		case "delmemo":
 			if console.expectParamsNum(fCommand, 1, NODE, 0) {
@@ -380,7 +379,6 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			}
 
 			handler.DelMemo(component, console.topology.TaskChan, uuid, route)
-
 			console.ready <- true
 		case "shell":
 			if console.expectParamsNum(fCommand, 1, NODE, 0) {
@@ -409,7 +407,6 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			}
 
 			handler.LetListen(component, route, uuid, fCommand[1])
-
 			console.ready <- true
 		case "ssh":
 			if console.expectParamsNum(fCommand, 2, NODE, 0) {
@@ -493,7 +490,6 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			} else {
 				fmt.Print("\r\n[*]Socks start successfully!")
 			}
-
 			console.ready <- true
 		case "stopsocks":
 			if console.expectParamsNum(fCommand, 1, NODE, 0) {
@@ -516,7 +512,6 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				}
 				console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
 			}
-
 			console.ready <- true
 		case "forward":
 			if console.expectParamsNum(fCommand, 3, NODE, 1) {
@@ -534,7 +529,6 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			} else {
 				fmt.Print("\r\n[*]Forward start successfully!")
 			}
-
 			console.ready <- true
 		case "upload":
 			if console.expectParamsNum(fCommand, 3, NODE, 0) {
@@ -554,7 +548,6 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			} else {
 				fmt.Print("\r\n[*]Fail to upload file!")
 			}
-
 			console.ready <- true
 		case "download":
 			if console.expectParamsNum(fCommand, 3, NODE, 0) {
@@ -575,7 +568,6 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			} else {
 				fmt.Print("\r\n[*]Unable to download file!")
 			}
-
 			console.ready <- true
 		case "offline":
 			if console.expectParamsNum(fCommand, 1, NODE, 0) {
@@ -583,13 +575,11 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			}
 
 			handler.LetOffline(component, route, uuid)
-
 			console.ready <- true
 		case "":
 			if console.expectParamsNum(fCommand, 1, NODE, 0) {
 				break
 			}
-
 			console.ready <- true
 		case "help":
 			if console.expectParamsNum(fCommand, 1, NODE, 0) {
@@ -597,7 +587,6 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			}
 
 			ShowNodeHelp()
-
 			console.ready <- true
 		case "exit":
 			if console.expectParamsNum(fCommand, 1, NODE, 0) {

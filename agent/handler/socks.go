@@ -654,6 +654,7 @@ func proxyC2SUDP(mgr *manager.Manager, listener *net.UDPConn, seq uint64) {
 
 		mgrTask = &manager.SocksTask{
 			Mode:            manager.S_UPDATEUDPHEADER,
+			Seq:             seq,
 			SocksHeaderAddr: remote,
 			SocksHeader:     udpHeader,
 		}
@@ -683,12 +684,14 @@ func proxyS2CUDP(mgr *manager.Manager, component *protocol.MessageComponent, lis
 	for {
 		length, addr, err := listener.ReadFromUDP(buffer)
 		if err != nil {
+			fmt.Println(err.Error())
 			listener.Close()
 			return
 		}
-
+		fmt.Println("i get data ", string(buffer[:length]))
 		mgrTask := &manager.SocksTask{
 			Mode:            manager.S_GETUDPHEADER,
+			Seq:             seq,
 			SocksHeaderAddr: addr.String(),
 		}
 		mgr.SocksManager.TaskChan <- mgrTask
@@ -699,6 +702,7 @@ func proxyS2CUDP(mgr *manager.Manager, component *protocol.MessageComponent, lis
 			data = append(data, result.SocksUDPHeader...)
 			data = append(data, buffer[:length]...)
 		} else {
+			fmt.Println("no header")
 			return
 		}
 
@@ -713,11 +717,11 @@ func proxyS2CUDP(mgr *manager.Manager, component *protocol.MessageComponent, lis
 	}
 }
 
-func DispathSocksTCPMess(mgr *manager.Manager, component *protocol.MessageComponent) {
+func DispathSocksMess(mgr *manager.Manager, component *protocol.MessageComponent) {
 	socks := newSocks()
 
 	for {
-		message, ok := <-mgr.SocksManager.SocksTCPMessChan // if new "socks start" command come and call the socks.Start(),then the old chan will be closed and current routine must exit immediately
+		message, ok := <-mgr.SocksManager.SocksMessChan
 		if ok {
 			switch message.(type) {
 			case *protocol.SocksStart:
@@ -748,47 +752,39 @@ func DispathSocksTCPMess(mgr *manager.Manager, component *protocol.MessageCompon
 					Seq:  mess.Seq,
 				}
 				mgr.SocksManager.TaskChan <- mgrTask
+			case *protocol.SocksUDPData:
+				mess := message.(*protocol.SocksUDPData)
+
+				mgrTask := &manager.SocksTask{
+					Mode: manager.S_GETUDPCHANS,
+					Seq:  mess.Seq,
+				}
+				mgr.SocksManager.TaskChan <- mgrTask
+				result := <-mgr.SocksManager.ResultChan
+
+				if result.OK {
+					result.DataChan <- mess.Data
+				}
+
+				mgr.SocksManager.Done <- true
+			case *protocol.UDPAssRes:
+				mess := message.(*protocol.UDPAssRes)
+
+				mgrTask := &manager.SocksTask{
+					Mode: manager.S_GETUDPCHANS,
+					Seq:  mess.Seq,
+				}
+				mgr.SocksManager.TaskChan <- mgrTask
+				result := <-mgr.SocksManager.ResultChan
+
+				if result.OK {
+					result.ReadyChan <- mess.Addr
+				}
+
+				mgr.SocksManager.Done <- true
 			}
 		} else {
 			return
-		}
-	}
-}
-
-func DispathSocksUDPMess(mgr *manager.Manager) {
-	for {
-		message := <-mgr.SocksManager.SocksUDPMessChan
-		switch message.(type) {
-		case *protocol.SocksUDPData:
-			mess := message.(*protocol.SocksUDPData)
-
-			mgrTask := &manager.SocksTask{
-				Mode: manager.S_GETUDPCHANS,
-				Seq:  mess.Seq,
-			}
-			mgr.SocksManager.TaskChan <- mgrTask
-			result := <-mgr.SocksManager.ResultChan
-
-			if result.OK {
-				result.DataChan <- mess.Data
-			}
-
-			mgr.SocksManager.Done <- true
-		case *protocol.UDPAssRes:
-			mess := message.(*protocol.UDPAssRes)
-
-			mgrTask := &manager.SocksTask{
-				Mode: manager.S_GETUDPCHANS,
-				Seq:  mess.Seq,
-			}
-			mgr.SocksManager.TaskChan <- mgrTask
-			result := <-mgr.SocksManager.ResultChan
-
-			if result.OK {
-				result.ReadyChan <- mess.Addr
-			}
-
-			mgr.SocksManager.Done <- true
 		}
 	}
 }

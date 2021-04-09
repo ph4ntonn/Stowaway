@@ -292,6 +292,7 @@ func startUDPAss(mgr *manager.Manager, topo *topology.Topology, conn net.Conn, s
 		mgrTask = &manager.SocksTask{
 			Mode:             manager.S_UPDATEUDP,
 			Seq:              seq,
+			UUID:             uuid,
 			SocksUDPListener: udpListener,
 		}
 		mgr.SocksManager.TaskChan <- mgrTask
