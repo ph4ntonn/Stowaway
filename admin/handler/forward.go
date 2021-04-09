@@ -57,10 +57,11 @@ func (forward *Forward) LetForward(component *protocol.MessageComponent, mgr *ma
 	}
 
 	mgrTask := &manager.ForwardTask{
-		Mode:     manager.F_NEWFORWARD,
-		UUID:     uuid,
-		Listener: listener,
-		Port:     forward.Port,
+		Mode:       manager.F_NEWFORWARD,
+		UUID:       uuid,
+		Listener:   listener,
+		Port:       forward.Port,
+		RemoteAddr: forward.Addr,
 	}
 
 	mgr.ForwardManager.TaskChan <- mgrTask
@@ -193,6 +194,40 @@ func (forward *Forward) handleForward(component *protocol.MessageComponent, mgr 
 
 		protocol.ConstructMessage(sMessage, dataHeader, forwardDataMess)
 		sMessage.SendMessage()
+	}
+}
+
+func GetForwardInfo(mgr *manager.Manager, uuid string) (int, bool) {
+	mgrTask := &manager.ForwardTask{
+		Mode: manager.F_GETFORWARDINFO,
+		UUID: uuid,
+	}
+	mgr.ForwardManager.TaskChan <- mgrTask
+	result := <-mgr.ForwardManager.ResultChan
+
+	for _, info := range result.ForwardInfo {
+		fmt.Print(info)
+	}
+
+	return len(result.ForwardInfo) - 1, result.OK
+}
+
+func StopForward(mgr *manager.Manager, uuid string, target int) {
+	if target == 0 {
+		mgrTask := &manager.ForwardTask{
+			Mode: manager.F_CLOSESINGLEALL,
+			UUID: uuid,
+		}
+		mgr.ForwardManager.TaskChan <- mgrTask
+		<-mgr.ForwardManager.ResultChan
+	} else {
+		mgrTask := &manager.ForwardTask{
+			Mode:        manager.F_CLOSESINGLE,
+			UUID:        uuid,
+			CloseTarget: target,
+		}
+		mgr.ForwardManager.TaskChan <- mgrTask
+		<-mgr.ForwardManager.ResultChan
 	}
 }
 

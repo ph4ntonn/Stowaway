@@ -21,6 +21,12 @@ type socks struct {
 }
 
 func main() {
+	var testa [5]string
+	var testb []string
+	fmt.Printf("testa len %d,testa cap %d testb len %d testa cap %d\n", len(testa), cap(testa), len(testb), cap(testb))
+	testa[0] = "1"
+	testb = append(testb, "1")
+	fmt.Printf("testa len %d,testa cap %d testb len %d testa cap %d\n", len(testa), cap(testa), len(testb), cap(testb))
 	var b int
 	fmt.Printf("addr is %p,b is %d\n", &b, b)
 	b, err := utils.Str2Int("1")

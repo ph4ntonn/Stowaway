@@ -530,6 +530,38 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				fmt.Print("\r\n[*]Forward start successfully!")
 			}
 			console.ready <- true
+		case "stopforward":
+			if console.expectParamsNum(fCommand, 1, NODE, 0) {
+				break
+			}
+
+			seq, isRunning := handler.GetForwardInfo(console.mgr, uuid)
+
+			if isRunning {
+				console.status = "[*]Do you really want to shutdown forward?(yes/no): "
+				console.ready <- true
+				option := console.pretreatInput()
+				if option == "yes" {
+					console.status = "[*]Please choose one to close: "
+					console.ready <- true
+					option := console.pretreatInput()
+					target, err := utils.Str2Int(option)
+					if err != nil {
+						fmt.Printf("\r\n[*]Please input integer!")
+					} else if target > seq || target < 0 {
+						fmt.Printf("\r\n[*]Please input integer between 0~%d", seq)
+					} else {
+						fmt.Printf("\r\n[*]Closing......")
+						handler.StopForward(console.mgr, uuid, target)
+						fmt.Printf("\r\n[*]Forward service has been closed successfully!")
+					}
+				} else if option == "no" {
+				} else {
+					fmt.Printf("\r\n[*]Please input yes/no!")
+				}
+				console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+			}
+			console.ready <- true
 		case "upload":
 			if console.expectParamsNum(fCommand, 3, NODE, 0) {
 				break

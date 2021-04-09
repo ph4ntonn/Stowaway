@@ -28,7 +28,7 @@ const (
 
 type socksManager struct {
 	socksSeq    uint64
-	socksSeqMap map[uint64]string // map[seq]uuid
+	socksSeqMap map[uint64]string // map[seq]uuid  just for accelerate the speed of searching detail only by seq
 	socksMap    map[string]*socks // map[uuid]socks's detail
 
 	SocksTCPMessChan chan interface{}
