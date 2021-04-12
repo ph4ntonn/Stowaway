@@ -46,6 +46,7 @@ func (admin *Admin) Run() {
 	go handler.DispathSocksTCPMess(admin.mgr)
 	go handler.DispathSocksUDPMess(admin.mgr, admin.Topology, admin.Conn, admin.UserOptions.Secret)
 	go handler.DispatchForwardMess(admin.mgr)
+	go handler.DispatchBackwardMess(admin.mgr)
 	go handler.DispatchFileMess(admin.mgr)
 	go handler.DispatchSSHMess(admin.mgr)
 	go handler.DispatchShellMess(admin.mgr)
@@ -66,7 +67,7 @@ func (admin *Admin) handleMessFromDownstream(console *cli.Console) {
 
 		switch header.MessageType {
 		case protocol.MYINFO:
-			admin.mgr.InfoManager.InfoMessChan <- &manager.InfoMess{UUID: header.Sender, Mess: message}
+			admin.mgr.InfoManager.InfoMessChan <- message
 		case protocol.SHELLRES:
 			fallthrough
 		case protocol.SHELLRESULT:
@@ -101,6 +102,10 @@ func (admin *Admin) handleMessFromDownstream(console *cli.Console) {
 			fallthrough
 		case protocol.FORWARDFIN:
 			admin.mgr.ForwardManager.ForwardMessChan <- message
+		case protocol.BACKWARDREADY:
+			fallthrough
+		case protocol.BACKWARDSEQREQ:
+			admin.mgr.BackwardManager.BackwardMessChan <- message
 		default:
 			log.Print("\n[*]Unknown Message!")
 		}

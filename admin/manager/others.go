@@ -48,16 +48,11 @@ func newShellManager() *shellManager {
 }
 
 type infoManager struct {
-	InfoMessChan chan *InfoMess
-}
-
-type InfoMess struct {
-	UUID string
-	Mess interface{}
+	InfoMessChan chan interface{}
 }
 
 func newInfoManager() *infoManager {
 	manager := new(infoManager)
-	manager.InfoMessChan = make(chan *InfoMess, 5)
+	manager.InfoMessChan = make(chan interface{}, 5)
 	return manager
 }

@@ -75,7 +75,7 @@ func (manager *forwardManager) run() {
 
 func (manager *forwardManager) newForward(task *ForwardTask) {
 	manager.forwardStatusMap[task.Seq] = new(forwardStatus)
-	manager.forwardStatusMap[task.Seq].dataChan = make(chan []byte, 5)
+	manager.forwardStatusMap[task.Seq].dataChan = make(chan []byte)
 	manager.ResultChan <- &forwardResult{OK: true}
 }
 

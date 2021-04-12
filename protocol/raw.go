@@ -91,6 +91,11 @@ func (message *RawMessage) ConstructData(header *Header, mess interface{}) {
 			dataBuffer.Write(OKBuf)
 		case MYINFO:
 			mmess := mess.(*MyInfo)
+			uuidLenBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(uuidLenBuf, mmess.UUIDLen)
+
+			uuidBuf := []byte(mmess.UUID)
+
 			usernameLenBuf := make([]byte, 8)
 			binary.BigEndian.PutUint64(usernameLenBuf, mmess.UsernameLen)
 
@@ -101,6 +106,8 @@ func (message *RawMessage) ConstructData(header *Header, mess interface{}) {
 
 			hostnameBuf := []byte(mmess.Hostname)
 
+			dataBuffer.Write(uuidLenBuf)
+			dataBuffer.Write(uuidBuf)
 			dataBuffer.Write(usernameLenBuf)
 			dataBuffer.Write(usernameBuf)
 			dataBuffer.Write(hostnameLenBuf)
@@ -415,6 +422,65 @@ func (message *RawMessage) ConstructData(header *Header, mess interface{}) {
 			binary.BigEndian.PutUint64(seqBuf, mmess.Seq)
 
 			dataBuffer.Write(seqBuf)
+		case BACKWARDTEST:
+			mmess := mess.(*BackwardTest)
+
+			lPortLenBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(lPortLenBuf, mmess.LPortLen)
+
+			lPortBuf := []byte(mmess.LPort)
+
+			rPortLenBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(rPortLenBuf, mmess.RPortLen)
+
+			rPortBuf := []byte(mmess.RPort)
+
+			dataBuffer.Write(lPortLenBuf)
+			dataBuffer.Write(lPortBuf)
+			dataBuffer.Write(rPortLenBuf)
+			dataBuffer.Write(rPortBuf)
+		case BACKWARDREADY:
+			mmess := mess.(*BackwardReady)
+			OKBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
+
+			dataBuffer.Write(OKBuf)
+		case BACKWARDSEQREQ:
+			mmess := mess.(*BackwardSeqReq)
+			uuidLenBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(uuidLenBuf, mmess.UUIDLen)
+
+			uuidBuf := []byte(mmess.UUID)
+
+			lPortLenBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(lPortLenBuf, mmess.LPortLen)
+
+			lPortBuf := []byte(mmess.LPort)
+
+			rPortLenBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(rPortLenBuf, mmess.RPortLen)
+
+			rPortBuf := []byte(mmess.LPort)
+
+			dataBuffer.Write(uuidLenBuf)
+			dataBuffer.Write(uuidBuf)
+			dataBuffer.Write(lPortLenBuf)
+			dataBuffer.Write(lPortBuf)
+			dataBuffer.Write(rPortLenBuf)
+			dataBuffer.Write(rPortBuf)
+		case BACKWARDDATA:
+			mmess := mess.(*BackwardData)
+			seqBuf := make([]byte, 8)
+			binary.BigEndian.PutUint64(seqBuf, mmess.Seq)
+
+			dataLenBuf := make([]byte, 8)
+			binary.BigEndian.PutUint64(dataLenBuf, mmess.DataLen)
+
+			dataBuf := mmess.Data
+
+			dataBuffer.Write(seqBuf)
+			dataBuffer.Write(dataLenBuf)
+			dataBuffer.Write(dataBuf)
 		case OFFLINE:
 			mmess := mess.(*Offline)
 			OKBuf := make([]byte, 2)
@@ -534,10 +600,12 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 		return header, mmess, nil
 	case MYINFO:
 		mmess := new(MyInfo)
-		mmess.UsernameLen = binary.BigEndian.Uint64(dataBuf[:8])
-		mmess.Username = string(dataBuf[8 : 8+mmess.UsernameLen])
-		mmess.HostnameLen = binary.BigEndian.Uint64(dataBuf[8+mmess.UsernameLen : 16+mmess.UsernameLen])
-		mmess.Hostname = string(dataBuf[16+mmess.UsernameLen : 16+mmess.UsernameLen+mmess.HostnameLen])
+		mmess.UUIDLen = binary.BigEndian.Uint16(dataBuf[:2])
+		mmess.UUID = string(dataBuf[2 : 2+mmess.UUIDLen])
+		mmess.UsernameLen = binary.BigEndian.Uint64(dataBuf[2+mmess.UUIDLen : 10+mmess.UUIDLen])
+		mmess.Username = string(dataBuf[10+mmess.UUIDLen : 10+uint64(mmess.UUIDLen)+mmess.UsernameLen])
+		mmess.HostnameLen = binary.BigEndian.Uint64(dataBuf[10+uint64(mmess.UUIDLen)+mmess.UsernameLen : 18+uint64(mmess.UUIDLen)+mmess.UsernameLen])
+		mmess.Hostname = string(dataBuf[18+uint64(mmess.UUIDLen)+mmess.UsernameLen : 18+uint64(mmess.UUIDLen)+mmess.UsernameLen+mmess.HostnameLen])
 		return header, mmess, nil
 	case MYMEMO:
 		mmess := new(MyMemo)
@@ -690,6 +758,36 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 		mmess.Data = dataBuf[16 : 16+mmess.DataLen]
 		return header, mmess, nil
 	case FORWARDFIN:
+		mmess := new(ForwardFin)
+		mmess.Seq = binary.BigEndian.Uint64(dataBuf[:8])
+		return header, mmess, nil
+	case BACKWARDTEST:
+		mmess := new(BackwardTest)
+		mmess.LPortLen = binary.BigEndian.Uint16(dataBuf[:2])
+		mmess.LPort = string(dataBuf[2 : 2+mmess.LPortLen])
+		mmess.RPortLen = binary.BigEndian.Uint16(dataBuf[2+mmess.LPortLen : 4+mmess.LPortLen])
+		mmess.RPort = string(dataBuf[4+mmess.LPortLen : 4+mmess.LPortLen+mmess.RPortLen])
+		return header, mmess, nil
+	case BACKWARDREADY:
+		mmess := new(BackwardReady)
+		mmess.OK = binary.BigEndian.Uint16(dataBuf[:2])
+		return header, mmess, nil
+	case BACKWARDSEQREQ:
+		mmess := new(BackwardSeqReq)
+		mmess.UUIDLen = binary.BigEndian.Uint16(dataBuf[:2])
+		mmess.UUID = string(dataBuf[2 : 2+mmess.UUIDLen])
+		mmess.LPortLen = binary.BigEndian.Uint16(dataBuf[2+mmess.UUIDLen : 4+mmess.UUIDLen])
+		mmess.LPort = string(dataBuf[4+mmess.UUIDLen : 4+mmess.UUIDLen+mmess.LPortLen])
+		mmess.RPortLen = binary.BigEndian.Uint16(dataBuf[4+mmess.UUIDLen+mmess.LPortLen : 6+mmess.UUIDLen+mmess.LPortLen])
+		mmess.RPort = string(dataBuf[6+mmess.UUIDLen+mmess.LPortLen : 6+mmess.UUIDLen+mmess.LPortLen+mmess.RPortLen])
+		return header, mmess, nil
+	case BACKWARDDATA:
+		mmess := new(BackwardData)
+		mmess.Seq = binary.BigEndian.Uint64(dataBuf[:8])
+		mmess.DataLen = binary.BigEndian.Uint64(dataBuf[8:16])
+		mmess.Data = dataBuf[16 : 16+mmess.DataLen]
+		return header, mmess, nil
+	case BACKWARDFIN:
 		mmess := new(ForwardFin)
 		mmess.Seq = binary.BigEndian.Uint64(dataBuf[:8])
 		return header, mmess, nil

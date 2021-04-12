@@ -60,8 +60,8 @@ func NewHelper() *Helper {
 		"download",
 		"forward",
 		"stopforward",
-		"reflect",
-		"stopreflect",
+		"backward",
+		"stopbackward",
 		"offline",
 		"exit",
 	}

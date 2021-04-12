@@ -81,13 +81,13 @@ func DispatchInfoMess(mgr *manager.Manager, topo *topology.Topology) {
 	for {
 		message := <-mgr.InfoManager.InfoMessChan
 
-		switch message.Mess.(type) {
+		switch message.(type) {
 		case *protocol.MyInfo:
-			mess := message.Mess.(*protocol.MyInfo)
+			mess := message.(*protocol.MyInfo)
 
 			task := &topology.TopoTask{
 				Mode:     topology.UPDATEDETAIL,
-				UUID:     message.UUID,
+				UUID:     mess.UUID,
 				UserName: mess.Username,
 				HostName: mess.Hostname,
 			}

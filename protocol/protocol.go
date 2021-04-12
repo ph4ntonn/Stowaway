@@ -45,6 +45,11 @@ const (
 	FORWARDREADY
 	FORWARDDATA
 	FORWARDFIN
+	BACKWARDTEST
+	BACKWARDREADY
+	BACKWARDSEQREQ
+	BACKWARDDATA
+	BACKWARDFIN
 	OFFLINE
 )
 
@@ -112,6 +117,8 @@ type UUIDRetMess struct {
 }
 
 type MyInfo struct {
+	UUIDLen     uint16
+	UUID        string
 	UsernameLen uint64
 	Username    string
 	HostnameLen uint64
@@ -269,6 +276,36 @@ type ForwardData struct {
 }
 
 type ForwardFin struct {
+	Seq uint64
+}
+
+type BackwardTest struct {
+	LPortLen uint16
+	LPort    string
+	RPortLen uint16
+	RPort    string
+}
+
+type BackwardReady struct {
+	OK uint16
+}
+
+type BackwardSeqReq struct {
+	UUIDLen  uint16
+	UUID     string
+	LPortLen uint16
+	LPort    string
+	RPortLen uint16
+	RPort    string
+}
+
+type BackwardData struct {
+	Seq     uint64
+	DataLen uint64
+	Data    []byte
+}
+
+type BackWardFin struct {
 	Seq uint64
 }
 

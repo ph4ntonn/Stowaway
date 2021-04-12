@@ -55,8 +55,8 @@ func ShowNodeHelp() {
 	download   <filename>                   		Download file from current node
 	forward    <lport> <ip:port>             		Forward local port to specific remote ip:port (eg:forward 8888 192.168.0.100:22)
 	stopforward                                		Shut down all forward services
-	reflect    <rport> <lport>               		Reflect remote port(agent) to local port(admin) (eg:reflect 22 80)
-	stopreflect                                		Shut down all reflect services
+	backward    <rport> <lport>               		Reflect remote port(agent) to local port(admin) (eg:reflect 22 80)
+	stopbackward                                	Shut down all reflect services
 	offline                                 		Terminate current node
 	exit                                     		Back to upper panel
   `)

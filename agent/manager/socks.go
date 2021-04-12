@@ -117,7 +117,7 @@ func (manager *socksManager) getTCPDataChan(task *SocksTask) {
 	} else {
 		manager.socksStatusMap[task.Seq] = new(socksStatus)
 		manager.socksStatusMap[task.Seq].tcp = new(tcpSocks)
-		manager.socksStatusMap[task.Seq].tcp.dataChan = make(chan []byte, 5) // register it!
+		manager.socksStatusMap[task.Seq].tcp.dataChan = make(chan []byte) // register it!
 		manager.ResultChan <- &socksResult{
 			SocksSeqExist: false,
 			DataChan:      manager.socksStatusMap[task.Seq].tcp.dataChan,

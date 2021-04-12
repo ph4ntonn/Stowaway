@@ -265,7 +265,7 @@ func (console *Console) handleMainPanelCommand() {
 		fCommand := strings.Split(tCommand, " ")
 		switch fCommand[0] {
 		case "use":
-			if console.expectParamsNum(fCommand, 2, MAIN, 1) {
+			if console.expectParams(fCommand, 2, MAIN, 1) {
 				break
 			}
 
@@ -289,7 +289,7 @@ func (console *Console) handleMainPanelCommand() {
 
 			console.ready <- true
 		case "detail":
-			if console.expectParamsNum(fCommand, 1, MAIN, 0) {
+			if console.expectParams(fCommand, 1, MAIN, 0) {
 				break
 			}
 
@@ -302,7 +302,7 @@ func (console *Console) handleMainPanelCommand() {
 
 			console.ready <- true
 		case "tree":
-			if console.expectParamsNum(fCommand, 1, MAIN, 0) {
+			if console.expectParams(fCommand, 1, MAIN, 0) {
 				break
 			}
 
@@ -314,12 +314,12 @@ func (console *Console) handleMainPanelCommand() {
 
 			console.ready <- true
 		case "":
-			if console.expectParamsNum(fCommand, 1, MAIN, 0) {
+			if console.expectParams(fCommand, 1, MAIN, 0) {
 				break
 			}
 			console.ready <- true
 		case "help":
-			if console.expectParamsNum(fCommand, 1, MAIN, 0) {
+			if console.expectParams(fCommand, 1, MAIN, 0) {
 				break
 			}
 
@@ -327,7 +327,7 @@ func (console *Console) handleMainPanelCommand() {
 
 			console.ready <- true
 		case "exit":
-			if console.expectParamsNum(fCommand, 1, MAIN, 0) {
+			if console.expectParams(fCommand, 1, MAIN, 0) {
 				break
 			}
 			fmt.Print("\n[*]BYE!")
@@ -374,14 +374,14 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			handler.AddMemo(component, console.topology.TaskChan, fCommand[1:], uuid, route)
 			console.ready <- true
 		case "delmemo":
-			if console.expectParamsNum(fCommand, 1, NODE, 0) {
+			if console.expectParams(fCommand, 1, NODE, 0) {
 				break
 			}
 
 			handler.DelMemo(component, console.topology.TaskChan, uuid, route)
 			console.ready <- true
 		case "shell":
-			if console.expectParamsNum(fCommand, 1, NODE, 0) {
+			if console.expectParams(fCommand, 1, NODE, 0) {
 				break
 			}
 
@@ -402,14 +402,14 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				console.ready <- true
 			}
 		case "listen":
-			if console.expectParamsNum(fCommand, 2, NODE, 0) {
+			if console.expectParams(fCommand, 2, NODE, 0) {
 				break
 			}
 
 			handler.LetListen(component, route, uuid, fCommand[1])
 			console.ready <- true
 		case "ssh":
-			if console.expectParamsNum(fCommand, 2, NODE, 0) {
+			if console.expectParams(fCommand, 2, NODE, 0) {
 				break
 			}
 
@@ -470,7 +470,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				console.ready <- true
 			}
 		case "socks":
-			if console.expectParamsNum(fCommand, []int{2, 4}, NODE, 0) {
+			if console.expectParams(fCommand, []int{2, 4}, NODE, 0) {
 				break
 			}
 
@@ -492,7 +492,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			}
 			console.ready <- true
 		case "stopsocks":
-			if console.expectParamsNum(fCommand, 1, NODE, 0) {
+			if console.expectParams(fCommand, 1, NODE, 0) {
 				break
 			}
 
@@ -514,7 +514,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			}
 			console.ready <- true
 		case "forward":
-			if console.expectParamsNum(fCommand, 3, NODE, 1) {
+			if console.expectParams(fCommand, 3, NODE, 1) {
 				break
 			}
 
@@ -531,7 +531,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			}
 			console.ready <- true
 		case "stopforward":
-			if console.expectParamsNum(fCommand, 1, NODE, 0) {
+			if console.expectParams(fCommand, 1, NODE, 0) {
 				break
 			}
 
@@ -562,8 +562,26 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
 			}
 			console.ready <- true
+		case "backward":
+			if console.expectParams(fCommand, 3, NODE, []int{1, 2}) {
+				break
+			}
+
+			fmt.Printf("\r\n[*]Trying to ask node to listen on 0.0.0.0:%s......", fCommand[1])
+			fmt.Printf("\r\n[*]Waiting for agent's response......")
+
+			backward := handler.NewBackward(fCommand[2], fCommand[1])
+
+			err := backward.LetBackward(component, console.mgr, route, uuid)
+			if err != nil {
+				fmt.Printf("\r\n[*]Error: %s", err.Error())
+			} else {
+				fmt.Print("\r\n[*]Forward start successfully!")
+			}
+			console.ready <- true
+
 		case "upload":
-			if console.expectParamsNum(fCommand, 3, NODE, 0) {
+			if console.expectParams(fCommand, 3, NODE, 0) {
 				break
 			}
 
@@ -582,7 +600,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			}
 			console.ready <- true
 		case "download":
-			if console.expectParamsNum(fCommand, 3, NODE, 0) {
+			if console.expectParams(fCommand, 3, NODE, 0) {
 				break
 			}
 
@@ -602,26 +620,26 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			}
 			console.ready <- true
 		case "offline":
-			if console.expectParamsNum(fCommand, 1, NODE, 0) {
+			if console.expectParams(fCommand, 1, NODE, 0) {
 				break
 			}
 
 			handler.LetOffline(component, route, uuid)
 			console.ready <- true
 		case "":
-			if console.expectParamsNum(fCommand, 1, NODE, 0) {
+			if console.expectParams(fCommand, 1, NODE, 0) {
 				break
 			}
 			console.ready <- true
 		case "help":
-			if console.expectParamsNum(fCommand, 1, NODE, 0) {
+			if console.expectParams(fCommand, 1, NODE, 0) {
 				break
 			}
 
 			ShowNodeHelp()
 			console.ready <- true
 		case "exit":
-			if console.expectParamsNum(fCommand, 1, NODE, 0) {
+			if console.expectParams(fCommand, 1, NODE, 0) {
 				break
 			}
 			return
@@ -708,7 +726,7 @@ func (console *Console) handleSSHPanelCommand(component *protocol.MessageCompone
 	}
 }
 
-func (console *Console) expectParamsNum(params []string, numbers interface{}, mode int, needToBeInt int) bool {
+func (console *Console) expectParams(params []string, numbers interface{}, mode int, needToBeInt interface{}) bool {
 	switch numbers.(type) {
 	case int:
 		num := numbers.(int)
@@ -743,9 +761,35 @@ func (console *Console) expectParamsNum(params []string, numbers interface{}, mo
 		}
 	}
 
-	if needToBeInt != 0 {
-		_, err := utils.Str2Int(params[needToBeInt])
-		if err != nil {
+	switch needToBeInt.(type) {
+	case int:
+		seq := needToBeInt.(int)
+		if needToBeInt != 0 {
+			_, err := utils.Str2Int(params[seq])
+			if err != nil {
+				fmt.Print("\n[*]Format error!\n")
+				if mode == MAIN {
+					ShowMainHelp()
+				} else {
+					ShowNodeHelp()
+				}
+				console.ready <- true
+				return true
+			}
+		}
+	case []int:
+		seqs := needToBeInt.([]int)
+		var ok bool
+		for _, seq := range seqs {
+			if seq != 0 {
+				_, err := utils.Str2Int(params[seq])
+				if err != nil {
+					ok = true
+				}
+			}
+		}
+
+		if !ok {
 			fmt.Print("\n[*]Format error!\n")
 			if mode == MAIN {
 				ShowMainHelp()

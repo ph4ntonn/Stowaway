@@ -26,7 +26,7 @@ const (
 
 type forwardManager struct {
 	forwardSeq      uint64
-	forwardSeqMap   map[uint64]*seqRelationship    // map[seq](port+uuid) just for accelerate the speed of searching detail only by seq
+	forwardSeqMap   map[uint64]*fwSeqRelationship  // map[seq](port+uuid) just for accelerate the speed of searching detail only by seq
 	forwardMap      map[string]map[string]*forward // map[uuid]map[port]*forward's detail record forward status
 	forwardReadyDel map[int]string                 // map[user's option]port(no need to initial it in newForwardManager())
 
@@ -70,7 +70,7 @@ type forwardStatus struct {
 	conn     net.Conn
 }
 
-type seqRelationship struct {
+type fwSeqRelationship struct {
 	uuid string
 	port string
 }
@@ -79,7 +79,7 @@ func newForwardManager() *forwardManager {
 	manager := new(forwardManager)
 
 	manager.forwardMap = make(map[string]map[string]*forward)
-	manager.forwardSeqMap = make(map[uint64]*seqRelationship)
+	manager.forwardSeqMap = make(map[uint64]*fwSeqRelationship)
 	manager.ForwardMessChan = make(chan interface{}, 5)
 	manager.ForwardReady = make(chan bool)
 
@@ -133,7 +133,7 @@ func (manager *forwardManager) newForward(task *ForwardTask) {
 }
 
 func (manager *forwardManager) getNewSeq(task *ForwardTask) {
-	manager.forwardSeqMap[manager.forwardSeq] = &seqRelationship{uuid: task.UUID, port: task.Port}
+	manager.forwardSeqMap[manager.forwardSeq] = &fwSeqRelationship{uuid: task.UUID, port: task.Port}
 	manager.ResultChan <- &forwardResult{ForwardSeq: manager.forwardSeq}
 	manager.forwardSeq++
 }

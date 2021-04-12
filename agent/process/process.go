@@ -43,6 +43,7 @@ func (agent *Agent) Run() {
 	// run dispatchers to dispatch all kinds of message
 	go handler.DispathSocksMess(mgr, component)
 	go handler.DispatchForwardMess(mgr, component)
+	go handler.DispatchBackwardMess(mgr, component)
 	go handler.DispatchFileMess(mgr, component)
 	go handler.DispatchSSHMess(mgr, component)
 	go handler.DispatchShellMess(mgr, component)
@@ -64,6 +65,8 @@ func (agent *Agent) sendMyInfo() {
 	hostname, username := utils.GetSystemInfo()
 
 	myInfoMess := &protocol.MyInfo{
+		UUIDLen:     uint16(len(agent.UUID)),
+		UUID:        agent.UUID,
 		UsernameLen: uint64(len(username)),
 		Username:    username,
 		HostnameLen: uint64(len(hostname)),
@@ -125,6 +128,8 @@ func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager, component *prot
 				fallthrough
 			case protocol.FORWARDFIN:
 				mgr.ForwardManager.ForwardMessChan <- message
+			case protocol.BACKWARDTEST:
+				mgr.BackwardManager.BackwardMessChan <- message
 			case protocol.OFFLINE:
 				os.Exit(0)
 			default:
