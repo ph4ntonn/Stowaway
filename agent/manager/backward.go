@@ -1,12 +1,17 @@
 package manager
 
-import "net"
+import (
+	"Stowaway/protocol"
+	"net"
+)
 
 const (
 	B_NEWBACKWARD = iota
 	B_GETSEQCHAN
 	B_ADDCONN
 	B_GETDATACHAN
+	B_GETDATACHAN_WITHOUTUUID
+	B_CLOSETCP
 )
 
 type backwardManager struct {
@@ -17,6 +22,7 @@ type backwardManager struct {
 	TaskChan   chan *BackwardTask
 	ResultChan chan *backwardResult
 	Done       chan bool
+	SeqReady   chan bool
 }
 
 type BackwardTask struct {
@@ -24,20 +30,20 @@ type BackwardTask struct {
 	Seq  uint64
 
 	Listener       net.Listener
-	Port           string
+	RPort          string
 	BackwardSocket net.Conn
 }
 
 type backwardResult struct {
 	OK bool
 
-	SeqChan  chan uint64
+	SeqChan  chan *protocol.BackwardSeq
 	DataChan chan []byte
 }
 
 type backward struct {
 	listener net.Listener
-	seqChan  chan uint64
+	seqChan  chan *protocol.BackwardSeq
 
 	backwardStatusMap map[uint64]*backwardStatus
 }
@@ -57,6 +63,7 @@ func newBackwardManager() *backwardManager {
 	manager.ResultChan = make(chan *backwardResult)
 	manager.TaskChan = make(chan *BackwardTask)
 	manager.Done = make(chan bool)
+	manager.SeqReady = make(chan bool)
 
 	return manager
 }
@@ -75,23 +82,28 @@ func (manager *backwardManager) run() {
 			manager.addConn(task)
 		case B_GETDATACHAN:
 			manager.getDataChan(task)
+		case B_GETDATACHAN_WITHOUTUUID:
+			manager.getDatachanWithoutUUID(task)
+			<-manager.Done
+		case B_CLOSETCP:
+			manager.closeTCP(task)
 		}
 	}
 }
 
 func (manager *backwardManager) newBackward(task *BackwardTask) {
-	manager.backwardMap[task.Port] = new(backward)
-	manager.backwardMap[task.Port].listener = task.Listener
-	manager.backwardMap[task.Port].backwardStatusMap = make(map[uint64]*backwardStatus)
-	manager.backwardMap[task.Port].seqChan = make(chan uint64)
+	manager.backwardMap[task.RPort] = new(backward)
+	manager.backwardMap[task.RPort].listener = task.Listener
+	manager.backwardMap[task.RPort].backwardStatusMap = make(map[uint64]*backwardStatus)
+	manager.backwardMap[task.RPort].seqChan = make(chan *protocol.BackwardSeq)
 	manager.ResultChan <- &backwardResult{OK: true}
 }
 
 func (manager *backwardManager) getSeqChan(task *BackwardTask) {
-	if _, ok := manager.backwardMap[task.Port]; ok {
+	if _, ok := manager.backwardMap[task.RPort]; ok {
 		manager.ResultChan <- &backwardResult{
 			OK:      true,
-			SeqChan: manager.backwardMap[task.Port].seqChan,
+			SeqChan: manager.backwardMap[task.RPort].seqChan,
 		}
 	} else {
 		manager.ResultChan <- &backwardResult{OK: false}
@@ -99,11 +111,11 @@ func (manager *backwardManager) getSeqChan(task *BackwardTask) {
 }
 
 func (manager *backwardManager) addConn(task *BackwardTask) {
-	if _, ok := manager.backwardMap[task.Port]; ok {
-		manager.backwardSeqMap[task.Seq] = task.Port
-		manager.backwardMap[task.Port].backwardStatusMap[task.Seq] = new(backwardStatus)
-		manager.backwardMap[task.Port].backwardStatusMap[task.Seq].conn = task.BackwardSocket
-		manager.backwardMap[task.Port].backwardStatusMap[task.Seq].dataChan = make(chan []byte)
+	if _, ok := manager.backwardMap[task.RPort]; ok {
+		manager.backwardSeqMap[task.Seq] = task.RPort
+		manager.backwardMap[task.RPort].backwardStatusMap[task.Seq] = new(backwardStatus)
+		manager.backwardMap[task.RPort].backwardStatusMap[task.Seq].conn = task.BackwardSocket
+		manager.backwardMap[task.RPort].backwardStatusMap[task.Seq].dataChan = make(chan []byte)
 		manager.ResultChan <- &backwardResult{OK: true}
 	} else {
 		manager.ResultChan <- &backwardResult{OK: false}
@@ -111,12 +123,34 @@ func (manager *backwardManager) addConn(task *BackwardTask) {
 }
 
 func (manager *backwardManager) getDataChan(task *BackwardTask) {
-	if _, ok := manager.backwardMap[task.Port]; ok {
+	if _, ok := manager.backwardMap[task.RPort]; ok {
 		manager.ResultChan <- &backwardResult{
 			OK:       true,
-			DataChan: manager.backwardMap[task.Port].backwardStatusMap[task.Seq].dataChan,
+			DataChan: manager.backwardMap[task.RPort].backwardStatusMap[task.Seq].dataChan,
 		}
 	} else {
 		manager.ResultChan <- &backwardResult{OK: false}
 	}
+}
+
+func (manager *backwardManager) getDatachanWithoutUUID(task *BackwardTask) {
+	if _, ok := manager.backwardSeqMap[task.Seq]; !ok {
+		manager.ResultChan <- &backwardResult{OK: false}
+		return
+	}
+
+	rPort := manager.backwardSeqMap[task.Seq]
+
+	if _, ok := manager.backwardMap[rPort]; ok {
+		manager.ResultChan <- &backwardResult{
+			OK:       true,
+			DataChan: manager.backwardMap[rPort].backwardStatusMap[task.Seq].dataChan,
+		}
+	} else {
+		manager.ResultChan <- &backwardResult{OK: false}
+	}
+}
+
+func (manager *backwardManager) closeTCP(task *BackwardTask) {
+
 }

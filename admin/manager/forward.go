@@ -139,21 +139,27 @@ func (manager *forwardManager) getNewSeq(task *ForwardTask) {
 }
 
 func (manager *forwardManager) addConn(task *ForwardTask) {
-	if _, ok := manager.forwardMap[task.UUID][task.Port]; ok {
-		manager.forwardMap[task.UUID][task.Port].forwardStatusMap[task.Seq] = new(forwardStatus)
-		manager.forwardMap[task.UUID][task.Port].forwardStatusMap[task.Seq].conn = task.Conn
-		manager.forwardMap[task.UUID][task.Port].forwardStatusMap[task.Seq].dataChan = make(chan []byte)
-		manager.ResultChan <- &forwardResult{OK: true}
-	} else {
+	if _, ok := manager.forwardSeqMap[task.Seq]; !ok {
 		manager.ResultChan <- &forwardResult{OK: false}
+		return
 	}
+
+	manager.forwardMap[task.UUID][task.Port].forwardStatusMap[task.Seq] = new(forwardStatus)
+	manager.forwardMap[task.UUID][task.Port].forwardStatusMap[task.Seq].conn = task.Conn
+	manager.forwardMap[task.UUID][task.Port].forwardStatusMap[task.Seq].dataChan = make(chan []byte)
+	manager.ResultChan <- &forwardResult{OK: true}
 }
 
 func (manager *forwardManager) getDatachan(task *ForwardTask) {
-	if _, ok := manager.forwardMap[task.UUID][task.Port]; ok {
+	if _, ok := manager.forwardSeqMap[task.Seq]; !ok {
+		manager.ResultChan <- &forwardResult{OK: false}
+		return
+	}
+
+	if _, ok := manager.forwardMap[task.UUID][task.Port].forwardStatusMap[task.Seq]; ok {
 		manager.ResultChan <- &forwardResult{
 			OK:       true,
-			DataChan: manager.forwardMap[task.UUID][task.Port].forwardStatusMap[task.Seq].dataChan, // no need to check forwardStatusMap[task.Seq]
+			DataChan: manager.forwardMap[task.UUID][task.Port].forwardStatusMap[task.Seq].dataChan,
 		}
 	} else {
 		manager.ResultChan <- &forwardResult{OK: false}

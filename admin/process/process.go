@@ -46,7 +46,7 @@ func (admin *Admin) Run() {
 	go handler.DispathSocksTCPMess(admin.mgr)
 	go handler.DispathSocksUDPMess(admin.mgr, admin.Topology, admin.Conn, admin.UserOptions.Secret)
 	go handler.DispatchForwardMess(admin.mgr)
-	go handler.DispatchBackwardMess(admin.mgr)
+	go handler.DispatchBackwardMess(admin.mgr, admin.Topology, admin.Conn, admin.UserOptions.Secret)
 	go handler.DispatchFileMess(admin.mgr)
 	go handler.DispatchSSHMess(admin.mgr)
 	go handler.DispatchShellMess(admin.mgr)
@@ -104,7 +104,11 @@ func (admin *Admin) handleMessFromDownstream(console *cli.Console) {
 			admin.mgr.ForwardManager.ForwardMessChan <- message
 		case protocol.BACKWARDREADY:
 			fallthrough
-		case protocol.BACKWARDSEQREQ:
+		case protocol.BACKWARDDATA:
+			fallthrough
+		case protocol.BACKWARDFIN:
+			fallthrough
+		case protocol.BACKWARDSTART:
 			admin.mgr.BackwardManager.BackwardMessChan <- message
 		default:
 			log.Print("\n[*]Unknown Message!")

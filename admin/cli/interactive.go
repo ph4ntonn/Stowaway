@@ -30,8 +30,8 @@ const (
 type Console struct {
 	// Admin status
 	conn     net.Conn
-	secret   string
 	topology *topology.Topology
+	secret   string
 	// console internal elements
 	status     string
 	ready      chan bool
@@ -571,7 +571,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			fmt.Printf("\r\n[*]Waiting for agent's response......")
 
 			backward := handler.NewBackward(fCommand[2], fCommand[1])
-
+			// node is okay
 			err := backward.LetBackward(component, console.mgr, route, uuid)
 			if err != nil {
 				fmt.Printf("\r\n[*]Error: %s", err.Error())
@@ -742,14 +742,14 @@ func (console *Console) expectParams(params []string, numbers interface{}, mode 
 		}
 	case []int:
 		nums := numbers.([]int)
-		var ok bool
+		var flag bool
 		for _, num := range nums {
 			if len(params) == num {
-				ok = true
+				flag = true
 			}
 		}
 
-		if !ok {
+		if !flag {
 			fmt.Print("\n[*]Format error!\n")
 			if mode == MAIN {
 				ShowMainHelp()
@@ -779,17 +779,17 @@ func (console *Console) expectParams(params []string, numbers interface{}, mode 
 		}
 	case []int:
 		seqs := needToBeInt.([]int)
-		var ok bool
+		var err error
 		for _, seq := range seqs {
 			if seq != 0 {
-				_, err := utils.Str2Int(params[seq])
+				_, err = utils.Str2Int(params[seq])
 				if err != nil {
-					ok = true
+					break
 				}
 			}
 		}
 
-		if !ok {
+		if err != nil {
 			fmt.Print("\n[*]Format error!\n")
 			if mode == MAIN {
 				ShowMainHelp()

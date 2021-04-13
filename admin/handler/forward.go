@@ -127,7 +127,6 @@ func (forward *Forward) handleForward(component *protocol.MessageComponent, mgr 
 	protocol.ConstructMessage(sMessage, startHeader, startMess)
 	sMessage.SendMessage()
 
-	// begin to work
 	defer func() {
 		finHeader := &protocol.Header{
 			Sender:      protocol.ADMIN_UUID,

@@ -46,8 +46,9 @@ const (
 	FORWARDDATA
 	FORWARDFIN
 	BACKWARDTEST
+	BACKWARDSTART
+	BACKWARDSEQ
 	BACKWARDREADY
-	BACKWARDSEQREQ
 	BACKWARDDATA
 	BACKWARDFIN
 	OFFLINE
@@ -286,15 +287,22 @@ type BackwardTest struct {
 	RPort    string
 }
 
-type BackwardReady struct {
-	OK uint16
-}
-
-type BackwardSeqReq struct {
+type BackwardStart struct {
 	UUIDLen  uint16
 	UUID     string
 	LPortLen uint16
 	LPort    string
+	RPortLen uint16
+	RPort    string
+}
+
+type BackwardReady struct {
+	OK uint16
+}
+
+type BackwardSeq struct {
+	OK       uint16
+	Seq      uint64
 	RPortLen uint16
 	RPort    string
 }

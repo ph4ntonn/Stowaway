@@ -129,6 +129,12 @@ func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager, component *prot
 			case protocol.FORWARDFIN:
 				mgr.ForwardManager.ForwardMessChan <- message
 			case protocol.BACKWARDTEST:
+				fallthrough
+			case protocol.BACKWARDSEQ:
+				fallthrough
+			case protocol.BACKWARDFIN:
+				fallthrough
+			case protocol.BACKWARDDATA:
 				mgr.BackwardManager.BackwardMessChan <- message
 			case protocol.OFFLINE:
 				os.Exit(0)
