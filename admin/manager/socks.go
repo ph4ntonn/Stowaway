@@ -37,7 +37,6 @@ type socksManager struct {
 
 	TaskChan   chan *SocksTask
 	ResultChan chan *socksResult
-	Done       chan bool // try to avoid this situation: A routine ask to get chan -> after that a TCPFIN message come and closeTCP() is called to close chan -> routine doesn't know chan is closed,so continue to input message into it -> panic
 }
 
 type SocksTask struct {
@@ -99,7 +98,6 @@ func newSocksManager() *socksManager {
 	manager.SocksReady = make(chan bool)
 
 	manager.TaskChan = make(chan *SocksTask)
-	manager.Done = make(chan bool)
 	manager.ResultChan = make(chan *socksResult)
 
 	return manager
@@ -120,13 +118,10 @@ func (manager *socksManager) run() {
 			manager.getTCPDataChan(task)
 		case S_GETUDPDATACHAN:
 			manager.getUDPDataChan(task)
-			<-manager.Done
 		case S_GETTCPDATACHAN_WITHOUTUUID:
 			manager.getTCPDataChanWithoutUUID(task)
-			<-manager.Done
 		case S_GETUDPDATACHAN_WITHOUTUUID:
 			manager.getUDPDataChanWithoutUUID(task)
-			<-manager.Done
 		case S_CLOSETCP:
 			manager.closeTCP(task)
 		case S_GETUDPSTARTINFO:

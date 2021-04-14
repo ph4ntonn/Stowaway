@@ -6,6 +6,7 @@ import (
 	"Stowaway/protocol"
 	"fmt"
 	"net"
+	"time"
 )
 
 type Backward struct {
@@ -78,7 +79,16 @@ func (backward *Backward) start(mgr *manager.Manager, topo *topology.Topology, c
 	mgr.BackwardManager.TaskChan <- backwardTask
 	result := <-mgr.BackwardManager.ResultChan
 	seq := result.BackwardSeq
-	// then,we connect to target port and get the conn && tell node result
+
+	backwardTask = &manager.BackwardTask{
+		Mode:  manager.B_ADDCONN,
+		RPort: backward.RPort,
+		UUID:  uuid,
+		Seq:   seq,
+	}
+	mgr.BackwardManager.TaskChan <- backwardTask
+	<-mgr.BackwardManager.ResultChan
+
 	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
 		Accepter:    uuid,
@@ -87,58 +97,15 @@ func (backward *Backward) start(mgr *manager.Manager, topo *topology.Topology, c
 		Route:       route,
 	}
 
-	seqSuccMess := &protocol.BackwardSeq{
-		OK:       1,
+	seqMess := &protocol.BackwardSeq{
 		Seq:      seq,
 		RPortLen: uint16(len([]byte(backward.RPort))),
 		RPort:    backward.RPort,
 	}
 
-	seqFailMess := &protocol.BackwardSeq{
-		OK:       0,
-		Seq:      seq,
-		RPortLen: uint16(len([]byte(backward.RPort))),
-		RPort:    backward.RPort,
-	}
-	// if can't connect,tell node to stop
-	backwardConn, err := net.Dial("tcp", net.JoinHostPort("127.0.0.1", backward.LPort))
-	if err != nil {
-		protocol.ConstructMessage(sMessage, header, seqFailMess)
-		sMessage.SendMessage()
-		return
-	}
-	// if stopbackward before,then addconn will fail,that's the only reason
-	// mention, at this time ,agent will not send fin mess cuz it's blocked at getting seq
-	backwardTask = &manager.BackwardTask{
-		Mode:  manager.B_ADDCONN,
-		RPort: backward.RPort,
-		UUID:  uuid,
-		Seq:   seq,
-		Conn:  backwardConn,
-	}
-	mgr.BackwardManager.TaskChan <- backwardTask
-	result = <-mgr.BackwardManager.ResultChan
-	if !result.OK {
-		return
-	}
-	// if stopbackward before,then getdatachan will fail,that's the only reason
-	// get datachan immediately
-	backwardTask = &manager.BackwardTask{
-		Mode:  manager.B_GETDATACHAN,
-		RPort: backward.RPort,
-		UUID:  uuid,
-		Seq:   seq,
-	}
-	mgr.BackwardManager.TaskChan <- backwardTask
-	result = <-mgr.BackwardManager.ResultChan
-	if !result.OK {
-		return
-	}
-	// get the datachan
-	dataChan := result.DataChan
-	// tell node it can go ahead
-	protocol.ConstructMessage(sMessage, header, seqSuccMess)
+	protocol.ConstructMessage(sMessage, header, seqMess)
 	sMessage.SendMessage()
+
 	// send fin after all done
 	defer func() {
 		finHeader := &protocol.Header{
@@ -156,6 +123,40 @@ func (backward *Backward) start(mgr *manager.Manager, topo *topology.Topology, c
 		protocol.ConstructMessage(sMessage, finHeader, finMess)
 		sMessage.SendMessage()
 	}()
+
+	backwardConn, err := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", backward.LPort), 10*time.Second)
+	if err != nil {
+		return
+	}
+
+	backwardTask = &manager.BackwardTask{
+		Mode:  manager.B_UPDATEBACKWARD,
+		RPort: backward.RPort,
+		UUID:  uuid,
+		Seq:   seq,
+		Conn:  backwardConn,
+	}
+	mgr.BackwardManager.TaskChan <- backwardTask
+	result = <-mgr.BackwardManager.ResultChan
+	if !result.OK {
+		backwardConn.Close()
+		return
+	}
+
+	backwardTask = &manager.BackwardTask{
+		Mode:  manager.B_GETDATACHAN,
+		RPort: backward.RPort,
+		UUID:  uuid,
+		Seq:   seq,
+	}
+	mgr.BackwardManager.TaskChan <- backwardTask
+	result = <-mgr.BackwardManager.ResultChan
+	if !result.OK {
+		return
+	}
+
+	dataChan := result.DataChan
+
 	// proxy C2S
 	go func() {
 		for {
@@ -224,7 +225,6 @@ func DispatchBackwardMess(mgr *manager.Manager, topo *topology.Topology, conn ne
 			if result.OK {
 				result.DataChan <- mess.Data
 			}
-			mgr.BackwardManager.Done <- true
 		case *protocol.BackWardFin:
 			mess := message.(*protocol.BackWardFin)
 			mgrTask := &manager.BackwardTask{

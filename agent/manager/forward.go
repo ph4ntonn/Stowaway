@@ -21,7 +21,6 @@ type forwardManager struct {
 
 	TaskChan   chan *ForwardTask
 	ResultChan chan *forwardResult
-	Done       chan bool
 }
 
 type ForwardTask struct {
@@ -50,7 +49,6 @@ func newForwardManager() *forwardManager {
 
 	manager.ResultChan = make(chan *forwardResult)
 	manager.TaskChan = make(chan *ForwardTask)
-	manager.Done = make(chan bool)
 
 	return manager
 }
@@ -64,7 +62,6 @@ func (manager *forwardManager) run() {
 			manager.newForward(task)
 		case F_GETDATACHAN:
 			manager.getDataChan(task)
-			<-manager.Done
 		case F_UPDATEFORWARD:
 			manager.updateForward(task)
 		case F_CLOSETCP:

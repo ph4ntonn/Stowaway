@@ -301,7 +301,6 @@ type BackwardReady struct {
 }
 
 type BackwardSeq struct {
-	OK       uint16
 	Seq      uint64
 	RPortLen uint16
 	RPort    string

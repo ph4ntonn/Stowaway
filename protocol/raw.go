@@ -494,6 +494,12 @@ func (message *RawMessage) ConstructData(header *Header, mess interface{}) {
 			dataBuffer.Write(seqBuf)
 			dataBuffer.Write(dataLenBuf)
 			dataBuffer.Write(dataBuf)
+		case BACKWARDFIN:
+			mmess := mess.(*BackWardFin)
+			seqBuf := make([]byte, 8)
+			binary.BigEndian.PutUint64(seqBuf, mmess.Seq)
+
+			dataBuffer.Write(seqBuf)
 		case OFFLINE:
 			mmess := mess.(*Offline)
 			OKBuf := make([]byte, 2)
@@ -796,10 +802,9 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 		return header, mmess, nil
 	case BACKWARDSEQ:
 		mmess := new(BackwardSeq)
-		mmess.OK = binary.BigEndian.Uint16(dataBuf[:2])
-		mmess.Seq = binary.BigEndian.Uint64(dataBuf[2:10])
-		mmess.RPortLen = binary.BigEndian.Uint16(dataBuf[10:12])
-		mmess.RPort = string(dataBuf[12 : 12+mmess.RPortLen])
+		mmess.Seq = binary.BigEndian.Uint64(dataBuf[0:8])
+		mmess.RPortLen = binary.BigEndian.Uint16(dataBuf[8:10])
+		mmess.RPort = string(dataBuf[10 : 10+mmess.RPortLen])
 		return header, mmess, nil
 	case BACKWARDDATA:
 		mmess := new(BackwardData)
@@ -808,11 +813,11 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 		mmess.Data = dataBuf[16 : 16+mmess.DataLen]
 		return header, mmess, nil
 	case BACKWARDFIN:
-		mmess := new(ForwardFin)
+		mmess := new(BackWardFin)
 		mmess.Seq = binary.BigEndian.Uint64(dataBuf[:8])
 		return header, mmess, nil
 	case OFFLINE:
-		mmess := new(FileDownRes)
+		mmess := new(Offline)
 		mmess.OK = binary.BigEndian.Uint16(dataBuf[:2])
 		return header, mmess, nil
 	default:

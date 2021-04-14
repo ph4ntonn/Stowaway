@@ -337,7 +337,6 @@ func handleUDPAss(mgr *manager.Manager, component *protocol.MessageComponent, li
 	}
 	mgr.SocksManager.TaskChan <- mgrTask
 	result := <-mgr.SocksManager.ResultChan
-	mgr.SocksManager.Done <- true
 
 	if !result.OK {
 		return
@@ -424,7 +423,6 @@ func DispathSocksTCPMess(mgr *manager.Manager) {
 			if result.OK {
 				result.TCPDataChan <- mess.Data
 			}
-			mgr.SocksManager.Done <- true
 		case *protocol.SocksTCPFin:
 			mess := message.(*protocol.SocksTCPFin)
 			mgrTask := &manager.SocksTask{
@@ -455,7 +453,6 @@ func DispathSocksUDPMess(mgr *manager.Manager, topo *topology.Topology, conn net
 			if result.OK {
 				result.UDPDataChan <- mess.Data
 			}
-			mgr.SocksManager.Done <- true
 		}
 	}
 }

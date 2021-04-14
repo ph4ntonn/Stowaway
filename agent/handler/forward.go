@@ -68,7 +68,6 @@ func (forward *Forward) start(mgr *manager.Manager, component *protocol.MessageC
 	}
 	mgr.ForwardManager.TaskChan <- task
 	result = <-mgr.ForwardManager.ResultChan
-	mgr.ForwardManager.Done <- true
 	if !result.OK { // no need to close conn,cuz conn has been already recorded,so if FIN occur between F_UPDATEFORWARD and F_GETDATACHAN,closeTCP will help us to close the conn
 		return
 	}
@@ -173,7 +172,6 @@ func DispatchForwardMess(mgr *manager.Manager, component *protocol.MessageCompon
 			if result.OK {
 				result.DataChan <- mess.Data
 			}
-			mgr.ForwardManager.Done <- true
 		case *protocol.ForwardFin:
 			mess := message.(*protocol.ForwardFin)
 			mgrTask := &manager.ForwardTask{

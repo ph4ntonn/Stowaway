@@ -531,7 +531,6 @@ func udpAssociate(mgr *manager.Manager, component *protocol.MessageComponent, se
 	}
 	mgr.SocksManager.TaskChan <- mgrTask
 	socksResult = <-mgr.SocksManager.ResultChan
-	mgr.SocksManager.Done <- true // give true immediately,cuz no need to ensure closeTCP() must after "readyChan := socksResult.ReadyChan" operation,trying to read data from a closed chan won't cause panic
 
 	if !socksResult.OK { // no need to close listener,cuz TCPFIN has helped us
 		protocol.ConstructMessage(sMessage, dataHeader, failMess)
@@ -588,7 +587,6 @@ func proxyC2SUDP(mgr *manager.Manager, listener *net.UDPConn, seq uint64) {
 	}
 	mgr.SocksManager.TaskChan <- mgrTask
 	result := <-mgr.SocksManager.ResultChan
-	mgr.SocksManager.Done <- true
 	// no need to check if OK,cuz if not,"data, ok := <-dataChan" will help us to exit
 	dataChan := result.DataChan
 
@@ -739,7 +737,6 @@ func DispathSocksMess(mgr *manager.Manager, component *protocol.MessageComponent
 				result := <-mgr.SocksManager.ResultChan
 
 				result.DataChan <- mess.Data
-				mgr.SocksManager.Done <- true
 
 				// if not exist
 				if !result.SocksSeqExist {
@@ -765,8 +762,6 @@ func DispathSocksMess(mgr *manager.Manager, component *protocol.MessageComponent
 				if result.OK {
 					result.DataChan <- mess.Data
 				}
-
-				mgr.SocksManager.Done <- true
 			case *protocol.UDPAssRes:
 				mess := message.(*protocol.UDPAssRes)
 
@@ -780,8 +775,6 @@ func DispathSocksMess(mgr *manager.Manager, component *protocol.MessageComponent
 				if result.OK {
 					result.ReadyChan <- mess.Addr
 				}
-
-				mgr.SocksManager.Done <- true
 			}
 		} else {
 			return

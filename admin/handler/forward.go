@@ -253,7 +253,6 @@ func DispatchForwardMess(mgr *manager.Manager) {
 			if result.OK {
 				result.DataChan <- mess.Data
 			}
-			mgr.ForwardManager.Done <- true
 		case *protocol.ForwardFin:
 			mess := message.(*protocol.ForwardFin)
 			mgrTask := &manager.ForwardTask{

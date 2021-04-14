@@ -27,7 +27,6 @@ type socksManager struct {
 
 	TaskChan   chan *SocksTask
 	ResultChan chan *socksResult
-	Done       chan bool
 }
 
 type SocksTask struct {
@@ -76,7 +75,6 @@ func newSocksManager() *socksManager {
 
 	manager.ResultChan = make(chan *socksResult)
 	manager.TaskChan = make(chan *SocksTask)
-	manager.Done = make(chan bool)
 
 	return manager
 }
@@ -88,10 +86,8 @@ func (manager *socksManager) run() {
 		switch task.Mode {
 		case S_GETTCPDATACHAN:
 			manager.getTCPDataChan(task)
-			<-manager.Done
 		case S_GETUDPCHANS:
 			manager.getUDPChans(task)
-			<-manager.Done
 		case S_GETUDPHEADER:
 			manager.getUDPHeader(task)
 		case S_UPDATETCP:

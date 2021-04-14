@@ -1,7 +1,6 @@
 package manager
 
 import (
-	"Stowaway/protocol"
 	"net"
 )
 
@@ -21,7 +20,6 @@ type backwardManager struct {
 
 	TaskChan   chan *BackwardTask
 	ResultChan chan *backwardResult
-	Done       chan bool
 	SeqReady   chan bool
 }
 
@@ -37,13 +35,13 @@ type BackwardTask struct {
 type backwardResult struct {
 	OK bool
 
-	SeqChan  chan *protocol.BackwardSeq
+	SeqChan  chan uint64
 	DataChan chan []byte
 }
 
 type backward struct {
 	listener net.Listener
-	seqChan  chan *protocol.BackwardSeq
+	seqChan  chan uint64
 
 	backwardStatusMap map[uint64]*backwardStatus
 }
@@ -62,7 +60,6 @@ func newBackwardManager() *backwardManager {
 
 	manager.ResultChan = make(chan *backwardResult)
 	manager.TaskChan = make(chan *BackwardTask)
-	manager.Done = make(chan bool)
 	manager.SeqReady = make(chan bool)
 
 	return manager
@@ -77,14 +74,12 @@ func (manager *backwardManager) run() {
 			manager.newBackward(task)
 		case B_GETSEQCHAN:
 			manager.getSeqChan(task)
-			<-manager.Done
 		case B_ADDCONN:
 			manager.addConn(task)
 		case B_GETDATACHAN:
 			manager.getDataChan(task)
 		case B_GETDATACHAN_WITHOUTUUID:
 			manager.getDatachanWithoutUUID(task)
-			<-manager.Done
 		case B_CLOSETCP:
 			manager.closeTCP(task)
 		}
@@ -95,7 +90,7 @@ func (manager *backwardManager) newBackward(task *BackwardTask) {
 	manager.backwardMap[task.RPort] = new(backward)
 	manager.backwardMap[task.RPort].listener = task.Listener
 	manager.backwardMap[task.RPort].backwardStatusMap = make(map[uint64]*backwardStatus)
-	manager.backwardMap[task.RPort].seqChan = make(chan *protocol.BackwardSeq)
+	manager.backwardMap[task.RPort].seqChan = make(chan uint64)
 	manager.ResultChan <- &backwardResult{OK: true}
 }
 
@@ -152,5 +147,15 @@ func (manager *backwardManager) getDatachanWithoutUUID(task *BackwardTask) {
 }
 
 func (manager *backwardManager) closeTCP(task *BackwardTask) {
+	if _, ok := manager.backwardSeqMap[task.Seq]; !ok {
+		return
+	}
 
+	rPort := manager.backwardSeqMap[task.Seq]
+
+	manager.backwardMap[rPort].backwardStatusMap[task.Seq].conn.Close()
+
+	close(manager.backwardMap[rPort].backwardStatusMap[task.Seq].dataChan)
+
+	delete(manager.backwardMap[rPort].backwardStatusMap, task.Seq)
 }
