@@ -400,9 +400,9 @@ func StopSocks(mgr *manager.Manager, uuid string) {
 	<-mgr.SocksManager.ResultChan
 }
 
-func DispathSocksTCPMess(mgr *manager.Manager) {
+func DispathSocksMess(mgr *manager.Manager, topo *topology.Topology, conn net.Conn, secret string) {
 	for {
-		message := <-mgr.SocksManager.SocksTCPMessChan
+		message := <-mgr.SocksManager.SocksMessChan
 
 		switch message.(type) {
 		case *protocol.SocksReady:
@@ -430,15 +430,6 @@ func DispathSocksTCPMess(mgr *manager.Manager) {
 				Seq:  mess.Seq,
 			}
 			mgr.SocksManager.TaskChan <- mgrTask
-		}
-	}
-}
-
-func DispathSocksUDPMess(mgr *manager.Manager, topo *topology.Topology, conn net.Conn, secret string) {
-	for {
-		message := <-mgr.SocksManager.SocksUDPMessChan
-
-		switch message.(type) {
 		case *protocol.UDPAssStart:
 			mess := message.(*protocol.UDPAssStart)
 			go startUDPAss(mgr, topo, conn, secret, mess.Seq)

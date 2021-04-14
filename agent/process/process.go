@@ -115,7 +115,7 @@ func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager, component *prot
 			case protocol.SOCKSTCPDATA:
 				fallthrough
 			case protocol.SOCKSTCPFIN:
-				mgr.SocksManager.SocksMessChan <- message
+				fallthrough
 			case protocol.UDPASSRES:
 				fallthrough
 			case protocol.SOCKSUDPDATA:

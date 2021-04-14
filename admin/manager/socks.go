@@ -31,9 +31,8 @@ type socksManager struct {
 	socksSeqMap map[uint64]string // map[seq]uuid  just for accelerate the speed of searching detail only by seq
 	socksMap    map[string]*socks // map[uuid]socks's detail
 
-	SocksTCPMessChan chan interface{}
-	SocksUDPMessChan chan interface{}
-	SocksReady       chan bool
+	SocksMessChan chan interface{}
+	SocksReady    chan bool
 
 	TaskChan   chan *SocksTask
 	ResultChan chan *socksResult
@@ -93,8 +92,7 @@ func newSocksManager() *socksManager {
 
 	manager.socksMap = make(map[string]*socks)
 	manager.socksSeqMap = make(map[uint64]string)
-	manager.SocksTCPMessChan = make(chan interface{}, 5)
-	manager.SocksUDPMessChan = make(chan interface{}, 5)
+	manager.SocksMessChan = make(chan interface{}, 5)
 	manager.SocksReady = make(chan bool)
 
 	manager.TaskChan = make(chan *SocksTask)

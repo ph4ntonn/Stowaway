@@ -43,8 +43,7 @@ func (admin *Admin) Run() {
 	// hanle all message comes from downstream
 	go admin.handleMessFromDownstream(console)
 	// run a dispatcher to dispatch different kinds of message
-	go handler.DispathSocksTCPMess(admin.mgr)
-	go handler.DispathSocksUDPMess(admin.mgr, admin.Topology, admin.Conn, admin.UserOptions.Secret)
+	go handler.DispathSocksMess(admin.mgr, admin.Topology, admin.Conn, admin.UserOptions.Secret)
 	go handler.DispatchForwardMess(admin.mgr)
 	go handler.DispatchBackwardMess(admin.mgr, admin.Topology, admin.Conn, admin.UserOptions.Secret)
 	go handler.DispatchFileMess(admin.mgr)
@@ -91,11 +90,11 @@ func (admin *Admin) handleMessFromDownstream(console *cli.Console) {
 		case protocol.SOCKSTCPDATA:
 			fallthrough
 		case protocol.SOCKSTCPFIN:
-			admin.mgr.SocksManager.SocksTCPMessChan <- message
+			fallthrough
 		case protocol.UDPASSSTART:
 			fallthrough
 		case protocol.SOCKSUDPDATA:
-			admin.mgr.SocksManager.SocksUDPMessChan <- message
+			admin.mgr.SocksManager.SocksMessChan <- message
 		case protocol.FORWARDREADY:
 			fallthrough
 		case protocol.FORWARDDATA:
