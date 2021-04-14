@@ -8,6 +8,7 @@ package handler
 
 import (
 	"Stowaway/agent/manager"
+	"Stowaway/global"
 	"Stowaway/protocol"
 	"Stowaway/utils"
 	"io"
@@ -24,14 +25,14 @@ func newShell() *Shell {
 	return new(Shell)
 }
 
-func (shell *Shell) start(component *protocol.MessageComponent) {
+func (shell *Shell) start() {
 	var cmd *exec.Cmd
 	var err error
 
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	shellResHeader := &protocol.Header{
-		Sender:      component.UUID,
+		Sender:      global.G_Component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.SHELLRES,
 		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))), // No need to set route when agent send mess to admin
@@ -39,7 +40,7 @@ func (shell *Shell) start(component *protocol.MessageComponent) {
 	}
 
 	shellResultHeader := &protocol.Header{
-		Sender:      component.UUID,
+		Sender:      global.G_Component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.SHELLRESULT,
 		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))), // No need to set route when agent send mess to admin
@@ -114,7 +115,7 @@ func (shell *Shell) input(command string) {
 	shell.stdin.Write([]byte(command))
 }
 
-func DispatchShellMess(mgr *manager.Manager, component *protocol.MessageComponent) {
+func DispatchShellMess(mgr *manager.Manager) {
 	shell := newShell()
 
 	for {
@@ -122,7 +123,7 @@ func DispatchShellMess(mgr *manager.Manager, component *protocol.MessageComponen
 
 		switch message.(type) {
 		case *protocol.ShellReq:
-			go shell.start(component)
+			go shell.start()
 		case *protocol.ShellCommand:
 			mess := message.(*protocol.ShellCommand)
 			shell.input(mess.Command)

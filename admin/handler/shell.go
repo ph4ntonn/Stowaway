@@ -8,12 +8,13 @@ package handler
 
 import (
 	"Stowaway/admin/manager"
+	"Stowaway/global"
 	"Stowaway/protocol"
 	"fmt"
 )
 
-func LetShellStart(component *protocol.MessageComponent, route string, uuid string) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
+func LetShellStart(route string, uuid string) {
+	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,

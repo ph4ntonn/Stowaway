@@ -9,18 +9,19 @@ package handler
 import (
 	"Stowaway/admin/manager"
 	"Stowaway/admin/topology"
+	"Stowaway/global"
 	"Stowaway/protocol"
 	"fmt"
 )
 
-func AddMemo(component *protocol.MessageComponent, taskChan chan *topology.TopoTask, info []string, uuid string, route string) {
+func AddMemo(taskChan chan *topology.TopoTask, info []string, uuid string, route string) {
 	var memo string
 
 	for _, i := range info {
 		memo = memo + " " + i
 	}
 
-	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	topoTask := &topology.TopoTask{
 		Mode: topology.UPDATEMEMO,
@@ -48,7 +49,7 @@ func AddMemo(component *protocol.MessageComponent, taskChan chan *topology.TopoT
 	fmt.Print("\n[*]Memo added!")
 }
 
-func DelMemo(component *protocol.MessageComponent, taskChan chan *topology.TopoTask, uuid string, route string) {
+func DelMemo(taskChan chan *topology.TopoTask, uuid string, route string) {
 	topoTask := &topology.TopoTask{
 		Mode: topology.UPDATEMEMO,
 		UUID: uuid,
@@ -56,7 +57,7 @@ func DelMemo(component *protocol.MessageComponent, taskChan chan *topology.TopoT
 	}
 	taskChan <- topoTask
 
-	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,

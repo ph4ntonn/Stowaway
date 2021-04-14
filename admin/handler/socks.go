@@ -9,6 +9,7 @@ package handler
 import (
 	"Stowaway/admin/manager"
 	"Stowaway/admin/topology"
+	"Stowaway/global"
 	"Stowaway/protocol"
 	"errors"
 	"fmt"
@@ -27,7 +28,7 @@ func NewSocks(port string) *Socks {
 	return socks
 }
 
-func (socks *Socks) LetSocks(component *protocol.MessageComponent, mgr *manager.Manager, route string, uuid string) error {
+func (socks *Socks) LetSocks(mgr *manager.Manager, route string, uuid string) error {
 	addr := fmt.Sprintf("0.0.0.0:%s", socks.Port)
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -52,7 +53,7 @@ func (socks *Socks) LetSocks(component *protocol.MessageComponent, mgr *manager.
 		return err
 	}
 
-	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
@@ -78,12 +79,12 @@ func (socks *Socks) LetSocks(component *protocol.MessageComponent, mgr *manager.
 		return err
 	}
 
-	go socks.handleSocksListener(component, mgr, listener, route, uuid)
+	go socks.handleSocksListener(mgr, listener, route, uuid)
 
 	return nil
 }
 
-func (socks *Socks) handleSocksListener(component *protocol.MessageComponent, mgr *manager.Manager, listener net.Listener, route string, uuid string) {
+func (socks *Socks) handleSocksListener(mgr *manager.Manager, listener net.Listener, route string, uuid string) {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -115,12 +116,12 @@ func (socks *Socks) handleSocksListener(component *protocol.MessageComponent, mg
 		}
 
 		// handle it!
-		go socks.handleSocks(component, mgr, conn, route, uuid, seq)
+		go socks.handleSocks(mgr, conn, route, uuid, seq)
 	}
 }
 
-func (socks *Socks) handleSocks(component *protocol.MessageComponent, mgr *manager.Manager, conn net.Conn, route string, uuid string, seq uint64) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
+func (socks *Socks) handleSocks(mgr *manager.Manager, conn net.Conn, route string, uuid string, seq uint64) {
+	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
@@ -227,18 +228,12 @@ func (socks *Socks) handleSocks(component *protocol.MessageComponent, mgr *manag
 	}
 }
 
-func startUDPAss(mgr *manager.Manager, topo *topology.Topology, conn net.Conn, secret string, seq uint64) {
+func startUDPAss(mgr *manager.Manager, topo *topology.Topology, seq uint64) {
 	var (
 		err             error
 		udpListenerAddr *net.UDPAddr
 		udpListener     *net.UDPConn
 	)
-
-	component := &protocol.MessageComponent{
-		Secret: secret,
-		Conn:   conn,
-		UUID:   protocol.ADMIN_UUID,
-	}
 
 	mgrTask := &manager.SocksTask{
 		Mode: manager.S_GETUDPSTARTINFO,
@@ -269,7 +264,7 @@ func startUDPAss(mgr *manager.Manager, topo *topology.Topology, conn net.Conn, s
 		OK:  0,
 	}
 
-	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	defer func() {
 		if err != nil {
@@ -302,7 +297,7 @@ func startUDPAss(mgr *manager.Manager, topo *topology.Topology, conn net.Conn, s
 			return
 		}
 
-		go handleUDPAss(mgr, component, udpListener, route, uuid, seq)
+		go handleUDPAss(mgr, udpListener, route, uuid, seq)
 
 		succMess := &protocol.UDPAssRes{
 			Seq:     seq,
@@ -319,8 +314,8 @@ func startUDPAss(mgr *manager.Manager, topo *topology.Topology, conn net.Conn, s
 	}
 }
 
-func handleUDPAss(mgr *manager.Manager, component *protocol.MessageComponent, listener *net.UDPConn, route string, uuid string, seq uint64) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
+func handleUDPAss(mgr *manager.Manager, listener *net.UDPConn, route string, uuid string, seq uint64) {
+	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	dataHeader := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
@@ -400,7 +395,7 @@ func StopSocks(mgr *manager.Manager, uuid string) {
 	<-mgr.SocksManager.ResultChan
 }
 
-func DispathSocksMess(mgr *manager.Manager, topo *topology.Topology, conn net.Conn, secret string) {
+func DispathSocksMess(mgr *manager.Manager, topo *topology.Topology) {
 	for {
 		message := <-mgr.SocksManager.SocksMessChan
 
@@ -432,7 +427,7 @@ func DispathSocksMess(mgr *manager.Manager, topo *topology.Topology, conn net.Co
 			mgr.SocksManager.TaskChan <- mgrTask
 		case *protocol.UDPAssStart:
 			mess := message.(*protocol.UDPAssStart)
-			go startUDPAss(mgr, topo, conn, secret, mess.Seq)
+			go startUDPAss(mgr, topo, mess.Seq)
 		case *protocol.SocksUDPData:
 			mess := message.(*protocol.SocksUDPData)
 			mgrTask := &manager.SocksTask{

@@ -7,19 +7,20 @@
 package handler
 
 import (
+	"Stowaway/global"
 	"Stowaway/protocol"
 	"Stowaway/utils"
 	"fmt"
 )
 
-func LetListen(component *protocol.MessageComponent, route string, uuid string, addr string) {
+func LetListen(route string, uuid string, addr string) {
 	normalAddr, _, err := utils.CheckIPPort(addr)
 	if err != nil {
 		fmt.Printf("[*]Error: %s\n", err.Error())
 		return
 	}
 
-	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,

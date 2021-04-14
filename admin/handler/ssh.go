@@ -8,6 +8,7 @@ package handler
 
 import (
 	"Stowaway/admin/manager"
+	"Stowaway/global"
 	"Stowaway/protocol"
 	"Stowaway/utils"
 	"fmt"
@@ -34,7 +35,7 @@ func NewSSH(addr string) *SSH {
 	return ssh
 }
 
-func (ssh *SSH) LetSSH(component *protocol.MessageComponent, route string, uuid string) error {
+func (ssh *SSH) LetSSH(route string, uuid string) error {
 	_, _, err := utils.CheckIPPort(ssh.Addr)
 	if err != nil {
 		return err
@@ -46,7 +47,7 @@ func (ssh *SSH) LetSSH(component *protocol.MessageComponent, route string, uuid 
 		}
 	}
 
-	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,

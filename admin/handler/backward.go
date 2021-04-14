@@ -3,6 +3,7 @@ package handler
 import (
 	"Stowaway/admin/manager"
 	"Stowaway/admin/topology"
+	"Stowaway/global"
 	"Stowaway/protocol"
 	"fmt"
 	"net"
@@ -21,8 +22,8 @@ func NewBackward(lPort, rPort string) *Backward {
 	return backward
 }
 
-func (backward *Backward) LetBackward(component *protocol.MessageComponent, mgr *manager.Manager, route string, uuid string) error {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
+func (backward *Backward) LetBackward(mgr *manager.Manager, route string, uuid string) error {
+	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 	// test if node can listen on assigned port
 	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
@@ -60,8 +61,8 @@ func (backward *Backward) LetBackward(component *protocol.MessageComponent, mgr 
 	return nil
 }
 
-func (backward *Backward) start(mgr *manager.Manager, topo *topology.Topology, conn net.Conn, secret string, uuid string) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(conn, secret, protocol.ADMIN_UUID)
+func (backward *Backward) start(mgr *manager.Manager, topo *topology.Topology, uuid string) {
+	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 	// first , admin need to know the route to target node,so ask topo for the answer
 	topoTask := &topology.TopoTask{
 		Mode: topology.GETROUTE,
@@ -196,7 +197,7 @@ func (backward *Backward) start(mgr *manager.Manager, topo *topology.Topology, c
 	}
 }
 
-func DispatchBackwardMess(mgr *manager.Manager, topo *topology.Topology, conn net.Conn, secret string) {
+func DispatchBackwardMess(mgr *manager.Manager, topo *topology.Topology) {
 	for {
 		message := <-mgr.BackwardManager.BackwardMessChan
 
@@ -212,7 +213,7 @@ func DispatchBackwardMess(mgr *manager.Manager, topo *topology.Topology, conn ne
 			// get the start message from node,so just start a backward
 			mess := message.(*protocol.BackwardStart)
 			backward := NewBackward(mess.LPort, mess.RPort)
-			go backward.start(mgr, topo, conn, secret, mess.UUID)
+			go backward.start(mgr, topo, mess.UUID)
 		case *protocol.BackwardData:
 			// get node's data,just put it in the corresponding chan
 			mess := message.(*protocol.BackwardData)

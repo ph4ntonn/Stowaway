@@ -7,6 +7,7 @@
 package share
 
 import (
+	"Stowaway/global"
 	"Stowaway/protocol"
 	"fmt"
 	"io"
@@ -49,17 +50,17 @@ func NewFile() *MyFile {
 	return file
 }
 
-func (file *MyFile) SendFileStat(component *protocol.MessageComponent, route string, targetUUID string, identity int) error {
+func (file *MyFile) SendFileStat(route string, targetUUID string, identity int) error {
 	var err error
 	var sMessage protocol.Message
 	if identity == ADMIN {
-		sMessage = protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
+		sMessage = protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 	} else {
-		sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+		sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 	}
 
 	statHeader := &protocol.Header{
-		Sender:      component.UUID,
+		Sender:      global.G_Component.UUID,
 		Accepter:    targetUUID,
 		MessageType: protocol.FILESTATREQ,
 		RouteLen:    uint32(len([]byte(route))),
@@ -67,7 +68,7 @@ func (file *MyFile) SendFileStat(component *protocol.MessageComponent, route str
 	}
 
 	downHeader := &protocol.Header{
-		Sender:      component.UUID,
+		Sender:      global.G_Component.UUID,
 		Accepter:    targetUUID,
 		MessageType: protocol.FILEDOWNRES,
 		RouteLen:    uint32(len([]byte(route))),
@@ -116,18 +117,18 @@ func (file *MyFile) SendFileStat(component *protocol.MessageComponent, route str
 	return nil
 }
 
-func (file *MyFile) CheckFileStat(component *protocol.MessageComponent, route string, targetUUID string, identity int) error {
+func (file *MyFile) CheckFileStat(route string, targetUUID string, identity int) error {
 	var err error
 	var sMessage protocol.Message
 
 	if identity == ADMIN {
-		sMessage = protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
+		sMessage = protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 	} else {
-		sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+		sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 	}
 
 	header := &protocol.Header{
-		Sender:      component.UUID,
+		Sender:      global.G_Component.UUID,
 		Accepter:    targetUUID,
 		MessageType: protocol.FILESTATRES,
 		RouteLen:    uint32(len([]byte(route))),
@@ -162,16 +163,16 @@ func (file *MyFile) CheckFileStat(component *protocol.MessageComponent, route st
 	return nil
 }
 
-func (file *MyFile) Upload(component *protocol.MessageComponent, route string, targetUUID string, identity int) {
+func (file *MyFile) Upload(route string, targetUUID string, identity int) {
 	var sMessage protocol.Message
 	if identity == ADMIN {
-		sMessage = protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
+		sMessage = protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 	} else {
-		sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+		sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 	}
 
 	dataHeader := &protocol.Header{
-		Sender:      component.UUID,
+		Sender:      global.G_Component.UUID,
 		Accepter:    targetUUID,
 		MessageType: protocol.FILEDATA,
 		RouteLen:    uint32(len([]byte(route))),
@@ -179,7 +180,7 @@ func (file *MyFile) Upload(component *protocol.MessageComponent, route string, t
 	}
 
 	errHeader := &protocol.Header{
-		Sender:      component.UUID,
+		Sender:      global.G_Component.UUID,
 		Accepter:    targetUUID,
 		MessageType: protocol.FILEERR,
 		RouteLen:    uint32(len([]byte(route))),
@@ -230,7 +231,7 @@ func (file *MyFile) Upload(component *protocol.MessageComponent, route string, t
 
 }
 
-func (file *MyFile) Receive(component *protocol.MessageComponent, route string, targetUUID string, identity int) {
+func (file *MyFile) Receive(route string, targetUUID string, identity int) {
 	if identity == ADMIN {
 		fmt.Println("\n[*]File transmitting, please wait...")
 		file.StatusChan <- &Status{Stat: START}
@@ -257,11 +258,11 @@ func (file *MyFile) Receive(component *protocol.MessageComponent, route string, 
 	}
 }
 
-func (file *MyFile) Ask4Download(component *protocol.MessageComponent, route string, targetUUID string) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
+func (file *MyFile) Ask4Download(route string, targetUUID string) {
+	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
-		Sender:      component.UUID,
+		Sender:      global.G_Component.UUID,
 		Accepter:    targetUUID,
 		MessageType: protocol.FILEDOWNREQ,
 		RouteLen:    uint32(len([]byte(route))),

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"Stowaway/agent/manager"
+	"Stowaway/global"
 	"Stowaway/protocol"
 	"fmt"
 	"net"
@@ -21,7 +22,7 @@ func newBackward(listener net.Listener, lPort, rPort string) *Backward {
 	return backward
 }
 
-func (backward *Backward) start(mgr *manager.Manager, component *protocol.MessageComponent) {
+func (backward *Backward) start(mgr *manager.Manager) {
 	mgrTask := &manager.BackwardTask{
 		Mode:     manager.B_NEWBACKWARD,
 		Listener: backward.Listener,
@@ -31,7 +32,7 @@ func (backward *Backward) start(mgr *manager.Manager, component *protocol.Messag
 	mgr.BackwardManager.TaskChan <- mgrTask
 	<-mgr.BackwardManager.ResultChan
 
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	for {
 		conn, err := backward.Listener.Accept()
@@ -41,7 +42,7 @@ func (backward *Backward) start(mgr *manager.Manager, component *protocol.Messag
 		}
 
 		seqHeader := &protocol.Header{
-			Sender:      component.UUID,
+			Sender:      global.G_Component.UUID,
 			Accepter:    protocol.ADMIN_UUID,
 			MessageType: protocol.BACKWARDSTART,
 			RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
@@ -49,8 +50,8 @@ func (backward *Backward) start(mgr *manager.Manager, component *protocol.Messag
 		}
 
 		seqMess := &protocol.BackwardStart{
-			UUIDLen:  uint16(len(component.UUID)),
-			UUID:     component.UUID,
+			UUIDLen:  uint16(len(global.G_Component.UUID)),
+			UUID:     global.G_Component.UUID,
 			LPortLen: uint16(len(backward.Lport)),
 			LPort:    backward.Lport,
 			RPortLen: uint16(len(backward.Rport)),
@@ -77,16 +78,16 @@ func (backward *Backward) start(mgr *manager.Manager, component *protocol.Messag
 			return
 		}
 
-		go backward.handleBackward(mgr, component, conn, seq)
+		go backward.handleBackward(mgr, conn, seq)
 	}
 }
 
-func (backward *Backward) handleBackward(mgr *manager.Manager, component *protocol.MessageComponent, conn net.Conn, seq uint64) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+func (backward *Backward) handleBackward(mgr *manager.Manager, conn net.Conn, seq uint64) {
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	defer func() {
 		finHeader := &protocol.Header{
-			Sender:      component.UUID,
+			Sender:      global.G_Component.UUID,
 			Accepter:    protocol.ADMIN_UUID,
 			MessageType: protocol.BACKWARDFIN,
 			RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
@@ -140,7 +141,7 @@ func (backward *Backward) handleBackward(mgr *manager.Manager, component *protoc
 	}()
 
 	dataHeader := &protocol.Header{
-		Sender:      component.UUID,
+		Sender:      global.G_Component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.BACKWARDDATA,
 		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
@@ -167,11 +168,11 @@ func (backward *Backward) handleBackward(mgr *manager.Manager, component *protoc
 	}
 }
 
-func testBackward(mgr *manager.Manager, component *protocol.MessageComponent, lPort, rPort string) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+func testBackward(mgr *manager.Manager, lPort, rPort string) {
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
-		Sender:      component.UUID,
+		Sender:      global.G_Component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.BACKWARDREADY,
 		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
@@ -196,20 +197,20 @@ func testBackward(mgr *manager.Manager, component *protocol.MessageComponent, lP
 
 	backward := newBackward(listener, lPort, rPort)
 
-	go backward.start(mgr, component)
+	go backward.start(mgr)
 
 	protocol.ConstructMessage(sMessage, header, succMess)
 	sMessage.SendMessage()
 }
 
-func DispatchBackwardMess(mgr *manager.Manager, component *protocol.MessageComponent) {
+func DispatchBackwardMess(mgr *manager.Manager) {
 	for {
 		message := <-mgr.BackwardManager.BackwardMessChan
 
 		switch message.(type) {
 		case *protocol.BackwardTest:
 			mess := message.(*protocol.BackwardTest)
-			go testBackward(mgr, component, mess.LPort, mess.RPort)
+			go testBackward(mgr, mess.LPort, mess.RPort)
 		case *protocol.BackwardSeq:
 			mess := message.(*protocol.BackwardSeq)
 
@@ -225,10 +226,10 @@ func DispatchBackwardMess(mgr *manager.Manager, component *protocol.MessageCompo
 				result.SeqChan <- mess.Seq
 				<-mgr.BackwardManager.SeqReady
 			} else {
-				sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+				sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 				finHeader := &protocol.Header{
-					Sender:      component.UUID,
+					Sender:      global.G_Component.UUID,
 					Accepter:    protocol.ADMIN_UUID,
 					MessageType: protocol.BACKWARDFIN,
 					RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),

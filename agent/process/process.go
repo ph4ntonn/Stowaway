@@ -9,51 +9,45 @@ package process
 
 import (
 	"Stowaway/agent/handler"
-	"Stowaway/agent/initial"
 	"Stowaway/agent/manager"
+	"Stowaway/global"
 	"Stowaway/protocol"
 	"Stowaway/share"
 	"Stowaway/utils"
 	"log"
-	"net"
 	"os"
 )
 
 type Agent struct {
 	UUID string
 	Memo string
-
-	Conn        net.Conn
-	UserOptions *initial.Options
 }
 
-func NewAgent(options *initial.Options) *Agent {
+func NewAgent() *Agent {
 	agent := new(Agent)
 	agent.UUID = protocol.TEMP_UUID
-	agent.UserOptions = options
 	return agent
 }
 
 func (agent *Agent) Run() {
-	component := &protocol.MessageComponent{Secret: agent.UserOptions.Secret, Conn: agent.Conn, UUID: agent.UUID}
 	agent.sendMyInfo()
 	// run manager
 	mgr := manager.NewManager(share.NewFile())
 	go mgr.Run()
 	// run dispatchers to dispatch all kinds of message
-	go handler.DispathSocksMess(mgr, component)
-	go handler.DispatchForwardMess(mgr, component)
-	go handler.DispatchBackwardMess(mgr, component)
-	go handler.DispatchFileMess(mgr, component)
-	go handler.DispatchSSHMess(mgr, component)
-	go handler.DispatchShellMess(mgr, component)
+	go handler.DispathSocksMess(mgr)
+	go handler.DispatchForwardMess(mgr)
+	go handler.DispatchBackwardMess(mgr)
+	go handler.DispatchFileMess(mgr)
+	go handler.DispatchSSHMess(mgr)
+	go handler.DispatchShellMess(mgr)
 	// process data from upstream
-	agent.handleDataFromUpstream(mgr, component)
+	agent.handleDataFromUpstream(mgr)
 	//agent.handleDataFromDownstream()
 }
 
 func (agent *Agent) sendMyInfo() {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(agent.Conn, agent.UserOptions.Secret, agent.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 	header := &protocol.Header{
 		Sender:      agent.UUID,
 		Accepter:    protocol.ADMIN_UUID,
@@ -77,8 +71,8 @@ func (agent *Agent) sendMyInfo() {
 	sMessage.SendMessage()
 }
 
-func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager, component *protocol.MessageComponent) {
-	rMessage := protocol.PrepareAndDecideWhichRProtoFromUpper(agent.Conn, agent.UserOptions.Secret, agent.UUID)
+func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager) {
+	rMessage := protocol.PrepareAndDecideWhichRProtoFromUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	for {
 		header, message, err := protocol.DestructMessage(rMessage)

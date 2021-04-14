@@ -8,10 +8,12 @@ package main
 
 import (
 	"log"
+	"net"
 	"runtime"
 
 	"Stowaway/agent/initial"
 	"Stowaway/agent/process"
+	"Stowaway/global"
 )
 
 func init() {
@@ -21,18 +23,21 @@ func init() {
 func main() {
 	options := initial.ParseOptions()
 
-	agent := process.NewAgent(options)
+	agent := process.NewAgent()
 
+	var conn net.Conn
 	switch options.Mode {
 	case initial.NORMAL_PASSIVE:
-		agent.Conn, agent.UUID = initial.NormalPassive(options)
+		conn, agent.UUID = initial.NormalPassive(options)
 	case initial.NORMAL_RECONNECT_ACTIVE:
 		fallthrough
 	case initial.NORMAL_ACTIVE:
-		agent.Conn, agent.UUID = initial.NormalActive(options)
+		conn, agent.UUID = initial.NormalActive(options)
 	default:
 		log.Fatal("[*]Unknown Mode")
 	}
+
+	global.InitialGComponent(conn, options.Secret, agent.UUID)
 
 	agent.Run()
 }

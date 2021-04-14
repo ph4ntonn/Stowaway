@@ -8,6 +8,7 @@ package handler
 
 import (
 	"Stowaway/admin/manager"
+	"Stowaway/global"
 	"Stowaway/protocol"
 	"fmt"
 	"net"
@@ -25,14 +26,14 @@ func NewForward(port, addr string) *Forward {
 	return forward
 }
 
-func (forward *Forward) LetForward(component *protocol.MessageComponent, mgr *manager.Manager, route string, uuid string) error {
+func (forward *Forward) LetForward(mgr *manager.Manager, route string, uuid string) error {
 	listenAddr := fmt.Sprintf("0.0.0.0:%s", forward.Port)
 	listener, err := net.Listen("tcp", listenAddr)
 	if err != nil {
 		return err
 	}
 
-	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
@@ -67,12 +68,12 @@ func (forward *Forward) LetForward(component *protocol.MessageComponent, mgr *ma
 	mgr.ForwardManager.TaskChan <- mgrTask
 	<-mgr.ForwardManager.ResultChan
 
-	go forward.handleForwardListener(component, mgr, listener, route, uuid)
+	go forward.handleForwardListener(mgr, listener, route, uuid)
 
 	return nil
 }
 
-func (forward *Forward) handleForwardListener(component *protocol.MessageComponent, mgr *manager.Manager, listener net.Listener, route string, uuid string) {
+func (forward *Forward) handleForwardListener(mgr *manager.Manager, listener net.Listener, route string, uuid string) {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -103,12 +104,12 @@ func (forward *Forward) handleForwardListener(component *protocol.MessageCompone
 			return
 		}
 
-		go forward.handleForward(component, mgr, conn, route, uuid, seq)
+		go forward.handleForward(mgr, conn, route, uuid, seq)
 	}
 }
 
-func (forward *Forward) handleForward(component *protocol.MessageComponent, mgr *manager.Manager, conn net.Conn, route string, uuid string, seq uint64) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
+func (forward *Forward) handleForward(mgr *manager.Manager, conn net.Conn, route string, uuid string, seq uint64) {
+	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 	// tell agent to start
 	startHeader := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,

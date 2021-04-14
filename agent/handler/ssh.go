@@ -11,6 +11,7 @@ import (
 	"io"
 
 	"Stowaway/agent/manager"
+	"Stowaway/global"
 	"Stowaway/protocol"
 	"Stowaway/utils"
 
@@ -39,14 +40,14 @@ func newSSH() *SSH {
 }
 
 // StartSSH 启动ssh
-func (mySSH *SSH) start(component *protocol.MessageComponent) {
+func (mySSH *SSH) start() {
 	var authPayload ssh.AuthMethod
 	var err error
 
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	sshResheader := &protocol.Header{
-		Sender:      component.UUID,
+		Sender:      global.G_Component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.SSHRES,
 		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))), // No need to set route when agent send mess to admin
@@ -54,7 +55,7 @@ func (mySSH *SSH) start(component *protocol.MessageComponent) {
 	}
 
 	sshResultheader := &protocol.Header{
-		Sender:      component.UUID,
+		Sender:      global.G_Component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.SSHRESULT,
 		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))), // No need to set route when agent send mess to admin
@@ -167,7 +168,7 @@ func (mySSH *SSH) input(command string) {
 	mySSH.stdin.Write([]byte(command))
 }
 
-func DispatchSSHMess(mgr *manager.Manager, component *protocol.MessageComponent) {
+func DispatchSSHMess(mgr *manager.Manager) {
 	mySSH := newSSH()
 
 	for {
@@ -181,7 +182,7 @@ func DispatchSSHMess(mgr *manager.Manager, component *protocol.MessageComponent)
 			mySSH.Username = mess.Username
 			mySSH.Password = mess.Password
 			mySSH.Certificate = mess.Certificate
-			go mySSH.start(component)
+			go mySSH.start()
 		case *protocol.SSHCommand:
 			mess := message.(*protocol.SSHCommand)
 			mySSH.input(mess.Command)

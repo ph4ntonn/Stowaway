@@ -8,6 +8,7 @@ package handler
 
 import (
 	"Stowaway/agent/manager"
+	"Stowaway/global"
 	"Stowaway/protocol"
 	"Stowaway/utils"
 	"fmt"
@@ -36,10 +37,11 @@ func newSocks() *Socks {
 	return new(Socks)
 }
 
-func (socks *Socks) start(mgr *manager.Manager, component *protocol.MessageComponent) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+func (socks *Socks) start(mgr *manager.Manager) {
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+
 	header := &protocol.Header{
-		Sender:      component.UUID,
+		Sender:      global.G_Component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.SOCKSREADY,
 		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))), // No need to set route when agent send mess to admin
@@ -69,14 +71,14 @@ func (socks *Socks) start(mgr *manager.Manager, component *protocol.MessageCompo
 	sMessage.SendMessage()
 }
 
-func (socks *Socks) handleSocks(mgr *manager.Manager, component *protocol.MessageComponent, dataChan chan []byte, seq uint64) {
+func (socks *Socks) handleSocks(mgr *manager.Manager, dataChan chan []byte, seq uint64) {
 	setting := new(Setting)
 
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	defer func() { // no matter what happened, after the function return,tell admin that works done
 		finHeader := &protocol.Header{
-			Sender:      component.UUID,
+			Sender:      global.G_Component.UUID,
 			Accepter:    protocol.ADMIN_UUID,
 			MessageType: protocol.SOCKSTCPFIN,
 			RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))), // No need to set route when agent send mess to admin
@@ -97,32 +99,32 @@ func (socks *Socks) handleSocks(mgr *manager.Manager, component *protocol.Messag
 			if !ok { //重连后原先引用失效，当chan释放后，若不捕捉，会无限循环
 				return
 			}
-			socks.checkMethod(component, setting, data, seq)
+			socks.checkMethod(setting, data, seq)
 		} else if setting.isAuthed == false && setting.method == "PASSWORD" {
 			data, ok := <-dataChan
 			if !ok {
 				return
 			}
 
-			socks.auth(component, setting, data, seq)
+			socks.auth(setting, data, seq)
 		} else if setting.isAuthed == true && setting.tcpConnected == false && !setting.isUDP {
 			data, ok := <-dataChan
 			if !ok {
 				return
 			}
 
-			socks.buildConn(mgr, component, setting, data, seq)
+			socks.buildConn(mgr, setting, data, seq)
 
 			if setting.tcpConnected == false && !setting.isUDP {
 				return
 			}
 		} else if setting.isAuthed == true && setting.tcpConnected == true && !setting.isUDP { //All done!
 			go proxyC2STCP(setting.tcpConn, dataChan)
-			proxyS2CTCP(component, setting.tcpConn, seq)
+			proxyS2CTCP(setting.tcpConn, seq)
 			return
 		} else if setting.isAuthed == true && setting.isUDP && setting.success {
 			go proxyC2SUDP(mgr, setting.udpListener, seq)
-			proxyS2CUDP(mgr, component, setting.udpListener, seq)
+			proxyS2CUDP(mgr, setting.udpListener, seq)
 			return
 		} else {
 			return
@@ -130,11 +132,11 @@ func (socks *Socks) handleSocks(mgr *manager.Manager, component *protocol.Messag
 	}
 }
 
-func (socks *Socks) checkMethod(component *protocol.MessageComponent, setting *Setting, data []byte, seq uint64) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+func (socks *Socks) checkMethod(setting *Setting, data []byte, seq uint64) {
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
-		Sender:      component.UUID,
+		Sender:      global.G_Component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.SOCKSTCPDATA,
 		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))), // No need to set route when agent send mess to admin
@@ -210,11 +212,11 @@ func (socks *Socks) checkMethod(component *protocol.MessageComponent, setting *S
 	setting.method = "ILLEGAL"
 }
 
-func (socks *Socks) auth(component *protocol.MessageComponent, setting *Setting, data []byte, seq uint64) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+func (socks *Socks) auth(setting *Setting, data []byte, seq uint64) {
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
-		Sender:      component.UUID,
+		Sender:      global.G_Component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.SOCKSTCPDATA,
 		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
@@ -256,11 +258,11 @@ func (socks *Socks) auth(component *protocol.MessageComponent, setting *Setting,
 	setting.isAuthed = true
 }
 
-func (socks *Socks) buildConn(mgr *manager.Manager, component *protocol.MessageComponent, setting *Setting, data []byte, seq uint64) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+func (socks *Socks) buildConn(mgr *manager.Manager, setting *Setting, data []byte, seq uint64) {
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
-		Sender:      component.UUID,
+		Sender:      global.G_Component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.SOCKSTCPDATA,
 		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))), // No need to set route when agent send mess to admin
@@ -284,11 +286,11 @@ func (socks *Socks) buildConn(mgr *manager.Manager, component *protocol.MessageC
 	if data[0] == 0x05 {
 		switch data[1] {
 		case 0x01:
-			tcpConnect(mgr, component, setting, data, seq, length)
+			tcpConnect(mgr, setting, data, seq, length)
 		case 0x02:
-			tcpBind(mgr, component, setting, data, seq, length)
+			tcpBind(mgr, setting, data, seq, length)
 		case 0x03:
-			udpAssociate(mgr, component, setting, data, seq, length)
+			udpAssociate(mgr, setting, data, seq, length)
 		default:
 			protocol.ConstructMessage(sMessage, header, failMess)
 			sMessage.SendMessage()
@@ -297,14 +299,14 @@ func (socks *Socks) buildConn(mgr *manager.Manager, component *protocol.MessageC
 }
 
 // TCPConnect 如果是代理tcp
-func tcpConnect(mgr *manager.Manager, component *protocol.MessageComponent, setting *Setting, data []byte, seq uint64, length int) {
+func tcpConnect(mgr *manager.Manager, setting *Setting, data []byte, seq uint64, length int) {
 	var host string
 	var err error
 
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
-		Sender:      component.UUID,
+		Sender:      global.G_Component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.SOCKSTCPDATA,
 		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
@@ -387,11 +389,11 @@ func proxyC2STCP(conn net.Conn, dataChan chan []byte) {
 	}
 }
 
-func proxyS2CTCP(component *protocol.MessageComponent, conn net.Conn, seq uint64) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+func proxyS2CTCP(conn net.Conn, seq uint64) {
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
-		Sender:      component.UUID,
+		Sender:      global.G_Component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.SOCKSTCPDATA,
 		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))), // No need to set route when agent send mess to admin
@@ -418,7 +420,7 @@ func proxyS2CTCP(component *protocol.MessageComponent, conn net.Conn, seq uint64
 }
 
 // TCPBind TCPBind方式
-func tcpBind(mgr *manager.Manager, component *protocol.MessageComponent, setting *Setting, data []byte, seq uint64, length int) {
+func tcpBind(mgr *manager.Manager, setting *Setting, data []byte, seq uint64, length int) {
 	fmt.Println("Not ready") //limited use, add to Todo
 	setting.tcpConnected = false
 }
@@ -438,13 +440,13 @@ func (addr *socksLocalAddr) byteArray() []byte {
 
 // Based on rfc1928,agent must send message strictly
 // UDPAssociate UDPAssociate方式
-func udpAssociate(mgr *manager.Manager, component *protocol.MessageComponent, setting *Setting, data []byte, seq uint64, length int) {
+func udpAssociate(mgr *manager.Manager, setting *Setting, data []byte, seq uint64, length int) {
 	setting.isUDP = true
 
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	dataHeader := &protocol.Header{
-		Sender:      component.UUID,
+		Sender:      global.G_Component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.SOCKSTCPDATA,
 		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
@@ -452,7 +454,7 @@ func udpAssociate(mgr *manager.Manager, component *protocol.MessageComponent, se
 	}
 
 	assHeader := &protocol.Header{
-		Sender:      component.UUID,
+		Sender:      global.G_Component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.UDPASSSTART,
 		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
@@ -664,11 +666,11 @@ func proxyC2SUDP(mgr *manager.Manager, listener *net.UDPConn, seq uint64) {
 }
 
 // proxyS2CUDP 代理S-->Cudp流量
-func proxyS2CUDP(mgr *manager.Manager, component *protocol.MessageComponent, listener *net.UDPConn, seq uint64) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+func proxyS2CUDP(mgr *manager.Manager, listener *net.UDPConn, seq uint64) {
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
-		Sender:      component.UUID,
+		Sender:      global.G_Component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.SOCKSUDPDATA,
 		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
@@ -713,7 +715,7 @@ func proxyS2CUDP(mgr *manager.Manager, component *protocol.MessageComponent, lis
 	}
 }
 
-func DispathSocksMess(mgr *manager.Manager, component *protocol.MessageComponent) {
+func DispathSocksMess(mgr *manager.Manager) {
 	socks := newSocks()
 
 	for {
@@ -724,7 +726,7 @@ func DispathSocksMess(mgr *manager.Manager, component *protocol.MessageComponent
 			mess := message.(*protocol.SocksStart)
 			socks.Username = mess.Username
 			socks.Password = mess.Password
-			go socks.start(mgr, component)
+			go socks.start(mgr)
 		case *protocol.SocksTCPData:
 			mess := message.(*protocol.SocksTCPData)
 			mgrTask := &manager.SocksTask{
@@ -738,7 +740,7 @@ func DispathSocksMess(mgr *manager.Manager, component *protocol.MessageComponent
 
 			// if not exist
 			if !result.SocksSeqExist {
-				go socks.handleSocks(mgr, component, result.DataChan, mess.Seq)
+				go socks.handleSocks(mgr, result.DataChan, mess.Seq)
 			}
 		case *protocol.SocksTCPFin:
 			mess := message.(*protocol.SocksTCPFin)

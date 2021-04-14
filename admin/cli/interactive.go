@@ -10,12 +10,12 @@ import (
 	"Stowaway/admin/handler"
 	"Stowaway/admin/manager"
 	"Stowaway/admin/topology"
+	"Stowaway/global"
 	"Stowaway/protocol"
 	"Stowaway/share"
 	"Stowaway/utils"
 	"bytes"
 	"fmt"
-	"net"
 	"os"
 	"strings"
 
@@ -29,9 +29,7 @@ const (
 
 type Console struct {
 	// Admin status
-	conn     net.Conn
 	topology *topology.Topology
-	secret   string
 	// console internal elements
 	status     string
 	ready      chan bool
@@ -51,9 +49,7 @@ func NewConsole() *Console {
 	return console
 }
 
-func (console *Console) Init(tTopology *topology.Topology, myManager *manager.Manager, conn net.Conn, secret string) {
-	console.conn = conn
-	console.secret = secret
+func (console *Console) Init(tTopology *topology.Topology, myManager *manager.Manager) {
 	console.topology = tTopology
 	console.mgr = myManager
 }
@@ -83,7 +79,7 @@ func (console *Console) mainPanel() {
 	for {
 		event := <-keysEvents
 		if event.Err != nil {
-			panic(event.Err)
+			continue
 		}
 		// under shell&&ssh mode,we cannot just erase the whole line and reprint,so there are two different ways to handle input
 		// BTW,all arrow stuff under shell&&ssh mode will be abandoned
@@ -357,12 +353,6 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 	topoResult = <-console.topology.ResultChan
 	route := topoResult.Route
 
-	component := &protocol.MessageComponent{
-		Secret: console.secret,
-		Conn:   console.conn,
-		UUID:   protocol.ADMIN_UUID,
-	}
-
 	console.ready <- true
 
 	for {
@@ -371,21 +361,21 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 
 		switch fCommand[0] {
 		case "addmemo":
-			handler.AddMemo(component, console.topology.TaskChan, fCommand[1:], uuid, route)
+			handler.AddMemo(console.topology.TaskChan, fCommand[1:], uuid, route)
 			console.ready <- true
 		case "delmemo":
 			if console.expectParams(fCommand, 1, NODE, 0) {
 				break
 			}
 
-			handler.DelMemo(component, console.topology.TaskChan, uuid, route)
+			handler.DelMemo(console.topology.TaskChan, uuid, route)
 			console.ready <- true
 		case "shell":
 			if console.expectParams(fCommand, 1, NODE, 0) {
 				break
 			}
 
-			handler.LetShellStart(component, route, uuid)
+			handler.LetShellStart(route, uuid)
 
 			fmt.Print("\r\n[*]Waiting for response.....")
 			fmt.Print("\r\n[*]MENTION!UNDER SHELL MODE ARROW UP/DOWN/LEFT/RIGHT ARE ALL ABANDONED!")
@@ -394,7 +384,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				fmt.Print("\r\n[*]Shell is started successfully!\r\n")
 				console.status = ""
 				console.shellMode = true
-				console.handleShellPanelCommand(component, route, uuid)
+				console.handleShellPanelCommand(route, uuid)
 				console.shellMode = false
 				console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
 			} else {
@@ -406,7 +396,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				break
 			}
 
-			handler.LetListen(component, route, uuid, fCommand[1])
+			handler.LetListen(route, uuid, fCommand[1])
 			console.ready <- true
 		case "ssh":
 			if console.expectParams(fCommand, 2, NODE, 0) {
@@ -447,7 +437,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				ssh.CertificatePath = console.pretreatInput()
 			}
 
-			err := ssh.LetSSH(component, route, uuid)
+			err := ssh.LetSSH(route, uuid)
 			if err != nil {
 				fmt.Printf("\r\n[*]Error: %s", err.Error())
 				console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
@@ -461,7 +451,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				fmt.Print("\r\n[*]Connect to target host via ssh successfully!")
 				console.status = ""
 				console.sshMode = true
-				console.handleSSHPanelCommand(component, route, uuid)
+				console.handleSSHPanelCommand(route, uuid)
 				console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
 				console.sshMode = false
 			} else {
@@ -483,7 +473,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			fmt.Printf("\r\n[*]Trying to listen on 0.0.0.0:%s......", fCommand[1])
 			fmt.Printf("\r\n[*]Waiting for agent's response......")
 
-			err := socks.LetSocks(component, console.mgr, route, uuid)
+			err := socks.LetSocks(console.mgr, route, uuid)
 
 			if err != nil {
 				fmt.Printf("\r\n[*]Error: %s", err.Error())
@@ -523,7 +513,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 
 			forward := handler.NewForward(fCommand[1], fCommand[2])
 
-			err := forward.LetForward(component, console.mgr, route, uuid)
+			err := forward.LetForward(console.mgr, route, uuid)
 			if err != nil {
 				fmt.Printf("\r\n[*]Error: %s", err.Error())
 			} else {
@@ -572,7 +562,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 
 			backward := handler.NewBackward(fCommand[2], fCommand[1])
 			// node is okay
-			err := backward.LetBackward(component, console.mgr, route, uuid)
+			err := backward.LetBackward(console.mgr, route, uuid)
 			if err != nil {
 				fmt.Printf("\r\n[*]Error: %s", err.Error())
 			} else {
@@ -588,11 +578,11 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			console.mgr.FileManager.File.FilePath = fCommand[1]
 			console.mgr.FileManager.File.FileName = fCommand[2]
 
-			err := console.mgr.FileManager.File.SendFileStat(component, route, uuid, share.ADMIN)
+			err := console.mgr.FileManager.File.SendFileStat(route, uuid, share.ADMIN)
 
 			if err == nil && <-console.mgr.ConsoleManager.OK {
 				go handler.StartBar(console.mgr.FileManager.File.StatusChan, console.mgr.FileManager.File.FileSize)
-				console.mgr.FileManager.File.Upload(component, route, uuid, share.ADMIN)
+				console.mgr.FileManager.File.Upload(route, uuid, share.ADMIN)
 			} else if err != nil {
 				fmt.Printf("\r\n[*]Error: %s", err.Error())
 			} else {
@@ -607,13 +597,13 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			console.mgr.FileManager.File.FilePath = fCommand[1]
 			console.mgr.FileManager.File.FileName = fCommand[2]
 
-			console.mgr.FileManager.File.Ask4Download(component, route, uuid)
+			console.mgr.FileManager.File.Ask4Download(route, uuid)
 
 			if <-console.mgr.ConsoleManager.OK {
-				err := console.mgr.FileManager.File.CheckFileStat(component, route, uuid, share.ADMIN)
+				err := console.mgr.FileManager.File.CheckFileStat(route, uuid, share.ADMIN)
 				if err == nil {
 					go handler.StartBar(console.mgr.FileManager.File.StatusChan, console.mgr.FileManager.File.FileSize)
-					console.mgr.FileManager.File.Receive(component, route, uuid, share.ADMIN)
+					console.mgr.FileManager.File.Receive(route, uuid, share.ADMIN)
 				}
 			} else {
 				fmt.Print("\r\n[*]Unable to download file!")
@@ -624,7 +614,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				break
 			}
 
-			handler.LetOffline(component, route, uuid)
+			handler.LetOffline(route, uuid)
 			console.ready <- true
 		case "":
 			if console.expectParams(fCommand, 1, NODE, 0) {
@@ -651,8 +641,8 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 	}
 }
 
-func (console *Console) handleShellPanelCommand(component *protocol.MessageComponent, route string, uuid string) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
+func (console *Console) handleShellPanelCommand(route string, uuid string) {
+	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
@@ -689,8 +679,8 @@ func (console *Console) handleShellPanelCommand(component *protocol.MessageCompo
 	}
 }
 
-func (console *Console) handleSSHPanelCommand(component *protocol.MessageComponent, route string, uuid string) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
+func (console *Console) handleSSHPanelCommand(route string, uuid string) {
+	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,

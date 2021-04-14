@@ -6,10 +6,13 @@
  */
 package handler
 
-import "Stowaway/protocol"
+import (
+	"Stowaway/global"
+	"Stowaway/protocol"
+)
 
-func LetOffline(component *protocol.MessageComponent, route string, uuid string) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(component.Conn, component.Secret, component.UUID)
+func LetOffline(route string, uuid string) {
+	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,

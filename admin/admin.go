@@ -9,7 +9,10 @@ package main
 import (
 	"Stowaway/admin/process"
 	"Stowaway/admin/topology"
+	"Stowaway/global"
+	"Stowaway/protocol"
 	"log"
+	"net"
 	"runtime"
 
 	"Stowaway/admin/cli"
@@ -25,20 +28,21 @@ func main() {
 
 	cli.Banner()
 
-	admin := process.NewAdmin(options)
-
 	topo := topology.NewTopology()
 	go topo.Run()
 
 	log.Println("[*]Waiting for new connection...")
+	var conn net.Conn
 	switch options.Mode {
 	case initial.NORMAL_ACTIVE:
-		admin.Conn = initial.NormalActive(options, topo)
+		conn = initial.NormalActive(options, topo)
 	case initial.NORMAL_PASSIVE:
-		admin.Conn = initial.NormalPassive(options, topo)
+		conn = initial.NormalPassive(options, topo)
 	default:
 		log.Fatal("[*]Unknown Mode")
 	}
+
+	admin := process.NewAdmin()
 
 	admin.Topology = topo
 
@@ -47,6 +51,8 @@ func main() {
 	}
 	topo.TaskChan <- topoTask
 	<-topo.ResultChan
+
+	global.InitialGComponent(conn, options.Secret, protocol.ADMIN_UUID)
 
 	admin.Run()
 }

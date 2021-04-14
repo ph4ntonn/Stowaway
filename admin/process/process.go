@@ -9,29 +9,22 @@ package process
 import (
 	"Stowaway/admin/cli"
 	"Stowaway/admin/handler"
-	"Stowaway/admin/initial"
 	"Stowaway/admin/manager"
 	"Stowaway/admin/topology"
+	"Stowaway/global"
 	"Stowaway/protocol"
 	"Stowaway/share"
 	"log"
-	"net"
 	"os"
 )
 
 type Admin struct {
-	Conn        net.Conn
-	Topology    *topology.Topology
-	UserOptions *initial.Options
-
-	// manager that needs to be shared with console
-	mgr *manager.Manager
+	Topology *topology.Topology
+	mgr      *manager.Manager
 }
 
-func NewAdmin(options *initial.Options) *Admin {
-	admin := new(Admin)
-	admin.UserOptions = options
-	return admin
+func NewAdmin() *Admin {
+	return new(Admin)
 }
 
 func (admin *Admin) Run() {
@@ -39,13 +32,13 @@ func (admin *Admin) Run() {
 	go admin.mgr.Run()
 	// Init console
 	console := cli.NewConsole()
-	console.Init(admin.Topology, admin.mgr, admin.Conn, admin.UserOptions.Secret)
+	console.Init(admin.Topology, admin.mgr)
 	// hanle all message comes from downstream
 	go admin.handleMessFromDownstream(console)
 	// run a dispatcher to dispatch different kinds of message
-	go handler.DispathSocksMess(admin.mgr, admin.Topology, admin.Conn, admin.UserOptions.Secret)
+	go handler.DispathSocksMess(admin.mgr, admin.Topology)
 	go handler.DispatchForwardMess(admin.mgr)
-	go handler.DispatchBackwardMess(admin.mgr, admin.Topology, admin.Conn, admin.UserOptions.Secret)
+	go handler.DispatchBackwardMess(admin.mgr, admin.Topology)
 	go handler.DispatchFileMess(admin.mgr)
 	go handler.DispatchSSHMess(admin.mgr)
 	go handler.DispatchShellMess(admin.mgr)
@@ -55,7 +48,7 @@ func (admin *Admin) Run() {
 }
 
 func (admin *Admin) handleMessFromDownstream(console *cli.Console) {
-	rMessage := protocol.PrepareAndDecideWhichRProtoFromUpper(admin.Conn, admin.UserOptions.Secret, protocol.ADMIN_UUID)
+	rMessage := protocol.PrepareAndDecideWhichRProtoFromLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	for {
 		header, message, err := protocol.DestructMessage(rMessage)

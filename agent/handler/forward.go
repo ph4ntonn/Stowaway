@@ -8,6 +8,7 @@ package handler
 
 import (
 	"Stowaway/agent/manager"
+	"Stowaway/global"
 	"Stowaway/protocol"
 	"net"
 	"time"
@@ -25,11 +26,11 @@ func newForward(seq uint64, addr string) *Forward {
 	return forward
 }
 
-func (forward *Forward) start(mgr *manager.Manager, component *protocol.MessageComponent) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+func (forward *Forward) start(mgr *manager.Manager) {
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	finHeader := &protocol.Header{
-		Sender:      component.UUID,
+		Sender:      global.G_Component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.FORWARDFIN,
 		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
@@ -85,7 +86,7 @@ func (forward *Forward) start(mgr *manager.Manager, component *protocol.MessageC
 	}()
 
 	dataHeader := &protocol.Header{
-		Sender:      component.UUID,
+		Sender:      global.G_Component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.FORWARDDATA,
 		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
@@ -112,11 +113,11 @@ func (forward *Forward) start(mgr *manager.Manager, component *protocol.MessageC
 	}
 }
 
-func testForward(component *protocol.MessageComponent, addr string) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(component.Conn, component.Secret, component.UUID)
+func testForward(addr string) {
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
-		Sender:      component.UUID,
+		Sender:      global.G_Component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.FORWARDREADY,
 		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
@@ -144,14 +145,14 @@ func testForward(component *protocol.MessageComponent, addr string) {
 	sMessage.SendMessage()
 }
 
-func DispatchForwardMess(mgr *manager.Manager, component *protocol.MessageComponent) {
+func DispatchForwardMess(mgr *manager.Manager) {
 	for {
 		message := <-mgr.ForwardManager.ForwardMessChan
 
 		switch message.(type) {
 		case *protocol.ForwardTest:
 			mess := message.(*protocol.ForwardTest)
-			go testForward(component, mess.Addr)
+			go testForward(mess.Addr)
 		case *protocol.ForwardStart:
 			mess := message.(*protocol.ForwardStart)
 			task := &manager.ForwardTask{
@@ -161,7 +162,7 @@ func DispatchForwardMess(mgr *manager.Manager, component *protocol.MessageCompon
 			mgr.ForwardManager.TaskChan <- task
 			<-mgr.ForwardManager.ResultChan
 			forward := newForward(mess.Seq, mess.Addr)
-			go forward.start(mgr, component)
+			go forward.start(mgr)
 		case *protocol.ForwardData:
 			mess := message.(*protocol.ForwardData)
 			mgrTask := &manager.ForwardTask{
