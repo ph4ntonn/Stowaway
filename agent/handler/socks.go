@@ -682,11 +682,10 @@ func proxyS2CUDP(mgr *manager.Manager, component *protocol.MessageComponent, lis
 	for {
 		length, addr, err := listener.ReadFromUDP(buffer)
 		if err != nil {
-			fmt.Println(err.Error())
 			listener.Close()
 			return
 		}
-		fmt.Println("i get data ", string(buffer[:length]))
+
 		mgrTask := &manager.SocksTask{
 			Mode:            manager.S_GETUDPHEADER,
 			Seq:             seq,
@@ -700,7 +699,6 @@ func proxyS2CUDP(mgr *manager.Manager, component *protocol.MessageComponent, lis
 			data = append(data, result.SocksUDPHeader...)
 			data = append(data, buffer[:length]...)
 		} else {
-			fmt.Println("no header")
 			return
 		}
 
@@ -719,65 +717,63 @@ func DispathSocksMess(mgr *manager.Manager, component *protocol.MessageComponent
 	socks := newSocks()
 
 	for {
-		message, ok := <-mgr.SocksManager.SocksMessChan
-		if ok {
-			switch message.(type) {
-			case *protocol.SocksStart:
-				mess := message.(*protocol.SocksStart)
-				socks.Username = mess.Username
-				socks.Password = mess.Password
-				go socks.start(mgr, component)
-			case *protocol.SocksTCPData:
-				mess := message.(*protocol.SocksTCPData)
-				mgrTask := &manager.SocksTask{
-					Mode: manager.S_GETTCPDATACHAN,
-					Seq:  mess.Seq,
-				}
-				mgr.SocksManager.TaskChan <- mgrTask
-				result := <-mgr.SocksManager.ResultChan
+		message := <-mgr.SocksManager.SocksMessChan
 
-				result.DataChan <- mess.Data
-
-				// if not exist
-				if !result.SocksSeqExist {
-					go socks.handleSocks(mgr, component, result.DataChan, mess.Seq)
-				}
-			case *protocol.SocksTCPFin:
-				mess := message.(*protocol.SocksTCPFin)
-				mgrTask := &manager.SocksTask{
-					Mode: manager.S_CLOSETCP,
-					Seq:  mess.Seq,
-				}
-				mgr.SocksManager.TaskChan <- mgrTask
-			case *protocol.SocksUDPData:
-				mess := message.(*protocol.SocksUDPData)
-
-				mgrTask := &manager.SocksTask{
-					Mode: manager.S_GETUDPCHANS,
-					Seq:  mess.Seq,
-				}
-				mgr.SocksManager.TaskChan <- mgrTask
-				result := <-mgr.SocksManager.ResultChan
-
-				if result.OK {
-					result.DataChan <- mess.Data
-				}
-			case *protocol.UDPAssRes:
-				mess := message.(*protocol.UDPAssRes)
-
-				mgrTask := &manager.SocksTask{
-					Mode: manager.S_GETUDPCHANS,
-					Seq:  mess.Seq,
-				}
-				mgr.SocksManager.TaskChan <- mgrTask
-				result := <-mgr.SocksManager.ResultChan
-
-				if result.OK {
-					result.ReadyChan <- mess.Addr
-				}
+		switch message.(type) {
+		case *protocol.SocksStart:
+			mess := message.(*protocol.SocksStart)
+			socks.Username = mess.Username
+			socks.Password = mess.Password
+			go socks.start(mgr, component)
+		case *protocol.SocksTCPData:
+			mess := message.(*protocol.SocksTCPData)
+			mgrTask := &manager.SocksTask{
+				Mode: manager.S_GETTCPDATACHAN,
+				Seq:  mess.Seq,
 			}
-		} else {
-			return
+			mgr.SocksManager.TaskChan <- mgrTask
+			result := <-mgr.SocksManager.ResultChan
+
+			result.DataChan <- mess.Data
+
+			// if not exist
+			if !result.SocksSeqExist {
+				go socks.handleSocks(mgr, component, result.DataChan, mess.Seq)
+			}
+		case *protocol.SocksTCPFin:
+			mess := message.(*protocol.SocksTCPFin)
+			mgrTask := &manager.SocksTask{
+				Mode: manager.S_CLOSETCP,
+				Seq:  mess.Seq,
+			}
+			mgr.SocksManager.TaskChan <- mgrTask
+		case *protocol.SocksUDPData:
+			mess := message.(*protocol.SocksUDPData)
+
+			mgrTask := &manager.SocksTask{
+				Mode: manager.S_GETUDPCHANS,
+				Seq:  mess.Seq,
+			}
+			mgr.SocksManager.TaskChan <- mgrTask
+			result := <-mgr.SocksManager.ResultChan
+
+			if result.OK {
+				result.DataChan <- mess.Data
+			}
+		case *protocol.UDPAssRes:
+			mess := message.(*protocol.UDPAssRes)
+
+			mgrTask := &manager.SocksTask{
+				Mode: manager.S_GETUDPCHANS,
+				Seq:  mess.Seq,
+			}
+			mgr.SocksManager.TaskChan <- mgrTask
+			result := <-mgr.SocksManager.ResultChan
+
+			if result.OK {
+				result.ReadyChan <- mess.Addr
+			}
 		}
+
 	}
 }

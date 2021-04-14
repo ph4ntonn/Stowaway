@@ -110,7 +110,7 @@ func (manager *backwardManager) addConn(task *BackwardTask) {
 		manager.backwardSeqMap[task.Seq] = task.RPort
 		manager.backwardMap[task.RPort].backwardStatusMap[task.Seq] = new(backwardStatus)
 		manager.backwardMap[task.RPort].backwardStatusMap[task.Seq].conn = task.BackwardSocket
-		manager.backwardMap[task.RPort].backwardStatusMap[task.Seq].dataChan = make(chan []byte)
+		manager.backwardMap[task.RPort].backwardStatusMap[task.Seq].dataChan = make(chan []byte, 5)
 		manager.ResultChan <- &backwardResult{OK: true}
 	} else {
 		manager.ResultChan <- &backwardResult{OK: false}

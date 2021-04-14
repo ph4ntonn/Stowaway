@@ -143,7 +143,7 @@ func (manager *forwardManager) addConn(task *ForwardTask) {
 
 	manager.forwardMap[task.UUID][task.Port].forwardStatusMap[task.Seq] = new(forwardStatus)
 	manager.forwardMap[task.UUID][task.Port].forwardStatusMap[task.Seq].conn = task.Conn
-	manager.forwardMap[task.UUID][task.Port].forwardStatusMap[task.Seq].dataChan = make(chan []byte)
+	manager.forwardMap[task.UUID][task.Port].forwardStatusMap[task.Seq].dataChan = make(chan []byte, 5)
 	manager.ResultChan <- &forwardResult{OK: true}
 }
 

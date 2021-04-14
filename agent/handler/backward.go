@@ -205,6 +205,7 @@ func testBackward(mgr *manager.Manager, component *protocol.MessageComponent, lP
 func DispatchBackwardMess(mgr *manager.Manager, component *protocol.MessageComponent) {
 	for {
 		message := <-mgr.BackwardManager.BackwardMessChan
+
 		switch message.(type) {
 		case *protocol.BackwardTest:
 			mess := message.(*protocol.BackwardTest)

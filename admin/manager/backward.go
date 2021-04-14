@@ -118,7 +118,7 @@ func (manager *backwardManager) getNewSeq(task *BackwardTask) {
 
 func (manager *backwardManager) addConn(task *BackwardTask) {
 	manager.backwardMap[task.UUID][task.RPort].backwardStatusMap[task.Seq] = new(backwardStatus)
-	manager.backwardMap[task.UUID][task.RPort].backwardStatusMap[task.Seq].dataChan = make(chan []byte)
+	manager.backwardMap[task.UUID][task.RPort].backwardStatusMap[task.Seq].dataChan = make(chan []byte, 5)
 	manager.ResultChan <- &backwardResult{OK: true}
 }
 

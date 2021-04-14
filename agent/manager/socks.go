@@ -113,7 +113,7 @@ func (manager *socksManager) getTCPDataChan(task *SocksTask) {
 	} else {
 		manager.socksStatusMap[task.Seq] = new(socksStatus)
 		manager.socksStatusMap[task.Seq].tcp = new(tcpSocks)
-		manager.socksStatusMap[task.Seq].tcp.dataChan = make(chan []byte) // register it!
+		manager.socksStatusMap[task.Seq].tcp.dataChan = make(chan []byte, 5) // register it!
 		manager.ResultChan <- &socksResult{
 			SocksSeqExist: false,
 			DataChan:      manager.socksStatusMap[task.Seq].tcp.dataChan,
@@ -146,7 +146,7 @@ func (manager *socksManager) updateUDP(task *SocksTask) {
 	if _, ok := manager.socksStatusMap[task.Seq]; ok {
 		manager.socksStatusMap[task.Seq].isUDP = true
 		manager.socksStatusMap[task.Seq].udp = new(udpSocks)
-		manager.socksStatusMap[task.Seq].udp.dataChan = make(chan []byte)
+		manager.socksStatusMap[task.Seq].udp.dataChan = make(chan []byte, 5)
 		manager.socksStatusMap[task.Seq].udp.readyChan = make(chan string)
 		manager.socksStatusMap[task.Seq].udp.headerPairs = make(map[string][]byte)
 		manager.socksStatusMap[task.Seq].udp.listener = task.SocksListener

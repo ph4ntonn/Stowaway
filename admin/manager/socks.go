@@ -162,7 +162,7 @@ func (manager *socksManager) addSocksTCPSocket(task *SocksTask) {
 	if _, ok := manager.socksMap[task.UUID]; ok {
 		manager.socksMap[task.UUID].socksStatusMap[task.Seq] = new(socksStatus)
 		manager.socksMap[task.UUID].socksStatusMap[task.Seq].tcp = new(tcpSocks) // no need to check if socksStatusMap[task.Seq] exist,because it must exist
-		manager.socksMap[task.UUID].socksStatusMap[task.Seq].tcp.dataChan = make(chan []byte)
+		manager.socksMap[task.UUID].socksStatusMap[task.Seq].tcp.dataChan = make(chan []byte, 5)
 		manager.socksMap[task.UUID].socksStatusMap[task.Seq].tcp.conn = task.SocksTCPSocket
 		manager.ResultChan <- &socksResult{OK: true}
 	} else {
@@ -307,7 +307,7 @@ func (manager *socksManager) updateUDP(task *SocksTask) {
 		if _, ok := manager.socksMap[task.UUID].socksStatusMap[task.Seq]; ok {
 			manager.socksMap[task.UUID].socksStatusMap[task.Seq].isUDP = true
 			manager.socksMap[task.UUID].socksStatusMap[task.Seq].udp = new(udpSocks)
-			manager.socksMap[task.UUID].socksStatusMap[task.Seq].udp.dataChan = make(chan []byte)
+			manager.socksMap[task.UUID].socksStatusMap[task.Seq].udp.dataChan = make(chan []byte, 5)
 			manager.socksMap[task.UUID].socksStatusMap[task.Seq].udp.listener = task.SocksUDPListener
 			manager.ResultChan <- &socksResult{OK: true}
 		} else {

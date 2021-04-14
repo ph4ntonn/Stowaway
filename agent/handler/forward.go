@@ -147,6 +147,7 @@ func testForward(component *protocol.MessageComponent, addr string) {
 func DispatchForwardMess(mgr *manager.Manager, component *protocol.MessageComponent) {
 	for {
 		message := <-mgr.ForwardManager.ForwardMessChan
+
 		switch message.(type) {
 		case *protocol.ForwardTest:
 			mess := message.(*protocol.ForwardTest)
