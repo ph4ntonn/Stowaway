@@ -153,7 +153,7 @@ func (manager *forwardManager) getDatachan(task *ForwardTask) {
 		return
 	}
 
-	if _, ok := manager.forwardMap[task.UUID][task.Port].forwardStatusMap[task.Seq]; ok {
+	if _, ok := manager.forwardMap[task.UUID][task.Port].forwardStatusMap[task.Seq]; ok { // need to check ,because you will never know when fin come
 		manager.ResultChan <- &forwardResult{
 			OK:       true,
 			DataChan: manager.forwardMap[task.UUID][task.Port].forwardStatusMap[task.Seq].dataChan,
@@ -172,13 +172,9 @@ func (manager *forwardManager) getDatachanWithoutUUID(task *ForwardTask) {
 	uuid := manager.forwardSeqMap[task.Seq].uuid
 	port := manager.forwardSeqMap[task.Seq].port
 
-	if _, ok := manager.forwardMap[uuid][port].forwardStatusMap[task.Seq]; ok {
-		manager.ResultChan <- &forwardResult{
-			OK:       true,
-			DataChan: manager.forwardMap[uuid][port].forwardStatusMap[task.Seq].dataChan,
-		}
-	} else {
-		manager.ResultChan <- &forwardResult{OK: false}
+	manager.ResultChan <- &forwardResult{ // no need to chek forwardStatusMap[task.Seq] like above,because no more data after fin
+		OK:       true,
+		DataChan: manager.forwardMap[uuid][port].forwardStatusMap[task.Seq].dataChan,
 	}
 }
 

@@ -500,6 +500,39 @@ func (message *RawMessage) ConstructData(header *Header, mess interface{}) {
 			binary.BigEndian.PutUint64(seqBuf, mmess.Seq)
 
 			dataBuffer.Write(seqBuf)
+		case BACKWARDSTOP:
+			mmess := mess.(*BackwardStop)
+			allBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(allBuf, mmess.All)
+
+			rPortLenBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(rPortLenBuf, mmess.RPortLen)
+
+			rPortBuf := []byte(mmess.RPort)
+
+			dataBuffer.Write(allBuf)
+			dataBuffer.Write(rPortLenBuf)
+			dataBuffer.Write(rPortBuf)
+		case BACKWARDSTOPDONE:
+			mmess := mess.(*BackwardStopDone)
+			allBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(allBuf, mmess.All)
+
+			uuidLenBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(uuidLenBuf, mmess.UUIDLen)
+
+			uuidBuf := []byte(mmess.UUID)
+
+			rPortLenBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(rPortLenBuf, mmess.RPortLen)
+
+			rPortBuf := []byte(mmess.RPort)
+
+			dataBuffer.Write(allBuf)
+			dataBuffer.Write(uuidLenBuf)
+			dataBuffer.Write(uuidBuf)
+			dataBuffer.Write(rPortLenBuf)
+			dataBuffer.Write(rPortBuf)
 		case OFFLINE:
 			mmess := mess.(*Offline)
 			OKBuf := make([]byte, 2)
@@ -815,6 +848,20 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 	case BACKWARDFIN:
 		mmess := new(BackWardFin)
 		mmess.Seq = binary.BigEndian.Uint64(dataBuf[:8])
+		return header, mmess, nil
+	case BACKWARDSTOP:
+		mmess := new(BackwardStop)
+		mmess.All = binary.BigEndian.Uint16(dataBuf[0:2])
+		mmess.RPortLen = binary.BigEndian.Uint16(dataBuf[2:4])
+		mmess.RPort = string(dataBuf[4 : 4+mmess.RPortLen])
+		return header, mmess, nil
+	case BACKWARDSTOPDONE:
+		mmess := new(BackwardStopDone)
+		mmess.All = binary.BigEndian.Uint16(dataBuf[0:2])
+		mmess.UUIDLen = binary.BigEndian.Uint16(dataBuf[2:4])
+		mmess.UUID = string(dataBuf[4 : 4+mmess.UUIDLen])
+		mmess.RPortLen = binary.BigEndian.Uint16(dataBuf[4+mmess.UUIDLen : 6+mmess.UUIDLen])
+		mmess.RPort = string(dataBuf[6+mmess.UUIDLen : 6+mmess.UUIDLen+mmess.RPortLen])
 		return header, mmess, nil
 	case OFFLINE:
 		mmess := new(Offline)

@@ -128,6 +128,8 @@ func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager) {
 				fallthrough
 			case protocol.BACKWARDFIN:
 				fallthrough
+			case protocol.BACKWARDSTOP:
+				fallthrough
 			case protocol.BACKWARDDATA:
 				mgr.BackwardManager.BackwardMessChan <- message
 			case protocol.OFFLINE:

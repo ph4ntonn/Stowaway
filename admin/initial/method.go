@@ -115,7 +115,7 @@ func NormalActive(userOptions *Options, topo *topology.Topology) net.Conn {
 
 				<-topo.ResultChan
 
-				log.Printf("[*]Connect to node %s successfully!\n", conn.RemoteAddr().String())
+				log.Printf("[*]Connect to node %s successfully! Node id is 0\n", conn.RemoteAddr().String())
 				return conn
 			}
 		}
@@ -195,7 +195,7 @@ func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 
 				<-topo.ResultChan
 
-				log.Printf("[*]Connection from node %s is set up successfully!\n", conn.RemoteAddr().String())
+				log.Printf("[*]Connection from node %s is set up successfully! Node id is 0\n", conn.RemoteAddr().String())
 				return conn
 			}
 		}

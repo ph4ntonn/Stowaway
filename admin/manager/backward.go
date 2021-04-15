@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"fmt"
 	"net"
 )
 
@@ -12,12 +13,17 @@ const (
 	B_GETDATACHAN
 	B_GETDATACHAN_WITHOUTUUID
 	B_CLOSETCP
+	B_GETBACKWARDINFO
+	B_GETSTOPRPORT
+	B_CLOSESINGLE
+	B_CLOSESINGLEALL
 )
 
 type backwardManager struct {
-	backwardSeq    uint64
-	backwardSeqMap map[uint64]*bwSeqRelationship   // map[seq](port+uuid) just for accelerate the speed of searching detail only by seq
-	backwardMap    map[string]map[string]*backward // map[uuid][rport]backward status
+	backwardSeq      uint64
+	backwardSeqMap   map[uint64]*bwSeqRelationship   // map[seq](port+uuid) just for accelerate the speed of searching detail only by seq
+	backwardMap      map[string]map[string]*backward // map[uuid][rport]backward status
+	backwardReadyDel map[int]string
 
 	BackwardMessChan chan interface{}
 	BackwardReady    chan bool
@@ -31,16 +37,19 @@ type BackwardTask struct {
 	UUID string // node uuid
 	Seq  uint64 // seq
 
-	LPort string
-	RPort string
-	Conn  net.Conn
+	LPort  string
+	RPort  string
+	Conn   net.Conn
+	Choice int
 }
 
 type backwardResult struct {
 	OK bool
 
-	DataChan    chan []byte
-	BackwardSeq uint64
+	DataChan     chan []byte
+	BackwardSeq  uint64
+	BackwardInfo []string
+	RPort        string
 }
 
 type backward struct {
@@ -65,8 +74,8 @@ func newBackwardManager() *backwardManager {
 	manager.backwardMap = make(map[string]map[string]*backward)
 	manager.backwardSeqMap = make(map[uint64]*bwSeqRelationship)
 	manager.BackwardMessChan = make(chan interface{}, 5)
-	manager.BackwardReady = make(chan bool)
 
+	manager.BackwardReady = make(chan bool)
 	manager.TaskChan = make(chan *BackwardTask)
 	manager.ResultChan = make(chan *backwardResult)
 
@@ -92,6 +101,14 @@ func (manager *backwardManager) run() {
 			manager.getDatachanWithoutUUID(task)
 		case B_CLOSETCP:
 			manager.closeTCP(task)
+		case B_GETBACKWARDINFO:
+			manager.getBackwardInfo(task)
+		case B_GETSTOPRPORT:
+			manager.getStopRPort(task)
+		case B_CLOSESINGLE:
+			manager.closeSingle(task)
+		case B_CLOSESINGLEALL:
+			manager.closeSingleAll(task)
 		}
 	}
 }
@@ -143,7 +160,7 @@ func (manager *backwardManager) getDataChan(task *BackwardTask) {
 		return
 	}
 
-	if _, ok := manager.backwardMap[task.UUID][task.RPort]; ok {
+	if _, ok := manager.backwardMap[task.UUID][task.RPort].backwardStatusMap[task.Seq]; ok {
 		manager.ResultChan <- &backwardResult{
 			OK:       true,
 			DataChan: manager.backwardMap[task.UUID][task.RPort].backwardStatusMap[task.Seq].dataChan,
@@ -163,13 +180,9 @@ func (manager *backwardManager) getDatachanWithoutUUID(task *BackwardTask) {
 	uuid := manager.backwardSeqMap[task.Seq].uuid
 	rPort := manager.backwardSeqMap[task.Seq].rPort
 
-	if _, ok := manager.backwardMap[uuid][rPort].backwardStatusMap[task.Seq]; ok {
-		manager.ResultChan <- &backwardResult{
-			OK:       true,
-			DataChan: manager.backwardMap[uuid][rPort].backwardStatusMap[task.Seq].dataChan,
-		}
-	} else {
-		manager.ResultChan <- &backwardResult{OK: false}
+	manager.ResultChan <- &backwardResult{
+		OK:       true,
+		DataChan: manager.backwardMap[uuid][rPort].backwardStatusMap[task.Seq].dataChan,
 	}
 }
 
@@ -188,4 +201,69 @@ func (manager *backwardManager) closeTCP(task *BackwardTask) {
 	close(manager.backwardMap[uuid][rPort].backwardStatusMap[task.Seq].dataChan)
 
 	delete(manager.backwardMap[uuid][rPort].backwardStatusMap, task.Seq)
+}
+
+func (manager *backwardManager) getBackwardInfo(task *BackwardTask) {
+	manager.backwardReadyDel = make(map[int]string)
+
+	var backwardInfo []string
+	infoNum := 1
+
+	if _, ok := manager.backwardMap[task.UUID]; ok {
+		backwardInfo = append(backwardInfo, "\r\n[0] All")
+		for port, info := range manager.backwardMap[task.UUID] {
+			manager.backwardReadyDel[infoNum] = port
+			detail := fmt.Sprintf("\r\n[%d] Remote Port : %s , Local Port : %s , Current Active Connnections : %d", infoNum, port, info.localPort, len(info.backwardStatusMap))
+			backwardInfo = append(backwardInfo, detail)
+			infoNum++
+		}
+		manager.ResultChan <- &backwardResult{
+			OK:           true,
+			BackwardInfo: backwardInfo,
+		}
+	} else {
+		backwardInfo = append(backwardInfo, "\r\nBackward service isn't running!")
+		manager.ResultChan <- &backwardResult{
+			OK:           false,
+			BackwardInfo: backwardInfo,
+		}
+	}
+}
+
+func (manager *backwardManager) getStopRPort(task *BackwardTask) {
+	manager.ResultChan <- &backwardResult{RPort: manager.backwardReadyDel[task.Choice]}
+}
+
+func (manager *backwardManager) closeSingle(task *BackwardTask) {
+	rPort := task.RPort
+
+	delete(manager.backwardMap[task.UUID], rPort)
+
+	for seq, relationship := range manager.backwardSeqMap {
+		if relationship.uuid == task.UUID && relationship.rPort == rPort {
+			delete(manager.backwardSeqMap, seq)
+		}
+	}
+
+	if len(manager.backwardMap[task.UUID]) == 0 {
+		delete(manager.backwardMap, task.UUID)
+	}
+
+	manager.ResultChan <- &backwardResult{OK: true}
+}
+
+func (manager *backwardManager) closeSingleAll(task *BackwardTask) {
+	for rPort := range manager.backwardMap[task.UUID] {
+		delete(manager.backwardMap[task.UUID], rPort)
+	}
+
+	for seq, relationship := range manager.backwardSeqMap {
+		if relationship.uuid == task.UUID {
+			delete(manager.backwardSeqMap, seq)
+		}
+	}
+
+	delete(manager.backwardMap, task.UUID)
+
+	manager.ResultChan <- &backwardResult{OK: true}
 }

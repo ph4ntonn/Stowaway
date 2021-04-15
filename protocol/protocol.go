@@ -51,6 +51,8 @@ const (
 	BACKWARDREADY
 	BACKWARDDATA
 	BACKWARDFIN
+	BACKWARDSTOP
+	BACKWARDSTOPDONE
 	OFFLINE
 )
 
@@ -314,6 +316,20 @@ type BackwardData struct {
 
 type BackWardFin struct {
 	Seq uint64
+}
+
+type BackwardStop struct {
+	All      uint16
+	RPortLen uint16
+	RPort    string
+}
+
+type BackwardStopDone struct {
+	All      uint16
+	UUIDLen  uint16
+	UUID     string
+	RPortLen uint16
+	RPort    string
 }
 
 type Offline struct {

@@ -197,6 +197,56 @@ func (backward *Backward) start(mgr *manager.Manager, topo *topology.Topology, u
 	}
 }
 
+func GetBackwardInfo(mgr *manager.Manager, uuid string) (int, bool) {
+	mgrTask := &manager.BackwardTask{
+		Mode: manager.B_GETBACKWARDINFO,
+		UUID: uuid,
+	}
+	mgr.BackwardManager.TaskChan <- mgrTask
+	result := <-mgr.BackwardManager.ResultChan
+
+	for _, info := range result.BackwardInfo {
+		fmt.Print(info)
+	}
+
+	return len(result.BackwardInfo) - 1, result.OK
+}
+
+func StopBackward(mgr *manager.Manager, uuid, route string, choice int) {
+	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+
+	header := &protocol.Header{
+		Sender:      protocol.ADMIN_UUID,
+		Accepter:    uuid,
+		MessageType: protocol.BACKWARDSTOP,
+		RouteLen:    uint32(len([]byte(route))),
+		Route:       route,
+	}
+
+	if choice == 0 {
+		stopMess := &protocol.BackwardStop{
+			All: 1,
+		}
+
+		protocol.ConstructMessage(sMessage, header, stopMess)
+		sMessage.SendMessage()
+	} else {
+		backwardTask := &manager.BackwardTask{
+			Mode:   manager.B_GETSTOPRPORT,
+			Choice: choice,
+		}
+		mgr.BackwardManager.TaskChan <- backwardTask
+		result := <-mgr.BackwardManager.ResultChan
+		stopMess := &protocol.BackwardStop{
+			All:      0,
+			RPortLen: uint16(len([]byte(result.RPort))),
+			RPort:    result.RPort,
+		}
+		protocol.ConstructMessage(sMessage, header, stopMess)
+		sMessage.SendMessage()
+	}
+}
+
 func DispatchBackwardMess(mgr *manager.Manager, topo *topology.Topology) {
 	for {
 		message := <-mgr.BackwardManager.BackwardMessChan
@@ -233,6 +283,23 @@ func DispatchBackwardMess(mgr *manager.Manager, topo *topology.Topology) {
 				Seq:  mess.Seq,
 			}
 			mgr.BackwardManager.TaskChan <- mgrTask
+		case *protocol.BackwardStopDone:
+			mess := message.(*protocol.BackwardStopDone)
+			if mess.All == 1 {
+				backwardTask := &manager.BackwardTask{
+					Mode: manager.B_CLOSESINGLEALL,
+					UUID: mess.UUID,
+				}
+				mgr.BackwardManager.TaskChan <- backwardTask
+			} else {
+				backwardTask := &manager.BackwardTask{
+					Mode:  manager.B_CLOSESINGLE,
+					UUID:  mess.UUID,
+					RPort: mess.RPort,
+				}
+				mgr.BackwardManager.TaskChan <- backwardTask
+			}
+			<-mgr.BackwardManager.ResultChan
 		}
 	}
 }

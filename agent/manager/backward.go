@@ -11,6 +11,8 @@ const (
 	B_GETDATACHAN
 	B_GETDATACHAN_WITHOUTUUID
 	B_CLOSETCP
+	B_CLOSESINGLE
+	B_CLOSESINGLEALL
 )
 
 type backwardManager struct {
@@ -82,6 +84,10 @@ func (manager *backwardManager) run() {
 			manager.getDatachanWithoutUUID(task)
 		case B_CLOSETCP:
 			manager.closeTCP(task)
+		case B_CLOSESINGLE:
+			manager.closeSingle(task)
+		case B_CLOSESINGLEALL:
+			manager.closeSingleAll()
 		}
 	}
 }
@@ -158,4 +164,47 @@ func (manager *backwardManager) closeTCP(task *BackwardTask) {
 	close(manager.backwardMap[rPort].backwardStatusMap[task.Seq].dataChan)
 
 	delete(manager.backwardMap[rPort].backwardStatusMap, task.Seq)
+
+}
+
+func (manager *backwardManager) closeSingle(task *BackwardTask) {
+	manager.backwardMap[task.RPort].listener.Close()
+	close(manager.backwardMap[task.RPort].seqChan)
+
+	for seq, status := range manager.backwardMap[task.RPort].backwardStatusMap {
+		status.conn.Close()
+		close(status.dataChan)
+		delete(manager.backwardMap[task.RPort].backwardStatusMap, seq)
+	}
+
+	delete(manager.backwardMap, task.RPort)
+
+	for seq, rPort := range manager.backwardSeqMap {
+		if rPort == task.RPort {
+			delete(manager.backwardSeqMap, seq)
+		}
+	}
+
+	manager.ResultChan <- &backwardResult{OK: true}
+}
+
+func (manager *backwardManager) closeSingleAll() {
+	for rPort, bw := range manager.backwardMap {
+		bw.listener.Close()
+		close(bw.seqChan)
+
+		for seq, status := range bw.backwardStatusMap {
+			status.conn.Close()
+			close(status.dataChan)
+			delete(manager.backwardMap[rPort].backwardStatusMap, seq)
+		}
+
+		delete(manager.backwardMap, rPort)
+	}
+
+	for seq := range manager.backwardSeqMap {
+		delete(manager.backwardSeqMap, seq)
+	}
+
+	manager.ResultChan <- &backwardResult{OK: true}
 }

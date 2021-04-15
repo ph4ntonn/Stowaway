@@ -203,6 +203,31 @@ func testBackward(mgr *manager.Manager, lPort, rPort string) {
 	sMessage.SendMessage()
 }
 
+func sendDoneMess(all uint16, rPort string) {
+	// here is a problem,if some of the backward conns cannot send FIN before DONE,then the FIN they send cannot be processed by admin
+	// but it's not a really big problem,because users must know some data maybe lost since they choose to close backward
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+
+	header := &protocol.Header{
+		Sender:      global.G_Component.UUID,
+		Accepter:    protocol.ADMIN_UUID,
+		MessageType: protocol.BACKWARDSTOPDONE,
+		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
+		Route:       protocol.TEMP_ROUTE,
+	}
+
+	doneMess := &protocol.BackwardStopDone{
+		All:      all,
+		UUIDLen:  uint16(len(global.G_Component.UUID)),
+		UUID:     global.G_Component.UUID,
+		RPortLen: uint16(len(rPort)),
+		RPort:    rPort,
+	}
+
+	protocol.ConstructMessage(sMessage, header, doneMess)
+	sMessage.SendMessage()
+}
+
 func DispatchBackwardMess(mgr *manager.Manager) {
 	for {
 		message := <-mgr.BackwardManager.BackwardMessChan
@@ -263,6 +288,22 @@ func DispatchBackwardMess(mgr *manager.Manager) {
 				Seq:  mess.Seq,
 			}
 			mgr.BackwardManager.TaskChan <- mgrTask
+		case *protocol.BackwardStop:
+			mess := message.(*protocol.BackwardStop)
+			if mess.All == 1 {
+				mgrTask := &manager.BackwardTask{
+					Mode: manager.B_CLOSESINGLEALL,
+				}
+				mgr.BackwardManager.TaskChan <- mgrTask
+			} else {
+				mgrTask := &manager.BackwardTask{
+					Mode:  manager.B_CLOSESINGLE,
+					RPort: mess.RPort,
+				}
+				mgr.BackwardManager.TaskChan <- mgrTask
+			}
+			<-mgr.BackwardManager.ResultChan
+			go sendDoneMess(mess.All, mess.RPort)
 		}
 	}
 }

@@ -56,9 +56,12 @@ func (console *Console) Init(tTopology *topology.Topology, myManager *manager.Ma
 
 func (console *Console) Run() {
 	go console.handleMainPanelCommand()
-	console.mainPanel() // block admin
+	console.mainPanel()
 }
 
+// At first,i think "interactive console? That's too fxxking easy"
+// But after i actually sit down and code this part,i changed my mind Orz
+// iTerm2 yyds(FYI,yyds means sth is the best)
 func (console *Console) mainPanel() {
 	var (
 		isGoingOn    bool
@@ -77,10 +80,11 @@ func (console *Console) mainPanel() {
 	defer keyboard.Close()
 
 	// Tested on:
-	// macos iterm/original terminal
-	// ubuntu desktop 16.04/18.04
-	// ubuntu server 16.04
-	// centos 7
+	// Macos Catalina iterm/original terminal
+	// Ubuntu desktop 16.04/18.04
+	// Ubuntu server 16.04
+	// Centos 7
+	// May have problems when the console working on some terminal since I'm using escape sequence,so if ur checking code after face this situation,let me know if possible
 	fmt.Print(console.status)
 	for {
 		event := <-keysEvents
@@ -102,7 +106,7 @@ func (console *Console) mainPanel() {
 
 				notSingleNum := (len(string(rightCommand)) - len(rightCommand)) / 2 // count non-english characters‘ num
 				singleNum := len(rightCommand) - notSingleNum                       // count English characters
-				// every non-english character need two '\b'
+				// every non-english character need two '\b'(Actually,i don't know why,i just tested a lot and find this stupid solution(on Mac,linux). So if u know,plz tell me,thx :) )
 				fmt.Print(string(bytes.Repeat([]byte("\b"), notSingleNum*2+singleNum)))
 			} else {
 				if len(leftCommand) >= 1 {
@@ -285,6 +289,7 @@ func (console *Console) mainPanel() {
 	}
 }
 
+// handle ur command
 func (console *Console) handleMainPanelCommand() {
 	for {
 		tCommand := console.pretreatInput()
@@ -565,14 +570,14 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 					console.status = "[*]Please choose one to close: "
 					console.ready <- true
 					option := console.pretreatInput()
-					target, err := utils.Str2Int(option)
+					choice, err := utils.Str2Int(option)
 					if err != nil {
 						fmt.Printf("\r\n[*]Please input integer!")
-					} else if target > seq || target < 0 {
+					} else if choice > seq || choice < 0 {
 						fmt.Printf("\r\n[*]Please input integer between 0~%d", seq)
 					} else {
 						fmt.Printf("\r\n[*]Closing......")
-						handler.StopForward(console.mgr, uuid, target)
+						handler.StopForward(console.mgr, uuid, choice)
 						fmt.Printf("\r\n[*]Forward service has been closed successfully!")
 					}
 				} else if option == "no" {
@@ -596,10 +601,41 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			if err != nil {
 				fmt.Printf("\r\n[*]Error: %s", err.Error())
 			} else {
-				fmt.Print("\r\n[*]Forward start successfully!")
+				fmt.Print("\r\n[*]Backward start successfully!")
 			}
 			console.ready <- true
+		case "stopbackward":
+			if console.expectParams(fCommand, 1, NODE, 0) {
+				break
+			}
 
+			seq, isRunning := handler.GetBackwardInfo(console.mgr, uuid)
+
+			if isRunning {
+				console.status = "[*]Do you really want to shutdown backward?(yes/no): "
+				console.ready <- true
+				option := console.pretreatInput()
+				if option == "yes" {
+					console.status = "[*]Please choose one to close: "
+					console.ready <- true
+					option := console.pretreatInput()
+					choice, err := utils.Str2Int(option)
+					if err != nil {
+						fmt.Printf("\r\n[*]Please input integer!")
+					} else if choice > seq || choice < 0 {
+						fmt.Printf("\r\n[*]Please input integer between 0~%d", seq)
+					} else {
+						fmt.Printf("\r\n[*]Closing......")
+						handler.StopBackward(console.mgr, uuid, route, choice)
+						fmt.Printf("\r\n[*]Backward service has been closed successfully!")
+					}
+				} else if option == "no" {
+				} else {
+					fmt.Printf("\r\n[*]Please input yes/no!")
+				}
+				console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+			}
+			console.ready <- true
 		case "upload":
 			if console.expectParams(fCommand, 3, NODE, 0) {
 				break

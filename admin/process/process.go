@@ -100,6 +100,8 @@ func (admin *Admin) handleMessFromDownstream(console *cli.Console) {
 			fallthrough
 		case protocol.BACKWARDFIN:
 			fallthrough
+		case protocol.BACKWARDSTOPDONE:
+			fallthrough
 		case protocol.BACKWARDSTART:
 			admin.mgr.BackwardManager.BackwardMessChan <- message
 		default:

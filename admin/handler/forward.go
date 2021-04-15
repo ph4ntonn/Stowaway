@@ -212,8 +212,8 @@ func GetForwardInfo(mgr *manager.Manager, uuid string) (int, bool) {
 	return len(result.ForwardInfo) - 1, result.OK
 }
 
-func StopForward(mgr *manager.Manager, uuid string, target int) {
-	if target == 0 {
+func StopForward(mgr *manager.Manager, uuid string, choice int) {
+	if choice == 0 {
 		mgrTask := &manager.ForwardTask{
 			Mode: manager.F_CLOSESINGLEALL,
 			UUID: uuid,
@@ -224,7 +224,7 @@ func StopForward(mgr *manager.Manager, uuid string, target int) {
 		mgrTask := &manager.ForwardTask{
 			Mode:        manager.F_CLOSESINGLE,
 			UUID:        uuid,
-			CloseTarget: target,
+			CloseTarget: choice,
 		}
 		mgr.ForwardManager.TaskChan <- mgrTask
 		<-mgr.ForwardManager.ResultChan
