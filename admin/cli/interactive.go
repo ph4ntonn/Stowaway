@@ -61,10 +61,9 @@ func (console *Console) Run() {
 
 func (console *Console) mainPanel() {
 	var (
-		isGoingOn bool
-		// serve for arrow left/right
-		leftCommand  string
-		rightCommand string
+		isGoingOn    bool
+		leftCommand  []rune
+		rightCommand []rune
 	)
 	// start history
 	history := NewHistory()
@@ -72,9 +71,16 @@ func (console *Console) mainPanel() {
 	// start helper
 	helper := NewHelper()
 	go helper.Run()
-	// init keyEvents
+
 	keysEvents, _ := keyboard.GetKeys(10)
-	// BEGIN TO WORK!!!!!!!!
+
+	defer keyboard.Close()
+
+	// Tested on:
+	// macos iterm/original terminal
+	// ubuntu desktop 16.04/18.04
+	// ubuntu server 16.04
+	// centos 7
 	fmt.Print(console.status)
 	for {
 		event := <-keysEvents
@@ -83,47 +89,37 @@ func (console *Console) mainPanel() {
 		}
 		// under shell&&ssh mode,we cannot just erase the whole line and reprint,so there are two different ways to handle input
 		// BTW,all arrow stuff under shell&&ssh mode will be abandoned
-		if (event.Key != keyboard.KeyEnter && event.Rune >= 0x20 && event.Rune <= 0x7F) || event.Key == keyboard.KeySpace {
+		if event.Key == keyboard.KeyBackspace2 || event.Key == keyboard.KeyBackspace {
 			if !console.shellMode && !console.sshMode {
 				fmt.Print("\r\033[K")
 				fmt.Print(console.status)
-				// save every single input
-				if event.Key == keyboard.KeySpace {
-					leftCommand = leftCommand + " "
-				} else {
-					leftCommand = leftCommand + string(event.Rune)
-				}
-				// print command && keep cursor at right position
-				fmt.Print(leftCommand + rightCommand)
-				fmt.Print(string(bytes.Repeat([]byte("\b"), len(rightCommand))))
-			} else {
-				if event.Key == keyboard.KeySpace {
-					leftCommand = leftCommand + " "
-				} else {
-					leftCommand = leftCommand + string(event.Rune)
-				}
-				fmt.Print(string(event.Rune))
-			}
-		} else if event.Key == keyboard.KeyBackspace2 || event.Key == keyboard.KeyBackspace {
-			if !console.shellMode && !console.sshMode {
-				fmt.Print("\r\033[K")
-				fmt.Print(console.status)
-				// let leftcommand--
+
 				if len(leftCommand) >= 1 {
 					leftCommand = leftCommand[:len(leftCommand)-1]
 				}
-				fmt.Print(leftCommand + rightCommand)
-				fmt.Print(string(bytes.Repeat([]byte("\b"), len(rightCommand))))
+
+				fmt.Print(string(leftCommand) + string(rightCommand))
+
+				notSingleNum := (len(string(rightCommand)) - len(rightCommand)) / 2 // count non-english characters‘ num
+				singleNum := len(rightCommand) - notSingleNum                       // count English characters
+				// every non-english character need two '\b'
+				fmt.Print(string(bytes.Repeat([]byte("\b"), notSingleNum*2+singleNum)))
 			} else {
 				if len(leftCommand) >= 1 {
+					notSingleNum := (len(string(leftCommand)) - len(leftCommand)) / 2
+					singleNum := len(leftCommand) - notSingleNum
+
+					fmt.Print(string(bytes.Repeat([]byte("\b"), notSingleNum*2+singleNum)))
+					fmt.Print("\033[K")
+
 					leftCommand = leftCommand[:len(leftCommand)-1]
-					fmt.Print("\b \b")
+
+					fmt.Print(string(leftCommand))
 				}
 			}
 		} else if event.Key == keyboard.KeyEnter {
 			if !console.shellMode && !console.sshMode {
-				// when hit enter,then concat left&&right command,create task to record it
-				command := leftCommand + rightCommand
+				command := string(leftCommand) + string(rightCommand)
 				// if command is not "",send it to history
 				if command != "" {
 					task := &HistoryTask{
@@ -136,17 +132,17 @@ func (console *Console) mainPanel() {
 				console.getCommand <- command
 				// set searching->false
 				isGoingOn = false
-				// set both left/right command -> "",new start!
-				leftCommand = ""
-				rightCommand = ""
+				// set both left/right command -> []rune{},new start!
+				leftCommand = []rune{}
+				rightCommand = []rune{}
 				// avoid scenario that console.status is printed before it's changed
 				<-console.ready
 				fmt.Print("\r\n")
 				fmt.Print(console.status)
 			} else {
 				fmt.Print("\r\n")
-				console.getCommand <- leftCommand
-				leftCommand = ""
+				console.getCommand <- string(leftCommand)
+				leftCommand = []rune{}
 			}
 		} else if event.Key == keyboard.KeyArrowUp {
 			if !console.shellMode && !console.sshMode {
@@ -165,9 +161,12 @@ func (console *Console) mainPanel() {
 					task.Order = NEXT
 					history.TaskChan <- task
 				}
-				// get the history command && set rightcommand -> ""
-				leftCommand = <-history.ResultChan
-				rightCommand = ""
+				// get the history command
+				result := <-history.ResultChan
+				fmt.Print(result)
+				// set rightcommand -> []rune{}
+				leftCommand = []rune(result)
+				rightCommand = []rune{}
 			}
 		} else if event.Key == keyboard.KeyArrowDown {
 			if !console.shellMode && !console.sshMode {
@@ -180,12 +179,15 @@ func (console *Console) mainPanel() {
 						Order: PREV,
 					}
 					history.TaskChan <- task
-					leftCommand = <-history.ResultChan
+					result := <-history.ResultChan
+
+					fmt.Print(result)
+					leftCommand = []rune(result)
 				} else {
 					// not started,then just erase user's input and output nothing
-					leftCommand = ""
+					leftCommand = []rune{}
 				}
-				rightCommand = ""
+				rightCommand = []rune{}
 			}
 		} else if event.Key == keyboard.KeyArrowLeft {
 			if !console.shellMode && !console.sshMode {
@@ -193,12 +195,15 @@ func (console *Console) mainPanel() {
 				fmt.Print(console.status)
 				// concat left command's last character with right command
 				if len(leftCommand) >= 1 {
-					rightCommand = leftCommand[len(leftCommand)-1:] + rightCommand
+					rightCommand = []rune(string(leftCommand[len(leftCommand)-1:]) + string(rightCommand))
 					leftCommand = leftCommand[:len(leftCommand)-1]
 				}
-
-				fmt.Print(leftCommand + rightCommand)
-				fmt.Print(string(bytes.Repeat([]byte("\b"), len(rightCommand))))
+				// print command
+				fmt.Print(string(leftCommand) + string(rightCommand))
+				// print \b
+				notSingleNum := (len(string(rightCommand)) - len(rightCommand)) / 2 // count non-english characters‘ num
+				singleNum := len(rightCommand) - notSingleNum
+				fmt.Print(string(bytes.Repeat([]byte("\b"), notSingleNum*2+singleNum)))
 			}
 		} else if event.Key == keyboard.KeyArrowRight {
 			if !console.shellMode && !console.sshMode {
@@ -206,25 +211,28 @@ func (console *Console) mainPanel() {
 				fmt.Print(console.status)
 				// concat right command's first character with left command
 				if len(rightCommand) > 1 {
-					leftCommand = leftCommand + rightCommand[:1]
+					leftCommand = []rune(string(leftCommand) + string(rightCommand[:1]))
 					rightCommand = rightCommand[1:]
 				} else if len(rightCommand) == 1 {
-					leftCommand = leftCommand + rightCommand[:1]
-					rightCommand = ""
+					leftCommand = []rune(string(leftCommand) + string(rightCommand[:1]))
+					rightCommand = []rune{}
 				}
 
-				fmt.Print(leftCommand + rightCommand)
-				fmt.Print(string(bytes.Repeat([]byte("\b"), len(rightCommand))))
+				fmt.Print(string(leftCommand) + string(rightCommand))
+
+				notSingleNum := (len(string(rightCommand)) - len(rightCommand)) / 2
+				singleNum := len(rightCommand) - notSingleNum
+				fmt.Print(string(bytes.Repeat([]byte("\b"), notSingleNum*2+singleNum)))
 			}
 		} else if event.Key == keyboard.KeyTab {
 			// if user move the cursor or under shellMode(sshMode),tab is abandoned
-			if rightCommand != "" || console.shellMode || console.sshMode {
+			if len(rightCommand) != 0 || console.shellMode || console.sshMode {
 				continue
 			}
 			// Tell helper the scenario
 			task := &HelperTask{
 				IsNodeMode: console.nodeMode,
-				Uncomplete: leftCommand,
+				Uncomplete: string(leftCommand),
 			}
 			helper.TaskChan <- task
 			compelete := <-helper.ResultChan
@@ -233,7 +241,7 @@ func (console *Console) mainPanel() {
 				fmt.Print("\r\033[K")
 				fmt.Print(console.status)
 				fmt.Print(compelete[0])
-				leftCommand = compelete[0]
+				leftCommand = []rune(compelete[0])
 			} else if len(compelete) > 1 {
 				// if multiple matches,then mimic linux's style
 				fmt.Print("\r\n")
@@ -242,15 +250,37 @@ func (console *Console) mainPanel() {
 				}
 				fmt.Print("\r\n")
 				fmt.Print(console.status)
-				fmt.Print(leftCommand)
+				fmt.Print(string(leftCommand))
 			}
 		} else if event.Key == keyboard.KeyCtrlC {
 			// Ctrl+C? Then BYE!
-			fmt.Print("\r\n[*]BYE!")
-			keyboard.Close()
-			os.Exit(0)
+			fmt.Print("\r\n[*]BYE!\r\n")
+			break
 		} else {
-			fmt.Print("\n[*]Unsupported input! Press <ctrl+c> to exit,<enter> to continue")
+			if !console.shellMode && !console.sshMode {
+				fmt.Print("\r\033[K")
+				fmt.Print(console.status)
+				// save every single input
+				if event.Key == keyboard.KeySpace {
+					leftCommand = []rune(string(leftCommand) + " ")
+				} else {
+					leftCommand = []rune(string(leftCommand) + string(event.Rune))
+				}
+				// print command && keep cursor at right position
+				fmt.Print(string(leftCommand) + string(rightCommand))
+
+				notSingleNum := (len(string(rightCommand)) - len(rightCommand)) / 2
+				singleNum := len(rightCommand) - notSingleNum
+				fmt.Print(string(bytes.Repeat([]byte("\b"), notSingleNum*2+singleNum)))
+			} else {
+				if event.Key == keyboard.KeySpace {
+					leftCommand = []rune(string(leftCommand) + " ")
+					fmt.Print(" ")
+				} else {
+					leftCommand = []rune(string(leftCommand) + string(event.Rune))
+					fmt.Print(string(event.Rune))
+				}
+			}
 		}
 	}
 }

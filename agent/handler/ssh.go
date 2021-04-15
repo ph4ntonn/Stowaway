@@ -9,6 +9,7 @@ package handler
 
 import (
 	"io"
+	"time"
 
 	"Stowaway/agent/manager"
 	"Stowaway/global"
@@ -93,6 +94,7 @@ func (mySSH *SSH) start() {
 		User:            mySSH.Username,
 		Auth:            []ssh.AuthMethod{authPayload},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         10 * time.Second,
 	})
 	if err != nil {
 		return

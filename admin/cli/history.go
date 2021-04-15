@@ -8,7 +8,6 @@ package cli
 
 import (
 	"container/list"
-	"fmt"
 )
 
 const (
@@ -82,18 +81,12 @@ func (history *History) search(task *HistoryTask) {
 
 	if history.now != nil {
 		command := history.now.Value.(string)
-		history.display(command)
 		history.ResultChan <- command
 	}
 
 	if history.storeList.Len() == 0 { // avoid blocking the interactive panel if user press arrowup or arrowdown when no history node exists
-		history.display("")
 		history.ResultChan <- ""
 	}
-}
-
-func (history *History) display(command string) {
-	fmt.Print(command)
 }
 
 func (history *History) clean() {
