@@ -1,4 +1,4 @@
-package initial
+package share
 
 import (
 	"Stowaway/utils"
@@ -10,15 +10,15 @@ import (
 )
 
 type Proxy struct {
-	AdminAddr string
+	PeerAddr  string
 	ProxyAddr string
 	UserName  string
 	Password  string
 }
 
-func NewProxy(adminAddr, proxyAddr, username, password string) *Proxy {
+func NewProxy(peerAddr, proxyAddr, username, password string) *Proxy {
 	proxy := new(Proxy)
-	proxy.AdminAddr = adminAddr
+	proxy.PeerAddr = peerAddr
 	proxy.ProxyAddr = proxyAddr
 	proxy.UserName = username
 	proxy.Password = password
@@ -27,7 +27,7 @@ func NewProxy(adminAddr, proxyAddr, username, password string) *Proxy {
 
 func (proxy *Proxy) Dial() (net.Conn, error) {
 	var NOT_SUPPORT = errors.New("Unknown protocol")
-	var NEED_AUTH = errors.New("Proxy server need username/password")
+	var WRONG_AUTH = errors.New("Wrong auth method")
 	var SERVER_ERROR = errors.New("Proxy server error")
 	var TOO_LONG = errors.New("User/Pass too long(max 255)")
 	var AUTH_FAIL = errors.New("Wrong username/password")
@@ -37,7 +37,7 @@ func (proxy *Proxy) Dial() (net.Conn, error) {
 		return proxyConn, err
 	}
 
-	host, portS, err := net.SplitHostPort(proxy.AdminAddr)
+	host, portS, err := net.SplitHostPort(proxy.PeerAddr)
 	if err != nil {
 		return proxyConn, err
 	}
@@ -93,7 +93,7 @@ func (proxy *Proxy) Dial() (net.Conn, error) {
 				return proxyConn, NOT_SUPPORT
 			}
 		case 0xff:
-			return proxyConn, NEED_AUTH
+			return proxyConn, WRONG_AUTH
 		default:
 			return proxyConn, NOT_SUPPORT
 		}

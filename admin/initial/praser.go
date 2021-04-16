@@ -28,6 +28,8 @@ type Options struct {
 	Listen     string
 	Connect    string
 	Proxy      string
+	ProxyU     string
+	ProxyP     string
 	Rhostreuse bool
 }
 
@@ -37,9 +39,11 @@ func init() {
 	Args = new(Options)
 	flag.StringVar(&Args.Secret, "s", "", "Communication secret")
 	flag.StringVar(&Args.Listen, "l", "", "Listen port")
-	flag.StringVar(&Args.Connect, "c", "", "The startnode address when you actively connect to it")
-	flag.StringVar(&Args.Proxy, "p", "", "The socks5 server ip:port you want to use")
-	flag.BoolVar(&Args.Rhostreuse, "rhostreuse", false, "If the startnode is reusing port")
+	flag.StringVar(&Args.Connect, "c", "", "The node address when you actively connect to it")
+	flag.StringVar(&Args.Proxy, "proxy", "", "The socks5 server ip:port you want to use")
+	flag.StringVar(&Args.ProxyU, "proxyu", "", "socks5 username")
+	flag.StringVar(&Args.ProxyP, "proxyp", "", "socks5 password")
+	flag.BoolVar(&Args.Rhostreuse, "rhostreuse", false, "If the node is reusing port")
 	flag.Usage = newUsage
 }
 
@@ -48,9 +52,9 @@ func newUsage() {
 Usages:
 	>> ./stowaway_admin -l <port> -s [secret]
 	>> ./stowaway_admin -c <ip:port> -s [secret] 
-	>> ./stowaway_admin -c <ip:port> -s [secret] -p [ip:port]
+	>> ./stowaway_admin -c <ip:port> -s [secret] --proxy <ip:port> --proxyu [username] --proxyp [password]
 	>> ./stowaway_admin -c <ip:port> -s [secret] --rhostreuse
-	>> ./stowaway_admin -c <ip:port> -s [secret] -p [ip:port] --rhostreuse
+	>> ./stowaway_admin -c <ip:port> -s [secret] --proxy <ip:port> --proxyu [username] --proxyp [password] --rhostreuse
 
 Options:
 `)
@@ -67,13 +71,13 @@ func ParseOptions() *Options {
 	} else if Args.Connect != "" && Args.Listen == "" && Args.Proxy == "" && !Args.Rhostreuse { // ./stowaway_admin -c <ip:port> -s [secret]
 		Args.Mode = NORMAL_ACTIVE
 		log.Println("[*]Trying to connect node actively without proxy")
-	} else if Args.Connect != "" && Args.Listen == "" && Args.Proxy != "" && !Args.Rhostreuse { // ./stowaway_admin -c <ip:port> -s [secret] -p [ip:port]
+	} else if Args.Connect != "" && Args.Listen == "" && Args.Proxy != "" && !Args.Rhostreuse { // ./stowaway_admin -c <ip:port> -s [secret] --proxy <ip:port> --proxyu [username] --proxyp [password]
 		Args.Mode = PROXY_ACTIVE
 		log.Printf("[*]Trying to connect node actively with proxy %s\n", Args.Proxy)
 	} else if Args.Connect != "" && Args.Listen == "" && Args.Proxy == "" && Args.Rhostreuse { // ./stowaway_admin -c <ip:port> -s [secret] --rhostreuse
 		Args.Mode = REUSE_ACTIVE
 		log.Println("[*]You're declaring target node is port-reusing! Trying to connect node actively")
-	} else if Args.Connect != "" && Args.Listen == "" && Args.Proxy != "" && Args.Rhostreuse { // ./stowaway_admin -c <ip:port> -s [secret] -p [ip:port] --rhostreuse
+	} else if Args.Connect != "" && Args.Listen == "" && Args.Proxy != "" && Args.Rhostreuse { // ./stowaway_admin -c <ip:port> -s [secret] --proxy <ip:port> --proxyu [username] --proxyp [password] --rhostreuse
 		Args.Mode = BOTH_ACTIVE
 		log.Printf("[*]You're declaring target node is port-reusing! Trying to connect node actively with proxy %s\n", Args.Proxy)
 	} else { // Wrong format

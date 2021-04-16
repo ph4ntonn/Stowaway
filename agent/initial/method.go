@@ -50,7 +50,7 @@ func achieveUUID(conn net.Conn, secret string) (uuid string) {
 	return uuid
 }
 
-func NormalActive(userOptions *Options, proxy *Proxy) (net.Conn, string) {
+func NormalActive(userOptions *Options, proxy *share.Proxy) (net.Conn, string) {
 	var sMessage, rMessage protocol.Message
 	// just say hi!
 	hiMess := &protocol.HIMess{

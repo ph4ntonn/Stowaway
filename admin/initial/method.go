@@ -60,7 +60,7 @@ func dispatchUUID(conn net.Conn, secret string) string {
  * @param {*Options} userOptions
  * @return {*}
  */
-func NormalActive(userOptions *Options, topo *topology.Topology) net.Conn {
+func NormalActive(userOptions *Options, topo *topology.Topology, proxy *share.Proxy) net.Conn {
 
 	var sMessage, rMessage protocol.Message
 
@@ -79,9 +79,19 @@ func NormalActive(userOptions *Options, topo *topology.Topology) net.Conn {
 	}
 
 	for {
-		conn, err := net.Dial("tcp", userOptions.Connect)
+		var (
+			conn net.Conn
+			err  error
+		)
+
+		if proxy == nil {
+			conn, err = net.Dial("tcp", userOptions.Connect)
+		} else {
+			conn, err = proxy.Dial()
+		}
+
 		if err != nil {
-			log.Fatal("[*]Connection refused!\n")
+			log.Fatalf("[*]Error occured: %s", err.Error())
 		}
 
 		if err := share.ActivePreAuth(conn, userOptions.Secret); err != nil {

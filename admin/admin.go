@@ -11,6 +11,7 @@ import (
 	"Stowaway/admin/topology"
 	"Stowaway/global"
 	"Stowaway/protocol"
+	"Stowaway/share"
 	"log"
 	"net"
 	"runtime"
@@ -35,9 +36,12 @@ func main() {
 	var conn net.Conn
 	switch options.Mode {
 	case initial.NORMAL_ACTIVE:
-		conn = initial.NormalActive(options, topo)
+		conn = initial.NormalActive(options, topo, nil)
 	case initial.NORMAL_PASSIVE:
 		conn = initial.NormalPassive(options, topo)
+	case initial.PROXY_ACTIVE:
+		proxy := share.NewProxy(options.Connect, options.Proxy, options.ProxyU, options.ProxyP)
+		conn = initial.NormalActive(options, topo, proxy)
 	default:
 		log.Fatal("[*]Unknown Mode")
 	}
