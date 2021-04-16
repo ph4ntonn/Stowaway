@@ -57,7 +57,7 @@ func (shell *Shell) start() {
 
 	defer func() {
 		if err != nil {
-			protocol.ConstructMessage(sMessage, shellResHeader, shellResFailMess)
+			protocol.ConstructMessage(sMessage, shellResHeader, shellResFailMess, false)
 			sMessage.SendMessage()
 		}
 	}()
@@ -90,7 +90,7 @@ func (shell *Shell) start() {
 		return
 	}
 
-	protocol.ConstructMessage(sMessage, shellResHeader, shellResSuccMess)
+	protocol.ConstructMessage(sMessage, shellResHeader, shellResSuccMess, false)
 	sMessage.SendMessage()
 
 	buffer := make([]byte, 4096)
@@ -106,7 +106,7 @@ func (shell *Shell) start() {
 			Result:    string(buffer[:count]),
 		}
 
-		protocol.ConstructMessage(sMessage, shellResultHeader, shellResultMess)
+		protocol.ConstructMessage(sMessage, shellResultHeader, shellResultMess, false)
 		sMessage.SendMessage()
 	}
 }

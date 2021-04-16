@@ -14,7 +14,8 @@ import (
 const (
 	HI = iota
 	UUID
-	UUIDRET
+	CHILDUUIDREQ
+	CHILDUUIDRES
 	MYINFO
 	MYMEMO
 	SHELLREQ
@@ -62,7 +63,7 @@ const TEMP_ROUTE = "THEREISNOROUTE"
 
 type Message interface {
 	ConstructHeader()
-	ConstructData(*Header, interface{})
+	ConstructData(*Header, interface{}, bool)
 	ConstructSuffix()
 	DeconstructHeader()
 	DeconstructData() (*Header, interface{}, error)
@@ -77,8 +78,8 @@ type Message interface {
  * @param {interface{}} mess
  * @return {*}
  */
-func ConstructMessage(message Message, header *Header, mess interface{}) {
-	message.ConstructData(header, mess)
+func ConstructMessage(message Message, header *Header, mess interface{}, isPass bool) {
+	message.ConstructData(header, mess, isPass)
 	message.ConstructHeader()
 	message.ConstructSuffix()
 }
@@ -115,8 +116,16 @@ type UUIDMess struct {
 	UUID    string
 }
 
-type UUIDRetMess struct {
-	OK uint16
+type ChildUUIDReq struct {
+	ParentUUIDLen uint16
+	ParentUUID    string
+	IPLen         uint16
+	IP            string
+}
+
+type ChildUUIDRes struct {
+	UUIDLen uint16
+	UUID    string
 }
 
 type MyInfo struct {

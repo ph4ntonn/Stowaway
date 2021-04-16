@@ -43,7 +43,7 @@ func AddMemo(taskChan chan *topology.TopoTask, info []string, uuid string, route
 		Memo:    memo,
 	}
 
-	protocol.ConstructMessage(sMessage, header, myMemoMess)
+	protocol.ConstructMessage(sMessage, header, myMemoMess, false)
 	sMessage.SendMessage()
 
 	fmt.Print("\n[*]Memo added!")
@@ -72,7 +72,7 @@ func DelMemo(taskChan chan *topology.TopoTask, uuid string, route string) {
 		Memo:    "",
 	}
 
-	protocol.ConstructMessage(sMessage, header, myMemoMess)
+	protocol.ConstructMessage(sMessage, header, myMemoMess, false)
 	sMessage.SendMessage()
 
 	fmt.Print("\n[*]Memo deleted!")

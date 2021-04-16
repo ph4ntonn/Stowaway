@@ -15,19 +15,7 @@ import (
 )
 
 func achieveUUID(conn net.Conn, secret string) (uuid string) {
-	var sMessage, rMessage protocol.Message
-
-	uuidRetMess := &protocol.UUIDRetMess{
-		OK: 1,
-	}
-
-	header := &protocol.Header{
-		Sender:      protocol.TEMP_UUID,
-		Accepter:    protocol.ADMIN_UUID,
-		MessageType: protocol.UUIDRET,
-		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
-		Route:       protocol.TEMP_ROUTE,
-	}
+	var rMessage protocol.Message
 
 	rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, secret, protocol.TEMP_UUID)
 	fHeader, fMessage, err := protocol.DestructMessage(rMessage)
@@ -41,11 +29,6 @@ func achieveUUID(conn net.Conn, secret string) (uuid string) {
 		mmess := fMessage.(*protocol.UUIDMess)
 		uuid = mmess.UUID
 	}
-
-	sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(conn, secret, protocol.TEMP_UUID)
-
-	protocol.ConstructMessage(sMessage, header, uuidRetMess)
-	sMessage.SendMessage()
 
 	return uuid
 }
@@ -89,7 +72,7 @@ func NormalActive(userOptions *Options, proxy *share.Proxy) (net.Conn, string) {
 
 		sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(conn, userOptions.Secret, protocol.TEMP_UUID)
 
-		protocol.ConstructMessage(sMessage, header, hiMess)
+		protocol.ConstructMessage(sMessage, header, hiMess, false)
 		sMessage.SendMessage()
 
 		rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, userOptions.Secret, protocol.TEMP_UUID)
@@ -170,7 +153,7 @@ func NormalPassive(userOptions *Options) (net.Conn, string) {
 			mmess := fMessage.(*protocol.HIMess)
 			if mmess.Greeting == "Shhh..." && mmess.IsAdmin == 1 {
 				sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(conn, userOptions.Secret, protocol.TEMP_UUID)
-				protocol.ConstructMessage(sMessage, header, hiMess)
+				protocol.ConstructMessage(sMessage, header, hiMess, false)
 				sMessage.SendMessage()
 				uuid := achieveUUID(conn, userOptions.Secret)
 				log.Printf("[*]Connection from admin %s is set up successfully!\n", conn.RemoteAddr().String())

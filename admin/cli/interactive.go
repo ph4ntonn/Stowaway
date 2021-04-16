@@ -431,7 +431,11 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				break
 			}
 
-			handler.LetListen(route, uuid, fCommand[1])
+			listen := handler.NewListen(fCommand[1])
+
+			fmt.Print("\r\n[*]Waiting for response......")
+
+			listen.LetListen(console.mgr, route, uuid)
 			console.ready <- true
 		case "ssh":
 			if console.expectParams(fCommand, 2, NODE, 0) {
@@ -740,7 +744,7 @@ func (console *Console) handleShellPanelCommand(route string, uuid string) {
 			Command:    fCommand,
 		}
 
-		protocol.ConstructMessage(sMessage, header, shellCommandMess)
+		protocol.ConstructMessage(sMessage, header, shellCommandMess, false)
 		sMessage.SendMessage()
 	}
 }
@@ -777,7 +781,7 @@ func (console *Console) handleSSHPanelCommand(route string, uuid string) {
 			Command:    fCommand,
 		}
 
-		protocol.ConstructMessage(sMessage, header, sshCommandMess)
+		protocol.ConstructMessage(sMessage, header, sshCommandMess, false)
 		sMessage.SendMessage()
 	}
 }

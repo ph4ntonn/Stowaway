@@ -6,73 +6,167 @@
  */
 package handler
 
-// import (
-// 	"Stowaway/protocol"
-// 	"Stowaway/share"
-// 	"log"
-// 	"net"
-// )
+import (
+	"Stowaway/agent/manager"
+	"Stowaway/global"
+	"Stowaway/protocol"
+	"Stowaway/share"
+	"net"
+)
 
-// func StartListen(addr string) {
-// 	var sMessage, rMessage protocol.Message
+type Listen struct {
+	addr string
+}
 
-// 	hiMess := protocol.HIMess{
-// 		GreetingLen: uint16(len("Keep slient")),
-// 		Greeting:    "Keep slient",
-// 		IsAdmin:     0,
-// 	}
+func newListen(addr string) *Listen {
+	listen := new(Listen)
+	listen.addr = addr
+	return listen
+}
 
-// 	header := &protocol.Header{
-// 		Sender:      protocol.TEMP_UUID,
-// 		Accepter:    protocol.ADMIN_UUID,
-// 		MessageType: protocol.HI,
-// 		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
-// 		Route:       protocol.TEMP_ROUTE,
-// 	}
+func (listen *Listen) start(mgr *manager.Manager) {
+	sUMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
-// 	listener, err := net.Listen("tcp", addr)
-// 	if err != nil {
-// 		log.Fatalf("[*]Error occured: %s", err.Error())
-// 	}
+	resHeader := &protocol.Header{
+		Sender:      global.G_Component.UUID,
+		Accepter:    protocol.ADMIN_UUID,
+		MessageType: protocol.LISTENRES,
+		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))), // No need to set route when agent send mess to admin
+		Route:       protocol.TEMP_ROUTE,
+	}
 
-// 	defer func() {
-// 		listener.Close()
-// 	}()
+	succMess := &protocol.ListenRes{
+		OK: 1,
+	}
 
-// 	for {
-// 		conn, err := listener.Accept()
-// 		if err != nil {
-// 			log.Printf("[*]Error occured: %s\n", err.Error())
-// 			conn.Close()
-// 			continue
-// 		}
+	failMess := &protocol.ListenRes{
+		OK: 0,
+	}
 
-// 		if err := share.PassivePreAuth(conn, userOptions.Secret); err != nil {
-// 			log.Fatalf("[*]Error occured: %s", err.Error())
-// 		}
+	listener, err := net.Listen("tcp", listen.addr)
+	if err != nil {
+		protocol.ConstructMessage(sUMessage, resHeader, failMess, false)
+		sUMessage.SendMessage()
+		return
+	}
 
-// 		rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, userOptions.Secret, protocol.TEMP_UUID)
-// 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
+	defer listener.Close()
 
-// 		if err != nil {
-// 			log.Printf("[*]Fail to set connection from %s, Error: %s\n", conn.RemoteAddr().String(), err.Error())
-// 			conn.Close()
-// 			continue
-// 		}
+	protocol.ConstructMessage(sUMessage, resHeader, succMess, false)
+	sUMessage.SendMessage()
 
-// 		if fHeader.MessageType == protocol.HI {
-// 			mmess := fMessage.(*protocol.HIMess)
-// 			if mmess.Greeting == "Shhh..." && mmess.IsAdmin == 1 {
-// 				sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(conn, userOptions.Secret, protocol.TEMP_UUID)
-// 				protocol.ConstructMessage(sMessage, header, hiMess)
-// 				sMessage.SendMessage()
-// 				uuid := achieveUUID(conn, userOptions.Secret)
-// 				log.Printf("[*]Connection from admin %s is set up successfully!\n", conn.RemoteAddr().String())
-// 				return conn, uuid
-// 			}
-// 		}
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			conn.Close()
+			continue
+		}
 
-// 		conn.Close()
-// 		log.Println("[*]Incoming connection seems illegal!")
-// 	}
-// }
+		if err := share.PassivePreAuth(conn, global.G_Component.Secret); err != nil {
+			conn.Close()
+			continue
+		}
+
+		rMessage := protocol.PrepareAndDecideWhichRProtoFromLower(conn, global.G_Component.Secret, protocol.ADMIN_UUID) //fake admin
+		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
+
+		if err != nil {
+			conn.Close()
+			continue
+		}
+
+		if fHeader.MessageType == protocol.HI {
+			mmess := fMessage.(*protocol.HIMess)
+			if mmess.Greeting == "Shhh..." {
+				sLMessage := protocol.PrepareAndDecideWhichSProtoToLower(conn, global.G_Component.Secret, protocol.ADMIN_UUID) //fake admin
+
+				hiMess := &protocol.HIMess{
+					GreetingLen: uint16(len("Keep slient")),
+					Greeting:    "Keep slient",
+					IsAdmin:     1,
+				}
+
+				hiHeader := &protocol.Header{
+					Sender:      protocol.ADMIN_UUID,
+					Accepter:    protocol.TEMP_UUID,
+					MessageType: protocol.HI,
+					RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
+					Route:       protocol.TEMP_ROUTE,
+				}
+
+				protocol.ConstructMessage(sLMessage, hiHeader, hiMess, false)
+				sLMessage.SendMessage()
+
+				childIP := conn.RemoteAddr().String()
+
+				cUUIDReqHeader := &protocol.Header{
+					Sender:      global.G_Component.UUID,
+					Accepter:    protocol.ADMIN_UUID,
+					MessageType: protocol.CHILDUUIDREQ,
+					RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
+					Route:       protocol.TEMP_ROUTE,
+				}
+
+				cUUIDMess := &protocol.ChildUUIDReq{
+					ParentUUIDLen: uint16(len(global.G_Component.UUID)),
+					ParentUUID:    global.G_Component.UUID,
+					IPLen:         uint16(len(childIP)),
+					IP:            childIP,
+				}
+
+				protocol.ConstructMessage(sUMessage, cUUIDReqHeader, cUUIDMess, false)
+				sUMessage.SendMessage()
+
+				// Problem:If two listen port ready,and at the same time,two agent come,then maybe it would cause wrong uuid dispatching,but i think such coincidence hardly happen
+				// (Fine..I just don't want to maintain status Orz
+				childUUID := <-mgr.ListenManager.ChildUUIDChan
+
+				uuidHeader := &protocol.Header{
+					Sender:      protocol.ADMIN_UUID, // Fake admin LOL
+					Accepter:    protocol.TEMP_UUID,
+					MessageType: protocol.UUID,
+					RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
+					Route:       protocol.TEMP_ROUTE,
+				}
+
+				uuidMess := &protocol.UUIDMess{
+					UUIDLen: uint16(len(childUUID)),
+					UUID:    childUUID,
+				}
+
+				protocol.ConstructMessage(sLMessage, uuidHeader, uuidMess, false)
+				sLMessage.SendMessage()
+
+				childrenTask := &manager.ChildrenTask{
+					Mode: manager.C_NEWCHILD,
+					UUID: childUUID,
+					Conn: conn,
+				}
+				mgr.ChildrenManager.TaskChan <- childrenTask
+				<-mgr.ChildrenManager.ResultChan
+
+				mgr.ChildrenManager.ChildComeChan <- conn
+
+				return
+			}
+		}
+
+		conn.Close()
+	}
+}
+
+func DispatchListenMess(mgr *manager.Manager) {
+	for {
+		message := <-mgr.ListenManager.ListenMessChan
+
+		switch message.(type) {
+		case *protocol.ListenReq:
+			mess := message.(*protocol.ListenReq)
+			listen := newListen(mess.Addr)
+			go listen.start(mgr)
+		case *protocol.ChildUUIDRes:
+			mess := message.(*protocol.ChildUUIDRes)
+			mgr.ListenManager.ChildUUIDChan <- mess.UUID
+		}
+	}
+}

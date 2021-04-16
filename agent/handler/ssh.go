@@ -73,7 +73,7 @@ func (mySSH *SSH) start() {
 
 	defer func() {
 		if err != nil {
-			protocol.ConstructMessage(sMessage, sshResheader, sshResFailMess)
+			protocol.ConstructMessage(sMessage, sshResheader, sshResFailMess, false)
 			sMessage.SendMessage()
 		}
 	}()
@@ -144,7 +144,7 @@ func (mySSH *SSH) start() {
 		return
 	}
 
-	protocol.ConstructMessage(sMessage, sshResheader, sshResSuccMess)
+	protocol.ConstructMessage(sMessage, sshResheader, sshResSuccMess, false)
 	sMessage.SendMessage()
 
 	buffer := make([]byte, 4096)
@@ -160,7 +160,7 @@ func (mySSH *SSH) start() {
 			Result:    string(buffer[:length]),
 		}
 
-		protocol.ConstructMessage(sMessage, sshResultheader, sshResultMess)
+		protocol.ConstructMessage(sMessage, sshResultheader, sshResultMess, false)
 		sMessage.SendMessage()
 	}
 }

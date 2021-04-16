@@ -69,7 +69,7 @@ func (ssh *SSH) LetSSH(route string, uuid string) error {
 		Certificate:    ssh.Certificate,
 	}
 
-	protocol.ConstructMessage(sMessage, header, sshReqMess)
+	protocol.ConstructMessage(sMessage, header, sshReqMess, false)
 	sMessage.SendMessage()
 
 	return nil

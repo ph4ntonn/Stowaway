@@ -62,12 +62,12 @@ func (socks *Socks) start(mgr *manager.Manager) {
 	mgr.SocksManager.TaskChan <- mgrTask
 	result := <-mgr.SocksManager.ResultChan
 	if !result.OK {
-		protocol.ConstructMessage(sMessage, header, failMess)
+		protocol.ConstructMessage(sMessage, header, failMess, false)
 		sMessage.SendMessage()
 		return
 	}
 
-	protocol.ConstructMessage(sMessage, header, succMess)
+	protocol.ConstructMessage(sMessage, header, succMess, false)
 	sMessage.SendMessage()
 }
 
@@ -89,7 +89,7 @@ func (socks *Socks) handleSocks(mgr *manager.Manager, dataChan chan []byte, seq 
 			Seq: seq,
 		}
 
-		protocol.ConstructMessage(sMessage, finHeader, finMess)
+		protocol.ConstructMessage(sMessage, finHeader, finMess, false)
 		sMessage.SendMessage()
 	}()
 
@@ -184,25 +184,25 @@ func (socks *Socks) checkMethod(setting *Setting, data []byte, seq uint64) {
 		}
 
 		if !supportMethodFinded {
-			protocol.ConstructMessage(sMessage, header, failMess)
+			protocol.ConstructMessage(sMessage, header, failMess, false)
 			sMessage.SendMessage()
 			setting.method = "ILLEGAL"
 			return
 		}
 
 		if noAuthFinded && (socks.Username == "" && socks.Password == "") {
-			protocol.ConstructMessage(sMessage, header, noneMess)
+			protocol.ConstructMessage(sMessage, header, noneMess, false)
 			sMessage.SendMessage()
 			setting.method = "NONE"
 			setting.isAuthed = true
 			return
 		} else if userPassFinded && (socks.Username != "" && socks.Password != "") {
-			protocol.ConstructMessage(sMessage, header, passMess)
+			protocol.ConstructMessage(sMessage, header, passMess, false)
 			sMessage.SendMessage()
 			setting.method = "PASSWORD"
 			return
 		} else {
-			protocol.ConstructMessage(sMessage, header, failMess)
+			protocol.ConstructMessage(sMessage, header, failMess, false)
 			sMessage.SendMessage()
 			setting.method = "ILLEGAL"
 			return
@@ -247,13 +247,13 @@ func (socks *Socks) auth(setting *Setting, data []byte, seq uint64) {
 	clientPass := string(data[3+ulen : 3+ulen+slen])
 
 	if clientName != socks.Username || clientPass != socks.Password {
-		protocol.ConstructMessage(sMessage, header, failMess)
+		protocol.ConstructMessage(sMessage, header, failMess, false)
 		sMessage.SendMessage()
 		setting.isAuthed = false
 		return
 	}
 	// username && password all fits!
-	protocol.ConstructMessage(sMessage, header, succMess)
+	protocol.ConstructMessage(sMessage, header, succMess, false)
 	sMessage.SendMessage()
 	setting.isAuthed = true
 }
@@ -278,7 +278,7 @@ func (socks *Socks) buildConn(mgr *manager.Manager, setting *Setting, data []byt
 	length := len(data)
 
 	if length <= 2 {
-		protocol.ConstructMessage(sMessage, header, failMess)
+		protocol.ConstructMessage(sMessage, header, failMess, false)
 		sMessage.SendMessage()
 		return
 	}
@@ -292,7 +292,7 @@ func (socks *Socks) buildConn(mgr *manager.Manager, setting *Setting, data []byt
 		case 0x03:
 			udpAssociate(mgr, setting, data, seq, length)
 		default:
-			protocol.ConstructMessage(sMessage, header, failMess)
+			protocol.ConstructMessage(sMessage, header, failMess, false)
 			sMessage.SendMessage()
 		}
 	}
@@ -342,7 +342,7 @@ func tcpConnect(mgr *manager.Manager, setting *Setting, data []byte, seq uint64,
 			data[13], data[14], data[15], data[16], data[17],
 			data[18], data[19]}.String()
 	default:
-		protocol.ConstructMessage(sMessage, header, failMess)
+		protocol.ConstructMessage(sMessage, header, failMess, false)
 		sMessage.SendMessage()
 		setting.tcpConnected = false
 		return
@@ -353,7 +353,7 @@ func tcpConnect(mgr *manager.Manager, setting *Setting, data []byte, seq uint64,
 	setting.tcpConn, err = net.DialTimeout("tcp", net.JoinHostPort(host, port), 10*time.Second)
 
 	if err != nil {
-		protocol.ConstructMessage(sMessage, header, failMess)
+		protocol.ConstructMessage(sMessage, header, failMess, false)
 		sMessage.SendMessage()
 		setting.tcpConnected = false
 		return
@@ -368,13 +368,13 @@ func tcpConnect(mgr *manager.Manager, setting *Setting, data []byte, seq uint64,
 	socksResult := <-mgr.SocksManager.ResultChan
 	if !socksResult.OK { // if admin has already send fin,then close the conn and set setting.tcpConnected -> false
 		setting.tcpConn.Close()
-		protocol.ConstructMessage(sMessage, header, failMess)
+		protocol.ConstructMessage(sMessage, header, failMess, false)
 		sMessage.SendMessage()
 		setting.tcpConnected = false
 		return
 	}
 
-	protocol.ConstructMessage(sMessage, header, succMess)
+	protocol.ConstructMessage(sMessage, header, succMess, false)
 	sMessage.SendMessage()
 	setting.tcpConnected = true
 }
@@ -414,7 +414,7 @@ func proxyS2CTCP(conn net.Conn, seq uint64) {
 			Data:    buffer[:length],
 		}
 
-		protocol.ConstructMessage(sMessage, header, dataMess)
+		protocol.ConstructMessage(sMessage, header, dataMess, false)
 		sMessage.SendMessage()
 	}
 }
@@ -485,7 +485,7 @@ func udpAssociate(mgr *manager.Manager, setting *Setting, data []byte, seq uint6
 			data[13], data[14], data[15], data[16], data[17],
 			data[18], data[19]}.String()
 	default:
-		protocol.ConstructMessage(sMessage, dataHeader, failMess)
+		protocol.ConstructMessage(sMessage, dataHeader, failMess, false)
 		sMessage.SendMessage()
 		setting.success = false
 		return
@@ -495,7 +495,7 @@ func udpAssociate(mgr *manager.Manager, setting *Setting, data []byte, seq uint6
 
 	udpListenerAddr, err := net.ResolveUDPAddr("udp", "0.0.0.0:0")
 	if err != nil {
-		protocol.ConstructMessage(sMessage, dataHeader, failMess)
+		protocol.ConstructMessage(sMessage, dataHeader, failMess, false)
 		sMessage.SendMessage()
 		setting.success = false
 		return
@@ -503,7 +503,7 @@ func udpAssociate(mgr *manager.Manager, setting *Setting, data []byte, seq uint6
 
 	udpListener, err := net.ListenUDP("udp", udpListenerAddr)
 	if err != nil {
-		protocol.ConstructMessage(sMessage, dataHeader, failMess)
+		protocol.ConstructMessage(sMessage, dataHeader, failMess, false)
 		sMessage.SendMessage()
 		setting.success = false
 		return
@@ -521,7 +521,7 @@ func udpAssociate(mgr *manager.Manager, setting *Setting, data []byte, seq uint6
 	socksResult := <-mgr.SocksManager.ResultChan
 	if !socksResult.OK {
 		udpListener.Close() // close listener,because tcp conn is closed
-		protocol.ConstructMessage(sMessage, dataHeader, failMess)
+		protocol.ConstructMessage(sMessage, dataHeader, failMess, false)
 		sMessage.SendMessage()
 		setting.success = false
 		return
@@ -535,7 +535,7 @@ func udpAssociate(mgr *manager.Manager, setting *Setting, data []byte, seq uint6
 	socksResult = <-mgr.SocksManager.ResultChan
 
 	if !socksResult.OK { // no need to close listener,cuz TCPFIN has helped us
-		protocol.ConstructMessage(sMessage, dataHeader, failMess)
+		protocol.ConstructMessage(sMessage, dataHeader, failMess, false)
 		sMessage.SendMessage()
 		setting.success = false
 		return
@@ -549,7 +549,7 @@ func udpAssociate(mgr *manager.Manager, setting *Setting, data []byte, seq uint6
 		SourceAddr:    sourceAddr,
 	}
 
-	protocol.ConstructMessage(sMessage, assHeader, assMess)
+	protocol.ConstructMessage(sMessage, assHeader, assMess, false)
 	sMessage.SendMessage()
 
 	if adminResponse, ok := <-readyChan; adminResponse != "" && ok {
@@ -568,7 +568,7 @@ func udpAssociate(mgr *manager.Manager, setting *Setting, data []byte, seq uint6
 			Data:    buf,
 		}
 
-		protocol.ConstructMessage(sMessage, dataHeader, dataMess)
+		protocol.ConstructMessage(sMessage, dataHeader, dataMess, false)
 		sMessage.SendMessage()
 
 		setting.udpListener = udpListener
@@ -576,7 +576,7 @@ func udpAssociate(mgr *manager.Manager, setting *Setting, data []byte, seq uint6
 		return
 	}
 
-	protocol.ConstructMessage(sMessage, dataHeader, failMess)
+	protocol.ConstructMessage(sMessage, dataHeader, failMess, false)
 	sMessage.SendMessage()
 	setting.success = false
 }
@@ -710,7 +710,7 @@ func proxyS2CUDP(mgr *manager.Manager, listener *net.UDPConn, seq uint64) {
 			Data:    data,
 		}
 
-		protocol.ConstructMessage(sMessage, header, dataMess)
+		protocol.ConstructMessage(sMessage, header, dataMess, false)
 		sMessage.SendMessage()
 	}
 }

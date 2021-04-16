@@ -70,7 +70,7 @@ func (socks *Socks) LetSocks(mgr *manager.Manager, route string, uuid string) er
 		Password:    socks.Password,
 	}
 
-	protocol.ConstructMessage(sMessage, header, socksStartMess)
+	protocol.ConstructMessage(sMessage, header, socksStartMess, false)
 	sMessage.SendMessage()
 
 	if ready := <-mgr.SocksManager.SocksReady; !ready {
@@ -184,7 +184,7 @@ func (socks *Socks) handleSocks(mgr *manager.Manager, conn net.Conn, route strin
 			Seq: seq,
 		}
 
-		protocol.ConstructMessage(sMessage, finHeader, finMess)
+		protocol.ConstructMessage(sMessage, finHeader, finMess, false)
 		sMessage.SendMessage()
 	}()
 
@@ -205,7 +205,7 @@ func (socks *Socks) handleSocks(mgr *manager.Manager, conn net.Conn, route strin
 		Data:    buffer[:length],
 	}
 
-	protocol.ConstructMessage(sMessage, header, socksDataMess)
+	protocol.ConstructMessage(sMessage, header, socksDataMess, false)
 	sMessage.SendMessage()
 
 	// browser sends sth, so handling conn normally and setting sendSth->true
@@ -223,7 +223,7 @@ func (socks *Socks) handleSocks(mgr *manager.Manager, conn net.Conn, route strin
 			Data:    buffer[:length],
 		}
 
-		protocol.ConstructMessage(sMessage, header, socksDataMess)
+		protocol.ConstructMessage(sMessage, header, socksDataMess, false)
 		sMessage.SendMessage()
 	}
 }
@@ -268,7 +268,7 @@ func startUDPAss(mgr *manager.Manager, topo *topology.Topology, seq uint64) {
 
 	defer func() {
 		if err != nil {
-			protocol.ConstructMessage(sMessage, header, failMess)
+			protocol.ConstructMessage(sMessage, header, failMess, false)
 			sMessage.SendMessage()
 		}
 	}()
@@ -306,7 +306,7 @@ func startUDPAss(mgr *manager.Manager, topo *topology.Topology, seq uint64) {
 			Addr:    udpListener.LocalAddr().String(),
 		}
 
-		protocol.ConstructMessage(sMessage, header, succMess)
+		protocol.ConstructMessage(sMessage, header, succMess, false)
 		sMessage.SendMessage()
 	} else {
 		err = errors.New("TCP conn seems disconnected!")
@@ -368,7 +368,7 @@ func handleUDPAss(mgr *manager.Manager, listener *net.UDPConn, route string, uui
 			Data:    buffer[:length],
 		}
 
-		protocol.ConstructMessage(sMessage, dataHeader, udpDataMess)
+		protocol.ConstructMessage(sMessage, dataHeader, udpDataMess, false)
 		sMessage.SendMessage()
 	}
 }

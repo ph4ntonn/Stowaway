@@ -42,7 +42,7 @@ func (forward *Forward) start(mgr *manager.Manager) {
 	}
 
 	defer func() {
-		protocol.ConstructMessage(sMessage, finHeader, finMess)
+		protocol.ConstructMessage(sMessage, finHeader, finMess, false)
 		sMessage.SendMessage()
 	}()
 
@@ -108,7 +108,7 @@ func (forward *Forward) start(mgr *manager.Manager) {
 			Data:    buffer[:length],
 		}
 
-		protocol.ConstructMessage(sMessage, dataHeader, forwardDataMess)
+		protocol.ConstructMessage(sMessage, dataHeader, forwardDataMess, false)
 		sMessage.SendMessage()
 	}
 }
@@ -134,14 +134,14 @@ func testForward(addr string) {
 
 	conn, err := net.DialTimeout("tcp", addr, 10*time.Second)
 	if err != nil {
-		protocol.ConstructMessage(sMessage, header, failMess)
+		protocol.ConstructMessage(sMessage, header, failMess, false)
 		sMessage.SendMessage()
 		return
 	}
 
 	conn.Close()
 
-	protocol.ConstructMessage(sMessage, header, succMess)
+	protocol.ConstructMessage(sMessage, header, succMess, false)
 	sMessage.SendMessage()
 }
 

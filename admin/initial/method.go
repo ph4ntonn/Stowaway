@@ -16,7 +16,7 @@ import (
 )
 
 func dispatchUUID(conn net.Conn, secret string) string {
-	var sMessage, rMessage protocol.Message
+	var sMessage protocol.Message
 
 	uuid := utils.GenerateUUID()
 	uuidMess := &protocol.UUIDMess{
@@ -34,23 +34,8 @@ func dispatchUUID(conn net.Conn, secret string) string {
 
 	sMessage = protocol.PrepareAndDecideWhichSProtoToLower(conn, secret, protocol.ADMIN_UUID)
 
-	protocol.ConstructMessage(sMessage, header, uuidMess)
+	protocol.ConstructMessage(sMessage, header, uuidMess, false)
 	sMessage.SendMessage()
-
-	rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, secret, protocol.ADMIN_UUID)
-	fHeader, fMessage, err := protocol.DestructMessage(rMessage)
-
-	if err != nil {
-		conn.Close()
-		log.Fatalf("[*]Fail to dispatch UUID to node %s, Error: %s", conn.RemoteAddr().String(), err.Error())
-	}
-
-	if fHeader.MessageType == protocol.UUIDRET {
-		mmess := fMessage.(*protocol.UUIDRetMess)
-		if mmess.OK != 1 {
-			log.Fatalf("[*]Fail to dispatch UUID to node %s, Error: %s", conn.RemoteAddr().String(), err.Error())
-		}
-	}
 
 	return uuid
 }
@@ -100,10 +85,10 @@ func NormalActive(userOptions *Options, topo *topology.Topology, proxy *share.Pr
 
 		sMessage = protocol.PrepareAndDecideWhichSProtoToLower(conn, userOptions.Secret, protocol.ADMIN_UUID)
 
-		protocol.ConstructMessage(sMessage, header, hiMess)
+		protocol.ConstructMessage(sMessage, header, hiMess, false)
 		sMessage.SendMessage()
 
-		rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, userOptions.Secret, protocol.ADMIN_UUID)
+		rMessage = protocol.PrepareAndDecideWhichRProtoFromLower(conn, userOptions.Secret, protocol.ADMIN_UUID)
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 
 		if err != nil {
@@ -179,7 +164,7 @@ func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 			log.Fatalf("[*]Error occured: %s", err.Error())
 		}
 
-		rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, userOptions.Secret, protocol.ADMIN_UUID)
+		rMessage = protocol.PrepareAndDecideWhichRProtoFromLower(conn, userOptions.Secret, protocol.ADMIN_UUID)
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 
 		if err != nil {
@@ -192,7 +177,7 @@ func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 			mmess := fMessage.(*protocol.HIMess)
 			if mmess.Greeting == "Shhh..." {
 				sMessage = protocol.PrepareAndDecideWhichSProtoToLower(conn, userOptions.Secret, protocol.ADMIN_UUID)
-				protocol.ConstructMessage(sMessage, header, hiMess)
+				protocol.ConstructMessage(sMessage, header, hiMess, false)
 				sMessage.SendMessage()
 				node := topology.NewNode(dispatchUUID(conn, userOptions.Secret), conn.RemoteAddr().String())
 				task := &topology.TopoTask{

@@ -58,7 +58,7 @@ func (backward *Backward) start(mgr *manager.Manager) {
 			RPort:    backward.Rport,
 		}
 
-		protocol.ConstructMessage(sMessage, seqHeader, seqMess)
+		protocol.ConstructMessage(sMessage, seqHeader, seqMess, false)
 		sMessage.SendMessage()
 
 		mgrTask = &manager.BackwardTask{
@@ -98,7 +98,7 @@ func (backward *Backward) handleBackward(mgr *manager.Manager, conn net.Conn, se
 			Seq: seq,
 		}
 
-		protocol.ConstructMessage(sMessage, finHeader, finMess)
+		protocol.ConstructMessage(sMessage, finHeader, finMess, false)
 		sMessage.SendMessage()
 	}()
 
@@ -163,7 +163,7 @@ func (backward *Backward) handleBackward(mgr *manager.Manager, conn net.Conn, se
 			Data:    buffer[:length],
 		}
 
-		protocol.ConstructMessage(sMessage, dataHeader, backwardDataMess)
+		protocol.ConstructMessage(sMessage, dataHeader, backwardDataMess, false)
 		sMessage.SendMessage()
 	}
 }
@@ -190,7 +190,7 @@ func testBackward(mgr *manager.Manager, lPort, rPort string) {
 	listenAddr := fmt.Sprintf("0.0.0.0:%s", rPort)
 	listener, err := net.Listen("tcp", listenAddr)
 	if err != nil {
-		protocol.ConstructMessage(sMessage, header, failMess)
+		protocol.ConstructMessage(sMessage, header, failMess, false)
 		sMessage.SendMessage()
 		return
 	}
@@ -199,7 +199,7 @@ func testBackward(mgr *manager.Manager, lPort, rPort string) {
 
 	go backward.start(mgr)
 
-	protocol.ConstructMessage(sMessage, header, succMess)
+	protocol.ConstructMessage(sMessage, header, succMess, false)
 	sMessage.SendMessage()
 }
 
@@ -224,7 +224,7 @@ func sendDoneMess(all uint16, rPort string) {
 		RPort:    rPort,
 	}
 
-	protocol.ConstructMessage(sMessage, header, doneMess)
+	protocol.ConstructMessage(sMessage, header, doneMess, false)
 	sMessage.SendMessage()
 }
 
@@ -265,7 +265,7 @@ func DispatchBackwardMess(mgr *manager.Manager) {
 					Seq: mess.Seq,
 				}
 
-				protocol.ConstructMessage(sMessage, finHeader, finMess)
+				protocol.ConstructMessage(sMessage, finHeader, finMess, false)
 				sMessage.SendMessage()
 			}
 		case *protocol.BackwardData:

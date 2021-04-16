@@ -36,6 +36,7 @@ func (admin *Admin) Run() {
 	// hanle all message comes from downstream
 	go admin.handleMessFromDownstream(console)
 	// run a dispatcher to dispatch different kinds of message
+	go handler.DispatchListenMess(admin.mgr, admin.Topology)
 	go handler.DispathSocksMess(admin.mgr, admin.Topology)
 	go handler.DispatchForwardMess(admin.mgr)
 	go handler.DispatchBackwardMess(admin.mgr, admin.Topology)
@@ -104,6 +105,10 @@ func (admin *Admin) handleMessFromDownstream(console *cli.Console) {
 			fallthrough
 		case protocol.BACKWARDSTART:
 			admin.mgr.BackwardManager.BackwardMessChan <- message
+		case protocol.CHILDUUIDREQ:
+			fallthrough
+		case protocol.LISTENRES:
+			admin.mgr.ListenManager.ListenMessChan <- message
 		default:
 			log.Print("\n[*]Unknown Message!")
 		}

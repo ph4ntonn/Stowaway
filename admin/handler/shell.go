@@ -28,7 +28,7 @@ func LetShellStart(route string, uuid string) {
 		Start: 1,
 	}
 
-	protocol.ConstructMessage(sMessage, header, shellReqMess)
+	protocol.ConstructMessage(sMessage, header, shellReqMess, false)
 	sMessage.SendMessage()
 }
 

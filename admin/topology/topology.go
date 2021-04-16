@@ -62,6 +62,7 @@ type topoResult struct {
 	IsExist bool
 	UUID    string
 	Route   string
+	IDNum   int
 }
 
 func NewTopology() *Topology {
@@ -143,9 +144,10 @@ func (topology *Topology) addNode(task *TopoTask) {
 	}
 
 	topology.nodes[topology.currentIDNum] = task.Target
-	topology.currentIDNum++
 
-	topology.ResultChan <- &topoResult{} // Just tell upstream: work done!
+	topology.ResultChan <- &topoResult{IDNum: topology.currentIDNum} // Just tell upstream: work done!
+
+	topology.currentIDNum++
 }
 
 func (topology *Topology) calculate() {
@@ -163,7 +165,7 @@ func (topology *Topology) calculate() {
 
 		for {
 			if topology.nodes[tempIDNum].parentUUID != protocol.ADMIN_UUID {
-				tempRoute = append(tempRoute, topology.nodes[tempIDNum].parentUUID)
+				tempRoute = append(tempRoute, topology.nodes[tempIDNum].uuid)
 				for i := 0; i < len(topology.nodes); i++ {
 					if topology.nodes[i].uuid == topology.nodes[tempIDNum].parentUUID {
 						tempIDNum = i

@@ -56,3 +56,15 @@ func newInfoManager() *infoManager {
 	manager.InfoMessChan = make(chan interface{}, 5)
 	return manager
 }
+
+type listenManager struct {
+	ListenMessChan chan interface{}
+	ListenReady    chan bool
+}
+
+func newListenManager() *listenManager {
+	manager := new(listenManager)
+	manager.ListenMessChan = make(chan interface{}, 5)
+	manager.ListenReady = make(chan bool)
+	return manager
+}

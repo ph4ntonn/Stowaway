@@ -20,8 +20,6 @@ type RawMessage struct {
 	UUID         string
 	Conn         net.Conn
 	CryptoSecret []byte
-	// flag to mark if the packet needed to be proxy
-	IsPass bool
 	// Prepared buffer
 	HeaderBuffer []byte
 	DataBuffer   []byte
@@ -39,7 +37,7 @@ func (message *RawMessage) ConstructHeader() {}
  * @param {*}
  * @return {*}
  */
-func (message *RawMessage) ConstructData(header *Header, mess interface{}) {
+func (message *RawMessage) ConstructData(header *Header, mess interface{}, isPass bool) {
 	var headerBuffer, dataBuffer bytes.Buffer
 	// First, construct own header
 	messageTypeBuf := make([]byte, 2)
@@ -56,9 +54,7 @@ func (message *RawMessage) ConstructData(header *Header, mess interface{}) {
 	headerBuffer.Write([]byte(header.Route))
 
 	// Check if message's data is needed to encrypt
-	if message.IsPass && message.DataBuffer != nil {
-		message.IsPass = false
-	} else {
+	if !isPass {
 		switch header.MessageType {
 		case HI:
 			mmess := mess.(*HIMess)
@@ -83,12 +79,31 @@ func (message *RawMessage) ConstructData(header *Header, mess interface{}) {
 
 			dataBuffer.Write(uuidLenBuf)
 			dataBuffer.Write(uuidBuf)
-		case UUIDRET:
-			mmess := mess.(*UUIDRetMess)
-			OKBuf := make([]byte, 2)
-			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
+		case CHILDUUIDREQ:
+			mmess := mess.(*ChildUUIDReq)
+			puuidLenBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(puuidLenBuf, mmess.ParentUUIDLen)
 
-			dataBuffer.Write(OKBuf)
+			puuidBuf := []byte(mmess.ParentUUID)
+
+			ipLenBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(ipLenBuf, mmess.IPLen)
+
+			ipBuf := []byte(mmess.IP)
+
+			dataBuffer.Write(puuidLenBuf)
+			dataBuffer.Write(puuidBuf)
+			dataBuffer.Write(ipLenBuf)
+			dataBuffer.Write(ipBuf)
+		case CHILDUUIDRES:
+			mmess := mess.(*ChildUUIDRes)
+			uuidLenBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(uuidLenBuf, mmess.UUIDLen)
+
+			uuidBuf := []byte(mmess.UUID)
+
+			dataBuffer.Write(uuidLenBuf)
+			dataBuffer.Write(uuidBuf)
 		case MYINFO:
 			mmess := mess.(*MyInfo)
 			uuidLenBuf := make([]byte, 2)
@@ -541,10 +556,17 @@ func (message *RawMessage) ConstructData(header *Header, mess interface{}) {
 			dataBuffer.Write(OKBuf)
 		default:
 		}
+	} else {
+		mmess := mess.([]byte)
+		dataBuffer.Write(mmess)
 	}
+
 	// Encrypt data
 	message.DataBuffer = dataBuffer.Bytes()
-	message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
+
+	if !isPass {
+		message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
+	}
 	// Calculate the whole data's length
 	dataLenBuf := make([]byte, 8)
 	binary.BigEndian.PutUint64(dataLenBuf, uint64(len(message.DataBuffer)))
@@ -629,9 +651,7 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 	if header.Accepter == TEMP_UUID || message.UUID == ADMIN_UUID || message.UUID == header.Accepter {
 		dataBuf = crypto.AESDecrypt(dataBuf[:], message.CryptoSecret) // use dataBuf directly to save the memory
 	} else {
-		message.IsPass = true
-		message.DataBuffer = dataBuf
-		return header, nil, nil
+		return header, dataBuf, nil
 	}
 
 	switch header.MessageType {
@@ -646,9 +666,17 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 		mmess.UUIDLen = binary.BigEndian.Uint16(dataBuf[:2])
 		mmess.UUID = string(dataBuf[2 : 2+mmess.UUIDLen])
 		return header, mmess, nil
-	case UUIDRET:
-		mmess := new(UUIDRetMess)
-		mmess.OK = binary.BigEndian.Uint16(dataBuf[:2])
+	case CHILDUUIDREQ:
+		mmess := new(ChildUUIDReq)
+		mmess.ParentUUIDLen = binary.BigEndian.Uint16(dataBuf[:2])
+		mmess.ParentUUID = string(dataBuf[2 : 2+mmess.ParentUUIDLen])
+		mmess.IPLen = binary.BigEndian.Uint16(dataBuf[2+mmess.ParentUUIDLen : 4+mmess.ParentUUIDLen])
+		mmess.IP = string(dataBuf[4+mmess.ParentUUIDLen : 4+mmess.ParentUUIDLen+mmess.IPLen])
+		return header, mmess, nil
+	case CHILDUUIDRES:
+		mmess := new(ChildUUIDRes)
+		mmess.UUIDLen = binary.BigEndian.Uint16(dataBuf[:2])
+		mmess.UUID = string(dataBuf[2 : 2+mmess.UUIDLen])
 		return header, mmess, nil
 	case MYINFO:
 		mmess := new(MyInfo)

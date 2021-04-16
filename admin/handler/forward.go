@@ -48,7 +48,7 @@ func (forward *Forward) LetForward(mgr *manager.Manager, route string, uuid stri
 		Addr:    forward.Addr,
 	}
 
-	protocol.ConstructMessage(sMessage, header, testMess)
+	protocol.ConstructMessage(sMessage, header, testMess, false)
 	sMessage.SendMessage()
 
 	if ready := <-mgr.ForwardManager.ForwardReady; !ready {
@@ -125,7 +125,7 @@ func (forward *Forward) handleForward(mgr *manager.Manager, conn net.Conn, route
 		Addr:    forward.Addr,
 	}
 
-	protocol.ConstructMessage(sMessage, startHeader, startMess)
+	protocol.ConstructMessage(sMessage, startHeader, startMess, false)
 	sMessage.SendMessage()
 
 	defer func() {
@@ -141,7 +141,7 @@ func (forward *Forward) handleForward(mgr *manager.Manager, conn net.Conn, route
 			Seq: seq,
 		}
 
-		protocol.ConstructMessage(sMessage, finHeader, finMess)
+		protocol.ConstructMessage(sMessage, finHeader, finMess, false)
 		sMessage.SendMessage()
 	}()
 
@@ -192,7 +192,7 @@ func (forward *Forward) handleForward(mgr *manager.Manager, conn net.Conn, route
 			Data:    buffer[:length],
 		}
 
-		protocol.ConstructMessage(sMessage, dataHeader, forwardDataMess)
+		protocol.ConstructMessage(sMessage, dataHeader, forwardDataMess, false)
 		sMessage.SendMessage()
 	}
 }

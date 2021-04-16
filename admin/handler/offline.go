@@ -26,6 +26,6 @@ func LetOffline(route string, uuid string) {
 		OK: 1,
 	}
 
-	protocol.ConstructMessage(sMessage, header, offlineMess)
+	protocol.ConstructMessage(sMessage, header, offlineMess, false)
 	sMessage.SendMessage()
 }

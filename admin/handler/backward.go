@@ -40,7 +40,7 @@ func (backward *Backward) LetBackward(mgr *manager.Manager, route string, uuid s
 		RPort:    backward.RPort,
 	}
 
-	protocol.ConstructMessage(sMessage, header, testMess)
+	protocol.ConstructMessage(sMessage, header, testMess, false)
 	sMessage.SendMessage()
 	// node can listen on assigned port?
 	if ready := <-mgr.BackwardManager.BackwardReady; !ready {
@@ -104,7 +104,7 @@ func (backward *Backward) start(mgr *manager.Manager, topo *topology.Topology, u
 		RPort:    backward.RPort,
 	}
 
-	protocol.ConstructMessage(sMessage, header, seqMess)
+	protocol.ConstructMessage(sMessage, header, seqMess, false)
 	sMessage.SendMessage()
 
 	// send fin after all done
@@ -121,7 +121,7 @@ func (backward *Backward) start(mgr *manager.Manager, topo *topology.Topology, u
 			Seq: seq,
 		}
 
-		protocol.ConstructMessage(sMessage, finHeader, finMess)
+		protocol.ConstructMessage(sMessage, finHeader, finMess, false)
 		sMessage.SendMessage()
 	}()
 
@@ -192,7 +192,7 @@ func (backward *Backward) start(mgr *manager.Manager, topo *topology.Topology, u
 			Data:    buffer[:length],
 		}
 
-		protocol.ConstructMessage(sMessage, dataHeader, backwardDataMess)
+		protocol.ConstructMessage(sMessage, dataHeader, backwardDataMess, false)
 		sMessage.SendMessage()
 	}
 }
@@ -228,7 +228,7 @@ func StopBackward(mgr *manager.Manager, uuid, route string, choice int) {
 			All: 1,
 		}
 
-		protocol.ConstructMessage(sMessage, header, stopMess)
+		protocol.ConstructMessage(sMessage, header, stopMess, false)
 		sMessage.SendMessage()
 	} else {
 		backwardTask := &manager.BackwardTask{
@@ -242,7 +242,7 @@ func StopBackward(mgr *manager.Manager, uuid, route string, choice int) {
 			RPortLen: uint16(len([]byte(result.RPort))),
 			RPort:    result.RPort,
 		}
-		protocol.ConstructMessage(sMessage, header, stopMess)
+		protocol.ConstructMessage(sMessage, header, stopMess, false)
 		sMessage.SendMessage()
 	}
 }

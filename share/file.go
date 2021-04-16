@@ -80,7 +80,7 @@ func (file *MyFile) SendFileStat(route string, targetUUID string, identity int) 
 			fileDownResMess := &protocol.FileDownRes{
 				OK: 0,
 			}
-			protocol.ConstructMessage(sMessage, downHeader, fileDownResMess)
+			protocol.ConstructMessage(sMessage, downHeader, fileDownResMess, false)
 			sMessage.SendMessage()
 		}
 	}()
@@ -111,7 +111,7 @@ func (file *MyFile) SendFileStat(route string, targetUUID string, identity int) 
 		SliceNum:    uint64(fileSliceNum),
 	}
 
-	protocol.ConstructMessage(sMessage, statHeader, fileStatReqMess)
+	protocol.ConstructMessage(sMessage, statHeader, fileStatReqMess, false)
 	sMessage.SendMessage()
 
 	return nil
@@ -145,7 +145,7 @@ func (file *MyFile) CheckFileStat(route string, targetUUID string, identity int)
 
 	defer func() {
 		if err != nil {
-			protocol.ConstructMessage(sMessage, header, fileStatResFailMess)
+			protocol.ConstructMessage(sMessage, header, fileStatResFailMess, false)
 			sMessage.SendMessage()
 		}
 	}()
@@ -157,7 +157,7 @@ func (file *MyFile) CheckFileStat(route string, targetUUID string, identity int)
 
 	file.Handler = fileHandler
 
-	protocol.ConstructMessage(sMessage, header, fileStatResSuccMess)
+	protocol.ConstructMessage(sMessage, header, fileStatResSuccMess, false)
 	sMessage.SendMessage()
 
 	return nil
@@ -209,7 +209,7 @@ func (file *MyFile) Upload(route string, targetUUID string, identity int) {
 	for {
 		length, err := file.Handler.Read(buffer)
 		if err != nil && err != io.EOF {
-			protocol.ConstructMessage(sMessage, errHeader, fileErrMess)
+			protocol.ConstructMessage(sMessage, errHeader, fileErrMess, false)
 			sMessage.SendMessage()
 			return
 		} else if err != nil && err == io.EOF {
@@ -221,7 +221,7 @@ func (file *MyFile) Upload(route string, targetUUID string, identity int) {
 			Data:    buffer[:length],
 		}
 
-		protocol.ConstructMessage(sMessage, dataHeader, fileDataMess)
+		protocol.ConstructMessage(sMessage, dataHeader, fileDataMess, false)
 		sMessage.SendMessage()
 
 		if identity == ADMIN {
@@ -276,6 +276,6 @@ func (file *MyFile) Ask4Download(route string, targetUUID string) {
 		Filename:    file.FileName,
 	}
 
-	protocol.ConstructMessage(sMessage, header, fileDownReqMess)
+	protocol.ConstructMessage(sMessage, header, fileDownReqMess, false)
 	sMessage.SendMessage()
 }

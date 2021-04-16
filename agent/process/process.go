@@ -15,34 +15,50 @@ import (
 	"Stowaway/share"
 	"Stowaway/utils"
 	"log"
+	"net"
 	"os"
+	"strings"
 )
 
 type Agent struct {
 	UUID string
 	Memo string
+
+	mgr              *manager.Manager
+	childrenMessChan chan *ChildrenMess
+}
+
+type ChildrenMess struct {
+	cHeader  *protocol.Header
+	cMessage []byte
 }
 
 func NewAgent() *Agent {
 	agent := new(Agent)
 	agent.UUID = protocol.TEMP_UUID
+	agent.childrenMessChan = make(chan *ChildrenMess, 5)
 	return agent
 }
 
 func (agent *Agent) Run() {
 	agent.sendMyInfo()
 	// run manager
-	mgr := manager.NewManager(share.NewFile())
-	go mgr.Run()
+	agent.mgr = manager.NewManager(share.NewFile())
+	go agent.mgr.Run()
 	// run dispatchers to dispatch all kinds of message
-	go handler.DispathSocksMess(mgr)
-	go handler.DispatchForwardMess(mgr)
-	go handler.DispatchBackwardMess(mgr)
-	go handler.DispatchFileMess(mgr)
-	go handler.DispatchSSHMess(mgr)
-	go handler.DispatchShellMess(mgr)
+	go handler.DispatchListenMess(agent.mgr)
+	go handler.DispathSocksMess(agent.mgr)
+	go handler.DispatchForwardMess(agent.mgr)
+	go handler.DispatchBackwardMess(agent.mgr)
+	go handler.DispatchFileMess(agent.mgr)
+	go handler.DispatchSSHMess(agent.mgr)
+	go handler.DispatchShellMess(agent.mgr)
+	// run dispatcher to dispatch children's message
+	go agent.dispatchChildrenMess()
+	// waiting for child
+	go agent.waitingChild()
 	// process data from upstream
-	agent.handleDataFromUpstream(mgr)
+	agent.handleDataFromUpstream()
 	//agent.handleDataFromDownstream()
 }
 
@@ -67,11 +83,11 @@ func (agent *Agent) sendMyInfo() {
 		Hostname:    hostname,
 	}
 
-	protocol.ConstructMessage(sMessage, header, myInfoMess)
+	protocol.ConstructMessage(sMessage, header, myInfoMess, false)
 	sMessage.SendMessage()
 }
 
-func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager) {
+func (agent *Agent) handleDataFromUpstream() {
 	rMessage := protocol.PrepareAndDecideWhichRProtoFromUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	for {
@@ -89,11 +105,11 @@ func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager) {
 			case protocol.SHELLREQ:
 				fallthrough
 			case protocol.SHELLCOMMAND:
-				mgr.ShellManager.ShellMessChan <- message
+				agent.mgr.ShellManager.ShellMessChan <- message
 			case protocol.SSHREQ:
 				fallthrough
 			case protocol.SSHCOMMAND:
-				mgr.SSHManager.SSHMessChan <- message
+				agent.mgr.SSHManager.SSHMessChan <- message
 			case protocol.FILESTATREQ:
 				fallthrough
 			case protocol.FILESTATRES:
@@ -103,7 +119,7 @@ func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager) {
 			case protocol.FILEERR:
 				fallthrough
 			case protocol.FILEDOWNREQ:
-				mgr.FileManager.FileMessChan <- message
+				agent.mgr.FileManager.FileMessChan <- message
 			case protocol.SOCKSSTART:
 				fallthrough
 			case protocol.SOCKSTCPDATA:
@@ -113,7 +129,7 @@ func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager) {
 			case protocol.UDPASSRES:
 				fallthrough
 			case protocol.SOCKSUDPDATA:
-				mgr.SocksManager.SocksMessChan <- message
+				agent.mgr.SocksManager.SocksMessChan <- message
 			case protocol.FORWARDTEST:
 				fallthrough
 			case protocol.FORWARDSTART:
@@ -121,7 +137,7 @@ func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager) {
 			case protocol.FORWARDDATA:
 				fallthrough
 			case protocol.FORWARDFIN:
-				mgr.ForwardManager.ForwardMessChan <- message
+				agent.mgr.ForwardManager.ForwardMessChan <- message
 			case protocol.BACKWARDTEST:
 				fallthrough
 			case protocol.BACKWARDSEQ:
@@ -131,12 +147,84 @@ func (agent *Agent) handleDataFromUpstream(mgr *manager.Manager) {
 			case protocol.BACKWARDSTOP:
 				fallthrough
 			case protocol.BACKWARDDATA:
-				mgr.BackwardManager.BackwardMessChan <- message
+				agent.mgr.BackwardManager.BackwardMessChan <- message
+			case protocol.CHILDUUIDRES:
+				fallthrough
+			case protocol.LISTENREQ:
+				agent.mgr.ListenManager.ListenMessChan <- message
 			case protocol.OFFLINE:
 				os.Exit(0)
 			default:
 				log.Println("[*]Unknown Message!")
 			}
+		} else {
+			agent.childrenMessChan <- &ChildrenMess{
+				cHeader:  header,
+				cMessage: message.([]byte),
+			}
 		}
 	}
+}
+
+func (agent *Agent) dispatchChildrenMess() {
+	for {
+		childrenMess := <-agent.childrenMessChan
+
+		childUUID := changeRoute(childrenMess.cHeader)
+
+		task := &manager.ChildrenTask{
+			Mode: manager.C_GETCONN,
+			UUID: childUUID,
+		}
+		agent.mgr.ChildrenManager.TaskChan <- task
+		result := <-agent.mgr.ChildrenManager.ResultChan
+		if !result.OK {
+
+			continue
+		}
+
+		sMessage := protocol.PrepareAndDecideWhichSProtoToLower(result.Conn, global.G_Component.Secret, global.G_Component.UUID)
+
+		protocol.ConstructMessage(sMessage, childrenMess.cHeader, childrenMess.cMessage, true)
+		sMessage.SendMessage()
+	}
+}
+
+func (agent *Agent) waitingChild() {
+	for {
+		childConn := <-agent.mgr.ChildrenManager.ChildComeChan
+		go agent.handleDataFromDownstream(childConn)
+	}
+}
+
+func (agent *Agent) handleDataFromDownstream(conn net.Conn) {
+	rMessage := protocol.PrepareAndDecideWhichRProtoFromUpper(conn, global.G_Component.Secret, global.G_Component.UUID)
+	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+
+	for {
+		header, message, err := protocol.DestructMessage(rMessage)
+		if err != nil {
+			log.Println("[*]Peer node seems offline!")
+			return
+		}
+
+		protocol.ConstructMessage(sMessage, header, message, true)
+		sMessage.SendMessage()
+	}
+}
+
+func changeRoute(header *protocol.Header) string {
+	route := header.Route
+	//找到下一个节点id号
+	routes := strings.Split(route, ":")
+	if len(routes) == 1 {
+		header.Route = ""
+		header.RouteLen = 0
+		return routes[0]
+	}
+
+	header.Route = strings.Join(routes[1:], ":")
+	header.RouteLen = uint32(len(header.Route))
+	return routes[0]
+
 }
