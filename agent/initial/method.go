@@ -50,7 +50,7 @@ func achieveUUID(conn net.Conn, secret string) (uuid string) {
 	return uuid
 }
 
-func NormalActive(userOptions *Options) (net.Conn, string) {
+func NormalActive(userOptions *Options, proxy *Proxy) (net.Conn, string) {
 	var sMessage, rMessage protocol.Message
 	// just say hi!
 	hiMess := &protocol.HIMess{
@@ -68,9 +68,19 @@ func NormalActive(userOptions *Options) (net.Conn, string) {
 	}
 
 	for {
-		conn, err := net.Dial("tcp", userOptions.Connect)
+		var (
+			conn net.Conn
+			err  error
+		)
+
+		if proxy == nil {
+			conn, err = net.Dial("tcp", userOptions.Connect)
+		} else {
+			conn, err = proxy.Dial()
+		}
+
 		if err != nil {
-			log.Fatal("[*]Connection refused!\n")
+			log.Fatalf("[*]Error occured: %s", err.Error())
 		}
 
 		if err := share.ActivePreAuth(conn, userOptions.Secret); err != nil {

@@ -32,7 +32,10 @@ func main() {
 	case initial.NORMAL_RECONNECT_ACTIVE:
 		fallthrough
 	case initial.NORMAL_ACTIVE:
-		conn, agent.UUID = initial.NormalActive(options)
+		conn, agent.UUID = initial.NormalActive(options, nil)
+	case initial.PROXY_ACTIVE:
+		proxy := initial.NewProxy(options.Connect, options.Proxy, options.ProxyU, options.ProxyP)
+		conn, agent.UUID = initial.NormalActive(options, proxy)
 	default:
 		log.Fatal("[*]Unknown Mode")
 	}

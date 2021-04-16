@@ -125,9 +125,13 @@ func (manager *backwardManager) addConn(task *BackwardTask) {
 
 func (manager *backwardManager) getDataChan(task *BackwardTask) {
 	if _, ok := manager.backwardMap[task.RPort]; ok {
-		manager.ResultChan <- &backwardResult{
-			OK:       true,
-			DataChan: manager.backwardMap[task.RPort].backwardStatusMap[task.Seq].dataChan,
+		if _, ok := manager.backwardMap[task.RPort].backwardStatusMap[task.Seq]; ok {
+			manager.ResultChan <- &backwardResult{
+				OK:       true,
+				DataChan: manager.backwardMap[task.RPort].backwardStatusMap[task.Seq].dataChan,
+			}
+		} else {
+			manager.ResultChan <- &backwardResult{OK: false}
 		}
 	} else {
 		manager.ResultChan <- &backwardResult{OK: false}

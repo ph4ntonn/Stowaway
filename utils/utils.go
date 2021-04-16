@@ -132,3 +132,16 @@ func CheckIPPort(info string) (normalAddr string, reuseAddr string, err error) {
 
 	return
 }
+
+// CheckIfIP4 检查是否是ipv4地址
+func CheckIfIP4(ip string) bool {
+	for i := 0; i < len(ip); i++ {
+		switch ip[i] {
+		case '.':
+			return true
+		case ':':
+			return false
+		}
+	}
+	return false
+}

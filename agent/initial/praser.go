@@ -79,13 +79,13 @@ func ParseOptions() *Options {
 		log.Printf("[*]Starting agent node actively.Connecting to %s.Declaring the remote node is port-reusing\n", Args.Connect)
 	} else if Args.Listen == "" && !Args.Reverse && Args.Connect != "" && Args.Reconnect == 0 && Args.ReuseHost == "" && Args.ReusePort == "" && !Args.RhostReuse && Args.Proxy != "" { // ./stowaway_agent -c <ip:port> -s [secret] --proxy <ip:port> --proxyu [username] --proxyp [password]
 		Args.Mode = PROXY_ACTIVE
-		log.Printf("[*]Starting agent node actively.Connecting to %s with proxy %s\n", Args.Connect, Args.Proxy)
+		log.Printf("[*]Starting agent node actively.Connecting to %s via proxy %s\n", Args.Connect, Args.Proxy)
 	} else if Args.Listen == "" && !Args.Reverse && Args.Connect != "" && Args.Reconnect == 0 && Args.ReuseHost == "" && Args.ReusePort == "" && Args.RhostReuse && Args.Proxy != "" { // ./stowaway_agent -c <ip:port> -s [secret] --proxy <ip:port> --proxyu [username] --proxyp [password] --rhostreuse
 		Args.Mode = PROXY_REUSE_ACTIVE
-		log.Printf("[*]Starting agent node actively.Connecting to %s with proxy %s.Declaring the remote node is port-reusing\n", Args.Connect, Args.Proxy)
+		log.Printf("[*]Starting agent node actively.Connecting to %s via proxy %s.Declaring the remote node is port-reusing\n", Args.Connect, Args.Proxy)
 	} else if Args.Listen == "" && !Args.Reverse && Args.Connect != "" && Args.Reconnect != 0 && Args.ReuseHost == "" && Args.ReusePort == "" && !Args.RhostReuse && Args.Proxy != "" { // ./stowaway_agent -c <ip:port> -s [secret] --proxy <ip:port> --proxyu [username] --proxyp [password] --reconnect <seconds>
 		Args.Mode = PROXY_RECONNECT_ACTIVE
-		log.Printf("[*]Starting agent node actively.Connecting to %s with proxy %s.Reconnecting every %d seconds\n", Args.Connect, Args.Proxy, Args.Reconnect)
+		log.Printf("[*]Starting agent node actively.Connecting to %s via proxy %s.Reconnecting every %d seconds\n", Args.Connect, Args.Proxy, Args.Reconnect)
 	} else {
 		log.Println("[*]Bad options!")
 		os.Exit(1)
