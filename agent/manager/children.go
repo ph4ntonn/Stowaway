@@ -20,6 +20,7 @@ type ChildrenTask struct {
 
 	UUID string
 	Conn net.Conn
+	Addr string
 }
 
 type ChildrenResult struct {
@@ -28,6 +29,7 @@ type ChildrenResult struct {
 }
 
 type child struct {
+	addr string
 	conn net.Conn
 }
 
@@ -56,6 +58,7 @@ func (manager *childrenManager) run() {
 func (manager *childrenManager) newChild(task *ChildrenTask) {
 	manager.children[task.UUID] = new(child)
 	manager.children[task.UUID].conn = task.Conn
+	manager.children[task.UUID].addr = task.Addr
 	manager.ResultChan <- &ChildrenResult{OK: true}
 }
 

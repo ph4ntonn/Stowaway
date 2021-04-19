@@ -54,6 +54,8 @@ const (
 	BACKWARDFIN
 	BACKWARDSTOP
 	BACKWARDSTOPDONE
+	CONNECTSTART
+	CONNECTDONE
 	OFFLINE
 )
 
@@ -339,6 +341,16 @@ type BackwardStopDone struct {
 	UUID     string
 	RPortLen uint16
 	RPort    string
+}
+
+type ConnectStart struct {
+	IsReuse uint16
+	AddrLen uint16
+	Addr    string
+}
+
+type ConnectDone struct {
+	OK uint16
 }
 
 type Offline struct {

@@ -431,11 +431,44 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				break
 			}
 
-			listen := handler.NewListen(fCommand[1])
+			fmt.Print("\r\n[*]Waiting for response......")
+
+			err := handler.LetListen(console.mgr, route, uuid, fCommand[1])
+			if err != nil {
+				fmt.Printf("[*]Error: %s\n", err.Error())
+			}
+
+			console.ready <- true
+		case "connect":
+			if console.expectParams(fCommand, 2, NODE, 0) {
+				break
+			}
+
+			connect := handler.NewConnect(fCommand[1], 0)
+
+			console.status = "[*]Is the target node currently reusing port?(yes/no): "
+			console.ready <- true
+			option := console.pretreatInput()
+			if option == "yes" {
+				connect.IsReuse = 1
+			} else if option == "no" {
+				connect.IsReuse = 0
+			} else {
+				fmt.Printf("\r\n[*]Please input yes/no!")
+				console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+				console.ready <- true
+				continue
+			}
 
 			fmt.Print("\r\n[*]Waiting for response......")
 
-			listen.LetListen(console.mgr, route, uuid)
+			err := connect.LetConnect(console.mgr, route, uuid)
+			if err != nil {
+				fmt.Printf("[*]Error: %s\n", err.Error())
+			}
+
+			console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+
 			console.ready <- true
 		case "ssh":
 			if console.expectParams(fCommand, 2, NODE, 0) {

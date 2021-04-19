@@ -24,6 +24,7 @@ type Manager struct {
 	ShellManager    *shellManager
 	InfoManager     *infoManager
 	ListenManager   *listenManager
+	ConnectManager  *connectManager
 }
 
 func NewManager(file *share.MyFile) *Manager {
@@ -37,6 +38,7 @@ func NewManager(file *share.MyFile) *Manager {
 	manager.ShellManager = newShellManager()
 	manager.InfoManager = newInfoManager()
 	manager.ListenManager = newListenManager()
+	manager.ConnectManager = newConnectManager()
 	return manager
 }
 

@@ -47,6 +47,7 @@ func (agent *Agent) Run() {
 	go agent.mgr.Run()
 	// run dispatchers to dispatch all kinds of message
 	go handler.DispatchListenMess(agent.mgr)
+	go handler.DispatchConnectMess(agent.mgr)
 	go handler.DispathSocksMess(agent.mgr)
 	go handler.DispatchForwardMess(agent.mgr)
 	go handler.DispatchBackwardMess(agent.mgr)
@@ -152,6 +153,8 @@ func (agent *Agent) handleDataFromUpstream() {
 				fallthrough
 			case protocol.LISTENREQ:
 				agent.mgr.ListenManager.ListenMessChan <- message
+			case protocol.CONNECTSTART:
+				agent.mgr.ConnectManager.ConnectMessChan <- message
 			case protocol.OFFLINE:
 				os.Exit(0)
 			default:

@@ -77,7 +77,7 @@ func (listen *Listen) start(mgr *manager.Manager) {
 
 		if fHeader.MessageType == protocol.HI {
 			mmess := fMessage.(*protocol.HIMess)
-			if mmess.Greeting == "Shhh..." {
+			if mmess.Greeting == "Shhh..." && mmess.IsAdmin == 0 {
 				sLMessage := protocol.PrepareAndDecideWhichSProtoToLower(conn, global.G_Component.Secret, protocol.ADMIN_UUID) //fake admin
 
 				hiMess := &protocol.HIMess{
@@ -141,6 +141,7 @@ func (listen *Listen) start(mgr *manager.Manager) {
 					Mode: manager.C_NEWCHILD,
 					UUID: childUUID,
 					Conn: conn,
+					Addr: listen.addr,
 				}
 				mgr.ChildrenManager.TaskChan <- childrenTask
 				<-mgr.ChildrenManager.ResultChan

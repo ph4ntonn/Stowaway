@@ -46,3 +46,13 @@ func newListenManager() *listenManager {
 	manager.ChildUUIDChan = make(chan string)
 	return manager
 }
+
+type connectManager struct {
+	ConnectMessChan chan interface{}
+}
+
+func newConnectManager() *connectManager {
+	manager := new(connectManager)
+	manager.ConnectMessChan = make(chan interface{}, 5)
+	return manager
+}

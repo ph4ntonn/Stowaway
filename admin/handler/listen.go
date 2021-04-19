@@ -15,21 +15,10 @@ import (
 	"fmt"
 )
 
-type Listen struct {
-	addr string
-}
-
-func NewListen(addr string) *Listen {
-	listen := new(Listen)
-	listen.addr = addr
-	return listen
-}
-
-func (listen *Listen) LetListen(mgr *manager.Manager, route, uuid string) {
-	normalAddr, _, err := utils.CheckIPPort(listen.addr)
+func LetListen(mgr *manager.Manager, route, uuid, addr string) error {
+	normalAddr, _, err := utils.CheckIPPort(addr)
 	if err != nil {
-		fmt.Printf("[*]Error: %s\n", err.Error())
-		return
+		return err
 	}
 
 	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
@@ -51,13 +40,15 @@ func (listen *Listen) LetListen(mgr *manager.Manager, route, uuid string) {
 	sMessage.SendMessage()
 
 	if <-mgr.ListenManager.ListenReady {
-		fmt.Printf("\r\n[*]Node is listening on %s", listen.addr)
+		fmt.Printf("\r\n[*]Node is listening on %s", addr)
 	} else {
-		fmt.Printf("\r\n[*]Node cannot listen on %s", listen.addr)
+		fmt.Printf("\r\n[*]Node cannot listen on %s", addr)
 	}
+
+	return nil
 }
 
-// this function is special,handling childuuidreq from both "listen" and "node reuse" condition
+// this function is SPECIAL,handling childuuidreq from both "listen" and "node reuse" and "connect" condition
 func dispatchChildUUID(mgr *manager.Manager, topo *topology.Topology, parentUUID, ip string) {
 	uuid := utils.GenerateUUID()
 	node := topology.NewNode(uuid, ip)

@@ -68,3 +68,15 @@ func newListenManager() *listenManager {
 	manager.ListenReady = make(chan bool)
 	return manager
 }
+
+type connectManager struct {
+	ConnectMessChan chan interface{}
+	ConnectReady    chan bool
+}
+
+func newConnectManager() *connectManager {
+	manager := new(connectManager)
+	manager.ConnectMessChan = make(chan interface{}, 5)
+	manager.ConnectReady = make(chan bool)
+	return manager
+}
