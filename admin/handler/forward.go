@@ -125,6 +125,26 @@ func (forward *Forward) handleForward(mgr *manager.Manager, conn net.Conn, route
 		Addr:    forward.Addr,
 	}
 
+	// Seems strange hh
+	// but the reason why i split this into two part (line 139 and line 168)
+	// is that if i want to use "Done chan" to make sure "stopforward" won't accidentally close the datachan that line 267 get(which can lead to panic)
+	// i must make sure that "Done chan" won't block the forwardManager first
+	// think about this scenario：when admin send startMess to agent,and agent send data back just before line 140 "F_GETDATACHAN" done
+	// what will happen?
+	// since i use "Done chan" to block the forwardManager, so i must do done<-true to make forwardManager go ahead
+	// but sadly, if i want send true to done,i need to send forward data to corresponding chan
+	// and at the same time "F_GETDATACHAN" is trying to achieve forwardManager's response(which will never response because "Done chan" is blocking it)
+	// the DEAD LOCK happened
+	// so to avoid DEAD LOCK, i split task and result to make sure agent must send data after admin get all things done
+	mgrTask := &manager.ForwardTask{
+		Mode: manager.F_GETDATACHAN,
+		UUID: uuid,
+		Seq:  seq,
+		Port: forward.Port,
+	}
+	mgr.ForwardManager.TaskChan <- mgrTask
+	result := <-mgr.ForwardManager.ResultChan
+
 	protocol.ConstructMessage(sMessage, startHeader, startMess, false)
 	sMessage.SendMessage()
 
@@ -145,14 +165,6 @@ func (forward *Forward) handleForward(mgr *manager.Manager, conn net.Conn, route
 		sMessage.SendMessage()
 	}()
 
-	mgrTask := &manager.ForwardTask{
-		Mode: manager.F_GETDATACHAN,
-		UUID: uuid,
-		Seq:  seq,
-		Port: forward.Port,
-	}
-	mgr.ForwardManager.TaskChan <- mgrTask
-	result := <-mgr.ForwardManager.ResultChan
 	if !result.OK {
 		return
 	}
@@ -254,6 +266,7 @@ func DispatchForwardMess(mgr *manager.Manager) {
 			if result.OK {
 				result.DataChan <- mess.Data
 			}
+			mgr.ForwardManager.Done <- true
 		case *protocol.ForwardFin:
 			mess := message.(*protocol.ForwardFin)
 			mgrTask := &manager.ForwardTask{

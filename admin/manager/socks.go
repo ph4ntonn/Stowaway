@@ -36,6 +36,7 @@ type socksManager struct {
 
 	TaskChan   chan *SocksTask
 	ResultChan chan *socksResult
+	Done       chan bool
 }
 
 type SocksTask struct {
@@ -118,8 +119,10 @@ func (manager *socksManager) run() {
 			manager.getUDPDataChan(task)
 		case S_GETTCPDATACHAN_WITHOUTUUID:
 			manager.getTCPDataChanWithoutUUID(task)
+			<-manager.Done
 		case S_GETUDPDATACHAN_WITHOUTUUID:
 			manager.getUDPDataChanWithoutUUID(task)
+			<-manager.Done
 		case S_CLOSETCP:
 			manager.closeTCP(task)
 		case S_GETUDPSTARTINFO:

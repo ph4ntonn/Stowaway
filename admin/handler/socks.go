@@ -418,6 +418,8 @@ func DispathSocksMess(mgr *manager.Manager, topo *topology.Topology) {
 			if result.OK {
 				result.TCPDataChan <- mess.Data
 			}
+
+			mgr.SocksManager.Done <- true
 		case *protocol.SocksTCPFin:
 			mess := message.(*protocol.SocksTCPFin)
 			mgrTask := &manager.SocksTask{
@@ -439,6 +441,8 @@ func DispathSocksMess(mgr *manager.Manager, topo *topology.Topology) {
 			if result.OK {
 				result.UDPDataChan <- mess.Data
 			}
+
+			mgr.SocksManager.Done <- true
 		}
 	}
 }
