@@ -5,6 +5,7 @@ import "net"
 const (
 	C_NEWCHILD = iota
 	C_GETCONN
+	C_GETCHILDREN
 )
 
 type childrenManager struct {
@@ -24,8 +25,9 @@ type ChildrenTask struct {
 }
 
 type ChildrenResult struct {
-	Conn net.Conn
-	OK   bool
+	Conn     net.Conn
+	OK       bool
+	Children []string
 }
 
 type child struct {
@@ -51,6 +53,8 @@ func (manager *childrenManager) run() {
 			manager.newChild(task)
 		case C_GETCONN:
 			manager.getConn(task)
+		case C_GETCHILDREN:
+			manager.getChildren()
 		}
 	}
 }
@@ -71,4 +75,14 @@ func (manager *childrenManager) getConn(task *ChildrenTask) {
 	} else {
 		manager.ResultChan <- &ChildrenResult{OK: false}
 	}
+}
+
+func (manager *childrenManager) getChildren() {
+	var children []string
+
+	for child, _ := range manager.children {
+		children = append(children, child)
+	}
+
+	manager.ResultChan <- &ChildrenResult{Children: children}
 }

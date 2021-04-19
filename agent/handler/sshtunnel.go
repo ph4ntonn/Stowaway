@@ -6,26 +6,88 @@ import (
 	"Stowaway/protocol"
 	"Stowaway/share"
 	"errors"
-	"net"
+	"fmt"
 	"time"
+
+	"golang.org/x/crypto/ssh"
 )
 
-type Connect struct {
-	IsReuse uint16
-	Addr    string
+type SSHTunnel struct {
+	Method      int
+	Addr        string
+	Port        string
+	Username    string
+	Password    string
+	Certificate []byte
 }
 
-func newConnect(addr string, isReuse uint16) *Connect {
-	connect := new(Connect)
-	connect.IsReuse = isReuse
-	connect.Addr = addr
-	return connect
+func newSSHTunnel(method int, addr, port, username, password string, certificate []byte) *SSHTunnel {
+	sshTunnel := new(SSHTunnel)
+	sshTunnel.Method = method
+	sshTunnel.Addr = addr
+	sshTunnel.Port = port
+	sshTunnel.Username = username
+	sshTunnel.Password = password
+	sshTunnel.Certificate = certificate
+	return sshTunnel
 }
 
-func (connect *Connect) start(mgr *manager.Manager) {
+func (sshTunnel *SSHTunnel) start(mgr *manager.Manager) {
+	var authPayload ssh.AuthMethod
+	var err error
 	var sUMessage, sLMessage, rMessage protocol.Message
 
 	sUMessage = protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+
+	sshTunnelResheader := &protocol.Header{
+		Sender:      global.G_Component.UUID,
+		Accepter:    protocol.ADMIN_UUID,
+		MessageType: protocol.SSHTUNNELRES,
+		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))), // No need to set route when agent send mess to admin
+		Route:       protocol.TEMP_ROUTE,
+	}
+
+	sshTunnelResSuccMess := &protocol.SSHTunnelRes{
+		OK: 1,
+	}
+
+	sshTunnelResFailMess := &protocol.SSHTunnelRes{
+		OK: 0,
+	}
+
+	defer func() {
+		if err != nil {
+			protocol.ConstructMessage(sUMessage, sshTunnelResheader, sshTunnelResFailMess, false)
+			sUMessage.SendMessage()
+		}
+	}()
+
+	switch sshTunnel.Method {
+	case UPMETHOD:
+		authPayload = ssh.Password(sshTunnel.Password)
+	case CERMETHOD:
+		var key ssh.Signer
+		key, err = ssh.ParsePrivateKey(sshTunnel.Certificate)
+		if err != nil {
+			return
+		}
+		authPayload = ssh.PublicKeys(key)
+	}
+
+	sshDial, err := ssh.Dial("tcp", sshTunnel.Addr, &ssh.ClientConfig{
+		User:            sshTunnel.Username,
+		Auth:            []ssh.AuthMethod{authPayload},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         10 * time.Second,
+	})
+	if err != nil {
+		return
+	}
+
+	conn, err := sshDial.Dial("tcp", fmt.Sprintf("127.0.0.1:%s", sshTunnel.Port))
+	if err != nil {
+		return
+	}
 
 	hiHeader := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID, // fake admin
@@ -45,40 +107,6 @@ func (connect *Connect) start(mgr *manager.Manager) {
 		IsReconnect: 0,
 	}
 
-	doneHeader := &protocol.Header{
-		Sender:      global.G_Component.UUID,
-		Accepter:    protocol.ADMIN_UUID,
-		MessageType: protocol.CONNECTDONE,
-		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
-		Route:       protocol.TEMP_ROUTE,
-	}
-
-	doneSuccMess := &protocol.ConnectDone{
-		OK: 1,
-	}
-
-	doneFailMess := &protocol.ConnectDone{
-		OK: 0,
-	}
-
-	var (
-		conn net.Conn
-		err  error
-	)
-
-	defer func() {
-		if err != nil {
-			protocol.ConstructMessage(sUMessage, doneHeader, doneFailMess, false)
-			sUMessage.SendMessage()
-		}
-	}()
-
-	conn, err = net.DialTimeout("tcp", connect.Addr, 10*time.Second)
-
-	if err != nil {
-		return
-	}
-
 	if err = share.ActivePreAuth(conn, global.G_Component.Secret); err != nil {
 		return
 	}
@@ -90,7 +118,6 @@ func (connect *Connect) start(mgr *manager.Manager) {
 
 	rMessage = protocol.PrepareAndDecideWhichRProtoFromLower(conn, global.G_Component.Secret, protocol.ADMIN_UUID)
 	fHeader, fMessage, err := protocol.DestructMessage(rMessage)
-
 	if err != nil {
 		conn.Close()
 		return
@@ -147,7 +174,7 @@ func (connect *Connect) start(mgr *manager.Manager) {
 
 			mgr.ChildrenManager.ChildComeChan <- conn
 
-			protocol.ConstructMessage(sUMessage, doneHeader, doneSuccMess, false)
+			protocol.ConstructMessage(sUMessage, sshTunnelResheader, sshTunnelResSuccMess, false)
 			sUMessage.SendMessage()
 
 			return
@@ -159,15 +186,15 @@ func (connect *Connect) start(mgr *manager.Manager) {
 	return
 }
 
-func DispatchConnectMess(mgr *manager.Manager) {
+func DispatchSSHTunnelMess(mgr *manager.Manager) {
 	for {
-		message := <-mgr.ConnectManager.ConnectMessChan
+		message := <-mgr.SSHTunnelManager.SSHTunnelMessChan
 
 		switch message.(type) {
-		case *protocol.ConnectStart:
-			mess := message.(*protocol.ConnectStart)
-			connect := newConnect(mess.Addr, mess.IsReuse)
-			go connect.start(mgr)
+		case *protocol.SSHTunnelReq:
+			mess := message.(*protocol.SSHTunnelReq)
+			sshTunnel := newSSHTunnel(int(mess.Method), mess.Addr, mess.Port, mess.Username, mess.Password, mess.Certificate)
+			go sshTunnel.start(mgr)
 		}
 	}
 }

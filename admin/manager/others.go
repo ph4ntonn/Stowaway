@@ -37,6 +37,16 @@ func newSSHManager() *sshManager {
 	return manager
 }
 
+type sshTunnelManager struct {
+	SSHTunnelMessChan chan interface{}
+}
+
+func newSSHTunnelManager() *sshTunnelManager {
+	manager := new(sshTunnelManager)
+	manager.SSHTunnelMessChan = make(chan interface{}, 5)
+	return manager
+}
+
 type shellManager struct {
 	ShellMessChan chan interface{}
 }

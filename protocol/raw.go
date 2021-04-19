@@ -63,13 +63,25 @@ func (message *RawMessage) ConstructData(header *Header, mess interface{}, isPas
 
 			greetingBuf := []byte(mmess.Greeting)
 
+			uuidLenBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(uuidLenBuf, mmess.UUIDLen)
+
+			uuidBuf := []byte(mmess.UUID)
+
 			isAdminBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(isAdminBuf, mmess.IsAdmin)
+
+			isReconnectBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(isReconnectBuf, mmess.IsReconnect)
+
 			// Collect all spilted data, try encrypt them
 			// use message.DataBuffer directly to save memory
 			dataBuffer.Write(greetingLenBuf)
 			dataBuffer.Write(greetingBuf)
+			dataBuffer.Write(uuidLenBuf)
+			dataBuffer.Write(uuidBuf)
 			dataBuffer.Write(isAdminBuf)
+			dataBuffer.Write(isReconnectBuf)
 		case UUID:
 			mmess := mess.(*UUIDMess)
 			uuidLenBuf := make([]byte, 2)
@@ -187,8 +199,8 @@ func (message *RawMessage) ConstructData(header *Header, mess interface{}, isPas
 			methodBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(methodBuf, mmess.Method)
 
-			addrLenBuf := make([]byte, 8)
-			binary.BigEndian.PutUint64(addrLenBuf, mmess.AddrLen)
+			addrLenBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(addrLenBuf, mmess.AddrLen)
 
 			addrBuf := []byte(mmess.Addr)
 
@@ -242,6 +254,53 @@ func (message *RawMessage) ConstructData(header *Header, mess interface{}, isPas
 
 			dataBuffer.Write(resultLenBuf)
 			dataBuffer.Write(resultBuf)
+		case SSHTUNNELREQ:
+			mmess := mess.(*SSHTunnelReq)
+			methodBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(methodBuf, mmess.Method)
+
+			addrLenBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(addrLenBuf, mmess.AddrLen)
+
+			addrBuf := []byte(mmess.Addr)
+
+			portLenBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(portLenBuf, mmess.PortLen)
+
+			portBuf := []byte(mmess.Port)
+
+			usernameLenBuf := make([]byte, 8)
+			binary.BigEndian.PutUint64(usernameLenBuf, mmess.UsernameLen)
+
+			usernameBuf := []byte(mmess.Username)
+
+			passwordLenBuf := make([]byte, 8)
+			binary.BigEndian.PutUint64(passwordLenBuf, mmess.PasswordLen)
+
+			passwordBuf := []byte(mmess.Password)
+
+			certificateLenBuf := make([]byte, 8)
+			binary.BigEndian.PutUint64(certificateLenBuf, mmess.CertificateLen)
+
+			certificateBuf := mmess.Certificate
+
+			dataBuffer.Write(methodBuf)
+			dataBuffer.Write(addrLenBuf)
+			dataBuffer.Write(addrBuf)
+			dataBuffer.Write(portLenBuf)
+			dataBuffer.Write(portBuf)
+			dataBuffer.Write(usernameLenBuf)
+			dataBuffer.Write(usernameBuf)
+			dataBuffer.Write(passwordLenBuf)
+			dataBuffer.Write(passwordBuf)
+			dataBuffer.Write(certificateLenBuf)
+			dataBuffer.Write(certificateBuf)
+		case SSHTUNNELRES:
+			mmess := mess.(*SSHTunnelRes)
+			OKBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
+
+			dataBuffer.Write(OKBuf)
 		case FILESTATREQ:
 			mmess := mess.(*FileStatReq)
 
@@ -679,7 +738,10 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 		mmess := new(HIMess)
 		mmess.GreetingLen = binary.BigEndian.Uint16(dataBuf[:2])
 		mmess.Greeting = string(dataBuf[2 : 2+mmess.GreetingLen])
-		mmess.IsAdmin = binary.BigEndian.Uint16(dataBuf[2+mmess.GreetingLen : header.DataLen])
+		mmess.UUIDLen = binary.BigEndian.Uint16(dataBuf[2+mmess.GreetingLen : 4+mmess.GreetingLen])
+		mmess.UUID = string(dataBuf[4+mmess.GreetingLen : 4+mmess.GreetingLen+mmess.UUIDLen])
+		mmess.IsAdmin = binary.BigEndian.Uint16(dataBuf[4+mmess.GreetingLen+mmess.UUIDLen : 6+mmess.GreetingLen+mmess.UUIDLen])
+		mmess.IsReconnect = binary.BigEndian.Uint16(dataBuf[6+mmess.GreetingLen+mmess.UUIDLen : 8+mmess.GreetingLen+mmess.UUIDLen])
 		return header, mmess, nil
 	case UUID:
 		mmess := new(UUIDMess)
@@ -742,14 +804,14 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 	case SSHREQ:
 		mmess := new(SSHReq)
 		mmess.Method = binary.BigEndian.Uint16(dataBuf[:2])
-		mmess.AddrLen = binary.BigEndian.Uint64(dataBuf[2:10])
-		mmess.Addr = string(dataBuf[10 : 10+mmess.AddrLen])
-		mmess.UsernameLen = binary.BigEndian.Uint64(dataBuf[10+mmess.AddrLen : 18+mmess.AddrLen])
-		mmess.Username = string(dataBuf[18+mmess.AddrLen : 18+mmess.AddrLen+mmess.UsernameLen])
-		mmess.PasswordLen = binary.BigEndian.Uint64(dataBuf[18+mmess.AddrLen+mmess.UsernameLen : 26+mmess.AddrLen+mmess.UsernameLen])
-		mmess.Password = string(dataBuf[26+mmess.AddrLen+mmess.UsernameLen : 26+mmess.AddrLen+mmess.UsernameLen+mmess.PasswordLen])
-		mmess.CertificateLen = binary.BigEndian.Uint64(dataBuf[26+mmess.AddrLen+mmess.UsernameLen+mmess.PasswordLen : 34+mmess.AddrLen+mmess.UsernameLen+mmess.PasswordLen])
-		mmess.Certificate = dataBuf[34+mmess.AddrLen+mmess.UsernameLen+mmess.PasswordLen : 34+mmess.AddrLen+mmess.UsernameLen+mmess.PasswordLen+mmess.CertificateLen]
+		mmess.AddrLen = binary.BigEndian.Uint16(dataBuf[2:4])
+		mmess.Addr = string(dataBuf[4 : 4+mmess.AddrLen])
+		mmess.UsernameLen = binary.BigEndian.Uint64(dataBuf[4+mmess.AddrLen : 12+mmess.AddrLen])
+		mmess.Username = string(dataBuf[12+mmess.AddrLen : 12+uint64(mmess.AddrLen)+mmess.UsernameLen])
+		mmess.PasswordLen = binary.BigEndian.Uint64(dataBuf[12+uint64(mmess.AddrLen)+mmess.UsernameLen : 20+uint64(mmess.AddrLen)+mmess.UsernameLen])
+		mmess.Password = string(dataBuf[20+uint64(mmess.AddrLen)+mmess.UsernameLen : 20+uint64(mmess.AddrLen)+mmess.UsernameLen+mmess.PasswordLen])
+		mmess.CertificateLen = binary.BigEndian.Uint64(dataBuf[20+uint64(mmess.AddrLen)+mmess.UsernameLen+mmess.PasswordLen : 28+uint64(mmess.AddrLen)+mmess.UsernameLen+mmess.PasswordLen])
+		mmess.Certificate = dataBuf[28+uint64(mmess.AddrLen)+mmess.UsernameLen+mmess.PasswordLen : 28+uint64(mmess.AddrLen)+mmess.UsernameLen+mmess.PasswordLen+mmess.CertificateLen]
 		return header, mmess, nil
 	case SSHRES:
 		mmess := new(SSHRes)
@@ -764,6 +826,24 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 		mmess := new(SSHResult)
 		mmess.ResultLen = binary.BigEndian.Uint64(dataBuf[:8])
 		mmess.Result = string(dataBuf[8 : 8+mmess.ResultLen])
+		return header, mmess, nil
+	case SSHTUNNELREQ:
+		mmess := new(SSHTunnelReq)
+		mmess.Method = binary.BigEndian.Uint16(dataBuf[:2])
+		mmess.AddrLen = binary.BigEndian.Uint16(dataBuf[2:4])
+		mmess.Addr = string(dataBuf[4 : 4+mmess.AddrLen])
+		mmess.PortLen = binary.BigEndian.Uint16(dataBuf[4+mmess.AddrLen : 6+mmess.AddrLen])
+		mmess.Port = string(dataBuf[6+mmess.AddrLen : 6+mmess.AddrLen+mmess.PortLen])
+		mmess.UsernameLen = binary.BigEndian.Uint64(dataBuf[6+mmess.AddrLen+mmess.PortLen : 14+mmess.AddrLen+mmess.PortLen])
+		mmess.Username = string(dataBuf[14+mmess.AddrLen+mmess.PortLen : 14+uint64(mmess.AddrLen)+uint64(mmess.PortLen)+mmess.UsernameLen])
+		mmess.PasswordLen = binary.BigEndian.Uint64(dataBuf[14+uint64(mmess.AddrLen)+uint64(mmess.PortLen)+mmess.UsernameLen : 22+uint64(mmess.AddrLen)+uint64(mmess.PortLen)+mmess.UsernameLen])
+		mmess.Password = string(dataBuf[22+uint64(mmess.AddrLen)+uint64(mmess.PortLen)+mmess.UsernameLen : 22+uint64(mmess.AddrLen)+uint64(mmess.PortLen)+mmess.UsernameLen+mmess.PasswordLen])
+		mmess.CertificateLen = binary.BigEndian.Uint64(dataBuf[22+uint64(mmess.AddrLen)+uint64(mmess.PortLen)+mmess.UsernameLen+mmess.PasswordLen : 30+uint64(mmess.AddrLen)+uint64(mmess.PortLen)+mmess.UsernameLen+mmess.PasswordLen])
+		mmess.Certificate = dataBuf[30+uint64(mmess.AddrLen)+uint64(mmess.PortLen)+mmess.UsernameLen+mmess.PasswordLen : 30+uint64(mmess.AddrLen)+uint64(mmess.PortLen)+mmess.UsernameLen+mmess.PasswordLen+mmess.CertificateLen]
+		return header, mmess, nil
+	case SSHTUNNELRES:
+		mmess := new(SSHTunnelRes)
+		mmess.OK = binary.BigEndian.Uint16(dataBuf[:2])
 		return header, mmess, nil
 	case FILESTATREQ:
 		mmess := new(FileStatReq)

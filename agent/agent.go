@@ -14,6 +14,7 @@ import (
 	"Stowaway/agent/initial"
 	"Stowaway/agent/process"
 	"Stowaway/global"
+	"Stowaway/protocol"
 	"Stowaway/share"
 )
 
@@ -24,19 +25,19 @@ func init() {
 func main() {
 	options := initial.ParseOptions()
 
-	agent := process.NewAgent()
+	agent := process.NewAgent(options)
 
 	var conn net.Conn
 	switch options.Mode {
 	case initial.NORMAL_PASSIVE:
-		conn, agent.UUID = initial.NormalPassive(options)
+		conn, agent.UUID = initial.NormalPassive(options, 0, protocol.TEMP_UUID)
 	case initial.NORMAL_RECONNECT_ACTIVE:
 		fallthrough
 	case initial.NORMAL_ACTIVE:
-		conn, agent.UUID = initial.NormalActive(options, nil)
+		conn, agent.UUID = initial.NormalActive(options, nil, 0, protocol.TEMP_UUID)
 	case initial.PROXY_ACTIVE:
 		proxy := share.NewProxy(options.Connect, options.Proxy, options.ProxyU, options.ProxyP)
-		conn, agent.UUID = initial.NormalActive(options, proxy)
+		conn, agent.UUID = initial.NormalActive(options, proxy, 0, protocol.TEMP_UUID)
 	default:
 		log.Fatal("[*]Unknown Mode")
 	}

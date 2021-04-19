@@ -20,6 +20,8 @@ const (
 	CHECKNODE
 	CALCULATE
 	GETROUTE
+	DELNODE
+	RECOVERNODE
 	// User-friendly
 	UPDATEDETAIL
 	SHOWDETAIL
@@ -45,6 +47,7 @@ type node struct {
 	currentHostname string
 	currentIP       string
 	memo            string
+	isOnline        bool
 }
 
 type TopoTask struct {
@@ -142,6 +145,8 @@ func (topology *Topology) addNode(task *TopoTask) {
 		parentIDNum := topology.id2IDNum(task.UUID)
 		topology.nodes[parentIDNum].childrenUUID = append(topology.nodes[parentIDNum].childrenUUID, task.Target.uuid)
 	}
+
+	task.Target.isOnline = true
 
 	topology.nodes[topology.currentIDNum] = task.Target
 

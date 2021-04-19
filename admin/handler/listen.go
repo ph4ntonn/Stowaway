@@ -48,7 +48,7 @@ func LetListen(mgr *manager.Manager, route, uuid, addr string) error {
 	return nil
 }
 
-// this function is SPECIAL,handling childuuidreq from both "listen" and "node reuse" and "connect" condition
+// this function is SPECIAL,handling childuuidreq from both "listen" && "node reuse" && "connect" && "sshtunnel" condition
 func dispatchChildUUID(mgr *manager.Manager, topo *topology.Topology, parentUUID, ip string) {
 	uuid := utils.GenerateUUID()
 	node := topology.NewNode(uuid, ip)

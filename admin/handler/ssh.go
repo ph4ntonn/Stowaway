@@ -59,7 +59,7 @@ func (ssh *SSH) LetSSH(route string, uuid string) error {
 
 	sshReqMess := &protocol.SSHReq{
 		Method:         uint16(ssh.Method),
-		AddrLen:        uint64(len(ssh.Addr)),
+		AddrLen:        uint16(len(ssh.Addr)),
 		Addr:           ssh.Addr,
 		UsernameLen:    uint64(len(ssh.Username)),
 		Username:       ssh.Username,

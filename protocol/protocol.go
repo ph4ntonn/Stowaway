@@ -28,6 +28,8 @@ const (
 	SSHRES
 	SSHCOMMAND
 	SSHRESULT
+	SSHTUNNELREQ
+	SSHTUNNELRES
 	FILESTATREQ
 	FILESTATRES
 	FILEDATA
@@ -56,6 +58,7 @@ const (
 	BACKWARDSTOPDONE
 	CONNECTSTART
 	CONNECTDONE
+	CLEARALL
 	OFFLINE
 )
 
@@ -110,7 +113,10 @@ type Header struct {
 type HIMess struct {
 	GreetingLen uint16
 	Greeting    string
+	UUIDLen     uint16
+	UUID        string
 	IsAdmin     uint16
+	IsReconnect uint16
 }
 
 type UUIDMess struct {
@@ -173,7 +179,7 @@ type ListenRes struct {
 
 type SSHReq struct {
 	Method         uint16
-	AddrLen        uint64
+	AddrLen        uint16
 	Addr           string
 	UsernameLen    uint64
 	Username       string
@@ -195,6 +201,24 @@ type SSHCommand struct {
 type SSHResult struct {
 	ResultLen uint64
 	Result    string
+}
+
+type SSHTunnelReq struct {
+	Method         uint16
+	AddrLen        uint16
+	Addr           string
+	PortLen        uint16
+	Port           string
+	UsernameLen    uint64
+	Username       string
+	PasswordLen    uint64
+	Password       string
+	CertificateLen uint64
+	Certificate    []byte
+}
+
+type SSHTunnelRes struct {
+	OK uint16
 }
 
 type FileStatReq struct {

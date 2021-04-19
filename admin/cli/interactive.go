@@ -531,6 +531,63 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
 				console.ready <- true
 			}
+		case "sshtunnel":
+			if console.expectParams(fCommand, 3, NODE, 2) {
+				break
+			}
+
+			sshTunnel := handler.NewSSHTunnel(fCommand[2], fCommand[1])
+
+			console.status = "[*]Please choose the auth method(1.username/password 2.certificate): "
+			console.ready <- true
+
+			firstChoice := console.pretreatInput()
+			if firstChoice == "1" {
+				sshTunnel.Method = handler.UPMETHOD
+			} else if firstChoice == "2" {
+				sshTunnel.Method = handler.CERMETHOD
+			} else {
+				fmt.Print("\r\n[*]Please input 1 or 2!")
+				console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+				console.ready <- true
+				break
+			}
+
+			switch sshTunnel.Method {
+			case handler.UPMETHOD:
+				console.status = "[*]Please enter the username: "
+				console.ready <- true
+				sshTunnel.Username = console.pretreatInput()
+				console.status = "[*]Please enter the password: "
+				console.ready <- true
+				sshTunnel.Password = console.pretreatInput()
+			case handler.CERMETHOD:
+				console.status = "[*]Please enter the username: "
+				console.ready <- true
+				sshTunnel.Username = console.pretreatInput()
+				console.status = "[*]Please enter the filepath of the privkey: "
+				console.ready <- true
+				sshTunnel.CertificatePath = console.pretreatInput()
+			}
+
+			fmt.Print("\r\n[*]Waiting for response.....")
+
+			err := sshTunnel.LetSSHTunnel(route, uuid)
+			if err != nil {
+				fmt.Printf("\r\n[*]Error: %s", err.Error())
+				console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+				console.ready <- true
+				break
+			}
+
+			if <-console.mgr.ConsoleManager.OK {
+				fmt.Print("\r\n[*]Node join via SSHTunnel")
+			} else {
+				fmt.Print("\r\n[*]Fail to connect to target node via SSHTunnel!")
+			}
+
+			console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+			console.ready <- true
 		case "socks":
 			if console.expectParams(fCommand, []int{2, 4}, NODE, 0) {
 				break

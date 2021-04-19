@@ -15,16 +15,17 @@ import (
 // So there may be some bugs in manager
 // Plz let me know if stowaway panic when you are using forward/stopforward/backward/stopbackward/socks/stopsocks or node offline
 type Manager struct {
-	ConsoleManager  *consoleManager
-	FileManager     *fileManager
-	SocksManager    *socksManager
-	ForwardManager  *forwardManager
-	BackwardManager *backwardManager
-	SSHManager      *sshManager
-	ShellManager    *shellManager
-	InfoManager     *infoManager
-	ListenManager   *listenManager
-	ConnectManager  *connectManager
+	ConsoleManager   *consoleManager
+	FileManager      *fileManager
+	SocksManager     *socksManager
+	ForwardManager   *forwardManager
+	BackwardManager  *backwardManager
+	SSHManager       *sshManager
+	SSHTunnelManager *sshTunnelManager
+	ShellManager     *shellManager
+	InfoManager      *infoManager
+	ListenManager    *listenManager
+	ConnectManager   *connectManager
 }
 
 func NewManager(file *share.MyFile) *Manager {
@@ -35,6 +36,7 @@ func NewManager(file *share.MyFile) *Manager {
 	manager.ForwardManager = newForwardManager()
 	manager.BackwardManager = newBackwardManager()
 	manager.SSHManager = newSSHManager()
+	manager.SSHTunnelManager = newSSHTunnelManager()
 	manager.ShellManager = newShellManager()
 	manager.InfoManager = newInfoManager()
 	manager.ListenManager = newListenManager()

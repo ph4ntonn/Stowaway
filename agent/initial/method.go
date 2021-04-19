@@ -33,13 +33,16 @@ func achieveUUID(conn net.Conn, secret string) (uuid string) {
 	return uuid
 }
 
-func NormalActive(userOptions *Options, proxy *share.Proxy) (net.Conn, string) {
+func NormalActive(userOptions *Options, proxy *share.Proxy, isReconnect uint16, uuid string) (net.Conn, string) {
 	var sMessage, rMessage protocol.Message
 	// just say hi!
 	hiMess := &protocol.HIMess{
 		GreetingLen: uint16(len("Shhh...")),
 		Greeting:    "Shhh...",
+		UUIDLen:     uint16(len(uuid)),
+		UUID:        uuid,
 		IsAdmin:     0,
+		IsReconnect: isReconnect,
 	}
 
 	header := &protocol.Header{
@@ -97,7 +100,7 @@ func NormalActive(userOptions *Options, proxy *share.Proxy) (net.Conn, string) {
 	}
 }
 
-func NormalPassive(userOptions *Options) (net.Conn, string) {
+func NormalPassive(userOptions *Options, isReconnect uint16, uuid string) (net.Conn, string) {
 	listenAddr, _, err := utils.CheckIPPort(userOptions.Listen)
 	if err != nil {
 		log.Fatalf("[*]Error occured: %s", err.Error())
@@ -117,7 +120,10 @@ func NormalPassive(userOptions *Options) (net.Conn, string) {
 	hiMess := &protocol.HIMess{
 		GreetingLen: uint16(len("Keep slient")),
 		Greeting:    "Keep slient",
+		UUIDLen:     uint16(len(uuid)),
+		UUID:        uuid,
 		IsAdmin:     0,
+		IsReconnect: isReconnect,
 	}
 
 	header := &protocol.Header{

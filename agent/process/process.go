@@ -9,6 +9,7 @@ package process
 
 import (
 	"Stowaway/agent/handler"
+	"Stowaway/agent/initial"
 	"Stowaway/agent/manager"
 	"Stowaway/global"
 	"Stowaway/protocol"
@@ -24,6 +25,7 @@ type Agent struct {
 	UUID string
 	Memo string
 
+	options          *initial.Options
 	mgr              *manager.Manager
 	childrenMessChan chan *ChildrenMess
 }
@@ -33,10 +35,11 @@ type ChildrenMess struct {
 	cMessage []byte
 }
 
-func NewAgent() *Agent {
+func NewAgent(options *initial.Options) *Agent {
 	agent := new(Agent)
 	agent.UUID = protocol.TEMP_UUID
 	agent.childrenMessChan = make(chan *ChildrenMess, 5)
+	agent.options = options
 	return agent
 }
 
@@ -53,6 +56,7 @@ func (agent *Agent) Run() {
 	go handler.DispatchBackwardMess(agent.mgr)
 	go handler.DispatchFileMess(agent.mgr)
 	go handler.DispatchSSHMess(agent.mgr)
+	go handler.DispatchSSHTunnelMess(agent.mgr)
 	go handler.DispatchShellMess(agent.mgr)
 	// run dispatcher to dispatch children's message
 	go agent.dispatchChildrenMess()
@@ -94,8 +98,7 @@ func (agent *Agent) handleDataFromUpstream() {
 	for {
 		header, message, err := protocol.DestructMessage(rMessage)
 		if err != nil {
-			log.Println("[*]Peer node seems offline!")
-			os.Exit(0)
+			UpstreamOffline(agent.mgr, agent.options)
 		}
 
 		if header.Accepter == agent.UUID {
@@ -111,6 +114,8 @@ func (agent *Agent) handleDataFromUpstream() {
 				fallthrough
 			case protocol.SSHCOMMAND:
 				agent.mgr.SSHManager.SSHMessChan <- message
+			case protocol.SSHTUNNELREQ:
+				agent.mgr.SSHTunnelManager.SSHTunnelMessChan <- message
 			case protocol.FILESTATREQ:
 				fallthrough
 			case protocol.FILESTATRES:
@@ -182,7 +187,6 @@ func (agent *Agent) dispatchChildrenMess() {
 		agent.mgr.ChildrenManager.TaskChan <- task
 		result := <-agent.mgr.ChildrenManager.ResultChan
 		if !result.OK {
-
 			continue
 		}
 

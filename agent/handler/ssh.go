@@ -25,15 +25,14 @@ const (
 )
 
 type SSH struct {
-	stdin           io.Writer
-	stdout          io.Reader
-	sshHost         *ssh.Session
-	Method          int
-	Addr            string
-	Username        string
-	Password        string
-	CertificatePath string
-	Certificate     []byte
+	stdin       io.Writer
+	stdout      io.Reader
+	sshHost     *ssh.Session
+	Method      int
+	Addr        string
+	Username    string
+	Password    string
+	Certificate []byte
 }
 
 func newSSH() *SSH {

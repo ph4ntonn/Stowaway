@@ -12,15 +12,16 @@ import (
 
 // Manager is used to maintain all status and keep different parts connected
 type Manager struct {
-	ChildrenManager *childrenManager
-	FileManager     *fileManager
-	SocksManager    *socksManager
-	ForwardManager  *forwardManager
-	BackwardManager *backwardManager
-	SSHManager      *sshManager
-	ShellManager    *shellManager
-	ListenManager   *listenManager
-	ConnectManager  *connectManager
+	ChildrenManager  *childrenManager
+	FileManager      *fileManager
+	SocksManager     *socksManager
+	ForwardManager   *forwardManager
+	BackwardManager  *backwardManager
+	SSHManager       *sshManager
+	SSHTunnelManager *sshTunnelManager
+	ShellManager     *shellManager
+	ListenManager    *listenManager
+	ConnectManager   *connectManager
 }
 
 func NewManager(file *share.MyFile) *Manager {
@@ -31,6 +32,7 @@ func NewManager(file *share.MyFile) *Manager {
 	manager.ForwardManager = newForwardManager()
 	manager.BackwardManager = newBackwardManager()
 	manager.SSHManager = newSSHManager()
+	manager.SSHTunnelManager = newSSHTunnelManager()
 	manager.ShellManager = newShellManager()
 	manager.ListenManager = newListenManager()
 	manager.ConnectManager = newConnectManager()

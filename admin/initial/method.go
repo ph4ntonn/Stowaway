@@ -52,7 +52,10 @@ func NormalActive(userOptions *Options, topo *topology.Topology, proxy *share.Pr
 	hiMess := &protocol.HIMess{
 		GreetingLen: uint16(len("Shhh...")),
 		Greeting:    "Shhh...",
+		UUIDLen:     uint16(len(protocol.ADMIN_UUID)),
+		UUID:        protocol.ADMIN_UUID,
 		IsAdmin:     1,
+		IsReconnect: 0,
 	}
 
 	header := &protocol.Header{
@@ -141,7 +144,10 @@ func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 	hiMess := &protocol.HIMess{
 		GreetingLen: uint16(len("Keep slient")),
 		Greeting:    "Keep slient",
+		UUIDLen:     uint16(len(protocol.ADMIN_UUID)),
+		UUID:        protocol.ADMIN_UUID,
 		IsAdmin:     1,
+		IsReconnect: 0,
 	}
 
 	header := &protocol.Header{
@@ -175,22 +181,27 @@ func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 
 		if fHeader.MessageType == protocol.HI {
 			mmess := fMessage.(*protocol.HIMess)
-			if mmess.Greeting == "Shhh..." {
+			if mmess.Greeting == "Shhh..." && mmess.IsAdmin == 0 {
 				sMessage = protocol.PrepareAndDecideWhichSProtoToLower(conn, userOptions.Secret, protocol.ADMIN_UUID)
 				protocol.ConstructMessage(sMessage, header, hiMess, false)
 				sMessage.SendMessage()
-				node := topology.NewNode(dispatchUUID(conn, userOptions.Secret), conn.RemoteAddr().String())
-				task := &topology.TopoTask{
-					Mode:    topology.ADDNODE,
-					Target:  node,
-					UUID:    protocol.TEMP_UUID,
-					IsFirst: true,
+				if mmess.IsReconnect == 0 {
+					node := topology.NewNode(dispatchUUID(conn, userOptions.Secret), conn.RemoteAddr().String())
+					task := &topology.TopoTask{
+						Mode:    topology.ADDNODE,
+						Target:  node,
+						UUID:    protocol.TEMP_UUID,
+						IsFirst: true,
+					}
+					topo.TaskChan <- task
+
+					<-topo.ResultChan
+
+					log.Printf("[*]Connection from node %s is set up successfully! Node id is 0\n", conn.RemoteAddr().String())
+				} else {
+
 				}
-				topo.TaskChan <- task
 
-				<-topo.ResultChan
-
-				log.Printf("[*]Connection from node %s is set up successfully! Node id is 0\n", conn.RemoteAddr().String())
 				return conn
 			}
 		}

@@ -43,6 +43,7 @@ func (admin *Admin) Run() {
 	go handler.DispatchBackwardMess(admin.mgr, admin.Topology)
 	go handler.DispatchFileMess(admin.mgr)
 	go handler.DispatchSSHMess(admin.mgr)
+	go handler.DispatchSSHTunnelMess(admin.mgr)
 	go handler.DispatchShellMess(admin.mgr)
 	go handler.DispatchInfoMess(admin.mgr, admin.Topology)
 	// start interactive panel
@@ -70,6 +71,8 @@ func (admin *Admin) handleMessFromDownstream(console *cli.Console) {
 			fallthrough
 		case protocol.SSHRESULT:
 			admin.mgr.SSHManager.SSHMessChan <- message
+		case protocol.SSHTUNNELRES:
+			admin.mgr.SSHTunnelManager.SSHTunnelMessChan <- message
 		case protocol.FILESTATREQ:
 			fallthrough
 		case protocol.FILEDOWNRES:

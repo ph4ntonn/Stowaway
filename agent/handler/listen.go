@@ -78,12 +78,17 @@ func (listen *Listen) start(mgr *manager.Manager) {
 		if fHeader.MessageType == protocol.HI {
 			mmess := fMessage.(*protocol.HIMess)
 			if mmess.Greeting == "Shhh..." && mmess.IsAdmin == 0 {
+				var childUUID string
+
 				sLMessage := protocol.PrepareAndDecideWhichSProtoToLower(conn, global.G_Component.Secret, protocol.ADMIN_UUID) //fake admin
 
 				hiMess := &protocol.HIMess{
 					GreetingLen: uint16(len("Keep slient")),
 					Greeting:    "Keep slient",
+					UUIDLen:     uint16(len(protocol.ADMIN_UUID)),
+					UUID:        protocol.ADMIN_UUID,
 					IsAdmin:     1,
+					IsReconnect: 0,
 				}
 
 				hiHeader := &protocol.Header{
@@ -97,45 +102,49 @@ func (listen *Listen) start(mgr *manager.Manager) {
 				protocol.ConstructMessage(sLMessage, hiHeader, hiMess, false)
 				sLMessage.SendMessage()
 
-				childIP := conn.RemoteAddr().String()
+				if mmess.IsReconnect == 0 {
+					childIP := conn.RemoteAddr().String()
 
-				cUUIDReqHeader := &protocol.Header{
-					Sender:      global.G_Component.UUID,
-					Accepter:    protocol.ADMIN_UUID,
-					MessageType: protocol.CHILDUUIDREQ,
-					RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
-					Route:       protocol.TEMP_ROUTE,
+					cUUIDReqHeader := &protocol.Header{
+						Sender:      global.G_Component.UUID,
+						Accepter:    protocol.ADMIN_UUID,
+						MessageType: protocol.CHILDUUIDREQ,
+						RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
+						Route:       protocol.TEMP_ROUTE,
+					}
+
+					cUUIDMess := &protocol.ChildUUIDReq{
+						ParentUUIDLen: uint16(len(global.G_Component.UUID)),
+						ParentUUID:    global.G_Component.UUID,
+						IPLen:         uint16(len(childIP)),
+						IP:            childIP,
+					}
+
+					protocol.ConstructMessage(sUMessage, cUUIDReqHeader, cUUIDMess, false)
+					sUMessage.SendMessage()
+
+					// Problem:If two listen port ready,and at the same time,two agent come,then maybe it would cause wrong uuid dispatching,but i think such coincidence hardly happen
+					// (Fine..I just don't want to maintain status Orz
+					childUUID = <-mgr.ListenManager.ChildUUIDChan
+
+					uuidHeader := &protocol.Header{
+						Sender:      protocol.ADMIN_UUID, // Fake admin LOL
+						Accepter:    protocol.TEMP_UUID,
+						MessageType: protocol.UUID,
+						RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
+						Route:       protocol.TEMP_ROUTE,
+					}
+
+					uuidMess := &protocol.UUIDMess{
+						UUIDLen: uint16(len(childUUID)),
+						UUID:    childUUID,
+					}
+
+					protocol.ConstructMessage(sLMessage, uuidHeader, uuidMess, false)
+					sLMessage.SendMessage()
+				} else {
+
 				}
-
-				cUUIDMess := &protocol.ChildUUIDReq{
-					ParentUUIDLen: uint16(len(global.G_Component.UUID)),
-					ParentUUID:    global.G_Component.UUID,
-					IPLen:         uint16(len(childIP)),
-					IP:            childIP,
-				}
-
-				protocol.ConstructMessage(sUMessage, cUUIDReqHeader, cUUIDMess, false)
-				sUMessage.SendMessage()
-
-				// Problem:If two listen port ready,and at the same time,two agent come,then maybe it would cause wrong uuid dispatching,but i think such coincidence hardly happen
-				// (Fine..I just don't want to maintain status Orz
-				childUUID := <-mgr.ListenManager.ChildUUIDChan
-
-				uuidHeader := &protocol.Header{
-					Sender:      protocol.ADMIN_UUID, // Fake admin LOL
-					Accepter:    protocol.TEMP_UUID,
-					MessageType: protocol.UUID,
-					RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
-					Route:       protocol.TEMP_ROUTE,
-				}
-
-				uuidMess := &protocol.UUIDMess{
-					UUIDLen: uint16(len(childUUID)),
-					UUID:    childUUID,
-				}
-
-				protocol.ConstructMessage(sLMessage, uuidHeader, uuidMess, false)
-				sLMessage.SendMessage()
 
 				childrenTask := &manager.ChildrenTask{
 					Mode: manager.C_NEWCHILD,
