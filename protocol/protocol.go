@@ -58,7 +58,7 @@ const (
 	BACKWARDSTOPDONE
 	CONNECTSTART
 	CONNECTDONE
-	CLEARALL
+	NODEOFFLINE
 	OFFLINE
 )
 
@@ -375,6 +375,11 @@ type ConnectStart struct {
 
 type ConnectDone struct {
 	OK uint16
+}
+
+type NodeOffline struct {
+	UUIDLen uint16
+	UUID    string
 }
 
 type Offline struct {

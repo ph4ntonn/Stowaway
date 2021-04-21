@@ -627,6 +627,16 @@ func (message *RawMessage) ConstructData(header *Header, mess interface{}, isPas
 			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
 
 			dataBuffer.Write(OKBuf)
+		case NODEOFFLINE:
+			mmess := mess.(*NodeOffline)
+
+			uuidLenBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(uuidLenBuf, mmess.UUIDLen)
+
+			uuidBuf := []byte(mmess.UUID)
+
+			dataBuffer.Write(uuidLenBuf)
+			dataBuffer.Write(uuidBuf)
 		case OFFLINE:
 			mmess := mess.(*Offline)
 			OKBuf := make([]byte, 2)
@@ -1000,6 +1010,11 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 	case CONNECTDONE:
 		mmess := new(ConnectDone)
 		mmess.OK = binary.BigEndian.Uint16(dataBuf[:2])
+		return header, mmess, nil
+	case NODEOFFLINE:
+		mmess := new(NodeOffline)
+		mmess.UUIDLen = binary.BigEndian.Uint16(dataBuf[0:2])
+		mmess.UUID = string(dataBuf[2 : 2+mmess.UUIDLen])
 		return header, mmess, nil
 	case OFFLINE:
 		mmess := new(Offline)

@@ -145,3 +145,7 @@ func CheckIfIP4(ip string) bool {
 	}
 	return false
 }
+
+func GiveMePortViaAddr(addr string) string {
+	return strings.Split(addr, ":")[1]
+}

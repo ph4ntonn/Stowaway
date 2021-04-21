@@ -145,7 +145,7 @@ func (connect *Connect) start(mgr *manager.Manager) {
 			mgr.ChildrenManager.TaskChan <- childrenTask
 			<-mgr.ChildrenManager.ResultChan
 
-			mgr.ChildrenManager.ChildComeChan <- conn
+			mgr.ChildrenManager.ChildComeChan <- &manager.ChildInfo{UUID: childUUID, Conn: conn}
 
 			protocol.ConstructMessage(sUMessage, doneHeader, doneSuccMess, false)
 			sUMessage.SendMessage()

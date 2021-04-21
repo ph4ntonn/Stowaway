@@ -20,8 +20,8 @@ const (
 	CHECKNODE
 	CALCULATE
 	GETROUTE
-	DELNODE
-	RECOVERNODE
+	DEACTIVENODE
+	ACTIVENODE
 	// User-friendly
 	UPDATEDETAIL
 	SHOWDETAIL
@@ -107,6 +107,8 @@ func (topology *Topology) Run() {
 			topology.calculate()
 		case GETROUTE:
 			topology.getRoute(task)
+		case DEACTIVENODE:
+			topology.deactiveNode(task)
 		}
 	}
 }
@@ -131,7 +133,11 @@ func (topology *Topology) getUUID(task *TopoTask) {
 
 func (topology *Topology) checkNode(task *TopoTask) {
 	if _, ok := topology.nodes[task.UUIDNum]; ok {
-		topology.ResultChan <- &topoResult{IsExist: true}
+		if topology.nodes[task.UUIDNum].isOnline {
+			topology.ResultChan <- &topoResult{IsExist: true}
+		} else {
+			topology.ResultChan <- &topoResult{IsExist: false}
+		}
 	} else {
 		topology.ResultChan <- &topoResult{IsExist: false}
 	}
@@ -229,4 +235,10 @@ func (topology *Topology) showTree() {
 func (topology *Topology) updateMemo(task *TopoTask) {
 	uuidNum := topology.id2IDNum(task.UUID)
 	topology.nodes[uuidNum].memo = task.Memo
+}
+
+func (topology *Topology) deactiveNode(task *TopoTask) {
+	// find all children node,deactive them
+	idNum := topology.id2IDNum(task.UUID)
+	topology.nodes[idNum].isOnline = false
 }

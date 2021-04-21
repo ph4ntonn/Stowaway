@@ -6,11 +6,12 @@ const (
 	C_NEWCHILD = iota
 	C_GETCONN
 	C_GETCHILDREN
+	C_DELCHILD
 )
 
 type childrenManager struct {
 	children      map[string]*child
-	ChildComeChan chan net.Conn
+	ChildComeChan chan *ChildInfo
 
 	TaskChan   chan *ChildrenTask
 	ResultChan chan *ChildrenResult
@@ -21,7 +22,6 @@ type ChildrenTask struct {
 
 	UUID string
 	Conn net.Conn
-	Addr string
 }
 
 type ChildrenResult struct {
@@ -30,15 +30,19 @@ type ChildrenResult struct {
 	Children []string
 }
 
+type ChildInfo struct {
+	UUID string
+	Conn net.Conn
+}
+
 type child struct {
-	addr string
 	conn net.Conn
 }
 
 func newChildrenManager() *childrenManager {
 	manager := new(childrenManager)
 	manager.children = make(map[string]*child)
-	manager.ChildComeChan = make(chan net.Conn)
+	manager.ChildComeChan = make(chan *ChildInfo)
 	manager.TaskChan = make(chan *ChildrenTask)
 	manager.ResultChan = make(chan *ChildrenResult)
 	return manager
@@ -55,6 +59,8 @@ func (manager *childrenManager) run() {
 			manager.getConn(task)
 		case C_GETCHILDREN:
 			manager.getChildren()
+		case C_DELCHILD:
+			manager.delChild(task)
 		}
 	}
 }
@@ -62,7 +68,6 @@ func (manager *childrenManager) run() {
 func (manager *childrenManager) newChild(task *ChildrenTask) {
 	manager.children[task.UUID] = new(child)
 	manager.children[task.UUID].conn = task.Conn
-	manager.children[task.UUID].addr = task.Addr
 	manager.ResultChan <- &ChildrenResult{OK: true}
 }
 
@@ -85,4 +90,9 @@ func (manager *childrenManager) getChildren() {
 	}
 
 	manager.ResultChan <- &ChildrenResult{Children: children}
+}
+
+func (manager *childrenManager) delChild(task *ChildrenTask) {
+	delete(manager.children, task.UUID)
+	manager.ResultChan <- &ChildrenResult{OK: true}
 }

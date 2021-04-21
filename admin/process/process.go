@@ -46,6 +46,7 @@ func (admin *Admin) Run() {
 	go handler.DispatchSSHTunnelMess(admin.mgr)
 	go handler.DispatchShellMess(admin.mgr)
 	go handler.DispatchInfoMess(admin.mgr, admin.Topology)
+	go DispatchChildrenMess(admin.mgr)
 	// start interactive panel
 	console.Run()
 }
@@ -115,6 +116,8 @@ func (admin *Admin) handleMessFromDownstream(console *cli.Console) {
 			admin.mgr.ListenManager.ListenMessChan <- message
 		case protocol.CONNECTDONE:
 			admin.mgr.ConnectManager.ConnectMessChan <- message
+		case protocol.NODEOFFLINE:
+			admin.mgr.ChildrenManager.ChildrenMessChan <- message
 		default:
 			log.Print("\n[*]Unknown Message!")
 		}

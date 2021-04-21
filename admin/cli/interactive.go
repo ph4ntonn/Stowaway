@@ -580,10 +580,8 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				break
 			}
 
-			if <-console.mgr.ConsoleManager.OK {
-				fmt.Print("\r\n[*]Node join via SSHTunnel")
-			} else {
-				fmt.Print("\r\n[*]Fail to connect to target node via SSHTunnel!")
+			if ok := <-console.mgr.ConsoleManager.OK; !ok {
+				fmt.Print("\r\n[*]Fail to add target node via SSHTunnel!")
 			}
 
 			console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))

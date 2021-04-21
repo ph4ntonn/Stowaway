@@ -38,6 +38,10 @@ func main() {
 	case initial.PROXY_ACTIVE:
 		proxy := share.NewProxy(options.Connect, options.Proxy, options.ProxyU, options.ProxyP)
 		conn, agent.UUID = initial.NormalActive(options, proxy, 0, protocol.TEMP_UUID)
+	case initial.IPTABLES_REUSE_PASSIVE:
+		conn, agent.UUID = initial.IPTableReusePassive(options)
+	// case initial.SO_REUSE_PASSIVE:
+	// 	conn, agent.UUID = initial.IPTableReusePassive(options)
 	default:
 		log.Fatal("[*]Unknown Mode")
 	}

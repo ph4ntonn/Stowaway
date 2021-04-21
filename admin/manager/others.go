@@ -90,3 +90,13 @@ func newConnectManager() *connectManager {
 	manager.ConnectReady = make(chan bool)
 	return manager
 }
+
+type childrenManager struct {
+	ChildrenMessChan chan interface{}
+}
+
+func newchildrenManager() *childrenManager {
+	manager := new(childrenManager)
+	manager.ChildrenMessChan = make(chan interface{}, 5)
+	return manager
+}

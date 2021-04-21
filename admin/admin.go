@@ -35,6 +35,8 @@ func main() {
 	log.Println("[*]Waiting for new connection...")
 	var conn net.Conn
 	switch options.Mode {
+	case initial.REUSE_ACTIVE:
+		fallthrough
 	case initial.NORMAL_ACTIVE:
 		conn = initial.NormalActive(options, topo, nil)
 	case initial.NORMAL_PASSIVE:

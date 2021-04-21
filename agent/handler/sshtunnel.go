@@ -89,6 +89,12 @@ func (sshTunnel *SSHTunnel) start(mgr *manager.Manager) {
 		return
 	}
 
+	if err = share.ActivePreAuth(conn, global.G_Component.Secret); err != nil {
+		return
+	}
+
+	sLMessage = protocol.PrepareAndDecideWhichSProtoToLower(conn, global.G_Component.Secret, protocol.ADMIN_UUID)
+
 	hiHeader := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID, // fake admin
 		Accepter:    protocol.TEMP_UUID,
@@ -106,12 +112,6 @@ func (sshTunnel *SSHTunnel) start(mgr *manager.Manager) {
 		IsAdmin:     1,
 		IsReconnect: 0,
 	}
-
-	if err = share.ActivePreAuth(conn, global.G_Component.Secret); err != nil {
-		return
-	}
-
-	sLMessage = protocol.PrepareAndDecideWhichSProtoToLower(conn, global.G_Component.Secret, protocol.ADMIN_UUID)
 
 	protocol.ConstructMessage(sLMessage, hiHeader, hiMess, false)
 	sLMessage.SendMessage()
@@ -149,7 +149,7 @@ func (sshTunnel *SSHTunnel) start(mgr *manager.Manager) {
 			childUUID := <-mgr.ListenManager.ChildUUIDChan
 
 			uuidHeader := &protocol.Header{
-				Sender:      protocol.ADMIN_UUID, // Fake admin LOL
+				Sender:      protocol.ADMIN_UUID,
 				Accepter:    protocol.TEMP_UUID,
 				MessageType: protocol.UUID,
 				RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
@@ -172,7 +172,7 @@ func (sshTunnel *SSHTunnel) start(mgr *manager.Manager) {
 			mgr.ChildrenManager.TaskChan <- childrenTask
 			<-mgr.ChildrenManager.ResultChan
 
-			mgr.ChildrenManager.ChildComeChan <- conn
+			mgr.ChildrenManager.ChildComeChan <- &manager.ChildInfo{UUID: childUUID, Conn: conn}
 
 			protocol.ConstructMessage(sUMessage, sshTunnelResheader, sshTunnelResSuccMess, false)
 			sUMessage.SendMessage()

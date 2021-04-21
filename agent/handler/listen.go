@@ -150,12 +150,11 @@ func (listen *Listen) start(mgr *manager.Manager) {
 					Mode: manager.C_NEWCHILD,
 					UUID: childUUID,
 					Conn: conn,
-					Addr: listen.addr,
 				}
 				mgr.ChildrenManager.TaskChan <- childrenTask
 				<-mgr.ChildrenManager.ResultChan
 
-				mgr.ChildrenManager.ChildComeChan <- conn
+				mgr.ChildrenManager.ChildComeChan <- &manager.ChildInfo{UUID: childUUID, Conn: conn}
 
 				return
 			}

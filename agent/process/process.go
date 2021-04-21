@@ -98,7 +98,7 @@ func (agent *Agent) handleDataFromUpstream() {
 	for {
 		header, message, err := protocol.DestructMessage(rMessage)
 		if err != nil {
-			UpstreamOffline(agent.mgr, agent.options)
+			upstreamOffline(agent.mgr, agent.options)
 		}
 
 		if header.Accepter == agent.UUID {
@@ -199,19 +199,19 @@ func (agent *Agent) dispatchChildrenMess() {
 
 func (agent *Agent) waitingChild() {
 	for {
-		childConn := <-agent.mgr.ChildrenManager.ChildComeChan
-		go agent.handleDataFromDownstream(childConn)
+		childInfo := <-agent.mgr.ChildrenManager.ChildComeChan
+		go agent.handleDataFromDownstream(childInfo.Conn, childInfo.UUID)
 	}
 }
 
-func (agent *Agent) handleDataFromDownstream(conn net.Conn) {
+func (agent *Agent) handleDataFromDownstream(conn net.Conn, uuid string) {
 	rMessage := protocol.PrepareAndDecideWhichRProtoFromUpper(conn, global.G_Component.Secret, global.G_Component.UUID)
 	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	for {
 		header, message, err := protocol.DestructMessage(rMessage)
 		if err != nil {
-			log.Println("[*]Peer node seems offline!")
+			downStreamOffline(agent.mgr, agent.options, uuid)
 			return
 		}
 
