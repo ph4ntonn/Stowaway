@@ -9,7 +9,11 @@ import (
 )
 
 func upstreamOffline(mgr *manager.Manager, options *initial.Options) {
+	if options.Mode == initial.IPTABLES_REUSE_PASSIVE {
+		initial.DeletePortReuseRules(options.Listen, options.ReusePort)
+	}
 	os.Exit(0)
+
 	if options.Reconnect == 0 && options.Listen == "" { // if no reconnecting || not passive,then exit immediately
 		os.Exit(0)
 	}
@@ -57,7 +61,7 @@ func downStreamOffline(mgr *manager.Manager, options *initial.Options, uuid stri
 		Sender:      global.G_Component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.NODEOFFLINE,
-		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))), // No need to set route when agent send mess to admin
+		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
 		Route:       protocol.TEMP_ROUTE,
 	}
 

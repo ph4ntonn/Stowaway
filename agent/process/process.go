@@ -25,8 +25,9 @@ type Agent struct {
 	UUID string
 	Memo string
 
-	options          *initial.Options
-	mgr              *manager.Manager
+	options *initial.Options
+	mgr     *manager.Manager
+
 	childrenMessChan chan *ChildrenMess
 }
 
@@ -49,7 +50,7 @@ func (agent *Agent) Run() {
 	agent.mgr = manager.NewManager(share.NewFile())
 	go agent.mgr.Run()
 	// run dispatchers to dispatch all kinds of message
-	go handler.DispatchListenMess(agent.mgr)
+	go handler.DispatchListenMess(agent.mgr, agent.options)
 	go handler.DispatchConnectMess(agent.mgr)
 	go handler.DispathSocksMess(agent.mgr)
 	go handler.DispatchForwardMess(agent.mgr)

@@ -46,7 +46,7 @@ func (admin *Admin) Run() {
 	go handler.DispatchSSHTunnelMess(admin.mgr)
 	go handler.DispatchShellMess(admin.mgr)
 	go handler.DispatchInfoMess(admin.mgr, admin.Topology)
-	go DispatchChildrenMess(admin.mgr)
+	go DispatchChildrenMess(admin.mgr, admin.Topology)
 	// start interactive panel
 	console.Run()
 }

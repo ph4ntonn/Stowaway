@@ -15,10 +15,30 @@ import (
 	"fmt"
 )
 
-func LetListen(mgr *manager.Manager, route, uuid, addr string) error {
-	normalAddr, _, err := utils.CheckIPPort(addr)
-	if err != nil {
-		return err
+const (
+	NORMAL = iota
+	IPTABLES
+	SOREUSE
+)
+
+type Listen struct {
+	Method int
+	Addr   string
+}
+
+func NewListen() *Listen {
+	return new(Listen)
+}
+
+func (listen *Listen) LetListen(mgr *manager.Manager, route, uuid string) error {
+	var finalAddr string
+
+	if listen.Method == NORMAL {
+		var err error
+		finalAddr, _, err = utils.CheckIPPort(listen.Addr)
+		if err != nil {
+			return err
+		}
 	}
 
 	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
@@ -32,17 +52,26 @@ func LetListen(mgr *manager.Manager, route, uuid, addr string) error {
 	}
 
 	listenReqMess := &protocol.ListenReq{
-		AddrLen: uint64(len(normalAddr)),
-		Addr:    normalAddr,
+		Method:  uint16(listen.Method),
+		AddrLen: uint64(len(finalAddr)),
+		Addr:    finalAddr,
 	}
 
 	protocol.ConstructMessage(sMessage, header, listenReqMess, false)
 	sMessage.SendMessage()
 
 	if <-mgr.ListenManager.ListenReady {
-		fmt.Printf("\r\n[*]Node is listening on %s", addr)
+		if listen.Method == NORMAL {
+			fmt.Printf("\r\n[*]Node is listening on %s", listen.Addr)
+		} else {
+			fmt.Print("\r\n[*]Node is reusing port successfully,just waiting for child....")
+		}
 	} else {
-		fmt.Printf("\r\n[*]Node cannot listen on %s", addr)
+		if listen.Method == NORMAL {
+			fmt.Printf("\r\n[*]Node cannot listen on %s", listen.Addr)
+		} else {
+			fmt.Print("\r\n[*]Node cannot reusing port,plz check if node is initialed via resusing!")
+		}
 	}
 
 	return nil

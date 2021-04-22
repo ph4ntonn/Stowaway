@@ -427,34 +427,30 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				console.ready <- true
 			}
 		case "listen":
-			if console.expectParams(fCommand, 2, NODE, 0) {
+			if console.expectParams(fCommand, 1, NODE, 0) {
 				break
 			}
 
-			fmt.Print("\r\n[*]Waiting for response......")
+			listen := handler.NewListen()
 
-			err := handler.LetListen(console.mgr, route, uuid, fCommand[1])
-			if err != nil {
-				fmt.Printf("[*]Error: %s\n", err.Error())
-			}
-
+			fmt.Print("\r\n[*]BE AWARE! If you choose IPTables Reuse or SOReuse,you MUST confirm that the node you're controlling was started in the corresponding way!")
+			fmt.Print("\r\n[*]When you choose IPTables Reuse or SOReuse, the node will use the initial config(when node started) to reuse port!")
+			console.status = "[*]Please choose the mode(1.Normal passive/2.IPTables Reuse/3.SOReuse): "
 			console.ready <- true
-		case "connect":
-			if console.expectParams(fCommand, 2, NODE, 0) {
-				break
-			}
 
-			connect := handler.NewConnect(fCommand[1], 0)
-
-			console.status = "[*]Is the target node currently reusing port?(yes/no): "
-			console.ready <- true
 			option := console.pretreatInput()
-			if option == "yes" {
-				connect.IsReuse = 1
-			} else if option == "no" {
-				connect.IsReuse = 0
+			if option == "1" {
+				listen.Method = handler.NORMAL
+				console.status = "[*]Please input the [ip:]<port> : "
+				console.ready <- true
+				option = console.pretreatInput()
+				listen.Addr = option
+			} else if option == "2" {
+				listen.Method = handler.IPTABLES
+			} else if option == "3" {
+				listen.Method = handler.SOREUSE
 			} else {
-				fmt.Printf("\r\n[*]Please input yes/no!")
+				fmt.Printf("\r\n[*]Please input 1/2/3!")
 				console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
 				console.ready <- true
 				continue
@@ -462,7 +458,22 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 
 			fmt.Print("\r\n[*]Waiting for response......")
 
-			err := connect.LetConnect(console.mgr, route, uuid)
+			err := listen.LetListen(console.mgr, route, uuid)
+			if err != nil {
+				fmt.Printf("[*]Error: %s\n", err.Error())
+			}
+
+			console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+
+			console.ready <- true
+		case "connect":
+			if console.expectParams(fCommand, 2, NODE, 0) {
+				break
+			}
+
+			fmt.Print("\r\n[*]Waiting for response......")
+
+			err := handler.LetConnect(console.mgr, route, uuid, fCommand[1])
 			if err != nil {
 				fmt.Printf("[*]Error: %s\n", err.Error())
 			}

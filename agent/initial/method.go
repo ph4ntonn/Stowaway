@@ -11,13 +11,12 @@ import (
 	"Stowaway/share"
 	"Stowaway/utils"
 	"fmt"
+	"io"
 	"log"
 	"net"
-	"os"
 	"os/exec"
-	"os/signal"
 	"strings"
-	"syscall"
+	"time"
 
 	reuseport "github.com/libp2p/go-reuseport"
 )
@@ -46,16 +45,16 @@ func achieveUUID(conn net.Conn, secret string) (uuid string) {
 	return uuid
 }
 
-func NormalActive(userOptions *Options, proxy *share.Proxy, isReconnect uint16, uuid string) (net.Conn, string) {
+func NormalActive(userOptions *Options, proxy *share.Proxy) (net.Conn, string) {
 	var sMessage, rMessage protocol.Message
 	// just say hi!
 	hiMess := &protocol.HIMess{
 		GreetingLen: uint16(len("Shhh...")),
 		Greeting:    "Shhh...",
-		UUIDLen:     uint16(len(uuid)),
-		UUID:        uuid,
+		UUIDLen:     uint16(len(protocol.TEMP_UUID)),
+		UUID:        protocol.TEMP_UUID,
 		IsAdmin:     0,
-		IsReconnect: isReconnect,
+		IsReconnect: 0,
 	}
 
 	header := &protocol.Header{
@@ -113,7 +112,7 @@ func NormalActive(userOptions *Options, proxy *share.Proxy, isReconnect uint16, 
 	}
 }
 
-func NormalPassive(userOptions *Options, isReconnect uint16, uuid string) (net.Conn, string) {
+func NormalPassive(userOptions *Options) (net.Conn, string) {
 	listenAddr, _, err := utils.CheckIPPort(userOptions.Listen)
 	if err != nil {
 		log.Fatalf("[*]Error occured: %s", err.Error())
@@ -133,10 +132,10 @@ func NormalPassive(userOptions *Options, isReconnect uint16, uuid string) (net.C
 	hiMess := &protocol.HIMess{
 		GreetingLen: uint16(len("Keep slient")),
 		Greeting:    "Keep slient",
-		UUIDLen:     uint16(len(uuid)),
-		UUID:        uuid,
+		UUIDLen:     uint16(len(protocol.TEMP_UUID)),
+		UUID:        protocol.TEMP_UUID,
 		IsAdmin:     0,
-		IsReconnect: isReconnect,
+		IsReconnect: 0,
 	}
 
 	header := &protocol.Header{
@@ -185,11 +184,11 @@ func NormalPassive(userOptions *Options, isReconnect uint16, uuid string) (net.C
 	}
 }
 
+// IPTable reuse port functions
 func IPTableReusePassive(options *Options) (net.Conn, string) {
-	_, localAddr, _ := utils.CheckIPPort(options.Listen)
 	setReuseSecret(options)
-	setPortReuseRules(localAddr, options.ReusePort)
-	conn, uuid := NormalPassive(options, 0, protocol.TEMP_UUID)
+	SetPortReuseRules(options.Listen, options.ReusePort)
+	conn, uuid := NormalPassive(options)
 	return conn, uuid
 }
 
@@ -201,7 +200,7 @@ func setReuseSecret(options *Options) {
 	STOP_FORWARDING = finalSecret[32:]
 }
 
-func deletePortReuseRules(localPort string, reusedPort string) error {
+func DeletePortReuseRules(localPort string, reusedPort string) error {
 	var cmds []string
 
 	cmds = append(cmds, fmt.Sprintf("iptables -t nat -D PREROUTING -p tcp --dport %s --syn -m recent --rcheck --seconds 3600 --name %s --rsource -j %s", reusedPort, strings.ToLower(CHAIN_NAME), CHAIN_NAME))
@@ -223,21 +222,9 @@ func deletePortReuseRules(localPort string, reusedPort string) error {
 	return nil
 }
 
-func setPortReuseRules(localAddr string, reusedPort string) error {
-	sigs := make(chan os.Signal, 1)
-
-	localPort := utils.GiveMePortViaAddr(localAddr)
-
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM) //监听ctrl+c、kill命令
-	go func() {
-		for {
-			<-sigs
-			deletePortReuseRules(localPort, reusedPort)
-			os.Exit(0)
-		}
-	}()
-
+func SetPortReuseRules(localPort string, reusedPort string) error {
 	var cmds []string
+
 	cmds = append(cmds, fmt.Sprintf("iptables -t nat -N %s", CHAIN_NAME))                                                                                                                                      //新建自定义链
 	cmds = append(cmds, fmt.Sprintf("iptables -t nat -A %s -p tcp -j REDIRECT --to-port %s", CHAIN_NAME, localPort))                                                                                           //将自定义链定义为转发流量至自定义监听端口
 	cmds = append(cmds, fmt.Sprintf("iptables -A INPUT -p tcp -m string --string %s --algo bm -m recent --set --name %s --rsource -j ACCEPT", START_FORWARDING, strings.ToLower(CHAIN_NAME)))                  //设置当有一个报文带着特定字符串经过INPUT链时，将此报文的源地址加入一个特定列表中
@@ -255,7 +242,8 @@ func setPortReuseRules(localAddr string, reusedPort string) error {
 	return nil
 }
 
-func SoReusePassive(options *Options, isReconnect uint16, uuid string) (net.Conn, string) {
+// soreuse port functions
+func SoReusePassive(options *Options) (net.Conn, string) {
 	listenAddr := fmt.Sprintf("%s:%s", options.ReuseHost, options.ReusePort)
 
 	listener, err := reuseport.Listen("tcp", listenAddr)
@@ -272,10 +260,10 @@ func SoReusePassive(options *Options, isReconnect uint16, uuid string) (net.Conn
 	hiMess := &protocol.HIMess{
 		GreetingLen: uint16(len("Keep slient")),
 		Greeting:    "Keep slient",
-		UUIDLen:     uint16(len(uuid)),
-		UUID:        uuid,
+		UUIDLen:     uint16(len(protocol.TEMP_UUID)),
+		UUID:        protocol.TEMP_UUID,
 		IsAdmin:     0,
-		IsReconnect: isReconnect,
+		IsReconnect: 0,
 	}
 
 	header := &protocol.Header{
@@ -286,16 +274,37 @@ func SoReusePassive(options *Options, isReconnect uint16, uuid string) (net.Conn
 		Route:       protocol.TEMP_ROUTE,
 	}
 
+	secret := utils.GetStringMd5(options.Secret)
+
 	for {
 		conn, err := listener.Accept()
+
 		if err != nil {
-			log.Printf("[*]Error occured: %s\n", err.Error())
 			conn.Close()
 			continue
 		}
 
-		if err := share.PassivePreAuth(conn, options.Secret); err != nil {
-			log.Fatalf("[*]Error occured: %s", err.Error())
+		defer conn.SetReadDeadline(time.Time{})
+		conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+
+		buffer := make([]byte, 16)
+		count, err := io.ReadFull(conn, buffer)
+
+		if err != nil {
+			if timeoutErr, ok := err.(net.Error); ok && timeoutErr.Timeout() {
+				go ProxyStream(conn, buffer[:count], options.ReusePort)
+				continue
+			} else {
+				conn.Close()
+				continue
+			}
+		}
+
+		if string(buffer[:count]) == secret[:16] {
+			conn.Write([]byte(secret[:16]))
+		} else {
+			go ProxyStream(conn, buffer[:count], options.ReusePort)
+			continue
 		}
 
 		rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, options.Secret, protocol.TEMP_UUID)
@@ -314,7 +323,6 @@ func SoReusePassive(options *Options, isReconnect uint16, uuid string) (net.Conn
 				protocol.ConstructMessage(sMessage, header, hiMess, false)
 				sMessage.SendMessage()
 				uuid := achieveUUID(conn, options.Secret)
-				log.Printf("[*]Connection from admin %s is set up successfully!\n", conn.RemoteAddr().String())
 				return conn, uuid
 			}
 		}
@@ -322,4 +330,43 @@ func SoReusePassive(options *Options, isReconnect uint16, uuid string) (net.Conn
 		conn.Close()
 		log.Println("[*]Incoming connection seems illegal!")
 	}
+}
+
+// ProxyStream 不是来自Stowaway的连接，进行代理
+func ProxyStream(conn net.Conn, message []byte, report string) {
+	reuseAddr := fmt.Sprintf("127.0.0.1:%s", report)
+
+	reuseConn, err := net.Dial("tcp", reuseAddr)
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	//把读出来的字节“归还”回去
+	reuseConn.Write(message)
+
+	go CopyTraffic(conn, reuseConn)
+	CopyTraffic(reuseConn, conn)
+}
+
+// CopyTraffic 将流量代理至正确的port
+func CopyTraffic(input, output net.Conn) {
+	defer input.Close()
+
+	buf := make([]byte, 10240)
+
+	for {
+		count, err := input.Read(buf)
+		if err != nil {
+			if err == io.EOF && count > 0 {
+				output.Write(buf[:count])
+			}
+			break
+		}
+		if count > 0 {
+			output.Write(buf[:count])
+		}
+	}
+
+	return
 }

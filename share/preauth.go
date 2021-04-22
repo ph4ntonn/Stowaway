@@ -14,19 +14,7 @@ import (
 	"time"
 )
 
-func ActivePreAuth(conn net.Conn, key string) (err error) {
-	err = sendSecret(conn, key)
-	err = checkSecret(conn, key)
-	return
-}
-
-func PassivePreAuth(conn net.Conn, key string) (err error) {
-	err = checkSecret(conn, key)
-	err = sendSecret(conn, key)
-	return
-}
-
-func sendSecret(conn net.Conn, key string) error {
+func ActivePreAuth(conn net.Conn, key string) error {
 	var NOT_VALID = errors.New("Not valid secret,check the secret!")
 
 	defer conn.SetReadDeadline(time.Time{})
@@ -57,8 +45,7 @@ func sendSecret(conn net.Conn, key string) error {
 	return NOT_VALID
 }
 
-// CheckSecret 检查secret值，在连接建立前测试合法性
-func checkSecret(conn net.Conn, key string) error {
+func PassivePreAuth(conn net.Conn, key string) error {
 	var NOT_VALID = errors.New("Not valid secret,check the secret!")
 
 	defer conn.SetReadDeadline(time.Time{})

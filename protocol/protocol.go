@@ -59,6 +59,7 @@ const (
 	CONNECTSTART
 	CONNECTDONE
 	NODEOFFLINE
+	NODEREONLINE
 	OFFLINE
 )
 
@@ -169,6 +170,7 @@ type ShellResult struct {
 }
 
 type ListenReq struct {
+	Method  uint16
 	AddrLen uint64
 	Addr    string
 }
@@ -368,7 +370,6 @@ type BackwardStopDone struct {
 }
 
 type ConnectStart struct {
-	IsReuse uint16
 	AddrLen uint16
 	Addr    string
 }
@@ -378,6 +379,11 @@ type ConnectDone struct {
 }
 
 type NodeOffline struct {
+	UUIDLen uint16
+	UUID    string
+}
+
+type NodeReonline struct {
 	UUIDLen uint16
 	UUID    string
 }

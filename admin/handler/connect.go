@@ -8,20 +8,8 @@ import (
 	"fmt"
 )
 
-type Connect struct {
-	IsReuse uint16
-	Addr    string
-}
-
-func NewConnect(addr string, isReuse uint16) *Connect {
-	connect := new(Connect)
-	connect.IsReuse = isReuse
-	connect.Addr = addr
-	return connect
-}
-
-func (connect *Connect) LetConnect(mgr *manager.Manager, route string, uuid string) error {
-	normalAddr, _, err := utils.CheckIPPort(connect.Addr)
+func LetConnect(mgr *manager.Manager, route, uuid, addr string) error {
+	normalAddr, _, err := utils.CheckIPPort(addr)
 	if err != nil {
 		return err
 	}
@@ -37,7 +25,6 @@ func (connect *Connect) LetConnect(mgr *manager.Manager, route string, uuid stri
 	}
 
 	connMess := &protocol.ConnectStart{
-		IsReuse: connect.IsReuse,
 		AddrLen: uint16(len([]byte(normalAddr))),
 		Addr:    normalAddr,
 	}
@@ -46,7 +33,7 @@ func (connect *Connect) LetConnect(mgr *manager.Manager, route string, uuid stri
 	sMessage.SendMessage()
 
 	if ok := <-mgr.ConnectManager.ConnectReady; !ok {
-		fmt.Printf("\r\n[*]Cannot connect to node %s", connect.Addr)
+		fmt.Printf("\r\n[*]Cannot connect to node %s", addr)
 	}
 
 	return nil

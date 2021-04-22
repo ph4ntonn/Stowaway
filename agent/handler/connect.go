@@ -11,13 +11,11 @@ import (
 )
 
 type Connect struct {
-	IsReuse uint16
-	Addr    string
+	Addr string
 }
 
-func newConnect(addr string, isReuse uint16) *Connect {
+func newConnect(addr string) *Connect {
 	connect := new(Connect)
-	connect.IsReuse = isReuse
 	connect.Addr = addr
 	return connect
 }
@@ -166,7 +164,7 @@ func DispatchConnectMess(mgr *manager.Manager) {
 		switch message.(type) {
 		case *protocol.ConnectStart:
 			mess := message.(*protocol.ConnectStart)
-			connect := newConnect(mess.Addr, mess.IsReuse)
+			connect := newConnect(mess.Addr)
 			go connect.start(mgr)
 		}
 	}

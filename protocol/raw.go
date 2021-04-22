@@ -181,11 +181,15 @@ func (message *RawMessage) ConstructData(header *Header, mess interface{}, isPas
 			dataBuffer.Write(resultBuf)
 		case LISTENREQ:
 			mmess := mess.(*ListenReq)
+			methodBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(methodBuf, mmess.Method)
+
 			addrLenBuf := make([]byte, 8)
 			binary.BigEndian.PutUint64(addrLenBuf, mmess.AddrLen)
 
 			addrBuf := []byte(mmess.Addr)
 
+			dataBuffer.Write(methodBuf)
 			dataBuffer.Write(addrLenBuf)
 			dataBuffer.Write(addrBuf)
 		case LISTENRES:
@@ -610,15 +614,11 @@ func (message *RawMessage) ConstructData(header *Header, mess interface{}, isPas
 		case CONNECTSTART:
 			mmess := mess.(*ConnectStart)
 
-			reuseBuf := make([]byte, 2)
-			binary.BigEndian.PutUint16(reuseBuf, mmess.IsReuse)
-
 			addrLenBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(addrLenBuf, mmess.AddrLen)
 
 			addrBuf := []byte(mmess.Addr)
 
-			dataBuffer.Write(reuseBuf)
 			dataBuffer.Write(addrLenBuf)
 			dataBuffer.Write(addrBuf)
 		case CONNECTDONE:
@@ -629,6 +629,16 @@ func (message *RawMessage) ConstructData(header *Header, mess interface{}, isPas
 			dataBuffer.Write(OKBuf)
 		case NODEOFFLINE:
 			mmess := mess.(*NodeOffline)
+
+			uuidLenBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(uuidLenBuf, mmess.UUIDLen)
+
+			uuidBuf := []byte(mmess.UUID)
+
+			dataBuffer.Write(uuidLenBuf)
+			dataBuffer.Write(uuidBuf)
+		case NODEREONLINE:
+			mmess := mess.(*NodeReonline)
 
 			uuidLenBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(uuidLenBuf, mmess.UUIDLen)
@@ -804,8 +814,9 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 		return header, mmess, nil
 	case LISTENREQ:
 		mmess := new(ListenReq)
-		mmess.AddrLen = binary.BigEndian.Uint64(dataBuf[:8])
-		mmess.Addr = string(dataBuf[8 : 8+mmess.AddrLen])
+		mmess.Method = binary.BigEndian.Uint16(dataBuf[:2])
+		mmess.AddrLen = binary.BigEndian.Uint64(dataBuf[2:10])
+		mmess.Addr = string(dataBuf[10 : 10+mmess.AddrLen])
 		return header, mmess, nil
 	case LISTENRES:
 		mmess := new(ListenRes)
@@ -1003,9 +1014,8 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 		return header, mmess, nil
 	case CONNECTSTART:
 		mmess := new(ConnectStart)
-		mmess.IsReuse = binary.BigEndian.Uint16(dataBuf[:2])
-		mmess.AddrLen = binary.BigEndian.Uint16(dataBuf[2:4])
-		mmess.Addr = string(dataBuf[4 : 4+mmess.AddrLen])
+		mmess.AddrLen = binary.BigEndian.Uint16(dataBuf[:2])
+		mmess.Addr = string(dataBuf[2 : 2+mmess.AddrLen])
 		return header, mmess, nil
 	case CONNECTDONE:
 		mmess := new(ConnectDone)
@@ -1013,6 +1023,11 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 		return header, mmess, nil
 	case NODEOFFLINE:
 		mmess := new(NodeOffline)
+		mmess.UUIDLen = binary.BigEndian.Uint16(dataBuf[0:2])
+		mmess.UUID = string(dataBuf[2 : 2+mmess.UUIDLen])
+		return header, mmess, nil
+	case NODEREONLINE:
+		mmess := new(NodeReonline)
 		mmess.UUIDLen = binary.BigEndian.Uint16(dataBuf[0:2])
 		mmess.UUID = string(dataBuf[2 : 2+mmess.UUIDLen])
 		return header, mmess, nil

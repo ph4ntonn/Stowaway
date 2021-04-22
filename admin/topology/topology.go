@@ -62,10 +62,11 @@ type TopoTask struct {
 }
 
 type topoResult struct {
-	IsExist bool
-	UUID    string
-	Route   string
-	IDNum   int
+	IsExist  bool
+	UUID     string
+	Route    string
+	IDNum    int
+	AllNodes []string
 }
 
 func NewTopology() *Topology {
@@ -209,6 +210,10 @@ func (topology *Topology) updateDetail(task *TopoTask) {
 
 func (topology *Topology) showDetail() {
 	for uuidNum, node := range topology.nodes {
+		if !node.isOnline {
+			continue
+		}
+
 		fmt.Printf("\nNode[%s] -> IP: %s  Hostname: %s  User: %s\nMemo: %s\n",
 			utils.Int2Str(uuidNum),
 			node.currentIP,
@@ -223,6 +228,10 @@ func (topology *Topology) showDetail() {
 
 func (topology *Topology) showTree() {
 	for uuidNum, node := range topology.nodes {
+		if !node.isOnline {
+			continue
+		}
+
 		fmt.Printf("\nNode[%s]'s children ->\n", utils.Int2Str(uuidNum))
 		for _, child := range node.childrenUUID {
 			fmt.Printf("Node[%s]\n", utils.Int2Str(topology.id2IDNum(child)))
@@ -239,6 +248,26 @@ func (topology *Topology) updateMemo(task *TopoTask) {
 
 func (topology *Topology) deactiveNode(task *TopoTask) {
 	// find all children node,deactive them
+	var ready []int
+	var readyUUID []string
+
 	idNum := topology.id2IDNum(task.UUID)
-	topology.nodes[idNum].isOnline = false
+	topology.findChildrenNodes(&ready, idNum)
+
+	ready = append(ready, idNum)
+
+	for _, idNum := range ready {
+		readyUUID = append(readyUUID, topology.idNum2ID(idNum))
+		topology.nodes[idNum].isOnline = false
+	}
+
+	topology.ResultChan <- &topoResult{AllNodes: readyUUID}
+}
+
+func (topology *Topology) findChildrenNodes(ready *[]int, idNum int) {
+	for _, uuid := range topology.nodes[idNum].childrenUUID {
+		idNum := topology.id2IDNum(uuid)
+		*ready = append(*ready, idNum)
+		topology.findChildrenNodes(ready, idNum)
+	}
 }
