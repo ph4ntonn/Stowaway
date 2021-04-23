@@ -291,7 +291,7 @@ func broadcastReonlineMess(mgr *manager.Manager) {
 			Route:       protocol.TEMP_ROUTE,
 		}
 
-		reOnlineMess := &protocol.UpstreamOffline{
+		reOnlineMess := &protocol.UpstreamReonline{
 			OK: 1,
 		}
 
@@ -368,17 +368,18 @@ func tellAdminReonline(mgr *manager.Manager) {
 	}
 }
 
-func DispatchOfflineMess(mgr *manager.Manager) {
+func DispatchOfflineMess(agent *Agent) {
 	for {
-		message := <-mgr.OfflineManager.OfflineMessChan
+		message := <-agent.mgr.OfflineManager.OfflineMessChan
 
 		switch message.(type) {
 		case *protocol.UpstreamOffline:
-			forceShutdown(mgr)
-			broadcastOfflineMess(mgr)
+			forceShutdown(agent.mgr)
+			broadcastOfflineMess(agent.mgr)
 		case *protocol.UpstreamReonline:
-			tellAdminReonline(mgr)
-			broadcastReonlineMess(mgr)
+			agent.sendMyInfo()
+			tellAdminReonline(agent.mgr)
+			broadcastReonlineMess(agent.mgr)
 		}
 	}
 }

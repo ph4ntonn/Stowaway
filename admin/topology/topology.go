@@ -17,6 +17,7 @@ const (
 	// Topology
 	ADDNODE = iota
 	GETUUID
+	GETUUIDNUM
 	CHECKNODE
 	CALCULATE
 	GETROUTE
@@ -96,6 +97,8 @@ func (topology *Topology) Run() {
 			topology.addNode(task)
 		case GETUUID:
 			topology.getUUID(task)
+		case GETUUIDNUM:
+			topology.getUUIDNum(task)
 		case CHECKNODE:
 			topology.checkNode(task)
 		case UPDATEDETAIL:
@@ -118,14 +121,13 @@ func (topology *Topology) Run() {
 	}
 }
 
-func (topology *Topology) id2IDNum(uuid string) (uuidNum int) {
-	for i := 0; i < len(topology.nodes); i++ {
-		if topology.nodes[i].uuid == uuid {
-			uuidNum = i
-			return
+func (topology *Topology) id2IDNum(uuid string) int {
+	for idNum, tNode := range topology.nodes {
+		if tNode.uuid == uuid {
+			return idNum
 		}
 	}
-	return
+	return -1
 }
 
 func (topology *Topology) idNum2ID(uuidNum int) string {
@@ -134,6 +136,10 @@ func (topology *Topology) idNum2ID(uuidNum int) string {
 
 func (topology *Topology) getUUID(task *TopoTask) {
 	topology.ResultChan <- &topoResult{UUID: topology.idNum2ID(task.UUIDNum)}
+}
+
+func (topology *Topology) getUUIDNum(task *TopoTask) {
+	topology.ResultChan <- &topoResult{IDNum: topology.id2IDNum(task.UUID)}
 }
 
 func (topology *Topology) checkNode(task *TopoTask) {
@@ -150,7 +156,11 @@ func (topology *Topology) addNode(task *TopoTask) {
 	} else {
 		task.Target.parentUUID = task.ParentUUID
 		parentIDNum := topology.id2IDNum(task.ParentUUID)
-		topology.nodes[parentIDNum].childrenUUID = append(topology.nodes[parentIDNum].childrenUUID, task.Target.uuid)
+		if parentIDNum >= 0 {
+			topology.nodes[parentIDNum].childrenUUID = append(topology.nodes[parentIDNum].childrenUUID, task.Target.uuid)
+		} else {
+			return
+		}
 	}
 
 	topology.nodes[topology.currentIDNum] = task.Target
@@ -204,8 +214,10 @@ func (topology *Topology) getRoute(task *TopoTask) {
 
 func (topology *Topology) updateDetail(task *TopoTask) {
 	uuidNum := topology.id2IDNum(task.UUID)
-	topology.nodes[uuidNum].currentUser = task.UserName
-	topology.nodes[uuidNum].currentHostname = task.HostName
+	if uuidNum >= 0 {
+		topology.nodes[uuidNum].currentUser = task.UserName
+		topology.nodes[uuidNum].currentHostname = task.HostName
+	}
 }
 
 func (topology *Topology) showDetail() {
@@ -235,7 +247,9 @@ func (topology *Topology) showTree() {
 
 func (topology *Topology) updateMemo(task *TopoTask) {
 	uuidNum := topology.id2IDNum(task.UUID)
-	topology.nodes[uuidNum].memo = task.Memo
+	if uuidNum >= 0 {
+		topology.nodes[uuidNum].memo = task.Memo
+	}
 }
 
 func (topology *Topology) delNode(task *TopoTask) {
@@ -249,7 +263,7 @@ func (topology *Topology) delNode(task *TopoTask) {
 	ready = append(ready, idNum)
 
 	for _, idNum := range ready {
-		fmt.Printf("\r\n[*]Node %d is offline! %s", idNum, topology.idNum2ID(idNum))
+		fmt.Printf("\r\n[*]Node %d is offline!", idNum)
 		readyUUID = append(readyUUID, topology.idNum2ID(idNum))
 		delete(topology.nodes, idNum)
 	}
@@ -274,7 +288,14 @@ func (topology *Topology) reonlineNode(task *TopoTask) {
 		topology.nodes[parentIDNum].childrenUUID = append(topology.nodes[parentIDNum].childrenUUID, task.Target.uuid)
 	}
 
-	idNum := topology.history[task.Target.uuid]
+	var idNum int
+	if _, ok := topology.history[task.Target.uuid]; ok {
+		idNum = topology.history[task.Target.uuid]
+	} else {
+		idNum = topology.currentIDNum
+		topology.history[task.Target.uuid] = idNum
+		topology.currentIDNum++
+	}
 
 	topology.nodes[idNum] = task.Target
 

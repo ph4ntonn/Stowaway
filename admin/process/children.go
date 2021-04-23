@@ -4,6 +4,7 @@ import (
 	"Stowaway/admin/manager"
 	"Stowaway/admin/topology"
 	"Stowaway/protocol"
+	"fmt"
 )
 
 func nodeOffline(mgr *manager.Manager, topo *topology.Topology, uuid string) {
@@ -62,6 +63,15 @@ func nodeReonline(mgr *manager.Manager, topo *topology.Topology, mess *protocol.
 	}
 	topo.TaskChan <- topoTask
 	<-topo.ResultChan
+
+	topoTask = &topology.TopoTask{
+		Mode: topology.GETUUIDNUM,
+		UUID: mess.UUID,
+	}
+	topo.TaskChan <- topoTask
+	result := <-topo.ResultChan
+
+	fmt.Printf("\r\n[*]Node %d is reonline!", result.IDNum)
 }
 
 func DispatchChildrenMess(mgr *manager.Manager, topo *topology.Topology) {

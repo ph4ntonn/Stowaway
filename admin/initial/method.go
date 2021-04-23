@@ -101,20 +101,36 @@ func NormalActive(userOptions *Options, topo *topology.Topology, proxy *share.Pr
 
 		if fHeader.MessageType == protocol.HI {
 			mmess := fMessage.(*protocol.HIMess)
-			if mmess.Greeting == "Keep slient" {
-				node := topology.NewNode(dispatchUUID(conn, userOptions.Secret), conn.RemoteAddr().String())
-				task := &topology.TopoTask{
-					Mode:       topology.ADDNODE,
-					Target:     node,
-					ParentUUID: protocol.TEMP_UUID,
-					IsFirst:    true,
+			if mmess.Greeting == "Keep slient" && mmess.IsAdmin == 0 {
+				if mmess.IsReconnect == 0 {
+					node := topology.NewNode(dispatchUUID(conn, userOptions.Secret), conn.RemoteAddr().String())
+					task := &topology.TopoTask{
+						Mode:       topology.ADDNODE,
+						Target:     node,
+						ParentUUID: protocol.TEMP_UUID,
+						IsFirst:    true,
+					}
+					topo.TaskChan <- task
+
+					<-topo.ResultChan
+
+					log.Printf("[*]Connect to node %s successfully! Node id is 0\n", conn.RemoteAddr().String())
+					return conn
+				} else {
+					node := topology.NewNode(mmess.UUID, conn.RemoteAddr().String())
+					task := &topology.TopoTask{
+						Mode:       topology.ADDNODE,
+						Target:     node,
+						ParentUUID: protocol.TEMP_UUID,
+						IsFirst:    true,
+					}
+					topo.TaskChan <- task
+
+					<-topo.ResultChan
+
+					log.Printf("[*]Connect to node %s successfully! Node id is 0\n", conn.RemoteAddr().String())
+					return conn
 				}
-				topo.TaskChan <- task
-
-				<-topo.ResultChan
-
-				log.Printf("[*]Connect to node %s successfully! Node id is 0\n", conn.RemoteAddr().String())
-				return conn
 			}
 		}
 
@@ -185,6 +201,7 @@ func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 				sMessage = protocol.PrepareAndDecideWhichSProtoToLower(conn, userOptions.Secret, protocol.ADMIN_UUID)
 				protocol.ConstructMessage(sMessage, header, hiMess, false)
 				sMessage.SendMessage()
+
 				if mmess.IsReconnect == 0 {
 					node := topology.NewNode(dispatchUUID(conn, userOptions.Secret), conn.RemoteAddr().String())
 					task := &topology.TopoTask{
@@ -199,7 +216,18 @@ func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 
 					log.Printf("[*]Connection from node %s is set up successfully! Node id is 0\n", conn.RemoteAddr().String())
 				} else {
+					node := topology.NewNode(mmess.UUID, conn.RemoteAddr().String())
+					task := &topology.TopoTask{
+						Mode:       topology.ADDNODE,
+						Target:     node,
+						ParentUUID: protocol.TEMP_UUID,
+						IsFirst:    true,
+					}
+					topo.TaskChan <- task
 
+					<-topo.ResultChan
+
+					log.Printf("[*]Connection from node %s is set up successfully! Node id is 0\n", conn.RemoteAddr().String())
 				}
 
 				return conn

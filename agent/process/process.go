@@ -59,7 +59,7 @@ func (agent *Agent) Run() {
 	go handler.DispatchSSHMess(agent.mgr)
 	go handler.DispatchSSHTunnelMess(agent.mgr)
 	go handler.DispatchShellMess(agent.mgr)
-	go DispatchOfflineMess(agent.mgr)
+	go DispatchOfflineMess(agent)
 	// run dispatcher to dispatch children's message
 	go agent.dispatchChildrenMess()
 	// waiting for child
@@ -102,6 +102,7 @@ func (agent *Agent) handleDataFromUpstream() {
 		if err != nil {
 			upstreamOffline(agent.mgr, agent.options)
 			rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+			go agent.sendMyInfo()
 			continue
 		}
 
