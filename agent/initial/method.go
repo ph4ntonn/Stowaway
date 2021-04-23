@@ -14,8 +14,11 @@ import (
 	"io"
 	"log"
 	"net"
+	"os"
 	"os/exec"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	reuseport "github.com/libp2p/go-reuseport"
@@ -34,7 +37,7 @@ func achieveUUID(conn net.Conn, secret string) (uuid string) {
 
 	if err != nil {
 		conn.Close()
-		log.Fatalf("[*]Fail to achieve UUID from admin %s, Error: %s", conn.RemoteAddr().String(), err.Error())
+		log.Fatalf("[*]Fail to achieve UUID, Error: %s", err.Error())
 	}
 
 	if fHeader.MessageType == protocol.UUID {
@@ -95,14 +98,13 @@ func NormalActive(userOptions *Options, proxy *share.Proxy) (net.Conn, string) {
 
 		if err != nil {
 			conn.Close()
-			log.Fatalf("[*]Fail to connect admin %s, Error: %s", conn.RemoteAddr().String(), err.Error())
+			log.Fatalf("[*]Fail to connect %s, Error: %s", conn.RemoteAddr().String(), err.Error())
 		}
 
 		if fHeader.MessageType == protocol.HI {
 			mmess := fMessage.(*protocol.HIMess)
 			if mmess.Greeting == "Keep slient" && mmess.IsAdmin == 1 {
 				uuid := achieveUUID(conn, userOptions.Secret)
-				log.Printf("[*]Connect to admin %s successfully!\n", conn.RemoteAddr().String())
 				return conn, uuid
 			}
 		}
@@ -174,7 +176,6 @@ func NormalPassive(userOptions *Options) (net.Conn, string) {
 				protocol.ConstructMessage(sMessage, header, hiMess, false)
 				sMessage.SendMessage()
 				uuid := achieveUUID(conn, userOptions.Secret)
-				log.Printf("[*]Connection from admin %s is set up successfully!\n", conn.RemoteAddr().String())
 				return conn, uuid
 			}
 		}
@@ -188,8 +189,19 @@ func NormalPassive(userOptions *Options) (net.Conn, string) {
 func IPTableReusePassive(options *Options) (net.Conn, string) {
 	setReuseSecret(options)
 	SetPortReuseRules(options.Listen, options.ReusePort)
+	go waitForExit(options.Listen, options.ReusePort)
 	conn, uuid := NormalPassive(options)
 	return conn, uuid
+}
+
+func waitForExit(localPort, reusedPort string) {
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM) //监听ctrl+c、kill命令
+	for {
+		<-sigs
+		DeletePortReuseRules(localPort, reusedPort)
+		os.Exit(0)
+	}
 }
 
 func setReuseSecret(options *Options) {
@@ -211,13 +223,8 @@ func DeletePortReuseRules(localPort string, reusedPort string) error {
 
 	for _, each := range cmds {
 		cmd := strings.Split(each, " ")
-		err := exec.Command(cmd[0], cmd[1:]...).Run()
-		if err != nil {
-			log.Println("[*]Error!Use the '" + each + "' to delete rules.")
-		}
+		exec.Command(cmd[0], cmd[1:]...).Run()
 	}
-
-	fmt.Println("[*]All rules have been cleared successfully!")
 
 	return nil
 }
@@ -233,10 +240,7 @@ func SetPortReuseRules(localPort string, reusedPort string) error {
 
 	for _, each := range cmds {
 		cmd := strings.Split(each, " ")
-		err := exec.Command(cmd[0], cmd[1:]...).Run() //添加规则
-		if err != nil {
-			return err
-		}
+		exec.Command(cmd[0], cmd[1:]...).Run() //添加规则
 	}
 
 	return nil

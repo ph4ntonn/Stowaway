@@ -88,6 +88,8 @@ func (agent *Agent) sendMyInfo() {
 		Username:    username,
 		HostnameLen: uint64(len(hostname)),
 		Hostname:    hostname,
+		MemoLen:     uint64(len(agent.Memo)),
+		Memo:        agent.Memo,
 	}
 
 	protocol.ConstructMessage(sMessage, header, myInfoMess, false)

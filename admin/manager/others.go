@@ -5,12 +5,14 @@ import (
 )
 
 type consoleManager struct {
-	OK chan bool
+	OK   chan bool
+	Exit chan bool
 }
 
 func newConsoleManager() *consoleManager {
 	manager := new(consoleManager)
 	manager.OK = make(chan bool)
+	manager.Exit = make(chan bool, 1)
 	return manager
 }
 

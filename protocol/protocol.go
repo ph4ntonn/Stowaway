@@ -22,6 +22,7 @@ const (
 	SHELLRES
 	SHELLCOMMAND
 	SHELLRESULT
+	SHELLEXIT
 	LISTENREQ
 	LISTENRES
 	SSHREQ
@@ -146,6 +147,8 @@ type MyInfo struct {
 	Username    string
 	HostnameLen uint64
 	Hostname    string
+	MemoLen     uint64
+	Memo        string
 }
 
 type MyMemo struct {
@@ -169,6 +172,10 @@ type ShellCommand struct {
 type ShellResult struct {
 	ResultLen uint64
 	Result    string
+}
+
+type ShellExit struct {
+	OK uint16
 }
 
 type ListenReq struct {

@@ -97,7 +97,7 @@ func (listen *Listen) normalListen(mgr *manager.Manager, options *initial.Option
 	succMess := &protocol.ListenRes{
 		OK: 1,
 	}
-	fmt.Println("listenaddr ", listen.addr)
+
 	listener, err := net.Listen("tcp", listen.addr)
 	if err != nil {
 		protocol.ConstructMessage(sUMessage, resHeader, failMess, false)
@@ -207,8 +207,12 @@ func (listen *Listen) normalListen(mgr *manager.Manager, options *initial.Option
 					}
 
 					reMess := &protocol.NodeReonline{
-						UUIDLen: uint16(len(mmess.UUID)),
-						UUID:    mmess.UUID,
+						ParentUUIDLen: uint16(len(global.G_Component.UUID)),
+						ParentUUID:    global.G_Component.UUID,
+						UUIDLen:       uint16(len(mmess.UUID)),
+						UUID:          mmess.UUID,
+						IPLen:         uint16(len(conn.RemoteAddr().String())),
+						IP:            conn.RemoteAddr().String(),
 					}
 
 					protocol.ConstructMessage(sUMessage, reheader, reMess, false)
@@ -368,8 +372,12 @@ func (listen *Listen) iptablesListen(mgr *manager.Manager, options *initial.Opti
 					}
 
 					reMess := &protocol.NodeReonline{
-						UUIDLen: uint16(len(mmess.UUID)),
-						UUID:    mmess.UUID,
+						ParentUUIDLen: uint16(len(global.G_Component.UUID)),
+						ParentUUID:    global.G_Component.UUID,
+						UUIDLen:       uint16(len(mmess.UUID)),
+						UUID:          mmess.UUID,
+						IPLen:         uint16(len(conn.RemoteAddr().String())),
+						IP:            conn.RemoteAddr().String(),
 					}
 
 					protocol.ConstructMessage(sUMessage, reheader, reMess, false)

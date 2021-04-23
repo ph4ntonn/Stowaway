@@ -67,6 +67,8 @@ func (admin *Admin) handleMessFromDownstream(console *cli.Console) {
 		case protocol.SHELLRES:
 			fallthrough
 		case protocol.SHELLRESULT:
+			fallthrough
+		case protocol.SHELLEXIT:
 			admin.mgr.ShellManager.ShellMessChan <- message
 		case protocol.SSHRES:
 			fallthrough

@@ -109,17 +109,7 @@ func (console *Console) mainPanel() {
 				// every non-english character need two '\b'(Actually,i don't know why,i just tested a lot and find this stupid solution(on Mac,linux). So if u know,plz tell me,thx :) )
 				fmt.Print(string(bytes.Repeat([]byte("\b"), notSingleNum*2+singleNum)))
 			} else {
-				if len(leftCommand) >= 1 {
-					notSingleNum := (len(string(leftCommand)) - len(leftCommand)) / 2
-					singleNum := len(leftCommand) - notSingleNum
-
-					fmt.Print(string(bytes.Repeat([]byte("\b"), notSingleNum*2+singleNum)))
-					fmt.Print("\033[K")
-
-					leftCommand = leftCommand[:len(leftCommand)-1]
-
-					fmt.Print(string(leftCommand))
-				}
+				console.getCommand <- string(event.Key)
 			}
 		} else if event.Key == keyboard.KeyEnter {
 			if !console.shellMode && !console.sshMode {
@@ -144,9 +134,7 @@ func (console *Console) mainPanel() {
 				fmt.Print("\r\n")
 				fmt.Print(console.status)
 			} else {
-				fmt.Print("\r\n")
-				console.getCommand <- string(leftCommand)
-				leftCommand = []rune{}
+				console.getCommand <- string(event.Key)
 			}
 		} else if event.Key == keyboard.KeyArrowUp {
 			if !console.shellMode && !console.sshMode {
@@ -229,10 +217,15 @@ func (console *Console) mainPanel() {
 				fmt.Print(string(bytes.Repeat([]byte("\b"), notSingleNum*2+singleNum)))
 			}
 		} else if event.Key == keyboard.KeyTab {
-			// if user move the cursor or under shellMode(sshMode),tab is abandoned
-			if len(rightCommand) != 0 || console.shellMode || console.sshMode {
+			if console.shellMode || console.sshMode {
+				console.getCommand <- string(event.Key)
 				continue
 			}
+
+			if len(rightCommand) != 0 {
+				continue
+			}
+
 			// Tell helper the scenario
 			task := &HelperTask{
 				IsNodeMode: console.nodeMode,
@@ -277,13 +270,7 @@ func (console *Console) mainPanel() {
 				singleNum := len(rightCommand) - notSingleNum
 				fmt.Print(string(bytes.Repeat([]byte("\b"), notSingleNum*2+singleNum)))
 			} else {
-				if event.Key == keyboard.KeySpace {
-					leftCommand = []rune(string(leftCommand) + " ")
-					fmt.Print(" ")
-				} else {
-					leftCommand = []rune(string(leftCommand) + string(event.Rune))
-					fmt.Print(string(event.Rune))
-				}
+				console.getCommand <- string(event.Rune)
 			}
 		}
 	}
@@ -421,7 +408,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				console.shellMode = true
 				console.handleShellPanelCommand(route, uuid)
 				console.shellMode = false
-				console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+				console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
 			} else {
 				fmt.Print("\r\n[*]Shell cannot be started!")
 				console.ready <- true
@@ -433,7 +420,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 
 			listen := handler.NewListen()
 
-			fmt.Print("\r\n[*]BE AWARE! If you choose IPTables Reuse or SOReuse,you MUST confirm that the node you're controlling was started in the corresponding way!")
+			fmt.Print("\r\n[*]BE AWARE! If you choose IPTables Reuse or SOReuse,you MUST CONFIRM that the node you're controlling was started in the corresponding way!")
 			fmt.Print("\r\n[*]When you choose IPTables Reuse or SOReuse, the node will use the initial config(when node started) to reuse port!")
 			console.status = "[*]Please choose the mode(1.Normal passive/2.IPTables Reuse/3.SOReuse): "
 			console.ready <- true
@@ -451,7 +438,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				listen.Method = handler.SOREUSE
 			} else {
 				fmt.Printf("\r\n[*]Please input 1/2/3!")
-				console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+				console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
 				console.ready <- true
 				continue
 			}
@@ -463,7 +450,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				fmt.Printf("[*]Error: %s\n", err.Error())
 			}
 
-			console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+			console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
 
 			console.ready <- true
 		case "connect":
@@ -478,7 +465,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				fmt.Printf("[*]Error: %s\n", err.Error())
 			}
 
-			console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+			console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
 
 			console.ready <- true
 		case "ssh":
@@ -498,7 +485,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				ssh.Method = handler.CERMETHOD
 			} else {
 				fmt.Print("\r\n[*]Please input 1 or 2!")
-				console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+				console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
 				console.ready <- true
 				break
 			}
@@ -523,7 +510,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			err := ssh.LetSSH(route, uuid)
 			if err != nil {
 				fmt.Printf("\r\n[*]Error: %s", err.Error())
-				console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+				console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
 				console.ready <- true
 				break
 			}
@@ -535,11 +522,11 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				console.status = ""
 				console.sshMode = true
 				console.handleSSHPanelCommand(route, uuid)
-				console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+				console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
 				console.sshMode = false
 			} else {
 				fmt.Print("\r\n[*]Fail to connect to target host via ssh!")
-				console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+				console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
 				console.ready <- true
 			}
 		case "sshtunnel":
@@ -559,7 +546,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				sshTunnel.Method = handler.CERMETHOD
 			} else {
 				fmt.Print("\r\n[*]Please input 1 or 2!")
-				console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+				console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
 				console.ready <- true
 				break
 			}
@@ -586,7 +573,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			err := sshTunnel.LetSSHTunnel(route, uuid)
 			if err != nil {
 				fmt.Printf("\r\n[*]Error: %s", err.Error())
-				console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+				console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
 				console.ready <- true
 				break
 			}
@@ -595,7 +582,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				fmt.Print("\r\n[*]Fail to add target node via SSHTunnel!")
 			}
 
-			console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+			console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
 			console.ready <- true
 		case "socks":
 			if console.expectParams(fCommand, []int{2, 4}, NODE, 0) {
@@ -638,7 +625,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				} else {
 					fmt.Printf("\r\n[*]Please input yes/no!")
 				}
-				console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+				console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
 			}
 			console.ready <- true
 		case "forward":
@@ -687,7 +674,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				} else {
 					fmt.Printf("\r\n[*]Please input yes/no!")
 				}
-				console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+				console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
 			}
 			console.ready <- true
 		case "backward":
@@ -736,7 +723,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				} else {
 					fmt.Printf("\r\n[*]Please input yes/no!")
 				}
-				console.status = fmt.Sprintf("(node %s) >> ", utils.Int2Str(uuidNum))
+				console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
 			}
 			console.ready <- true
 		case "upload":
@@ -823,28 +810,20 @@ func (console *Console) handleShellPanelCommand(route string, uuid string) {
 
 	console.ready <- true
 
-	var done bool
 	for {
+		select {
+		case tCommand := <-console.getCommand:
 
-		if done { // check if user has asked to exit
+			shellCommandMess := &protocol.ShellCommand{
+				CommandLen: uint64(len(tCommand)),
+				Command:    tCommand,
+			}
+
+			protocol.ConstructMessage(sMessage, header, shellCommandMess, false)
+			sMessage.SendMessage()
+		case <-console.mgr.ConsoleManager.Exit:
 			return
 		}
-
-		tCommand := <-console.getCommand
-
-		if tCommand == "exit" {
-			done = true
-		}
-
-		fCommand := tCommand + "\n"
-
-		shellCommandMess := &protocol.ShellCommand{
-			CommandLen: uint64(len(fCommand)),
-			Command:    fCommand,
-		}
-
-		protocol.ConstructMessage(sMessage, header, shellCommandMess, false)
-		sMessage.SendMessage()
 	}
 }
 

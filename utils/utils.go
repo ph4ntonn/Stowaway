@@ -146,6 +146,19 @@ func CheckIfIP4(ip string) bool {
 	return false
 }
 
-func GiveMePortViaAddr(addr string) string {
-	return strings.Split(addr, ":")[1]
+func CheckRange(nodes []int) {
+	for m := len(nodes) - 1; m > 0; m-- {
+		var flag bool = false
+		for n := 0; n < m; n++ {
+			if nodes[n] > nodes[n+1] {
+				temp := nodes[n]
+				nodes[n] = nodes[n+1]
+				nodes[n+1] = temp
+				flag = true
+			}
+		}
+		if !flag {
+			break
+		}
+	}
 }

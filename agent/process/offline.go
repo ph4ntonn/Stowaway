@@ -14,7 +14,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/libp2p/go-reuseport"
+	reuseport "github.com/libp2p/go-reuseport"
 )
 
 func upstreamOffline(mgr *manager.Manager, options *initial.Options) {
@@ -38,6 +38,11 @@ func upstreamOffline(mgr *manager.Manager, options *initial.Options) {
 		newConn = ipTableReusePassiveReconn(options)
 	case initial.SO_REUSE_PASSIVE:
 		newConn = soReusePassiveReconn(options)
+	case initial.NORMAL_RECONNECT_ACTIVE:
+		newConn = normalReconnActiveReconn(options, nil)
+	case initial.PROXY_RECONNECT_ACTIVE:
+		proxy := share.NewProxy(options.Connect, options.Proxy, options.ProxyU, options.ProxyP)
+		newConn = normalReconnActiveReconn(options, proxy)
 	}
 
 	global.UpdateGComponent(newConn)
@@ -76,7 +81,7 @@ func normalPassiveReconn(options *initial.Options) net.Conn {
 	}
 
 	header := &protocol.Header{
-		Sender:      protocol.TEMP_UUID,
+		Sender:      global.G_Component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.HI,
 		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
@@ -86,20 +91,18 @@ func normalPassiveReconn(options *initial.Options) net.Conn {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Printf("[*]Error occured: %s\n", err.Error())
-			conn.Close()
 			continue
 		}
 
 		if err := share.PassivePreAuth(conn, options.Secret); err != nil {
-			log.Fatalf("[*]Error occured: %s", err.Error())
+			conn.Close()
+			continue
 		}
 
 		rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, options.Secret, protocol.TEMP_UUID)
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 
 		if err != nil {
-			log.Printf("[*]Fail to set connection from %s, Error: %s\n", conn.RemoteAddr().String(), err.Error())
 			conn.Close()
 			continue
 		}
@@ -147,7 +150,7 @@ func soReusePassiveReconn(options *initial.Options) net.Conn {
 	}
 
 	header := &protocol.Header{
-		Sender:      protocol.TEMP_UUID,
+		Sender:      global.G_Component.UUID,
 		Accepter:    protocol.ADMIN_UUID,
 		MessageType: protocol.HI,
 		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
@@ -158,9 +161,7 @@ func soReusePassiveReconn(options *initial.Options) net.Conn {
 
 	for {
 		conn, err := listener.Accept()
-
 		if err != nil {
-			conn.Close()
 			continue
 		}
 
@@ -191,7 +192,6 @@ func soReusePassiveReconn(options *initial.Options) net.Conn {
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 
 		if err != nil {
-			log.Printf("[*]Fail to set connection from %s, Error: %s\n", conn.RemoteAddr().String(), err.Error())
 			conn.Close()
 			continue
 		}
@@ -207,6 +207,75 @@ func soReusePassiveReconn(options *initial.Options) net.Conn {
 		}
 
 		conn.Close()
+	}
+}
+
+func normalReconnActiveReconn(options *initial.Options, proxy *share.Proxy) net.Conn {
+	var sMessage, rMessage protocol.Message
+
+	hiMess := &protocol.HIMess{
+		GreetingLen: uint16(len("Shhh...")),
+		Greeting:    "Shhh...",
+		UUIDLen:     uint16(len(global.G_Component.UUID)),
+		UUID:        global.G_Component.UUID,
+		IsAdmin:     0,
+		IsReconnect: 1,
+	}
+
+	header := &protocol.Header{
+		Sender:      global.G_Component.UUID,
+		Accepter:    protocol.ADMIN_UUID,
+		MessageType: protocol.HI,
+		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
+		Route:       protocol.TEMP_ROUTE,
+	}
+
+	for {
+		var (
+			conn net.Conn
+			err  error
+		)
+
+		if proxy == nil {
+			conn, err = net.Dial("tcp", options.Connect)
+		} else {
+			conn, err = proxy.Dial()
+		}
+
+		if err != nil {
+			time.Sleep(time.Duration(options.Reconnect) * time.Second)
+			continue
+		}
+
+		if err := share.ActivePreAuth(conn, options.Secret); err != nil {
+			conn.Close()
+			time.Sleep(time.Duration(options.Reconnect) * time.Second)
+			continue
+		}
+
+		sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(conn, options.Secret, protocol.TEMP_UUID)
+
+		protocol.ConstructMessage(sMessage, header, hiMess, false)
+		sMessage.SendMessage()
+
+		rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, options.Secret, protocol.TEMP_UUID)
+		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
+
+		if err != nil {
+			conn.Close()
+			time.Sleep(time.Duration(options.Reconnect) * time.Second)
+			continue
+		}
+
+		if fHeader.MessageType == protocol.HI {
+			mmess := fMessage.(*protocol.HIMess)
+			if mmess.Greeting == "Keep slient" && mmess.IsAdmin == 1 {
+				return conn
+			}
+		}
+
+		conn.Close()
+		time.Sleep(time.Duration(options.Reconnect) * time.Second)
 	}
 }
 

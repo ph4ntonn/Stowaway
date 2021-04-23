@@ -217,17 +217,25 @@ func (topology *Topology) updateDetail(task *TopoTask) {
 	if uuidNum >= 0 {
 		topology.nodes[uuidNum].currentUser = task.UserName
 		topology.nodes[uuidNum].currentHostname = task.HostName
+		topology.nodes[uuidNum].memo = task.Memo
 	}
 }
 
 func (topology *Topology) showDetail() {
-	for uuidNum, node := range topology.nodes {
-		fmt.Printf("\nNode[%s] -> IP: %s  Hostname: %s  User: %s\nMemo: %s\n",
-			utils.Int2Str(uuidNum),
-			node.currentIP,
-			node.currentHostname,
-			node.currentUser,
-			node.memo,
+	var nodes []int
+	for uuidNum := range topology.nodes {
+		nodes = append(nodes, uuidNum)
+	}
+
+	utils.CheckRange(nodes)
+
+	for _, uuidNum := range nodes {
+		fmt.Printf("\nNode[%d] -> IP: %s  Hostname: %s  User: %s\nMemo: %s\n",
+			uuidNum,
+			topology.nodes[uuidNum].currentIP,
+			topology.nodes[uuidNum].currentHostname,
+			topology.nodes[uuidNum].currentUser,
+			topology.nodes[uuidNum].memo,
 		)
 	}
 
@@ -235,10 +243,17 @@ func (topology *Topology) showDetail() {
 }
 
 func (topology *Topology) showTree() {
-	for uuidNum, node := range topology.nodes {
-		fmt.Printf("\nNode[%s]'s children ->\n", utils.Int2Str(uuidNum))
-		for _, child := range node.childrenUUID {
-			fmt.Printf("Node[%s]\n", utils.Int2Str(topology.id2IDNum(child)))
+	var nodes []int
+	for uuidNum := range topology.nodes {
+		nodes = append(nodes, uuidNum)
+	}
+
+	utils.CheckRange(nodes)
+
+	for _, uuidNum := range nodes {
+		fmt.Printf("\nNode[%d]'s children ->\n", uuidNum)
+		for _, child := range topology.nodes[uuidNum].childrenUUID {
+			fmt.Printf("Node[%d]\n", topology.id2IDNum(child))
 		}
 	}
 
@@ -258,6 +273,19 @@ func (topology *Topology) delNode(task *TopoTask) {
 	var readyUUID []string
 
 	idNum := topology.id2IDNum(task.UUID)
+
+	parentIDNum := topology.id2IDNum(topology.nodes[idNum].parentUUID)
+
+	for pointer, childUUID := range topology.nodes[parentIDNum].childrenUUID { // del parent's children record
+		if childUUID == task.UUID {
+			if pointer == len(topology.nodes[parentIDNum].childrenUUID)-1 {
+				topology.nodes[parentIDNum].childrenUUID = topology.nodes[parentIDNum].childrenUUID[:pointer]
+			} else {
+				topology.nodes[parentIDNum].childrenUUID = append(topology.nodes[parentIDNum].childrenUUID[:pointer], topology.nodes[parentIDNum].childrenUUID[pointer+1:]...)
+			}
+		}
+	}
+
 	topology.findChildrenNodes(&ready, idNum)
 
 	ready = append(ready, idNum)

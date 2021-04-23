@@ -47,6 +47,8 @@ func DispatchShellMess(mgr *manager.Manager) {
 		case *protocol.ShellResult:
 			mess := message.(*protocol.ShellResult)
 			fmt.Print(mess.Result)
+		case *protocol.ShellExit:
+			mgr.ConsoleManager.Exit <- true
 		}
 	}
 }

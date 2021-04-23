@@ -133,12 +133,19 @@ func (message *RawMessage) ConstructData(header *Header, mess interface{}, isPas
 
 			hostnameBuf := []byte(mmess.Hostname)
 
+			memoLenBuf := make([]byte, 8)
+			binary.BigEndian.PutUint64(memoLenBuf, mmess.MemoLen)
+
+			memoBuf := []byte(mmess.Memo)
+
 			dataBuffer.Write(uuidLenBuf)
 			dataBuffer.Write(uuidBuf)
 			dataBuffer.Write(usernameLenBuf)
 			dataBuffer.Write(usernameBuf)
 			dataBuffer.Write(hostnameLenBuf)
 			dataBuffer.Write(hostnameBuf)
+			dataBuffer.Write(memoLenBuf)
+			dataBuffer.Write(memoBuf)
 		case MYMEMO:
 			mmess := mess.(*MyMemo)
 			memoLenBuf := make([]byte, 8)
@@ -179,6 +186,12 @@ func (message *RawMessage) ConstructData(header *Header, mess interface{}, isPas
 
 			dataBuffer.Write(resultLenBuf)
 			dataBuffer.Write(resultBuf)
+		case SHELLEXIT:
+			mmess := mess.(*ShellExit)
+			OKBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
+
+			dataBuffer.Write(OKBuf)
 		case LISTENREQ:
 			mmess := mess.(*ListenReq)
 			methodBuf := make([]byte, 2)
@@ -814,6 +827,8 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 		mmess.Username = string(dataBuf[10+mmess.UUIDLen : 10+uint64(mmess.UUIDLen)+mmess.UsernameLen])
 		mmess.HostnameLen = binary.BigEndian.Uint64(dataBuf[10+uint64(mmess.UUIDLen)+mmess.UsernameLen : 18+uint64(mmess.UUIDLen)+mmess.UsernameLen])
 		mmess.Hostname = string(dataBuf[18+uint64(mmess.UUIDLen)+mmess.UsernameLen : 18+uint64(mmess.UUIDLen)+mmess.UsernameLen+mmess.HostnameLen])
+		mmess.MemoLen = binary.BigEndian.Uint64(dataBuf[18+uint64(mmess.UUIDLen)+mmess.UsernameLen+mmess.HostnameLen : 26+uint64(mmess.UUIDLen)+mmess.UsernameLen+mmess.HostnameLen])
+		mmess.Memo = string(dataBuf[26+uint64(mmess.UUIDLen)+mmess.UsernameLen+mmess.HostnameLen : 26+uint64(mmess.UUIDLen)+mmess.UsernameLen+mmess.HostnameLen+mmess.MemoLen])
 		return header, mmess, nil
 	case MYMEMO:
 		mmess := new(MyMemo)
@@ -837,6 +852,10 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 		mmess := new(ShellResult)
 		mmess.ResultLen = binary.BigEndian.Uint64(dataBuf[:8])
 		mmess.Result = string(dataBuf[8 : 8+mmess.ResultLen])
+		return header, mmess, nil
+	case SHELLEXIT:
+		mmess := new(ShellExit)
+		mmess.OK = binary.BigEndian.Uint16(dataBuf[:2])
 		return header, mmess, nil
 	case LISTENREQ:
 		mmess := new(ListenReq)

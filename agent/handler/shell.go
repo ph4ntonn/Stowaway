@@ -93,11 +93,25 @@ func (shell *Shell) start() {
 	protocol.ConstructMessage(sMessage, shellResHeader, shellResSuccMess, false)
 	sMessage.SendMessage()
 
+	shellExitHeader := &protocol.Header{
+		Sender:      global.G_Component.UUID,
+		Accepter:    protocol.ADMIN_UUID,
+		MessageType: protocol.SHELLEXIT,
+		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))), // No need to set route when agent send mess to admin
+		Route:       protocol.TEMP_ROUTE,
+	}
+
+	shellExitMess := &protocol.ShellExit{
+		OK: 1,
+	}
+
 	buffer := make([]byte, 4096)
 	for {
 		count, err := shell.stdout.Read(buffer)
 
 		if err != nil {
+			protocol.ConstructMessage(sMessage, shellExitHeader, shellExitMess, false)
+			sMessage.SendMessage()
 			return
 		}
 

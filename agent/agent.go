@@ -34,10 +34,13 @@ func main() {
 		fallthrough
 	case initial.NORMAL_ACTIVE:
 		conn, agent.UUID = initial.NormalActive(options, nil)
+	case initial.PROXY_RECONNECT_ACTIVE:
+		fallthrough
 	case initial.PROXY_ACTIVE:
 		proxy := share.NewProxy(options.Connect, options.Proxy, options.ProxyU, options.ProxyP)
 		conn, agent.UUID = initial.NormalActive(options, proxy)
 	case initial.IPTABLES_REUSE_PASSIVE:
+		defer initial.DeletePortReuseRules(options.Listen, options.ReusePort)
 		conn, agent.UUID = initial.IPTableReusePassive(options)
 	case initial.SO_REUSE_PASSIVE:
 		conn, agent.UUID = initial.SoReusePassive(options)

@@ -91,6 +91,7 @@ func DispatchInfoMess(mgr *manager.Manager, topo *topology.Topology) {
 				UUID:     mess.UUID,
 				UserName: mess.Username,
 				HostName: mess.Hostname,
+				Memo:     mess.Memo,
 			}
 			topo.TaskChan <- task
 		}
