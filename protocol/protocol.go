@@ -60,6 +60,8 @@ const (
 	CONNECTDONE
 	NODEOFFLINE
 	NODEREONLINE
+	UPSTREAMOFFLINE
+	UPSTREAMREONLINE
 	OFFLINE
 )
 
@@ -384,8 +386,20 @@ type NodeOffline struct {
 }
 
 type NodeReonline struct {
-	UUIDLen uint16
-	UUID    string
+	ParentUUIDLen uint16
+	ParentUUID    string
+	UUIDLen       uint16
+	UUID          string
+	IPLen         uint16
+	IP            string
+}
+
+type UpstreamOffline struct {
+	OK uint16
+}
+
+type UpstreamReonline struct {
+	OK uint16
 }
 
 type Offline struct {

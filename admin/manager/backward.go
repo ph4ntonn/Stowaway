@@ -17,6 +17,7 @@ const (
 	B_GETSTOPRPORT
 	B_CLOSESINGLE
 	B_CLOSESINGLEALL
+	B_FORCESHUTDOWN
 )
 
 type backwardManager struct {
@@ -109,6 +110,8 @@ func (manager *backwardManager) run() {
 			manager.closeSingle(task)
 		case B_CLOSESINGLEALL:
 			manager.closeSingleAll(task)
+		case B_FORCESHUTDOWN:
+			manager.forceShutdown(task)
 		}
 	}
 }
@@ -269,6 +272,31 @@ func (manager *backwardManager) closeSingleAll(task *BackwardTask) {
 	}
 
 	delete(manager.backwardMap, task.UUID)
+
+	manager.ResultChan <- &backwardResult{OK: true}
+}
+
+func (manager *backwardManager) forceShutdown(task *BackwardTask) {
+	if _, ok := manager.backwardMap[task.UUID]; ok {
+		for rPort := range manager.backwardMap[task.UUID] {
+			for seq, status := range manager.backwardMap[task.UUID][rPort].backwardStatusMap {
+				if status.conn != nil {
+					status.conn.Close()
+				}
+				close(status.dataChan)
+				delete(manager.backwardMap[task.UUID][rPort].backwardStatusMap, seq)
+			}
+			delete(manager.backwardMap[task.UUID], rPort)
+		}
+
+		for seq, relationship := range manager.backwardSeqMap {
+			if relationship.uuid == task.UUID {
+				delete(manager.backwardSeqMap, seq)
+			}
+		}
+
+		delete(manager.backwardMap, task.UUID)
+	}
 
 	manager.ResultChan <- &backwardResult{OK: true}
 }

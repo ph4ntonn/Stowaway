@@ -21,7 +21,7 @@ const (
 	F_CLOSETCP
 	F_CLOSESINGLE
 	F_CLOSESINGLEALL
-	F_CLOSEALL
+	F_FORCESHUTDOWN
 )
 
 type forwardManager struct {
@@ -114,6 +114,8 @@ func (manager *forwardManager) run() {
 			manager.closeSingle(task)
 		case F_CLOSESINGLEALL:
 			manager.closeSingleAll(task)
+		case F_FORCESHUTDOWN:
+			manager.forceShutdown(task)
 		}
 	}
 }
@@ -271,4 +273,12 @@ func (manager *forwardManager) closeSingleAll(task *ForwardTask) {
 	delete(manager.forwardMap, task.UUID)
 
 	manager.ResultChan <- &forwardResult{OK: true}
+}
+
+func (manager *forwardManager) forceShutdown(task *ForwardTask) {
+	if _, ok := manager.forwardMap[task.UUID]; ok {
+		manager.closeSingleAll(task)
+	} else {
+		manager.ResultChan <- &forwardResult{OK: true}
+	}
 }

@@ -82,10 +82,10 @@ func dispatchChildUUID(mgr *manager.Manager, topo *topology.Topology, parentUUID
 	uuid := utils.GenerateUUID()
 	node := topology.NewNode(uuid, ip)
 	topoTask := &topology.TopoTask{
-		Mode:    topology.ADDNODE,
-		Target:  node,
-		UUID:    parentUUID,
-		IsFirst: false,
+		Mode:       topology.ADDNODE,
+		Target:     node,
+		ParentUUID: parentUUID,
+		IsFirst:    false,
 	}
 	topo.TaskChan <- topoTask
 	topoResult := <-topo.ResultChan

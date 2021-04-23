@@ -19,6 +19,7 @@ const (
 	S_GETUDPHEADER
 	S_CLOSETCP
 	S_CHECKSOCKSREADY
+	S_FORCESHUTDOWN
 )
 
 type socksManager struct {
@@ -100,6 +101,8 @@ func (manager *socksManager) run() {
 			manager.closeTCP(task)
 		case S_CHECKSOCKSREADY:
 			manager.checkSocksReady()
+		case S_FORCESHUTDOWN:
+			manager.forceShutdown()
 		}
 	}
 }
@@ -201,4 +204,25 @@ func (manager *socksManager) checkSocksReady() {
 	} else {
 		manager.ResultChan <- &socksResult{OK: false}
 	}
+}
+
+func (manager *socksManager) forceShutdown() {
+	for seq, status := range manager.socksStatusMap {
+		if status.tcp.conn != nil {
+			status.tcp.conn.Close()
+		}
+
+		close(status.tcp.dataChan)
+
+		if status.isUDP {
+			status.udp.listener.Close()
+			close(status.udp.dataChan)
+			close(status.udp.readyChan)
+			status.udp.headerPairs = nil
+		}
+
+		delete(manager.socksStatusMap, seq)
+	}
+
+	manager.ResultChan <- &socksResult{OK: true}
 }

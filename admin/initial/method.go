@@ -104,10 +104,10 @@ func NormalActive(userOptions *Options, topo *topology.Topology, proxy *share.Pr
 			if mmess.Greeting == "Keep slient" {
 				node := topology.NewNode(dispatchUUID(conn, userOptions.Secret), conn.RemoteAddr().String())
 				task := &topology.TopoTask{
-					Mode:    topology.ADDNODE,
-					Target:  node,
-					UUID:    protocol.TEMP_UUID,
-					IsFirst: true,
+					Mode:       topology.ADDNODE,
+					Target:     node,
+					ParentUUID: protocol.TEMP_UUID,
+					IsFirst:    true,
 				}
 				topo.TaskChan <- task
 
@@ -188,10 +188,10 @@ func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 				if mmess.IsReconnect == 0 {
 					node := topology.NewNode(dispatchUUID(conn, userOptions.Secret), conn.RemoteAddr().String())
 					task := &topology.TopoTask{
-						Mode:    topology.ADDNODE,
-						Target:  node,
-						UUID:    protocol.TEMP_UUID,
-						IsFirst: true,
+						Mode:       topology.ADDNODE,
+						Target:     node,
+						ParentUUID: protocol.TEMP_UUID,
+						IsFirst:    true,
 					}
 					topo.TaskChan <- task
 

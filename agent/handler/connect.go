@@ -94,46 +94,72 @@ func (connect *Connect) start(mgr *manager.Manager) {
 		return
 	}
 
+	var childUUID string
+
 	if fHeader.MessageType == protocol.HI {
 		mmess := fMessage.(*protocol.HIMess)
 		if mmess.Greeting == "Keep slient" && mmess.IsAdmin == 0 {
-			childIP := conn.RemoteAddr().String()
+			if mmess.IsReconnect == 0 {
+				childIP := conn.RemoteAddr().String()
 
-			cUUIDReqHeader := &protocol.Header{
-				Sender:      global.G_Component.UUID,
-				Accepter:    protocol.ADMIN_UUID,
-				MessageType: protocol.CHILDUUIDREQ,
-				RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
-				Route:       protocol.TEMP_ROUTE,
+				cUUIDReqHeader := &protocol.Header{
+					Sender:      global.G_Component.UUID,
+					Accepter:    protocol.ADMIN_UUID,
+					MessageType: protocol.CHILDUUIDREQ,
+					RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
+					Route:       protocol.TEMP_ROUTE,
+				}
+
+				cUUIDMess := &protocol.ChildUUIDReq{
+					ParentUUIDLen: uint16(len(global.G_Component.UUID)),
+					ParentUUID:    global.G_Component.UUID,
+					IPLen:         uint16(len(childIP)),
+					IP:            childIP,
+				}
+
+				protocol.ConstructMessage(sUMessage, cUUIDReqHeader, cUUIDMess, false)
+				sUMessage.SendMessage()
+
+				childUUID = <-mgr.ListenManager.ChildUUIDChan
+
+				uuidHeader := &protocol.Header{
+					Sender:      protocol.ADMIN_UUID, // Fake admin LOL
+					Accepter:    protocol.TEMP_UUID,
+					MessageType: protocol.UUID,
+					RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
+					Route:       protocol.TEMP_ROUTE,
+				}
+
+				uuidMess := &protocol.UUIDMess{
+					UUIDLen: uint16(len(childUUID)),
+					UUID:    childUUID,
+				}
+
+				protocol.ConstructMessage(sLMessage, uuidHeader, uuidMess, false)
+				sLMessage.SendMessage()
+			} else {
+				reheader := &protocol.Header{
+					Sender:      global.G_Component.UUID,
+					Accepter:    protocol.ADMIN_UUID,
+					MessageType: protocol.NODEREONLINE,
+					RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
+					Route:       protocol.TEMP_ROUTE,
+				}
+
+				reMess := &protocol.NodeReonline{
+					ParentUUIDLen: uint16(len(global.G_Component.UUID)),
+					ParentUUID:    global.G_Component.UUID,
+					UUIDLen:       uint16(len(mmess.UUID)),
+					UUID:          mmess.UUID,
+					IPLen:         uint16(len(conn.RemoteAddr().String())),
+					IP:            conn.RemoteAddr().String(),
+				}
+
+				protocol.ConstructMessage(sUMessage, reheader, reMess, false)
+				sUMessage.SendMessage()
+
+				childUUID = mmess.UUID
 			}
-
-			cUUIDMess := &protocol.ChildUUIDReq{
-				ParentUUIDLen: uint16(len(global.G_Component.UUID)),
-				ParentUUID:    global.G_Component.UUID,
-				IPLen:         uint16(len(childIP)),
-				IP:            childIP,
-			}
-
-			protocol.ConstructMessage(sUMessage, cUUIDReqHeader, cUUIDMess, false)
-			sUMessage.SendMessage()
-
-			childUUID := <-mgr.ListenManager.ChildUUIDChan
-
-			uuidHeader := &protocol.Header{
-				Sender:      protocol.ADMIN_UUID, // Fake admin LOL
-				Accepter:    protocol.TEMP_UUID,
-				MessageType: protocol.UUID,
-				RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))),
-				Route:       protocol.TEMP_ROUTE,
-			}
-
-			uuidMess := &protocol.UUIDMess{
-				UUIDLen: uint16(len(childUUID)),
-				UUID:    childUUID,
-			}
-
-			protocol.ConstructMessage(sLMessage, uuidHeader, uuidMess, false)
-			sLMessage.SendMessage()
 
 			childrenTask := &manager.ChildrenTask{
 				Mode: manager.C_NEWCHILD,

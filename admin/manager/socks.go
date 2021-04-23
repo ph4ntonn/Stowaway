@@ -24,6 +24,7 @@ const (
 	S_UPDATEUDP
 	S_GETSOCKSINFO
 	S_CLOSESOCKS
+	S_FORCESHUTDOWN
 )
 
 type socksManager struct {
@@ -98,6 +99,7 @@ func newSocksManager() *socksManager {
 
 	manager.TaskChan = make(chan *SocksTask)
 	manager.ResultChan = make(chan *socksResult)
+	manager.Done = make(chan bool)
 
 	return manager
 }
@@ -133,6 +135,8 @@ func (manager *socksManager) run() {
 			manager.getSocksInfo(task)
 		case S_CLOSESOCKS:
 			manager.closeSocks(task)
+		case S_FORCESHUTDOWN:
+			manager.forceShutdown(task)
 		}
 	}
 }
@@ -371,4 +375,12 @@ func (manager *socksManager) closeSocks(task *SocksTask) {
 
 	delete(manager.socksMap, task.UUID) // we delete corresponding "socksMap"
 	manager.ResultChan <- &socksResult{OK: true}
+}
+
+func (manager *socksManager) forceShutdown(task *SocksTask) {
+	if _, ok := manager.socksMap[task.UUID]; ok {
+		manager.closeSocks(task)
+	} else {
+		manager.ResultChan <- &socksResult{OK: true}
+	}
 }

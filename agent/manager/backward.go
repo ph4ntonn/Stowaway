@@ -13,6 +13,7 @@ const (
 	B_CLOSETCP
 	B_CLOSESINGLE
 	B_CLOSESINGLEALL
+	B_FORCESHUTDOWN
 )
 
 type backwardManager struct {
@@ -88,6 +89,8 @@ func (manager *backwardManager) run() {
 			manager.closeSingle(task)
 		case B_CLOSESINGLEALL:
 			manager.closeSingleAll()
+		case B_FORCESHUTDOWN:
+			manager.forceShutdown()
 		}
 	}
 }
@@ -211,4 +214,8 @@ func (manager *backwardManager) closeSingleAll() {
 	}
 
 	manager.ResultChan <- &backwardResult{OK: true}
+}
+
+func (manager *backwardManager) forceShutdown() {
+	manager.closeSingleAll()
 }

@@ -640,13 +640,39 @@ func (message *RawMessage) ConstructData(header *Header, mess interface{}, isPas
 		case NODEREONLINE:
 			mmess := mess.(*NodeReonline)
 
+			puuidLenBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(puuidLenBuf, mmess.ParentUUIDLen)
+
+			puuidBuf := []byte(mmess.ParentUUID)
+
 			uuidLenBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(uuidLenBuf, mmess.UUIDLen)
 
 			uuidBuf := []byte(mmess.UUID)
 
+			ipLenBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(ipLenBuf, mmess.IPLen)
+
+			ipBuf := []byte(mmess.IP)
+
+			dataBuffer.Write(puuidLenBuf)
+			dataBuffer.Write(puuidBuf)
 			dataBuffer.Write(uuidLenBuf)
 			dataBuffer.Write(uuidBuf)
+			dataBuffer.Write(ipLenBuf)
+			dataBuffer.Write(ipBuf)
+		case UPSTREAMOFFLINE:
+			mmess := mess.(*UpstreamOffline)
+			OKBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
+
+			dataBuffer.Write(OKBuf)
+		case UPSTREAMREONLINE:
+			mmess := mess.(*UpstreamReonline)
+			OKBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
+
+			dataBuffer.Write(OKBuf)
 		case OFFLINE:
 			mmess := mess.(*Offline)
 			OKBuf := make([]byte, 2)
@@ -1028,8 +1054,20 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 		return header, mmess, nil
 	case NODEREONLINE:
 		mmess := new(NodeReonline)
-		mmess.UUIDLen = binary.BigEndian.Uint16(dataBuf[0:2])
-		mmess.UUID = string(dataBuf[2 : 2+mmess.UUIDLen])
+		mmess.ParentUUIDLen = binary.BigEndian.Uint16(dataBuf[:2])
+		mmess.ParentUUID = string(dataBuf[2 : 2+mmess.ParentUUIDLen])
+		mmess.UUIDLen = binary.BigEndian.Uint16(dataBuf[2+mmess.ParentUUIDLen : 4+mmess.ParentUUIDLen])
+		mmess.UUID = string(dataBuf[4+mmess.ParentUUIDLen : 4+mmess.ParentUUIDLen+mmess.UUIDLen])
+		mmess.IPLen = binary.BigEndian.Uint16(dataBuf[4+mmess.ParentUUIDLen+mmess.UUIDLen : 6+mmess.ParentUUIDLen+mmess.UUIDLen])
+		mmess.IP = string(dataBuf[6+mmess.ParentUUIDLen+mmess.UUIDLen : 6+mmess.ParentUUIDLen+mmess.UUIDLen+mmess.IPLen])
+		return header, mmess, nil
+	case UPSTREAMOFFLINE:
+		mmess := new(UpstreamOffline)
+		mmess.OK = binary.BigEndian.Uint16(dataBuf[:2])
+		return header, mmess, nil
+	case UPSTREAMREONLINE:
+		mmess := new(UpstreamReonline)
+		mmess.OK = binary.BigEndian.Uint16(dataBuf[:2])
 		return header, mmess, nil
 	case OFFLINE:
 		mmess := new(Offline)

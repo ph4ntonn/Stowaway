@@ -13,6 +13,7 @@ const (
 	F_GETDATACHAN
 	F_UPDATEFORWARD
 	F_CLOSETCP
+	F_FORCESHUTDOWN
 )
 
 type forwardManager struct {
@@ -66,6 +67,8 @@ func (manager *forwardManager) run() {
 			manager.updateForward(task)
 		case F_CLOSETCP:
 			manager.closeTCP(task)
+		case F_FORCESHUTDOWN:
+			manager.forceShutdown()
 		}
 	}
 }
@@ -104,4 +107,18 @@ func (manager *forwardManager) closeTCP(task *ForwardTask) {
 	close(manager.forwardStatusMap[task.Seq].dataChan)
 
 	delete(manager.forwardStatusMap, task.Seq)
+}
+
+func (manager *forwardManager) forceShutdown() {
+	for seq, status := range manager.forwardStatusMap {
+		if status.conn != nil {
+			status.conn.Close()
+		}
+
+		close(status.dataChan)
+
+		delete(manager.forwardStatusMap, seq)
+	}
+
+	manager.ResultChan <- &forwardResult{OK: true}
 }

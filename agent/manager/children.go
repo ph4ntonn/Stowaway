@@ -1,11 +1,13 @@
 package manager
 
-import "net"
+import (
+	"net"
+)
 
 const (
 	C_NEWCHILD = iota
 	C_GETCONN
-	C_GETCHILDREN
+	C_GETALLCHILDREN
 	C_DELCHILD
 )
 
@@ -57,8 +59,8 @@ func (manager *childrenManager) run() {
 			manager.newChild(task)
 		case C_GETCONN:
 			manager.getConn(task)
-		case C_GETCHILDREN:
-			manager.getChildren()
+		case C_GETALLCHILDREN:
+			manager.getAllChildren()
 		case C_DELCHILD:
 			manager.delChild(task)
 		}
@@ -82,7 +84,7 @@ func (manager *childrenManager) getConn(task *ChildrenTask) {
 	}
 }
 
-func (manager *childrenManager) getChildren() {
+func (manager *childrenManager) getAllChildren() {
 	var children []string
 
 	for child, _ := range manager.children {

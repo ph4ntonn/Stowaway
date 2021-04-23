@@ -116,6 +116,8 @@ func (admin *Admin) handleMessFromDownstream(console *cli.Console) {
 			admin.mgr.ListenManager.ListenMessChan <- message
 		case protocol.CONNECTDONE:
 			admin.mgr.ConnectManager.ConnectMessChan <- message
+		case protocol.NODEREONLINE:
+			fallthrough
 		case protocol.NODEOFFLINE:
 			admin.mgr.ChildrenManager.ChildrenMessChan <- message
 		default:

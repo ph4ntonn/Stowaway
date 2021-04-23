@@ -20,8 +20,8 @@ const (
 	CHECKNODE
 	CALCULATE
 	GETROUTE
-	DEACTIVENODE
-	ACTIVENODE
+	DELNODE
+	REONLINENODE
 	// User-friendly
 	UPDATEDETAIL
 	SHOWDETAIL
@@ -34,6 +34,7 @@ type Topology struct {
 	currentIDNum int
 	nodes        map[int]*node     // we use uuidNum as the map's key,that's the only special excpection
 	route        map[string]string // map[uuid]route
+	history      map[string]int
 
 	TaskChan   chan *TopoTask
 	ResultChan chan *topoResult
@@ -47,18 +48,18 @@ type node struct {
 	currentHostname string
 	currentIP       string
 	memo            string
-	isOnline        bool
 }
 
 type TopoTask struct {
-	Mode     int
-	UUID     string
-	UUIDNum  int
-	Target   *node
-	HostName string
-	UserName string
-	Memo     string
-	IsFirst  bool
+	Mode       int
+	UUID       string
+	UUIDNum    int
+	ParentUUID string
+	Target     *node
+	HostName   string
+	UserName   string
+	Memo       string
+	IsFirst    bool
 }
 
 type topoResult struct {
@@ -73,6 +74,7 @@ func NewTopology() *Topology {
 	topology := new(Topology)
 	topology.nodes = make(map[int]*node)
 	topology.route = make(map[string]string)
+	topology.history = make(map[string]int)
 	topology.currentIDNum = 0
 	topology.TaskChan = make(chan *TopoTask)
 	topology.ResultChan = make(chan *topoResult)
@@ -108,8 +110,10 @@ func (topology *Topology) Run() {
 			topology.calculate()
 		case GETROUTE:
 			topology.getRoute(task)
-		case DEACTIVENODE:
-			topology.deactiveNode(task)
+		case DELNODE:
+			topology.delNode(task)
+		case REONLINENODE:
+			topology.reonlineNode(task)
 		}
 	}
 }
@@ -134,11 +138,7 @@ func (topology *Topology) getUUID(task *TopoTask) {
 
 func (topology *Topology) checkNode(task *TopoTask) {
 	if _, ok := topology.nodes[task.UUIDNum]; ok {
-		if topology.nodes[task.UUIDNum].isOnline {
-			topology.ResultChan <- &topoResult{IsExist: true}
-		} else {
-			topology.ResultChan <- &topoResult{IsExist: false}
-		}
+		topology.ResultChan <- &topoResult{IsExist: true}
 	} else {
 		topology.ResultChan <- &topoResult{IsExist: false}
 	}
@@ -148,16 +148,16 @@ func (topology *Topology) addNode(task *TopoTask) {
 	if task.IsFirst {
 		task.Target.parentUUID = protocol.ADMIN_UUID
 	} else {
-		task.Target.parentUUID = task.UUID
-		parentIDNum := topology.id2IDNum(task.UUID)
+		task.Target.parentUUID = task.ParentUUID
+		parentIDNum := topology.id2IDNum(task.ParentUUID)
 		topology.nodes[parentIDNum].childrenUUID = append(topology.nodes[parentIDNum].childrenUUID, task.Target.uuid)
 	}
 
-	task.Target.isOnline = true
-
 	topology.nodes[topology.currentIDNum] = task.Target
 
-	topology.ResultChan <- &topoResult{IDNum: topology.currentIDNum} // Just tell upstream: work done!
+	topology.history[task.Target.uuid] = topology.currentIDNum
+
+	topology.ResultChan <- &topoResult{IDNum: topology.currentIDNum}
 
 	topology.currentIDNum++
 }
@@ -210,10 +210,6 @@ func (topology *Topology) updateDetail(task *TopoTask) {
 
 func (topology *Topology) showDetail() {
 	for uuidNum, node := range topology.nodes {
-		if !node.isOnline {
-			continue
-		}
-
 		fmt.Printf("\nNode[%s] -> IP: %s  Hostname: %s  User: %s\nMemo: %s\n",
 			utils.Int2Str(uuidNum),
 			node.currentIP,
@@ -228,10 +224,6 @@ func (topology *Topology) showDetail() {
 
 func (topology *Topology) showTree() {
 	for uuidNum, node := range topology.nodes {
-		if !node.isOnline {
-			continue
-		}
-
 		fmt.Printf("\nNode[%s]'s children ->\n", utils.Int2Str(uuidNum))
 		for _, child := range node.childrenUUID {
 			fmt.Printf("Node[%s]\n", utils.Int2Str(topology.id2IDNum(child)))
@@ -246,8 +238,8 @@ func (topology *Topology) updateMemo(task *TopoTask) {
 	topology.nodes[uuidNum].memo = task.Memo
 }
 
-func (topology *Topology) deactiveNode(task *TopoTask) {
-	// find all children node,deactive them
+func (topology *Topology) delNode(task *TopoTask) {
+	// find all children node,del them
 	var ready []int
 	var readyUUID []string
 
@@ -257,8 +249,9 @@ func (topology *Topology) deactiveNode(task *TopoTask) {
 	ready = append(ready, idNum)
 
 	for _, idNum := range ready {
+		fmt.Printf("\r\n[*]Node %d is offline! %s", idNum, topology.idNum2ID(idNum))
 		readyUUID = append(readyUUID, topology.idNum2ID(idNum))
-		topology.nodes[idNum].isOnline = false
+		delete(topology.nodes, idNum)
 	}
 
 	topology.ResultChan <- &topoResult{AllNodes: readyUUID}
@@ -270,4 +263,20 @@ func (topology *Topology) findChildrenNodes(ready *[]int, idNum int) {
 		*ready = append(*ready, idNum)
 		topology.findChildrenNodes(ready, idNum)
 	}
+}
+
+func (topology *Topology) reonlineNode(task *TopoTask) {
+	if task.IsFirst {
+		task.Target.parentUUID = protocol.ADMIN_UUID
+	} else {
+		task.Target.parentUUID = task.ParentUUID
+		parentIDNum := topology.id2IDNum(task.ParentUUID)
+		topology.nodes[parentIDNum].childrenUUID = append(topology.nodes[parentIDNum].childrenUUID, task.Target.uuid)
+	}
+
+	idNum := topology.history[task.Target.uuid]
+
+	topology.nodes[idNum] = task.Target
+
+	topology.ResultChan <- &topoResult{}
 }

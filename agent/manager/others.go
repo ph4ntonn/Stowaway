@@ -66,3 +66,13 @@ func newConnectManager() *connectManager {
 	manager.ConnectMessChan = make(chan interface{}, 5)
 	return manager
 }
+
+type offlineManager struct {
+	OfflineMessChan chan interface{}
+}
+
+func newOfflineManager() *offlineManager {
+	manager := new(offlineManager)
+	manager.OfflineMessChan = make(chan interface{}, 5)
+	return manager
+}

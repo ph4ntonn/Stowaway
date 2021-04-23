@@ -59,6 +59,7 @@ func (agent *Agent) Run() {
 	go handler.DispatchSSHMess(agent.mgr)
 	go handler.DispatchSSHTunnelMess(agent.mgr)
 	go handler.DispatchShellMess(agent.mgr)
+	go DispatchOfflineMess(agent.mgr)
 	// run dispatcher to dispatch children's message
 	go agent.dispatchChildrenMess()
 	// waiting for child
@@ -100,6 +101,8 @@ func (agent *Agent) handleDataFromUpstream() {
 		header, message, err := protocol.DestructMessage(rMessage)
 		if err != nil {
 			upstreamOffline(agent.mgr, agent.options)
+			rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+			continue
 		}
 
 		if header.Accepter == agent.UUID {
@@ -161,6 +164,10 @@ func (agent *Agent) handleDataFromUpstream() {
 				agent.mgr.ListenManager.ListenMessChan <- message
 			case protocol.CONNECTSTART:
 				agent.mgr.ConnectManager.ConnectMessChan <- message
+			case protocol.UPSTREAMOFFLINE:
+				fallthrough
+			case protocol.UPSTREAMREONLINE:
+				agent.mgr.OfflineManager.OfflineMessChan <- message
 			case protocol.OFFLINE:
 				os.Exit(0)
 			default:
@@ -207,7 +214,6 @@ func (agent *Agent) waitingChild() {
 
 func (agent *Agent) handleDataFromDownstream(conn net.Conn, uuid string) {
 	rMessage := protocol.PrepareAndDecideWhichRProtoFromUpper(conn, global.G_Component.Secret, global.G_Component.UUID)
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	for {
 		header, message, err := protocol.DestructMessage(rMessage)
@@ -215,6 +221,8 @@ func (agent *Agent) handleDataFromDownstream(conn net.Conn, uuid string) {
 			downStreamOffline(agent.mgr, agent.options, uuid)
 			return
 		}
+
+		sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 		protocol.ConstructMessage(sMessage, header, message, true)
 		sMessage.SendMessage()
