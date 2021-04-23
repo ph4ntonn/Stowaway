@@ -98,6 +98,8 @@ func DispatchSSHMess(mgr *manager.Manager) {
 		case *protocol.SSHResult:
 			mess := message.(*protocol.SSHResult)
 			fmt.Print(mess.Result)
+		case *protocol.SSHExit:
+			mgr.ConsoleManager.Exit <- true
 		}
 	}
 }

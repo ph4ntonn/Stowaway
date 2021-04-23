@@ -813,12 +813,10 @@ func (console *Console) handleShellPanelCommand(route string, uuid string) {
 	for {
 		select {
 		case tCommand := <-console.getCommand:
-
 			shellCommandMess := &protocol.ShellCommand{
 				CommandLen: uint64(len(tCommand)),
 				Command:    tCommand,
 			}
-
 			protocol.ConstructMessage(sMessage, header, shellCommandMess, false)
 			sMessage.SendMessage()
 		case <-console.mgr.ConsoleManager.Exit:
@@ -840,27 +838,18 @@ func (console *Console) handleSSHPanelCommand(route string, uuid string) {
 
 	console.ready <- true
 
-	var done bool
 	for {
-		if done { // check if user has asked to exit
+		select {
+		case tCommand := <-console.getCommand:
+			sshCommandMess := &protocol.SSHCommand{
+				CommandLen: uint64(len(tCommand)),
+				Command:    tCommand,
+			}
+			protocol.ConstructMessage(sMessage, header, sshCommandMess, false)
+			sMessage.SendMessage()
+		case <-console.mgr.ConsoleManager.Exit:
 			return
 		}
-
-		tCommand := <-console.getCommand
-
-		if tCommand == "exit" {
-			done = true
-		}
-
-		fCommand := tCommand + "\n"
-
-		sshCommandMess := &protocol.SSHCommand{
-			CommandLen: uint64(len(fCommand)),
-			Command:    fCommand,
-		}
-
-		protocol.ConstructMessage(sMessage, header, sshCommandMess, false)
-		sMessage.SendMessage()
 	}
 }
 

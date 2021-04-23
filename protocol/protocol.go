@@ -29,6 +29,7 @@ const (
 	SSHRES
 	SSHCOMMAND
 	SSHRESULT
+	SSHEXIT
 	SSHTUNNELREQ
 	SSHTUNNELRES
 	FILESTATREQ
@@ -212,6 +213,10 @@ type SSHCommand struct {
 type SSHResult struct {
 	ResultLen uint64
 	Result    string
+}
+
+type SSHExit struct {
+	OK uint16
 }
 
 type SSHTunnelReq struct {

@@ -73,6 +73,8 @@ func (admin *Admin) handleMessFromDownstream(console *cli.Console) {
 		case protocol.SSHRES:
 			fallthrough
 		case protocol.SSHRESULT:
+			fallthrough
+		case protocol.SSHEXIT:
 			admin.mgr.SSHManager.SSHMessChan <- message
 		case protocol.SSHTUNNELRES:
 			admin.mgr.SSHTunnelManager.SSHTunnelMessChan <- message

@@ -146,12 +146,26 @@ func (mySSH *SSH) start() {
 	protocol.ConstructMessage(sMessage, sshResheader, sshResSuccMess, false)
 	sMessage.SendMessage()
 
+	sshExitHeader := &protocol.Header{
+		Sender:      global.G_Component.UUID,
+		Accepter:    protocol.ADMIN_UUID,
+		MessageType: protocol.SSHEXIT,
+		RouteLen:    uint32(len([]byte(protocol.TEMP_ROUTE))), // No need to set route when agent send mess to admin
+		Route:       protocol.TEMP_ROUTE,
+	}
+
+	sshExitMess := &protocol.SSHExit{
+		OK: 1,
+	}
+
 	buffer := make([]byte, 4096)
 	for {
 		length, err := mySSH.stdout.Read(buffer)
 
 		if err != nil {
-			break
+			protocol.ConstructMessage(sMessage, sshExitHeader, sshExitMess, false)
+			sMessage.SendMessage()
+			return
 		}
 
 		sshResultMess := &protocol.SSHResult{

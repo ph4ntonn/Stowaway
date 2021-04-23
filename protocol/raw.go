@@ -271,6 +271,12 @@ func (message *RawMessage) ConstructData(header *Header, mess interface{}, isPas
 
 			dataBuffer.Write(resultLenBuf)
 			dataBuffer.Write(resultBuf)
+		case SSHEXIT:
+			mmess := mess.(*SSHExit)
+			OKBuf := make([]byte, 2)
+			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
+
+			dataBuffer.Write(OKBuf)
 		case SSHTUNNELREQ:
 			mmess := mess.(*SSHTunnelReq)
 			methodBuf := make([]byte, 2)
@@ -892,6 +898,10 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 		mmess := new(SSHResult)
 		mmess.ResultLen = binary.BigEndian.Uint64(dataBuf[:8])
 		mmess.Result = string(dataBuf[8 : 8+mmess.ResultLen])
+		return header, mmess, nil
+	case SSHEXIT:
+		mmess := new(SSHExit)
+		mmess.OK = binary.BigEndian.Uint16(dataBuf[:2])
 		return header, mmess, nil
 	case SSHTUNNELREQ:
 		mmess := new(SSHTunnelReq)
