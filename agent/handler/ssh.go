@@ -117,7 +117,7 @@ func (mySSH *SSH) start() {
 	mySSH.sshHost.Stderr = mySSH.sshHost.Stdout
 
 	modes := ssh.TerminalModes{
-		ssh.ECHO:          0,
+		ssh.ECHO:          1,
 		ssh.TTY_OP_ISPEED: 14400,
 		ssh.TTY_OP_OSPEED: 14400,
 	}

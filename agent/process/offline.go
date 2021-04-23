@@ -26,10 +26,6 @@ func upstreamOffline(mgr *manager.Manager, options *initial.Options) {
 
 	broadcastOfflineMess(mgr)
 
-	if options.Mode == initial.IPTABLES_REUSE_PASSIVE {
-		initial.DeletePortReuseRules(options.Listen, options.ReusePort)
-	}
-
 	var newConn net.Conn
 	switch options.Mode {
 	case initial.NORMAL_PASSIVE:
@@ -122,7 +118,6 @@ func normalPassiveReconn(options *initial.Options) net.Conn {
 }
 
 func ipTableReusePassiveReconn(options *initial.Options) net.Conn {
-	initial.SetPortReuseRules(options.Listen, options.ReusePort)
 	return normalPassiveReconn(options)
 }
 
