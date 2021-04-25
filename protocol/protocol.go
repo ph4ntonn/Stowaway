@@ -11,6 +11,9 @@ import (
 	"net"
 )
 
+var Upstream string
+var Downstream string
+
 const (
 	HI = iota
 	UUID
@@ -429,29 +432,63 @@ type MessageComponent struct {
 	Secret string
 }
 
+func DecideType(upstream, downstream string) {
+	if upstream == "http" {
+		Upstream = "http"
+	} else {
+		Upstream = "raw"
+	}
+
+	if downstream == "http" {
+		Downstream = "http"
+	} else {
+		Downstream = "raw"
+	}
+}
+
 /**
  * @description: Decide which transmission protocol you want to use for sending message,Never cross use the same "Message" !!!
  * @param {net.Conn} conn
  * @return {*}
  */
 func PrepareAndDecideWhichSProtoToUpper(conn net.Conn, secret string, uuid string) Message {
-	// Now only apply tcp raw
-	// TODO: HTTP
-	tMessage := new(RawMessage)
-	tMessage.Conn = conn
-	tMessage.UUID = uuid
-	tMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
-	return tMessage
+	switch Upstream {
+	case "raw":
+		tMessage := new(RawMessage)
+		tMessage = new(RawMessage)
+		tMessage.Conn = conn
+		tMessage.UUID = uuid
+		tMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
+		return tMessage
+	case "http":
+		tMessage := new(HTTPMessage)
+		tMessage.RawMessage = new(RawMessage)
+		tMessage.RawMessage.Conn = conn
+		tMessage.RawMessage.UUID = uuid
+		tMessage.RawMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
+		return tMessage
+	}
+	return nil
 }
 
 func PrepareAndDecideWhichSProtoToLower(conn net.Conn, secret string, uuid string) Message {
-	// Now only apply tcp raw
-	// TODO: HTTP
-	tMessage := new(RawMessage)
-	tMessage.Conn = conn
-	tMessage.UUID = uuid
-	tMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
-	return tMessage
+	switch Downstream {
+	case "raw":
+		tMessage := new(RawMessage)
+		tMessage = new(RawMessage)
+		tMessage.Conn = conn
+		tMessage.UUID = uuid
+		tMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
+		return tMessage
+	case "http":
+		tMessage := new(HTTPMessage)
+		tMessage.RawMessage = new(RawMessage)
+		tMessage.RawMessage.Conn = conn
+		tMessage.RawMessage.UUID = uuid
+		tMessage.RawMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
+		return tMessage
+	}
+	return nil
 }
 
 /**
@@ -460,21 +497,41 @@ func PrepareAndDecideWhichSProtoToLower(conn net.Conn, secret string, uuid strin
  * @return {*}
  */
 func PrepareAndDecideWhichRProtoFromUpper(conn net.Conn, secret string, uuid string) Message {
-	// Now only apply tcp raw
-	// TODO: HTTP
-	tMessage := new(RawMessage)
-	tMessage.Conn = conn
-	tMessage.UUID = uuid
-	tMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
-	return tMessage
+	switch Upstream {
+	case "raw":
+		tMessage := new(RawMessage)
+		tMessage = new(RawMessage)
+		tMessage.Conn = conn
+		tMessage.UUID = uuid
+		tMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
+		return tMessage
+	case "http":
+		tMessage := new(HTTPMessage)
+		tMessage.RawMessage = new(RawMessage)
+		tMessage.RawMessage.Conn = conn
+		tMessage.RawMessage.UUID = uuid
+		tMessage.RawMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
+		return tMessage
+	}
+	return nil
 }
 
 func PrepareAndDecideWhichRProtoFromLower(conn net.Conn, secret string, uuid string) Message {
-	// Now only apply tcp raw
-	// TODO: HTTP
-	tMessage := new(RawMessage)
-	tMessage.Conn = conn
-	tMessage.UUID = uuid
-	tMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
-	return tMessage
+	switch Downstream {
+	case "raw":
+		tMessage := new(RawMessage)
+		tMessage = new(RawMessage)
+		tMessage.Conn = conn
+		tMessage.UUID = uuid
+		tMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
+		return tMessage
+	case "http":
+		tMessage := new(HTTPMessage)
+		tMessage.RawMessage = new(RawMessage)
+		tMessage.RawMessage.Conn = conn
+		tMessage.RawMessage.UUID = uuid
+		tMessage.RawMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
+		return tMessage
+	}
+	return nil
 }

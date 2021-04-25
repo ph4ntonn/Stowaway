@@ -310,7 +310,7 @@ func broadcastOfflineMess(mgr *manager.Manager) {
 		mgr.ChildrenManager.TaskChan <- task
 		result = <-mgr.ChildrenManager.ResultChan
 
-		sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(result.Conn, global.G_Component.Secret, global.G_Component.UUID)
+		sMessage := protocol.PrepareAndDecideWhichSProtoToLower(result.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 		header := &protocol.Header{
 			Sender:      global.G_Component.UUID,
@@ -345,7 +345,7 @@ func broadcastReonlineMess(mgr *manager.Manager) {
 		mgr.ChildrenManager.TaskChan <- task
 		result = <-mgr.ChildrenManager.ResultChan
 
-		sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(result.Conn, global.G_Component.Secret, global.G_Component.UUID)
+		sMessage := protocol.PrepareAndDecideWhichSProtoToLower(result.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 		header := &protocol.Header{
 			Sender:      global.G_Component.UUID,

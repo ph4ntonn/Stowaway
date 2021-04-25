@@ -19,16 +19,18 @@ const (
 )
 
 type Options struct {
-	Mode      int
-	Secret    string
-	Listen    string
-	Reconnect uint64
-	Connect   string
-	ReuseHost string
-	ReusePort string
-	Proxy     string
-	ProxyU    string
-	ProxyP    string
+	Mode       int
+	Secret     string
+	Listen     string
+	Reconnect  uint64
+	Connect    string
+	ReuseHost  string
+	ReusePort  string
+	Proxy      string
+	ProxyU     string
+	ProxyP     string
+	Upstream   string
+	Downstream string
 }
 
 var Args *Options
@@ -44,6 +46,8 @@ func init() {
 	flag.StringVar(&Args.Proxy, "proxy", "", "")
 	flag.StringVar(&Args.ProxyU, "proxyu", "", "")
 	flag.StringVar(&Args.ProxyP, "proxyp", "", "")
+	flag.StringVar(&Args.Upstream, "up", "raw", "")
+	flag.StringVar(&Args.Downstream, "down", "raw", "")
 
 	flag.Usage = func() {}
 }

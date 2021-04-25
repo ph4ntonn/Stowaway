@@ -11,10 +11,12 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"errors"
+	"math/rand"
 	"os/exec"
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gofrs/uuid"
 )
@@ -161,4 +163,33 @@ func CheckRange(nodes []int) {
 			break
 		}
 	}
+}
+
+func GetDigitLen(num int) int {
+	var length int
+	for {
+		num = num / 10
+		if num != 0 {
+			length++
+		} else {
+			length++
+			return length
+		}
+	}
+}
+
+func GetRandomString(l int) string {
+	str := "0123456789abcdefghijklmnopqrstuvwxyz"
+	bytes := []byte(str)
+	result := []byte{}
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	for i := 0; i < l; i++ {
+		result = append(result, bytes[r.Intn(len(bytes))])
+	}
+	return string(result)
+}
+
+func GetRandomInt(max int) int {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	return r.Intn(max)
 }

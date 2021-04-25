@@ -21,25 +21,31 @@ const (
 )
 
 type Options struct {
-	Mode    uint8
-	Secret  string
-	Listen  string
-	Connect string
-	Proxy   string
-	ProxyU  string
-	ProxyP  string
+	Mode       uint8
+	Secret     string
+	Listen     string
+	Connect    string
+	Proxy      string
+	ProxyU     string
+	ProxyP     string
+	Upstream   string
+	Downstream string
 }
 
 var Args *Options
 
 func init() {
 	Args = new(Options)
+
 	flag.StringVar(&Args.Secret, "s", "", "Communication secret")
 	flag.StringVar(&Args.Listen, "l", "", "Listen port")
 	flag.StringVar(&Args.Connect, "c", "", "The node address when you actively connect to it")
 	flag.StringVar(&Args.Proxy, "proxy", "", "The socks5 server ip:port you want to use")
 	flag.StringVar(&Args.ProxyU, "proxyu", "", "socks5 username")
 	flag.StringVar(&Args.ProxyP, "proxyp", "", "socks5 password")
+	flag.StringVar(&Args.Upstream, "up", "raw", "")
+	flag.StringVar(&Args.Downstream, "down", "raw", "")
+
 	flag.Usage = newUsage
 }
 

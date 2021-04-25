@@ -14,6 +14,7 @@ import (
 	"Stowaway/agent/initial"
 	"Stowaway/agent/process"
 	"Stowaway/global"
+	"Stowaway/protocol"
 	"Stowaway/share"
 )
 
@@ -25,6 +26,8 @@ func main() {
 	options := initial.ParseOptions()
 
 	agent := process.NewAgent(options)
+
+	protocol.DecideType(options.Upstream, options.Downstream)
 
 	var conn net.Conn
 	switch options.Mode {

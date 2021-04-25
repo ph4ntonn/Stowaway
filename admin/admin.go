@@ -27,6 +27,8 @@ func init() {
 func main() {
 	options := initial.ParseOptions()
 
+	protocol.DecideType(options.Upstream, options.Downstream)
+
 	cli.Banner()
 
 	topo := topology.NewTopology()

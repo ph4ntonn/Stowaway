@@ -216,7 +216,7 @@ func (agent *Agent) waitingChild() {
 }
 
 func (agent *Agent) handleDataFromDownstream(conn net.Conn, uuid string) {
-	rMessage := protocol.PrepareAndDecideWhichRProtoFromUpper(conn, global.G_Component.Secret, global.G_Component.UUID)
+	rMessage := protocol.PrepareAndDecideWhichRProtoFromLower(conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	for {
 		header, message, err := protocol.DestructMessage(rMessage)
