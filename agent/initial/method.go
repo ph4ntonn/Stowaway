@@ -37,7 +37,7 @@ func achieveUUID(conn net.Conn, secret string) (uuid string) {
 
 	if err != nil {
 		conn.Close()
-		log.Fatalf("[*]Fail to achieve UUID, Error: %s", err.Error())
+		log.Fatalf("[*] Fail to achieve UUID, Error: %s", err.Error())
 	}
 
 	if fHeader.MessageType == protocol.UUID {
@@ -81,11 +81,11 @@ func NormalActive(userOptions *Options, proxy *share.Proxy) (net.Conn, string) {
 		}
 
 		if err != nil {
-			log.Fatalf("[*]Error occured: %s", err.Error())
+			log.Fatalf("[*] Error occured: %s", err.Error())
 		}
 
 		if err := share.ActivePreAuth(conn, userOptions.Secret); err != nil {
-			log.Fatalf("[*]Error occured: %s", err.Error())
+			log.Fatalf("[*] Error occured: %s", err.Error())
 		}
 
 		sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(conn, userOptions.Secret, protocol.TEMP_UUID)
@@ -98,7 +98,7 @@ func NormalActive(userOptions *Options, proxy *share.Proxy) (net.Conn, string) {
 
 		if err != nil {
 			conn.Close()
-			log.Fatalf("[*]Fail to connect %s, Error: %s", conn.RemoteAddr().String(), err.Error())
+			log.Fatalf("[*] Fail to connect %s, Error: %s", conn.RemoteAddr().String(), err.Error())
 		}
 
 		if fHeader.MessageType == protocol.HI {
@@ -110,19 +110,19 @@ func NormalActive(userOptions *Options, proxy *share.Proxy) (net.Conn, string) {
 		}
 
 		conn.Close()
-		log.Fatal("[*]Admin seems illegal!\n")
+		log.Fatal("[*] Admin seems illegal!\n")
 	}
 }
 
 func NormalPassive(userOptions *Options) (net.Conn, string) {
 	listenAddr, _, err := utils.CheckIPPort(userOptions.Listen)
 	if err != nil {
-		log.Fatalf("[*]Error occured: %s", err.Error())
+		log.Fatalf("[*] Error occured: %s", err.Error())
 	}
 
 	listener, err := net.Listen("tcp", listenAddr)
 	if err != nil {
-		log.Fatalf("[*]Error occured: %s", err.Error())
+		log.Fatalf("[*] Error occured: %s", err.Error())
 	}
 
 	defer func() {
@@ -151,20 +151,20 @@ func NormalPassive(userOptions *Options) (net.Conn, string) {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Printf("[*]Error occured: %s\n", err.Error())
+			log.Printf("[*] Error occured: %s\n", err.Error())
 			conn.Close()
 			continue
 		}
 
 		if err := share.PassivePreAuth(conn, userOptions.Secret); err != nil {
-			log.Fatalf("[*]Error occured: %s", err.Error())
+			log.Fatalf("[*] Error occured: %s", err.Error())
 		}
 
 		rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, userOptions.Secret, protocol.TEMP_UUID)
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 
 		if err != nil {
-			log.Printf("[*]Fail to set connection from %s, Error: %s\n", conn.RemoteAddr().String(), err.Error())
+			log.Printf("[*] Fail to set connection from %s, Error: %s\n", conn.RemoteAddr().String(), err.Error())
 			conn.Close()
 			continue
 		}
@@ -181,7 +181,7 @@ func NormalPassive(userOptions *Options) (net.Conn, string) {
 		}
 
 		conn.Close()
-		log.Println("[*]Incoming connection seems illegal!")
+		log.Println("[*] Incoming connection seems illegal!")
 	}
 }
 
@@ -252,7 +252,7 @@ func SoReusePassive(options *Options) (net.Conn, string) {
 
 	listener, err := reuseport.Listen("tcp", listenAddr)
 	if err != nil {
-		log.Fatalf("[*]Error occured: %s", err.Error())
+		log.Fatalf("[*] Error occured: %s", err.Error())
 	}
 
 	defer func() {
@@ -315,7 +315,7 @@ func SoReusePassive(options *Options) (net.Conn, string) {
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 
 		if err != nil {
-			log.Printf("[*]Fail to set connection from %s, Error: %s\n", conn.RemoteAddr().String(), err.Error())
+			log.Printf("[*] Fail to set connection from %s, Error: %s\n", conn.RemoteAddr().String(), err.Error())
 			conn.Close()
 			continue
 		}
@@ -332,7 +332,7 @@ func SoReusePassive(options *Options) (net.Conn, string) {
 		}
 
 		conn.Close()
-		log.Println("[*]Incoming connection seems illegal!")
+		log.Println("[*] Incoming connection seems illegal!")
 	}
 }
 

@@ -17,6 +17,8 @@ github.com/eiannone/keyboard v0.0.0-20200508000154-caf4b762e807/go.mod h1:Xoiu5V
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.4/go.mod h1:6rpuAdCZL397s3pYoYcLgu1mIlRU8Am5FuJP05cCM98=
 github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7+kN2VEUnK/pcBlmesArF7c=
+github.com/fatih/color v1.10.0 h1:s36xzo75JdqLaaWoiEHk767eHiwo0598uUxyfiPkDsg=
+github.com/fatih/color v1.10.0/go.mod h1:ELkj/draVOlAH/xkhN6mQ50Qd0MPOk5AAr3maGEBuJM=
 github.com/fwhezfwhez/errorx v0.0.0-20201127140441-9d82b2c2216f h1:vdXZ6bzT7r6+cLau//mxvvYqE4+GUaTmfJXO+LDHhLk=
 github.com/fwhezfwhez/errorx v0.0.0-20201127140441-9d82b2c2216f/go.mod h1:UUlJSPsX21+K7nZwMGMJKUbfxCdvDtMnSg1Ce5AWdrA=
 github.com/fwhezfwhez/go-queue v0.0.0-20181018085741-6c0e1734beaa/go.mod h1:qNtz1SFX/m63OyA2nuM+LjesDQiMVvcB7rYY86svpwM=

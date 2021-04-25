@@ -10,11 +10,11 @@ import (
 	"Stowaway/admin/cli"
 	"Stowaway/admin/handler"
 	"Stowaway/admin/manager"
+	"Stowaway/admin/printer"
 	"Stowaway/admin/topology"
 	"Stowaway/global"
 	"Stowaway/protocol"
 	"Stowaway/share"
-	"log"
 	"os"
 )
 
@@ -57,7 +57,7 @@ func (admin *Admin) handleMessFromDownstream(console *cli.Console) {
 	for {
 		header, message, err := protocol.DestructMessage(rMessage)
 		if err != nil {
-			log.Print("\r\n[*]Peer node seems offline!")
+			printer.Fail("\r\n[*] Peer node seems offline!")
 			os.Exit(0)
 		}
 
@@ -125,7 +125,7 @@ func (admin *Admin) handleMessFromDownstream(console *cli.Console) {
 		case protocol.NODEOFFLINE:
 			admin.mgr.ChildrenManager.ChildrenMessChan <- message
 		default:
-			log.Print("\n[*]Unknown Message!")
+			printer.Fail("\n[*] Unknown Message!")
 		}
 	}
 }

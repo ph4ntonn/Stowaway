@@ -2,9 +2,9 @@ package process
 
 import (
 	"Stowaway/admin/manager"
+	"Stowaway/admin/printer"
 	"Stowaway/admin/topology"
 	"Stowaway/protocol"
-	"fmt"
 )
 
 func nodeOffline(mgr *manager.Manager, topo *topology.Topology, uuid string) {
@@ -71,7 +71,7 @@ func nodeReonline(mgr *manager.Manager, topo *topology.Topology, mess *protocol.
 	topo.TaskChan <- topoTask
 	result := <-topo.ResultChan
 
-	fmt.Printf("\r\n[*]Node %d is reonline!", result.IDNum)
+	printer.Success("\r\n[*] Node %d is reonline!", result.IDNum)
 }
 
 func DispatchChildrenMess(mgr *manager.Manager, topo *topology.Topology) {

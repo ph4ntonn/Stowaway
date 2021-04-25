@@ -174,7 +174,7 @@ func (agent *Agent) handleDataFromUpstream() {
 			case protocol.OFFLINE:
 				os.Exit(0)
 			default:
-				log.Println("[*]Unknown Message!")
+				log.Println("[*] Unknown Message!")
 			}
 		} else {
 			agent.childrenMessChan <- &ChildrenMess{

@@ -8,11 +8,11 @@ package handler
 
 import (
 	"Stowaway/admin/manager"
+	"Stowaway/admin/printer"
 	"Stowaway/admin/topology"
 	"Stowaway/global"
 	"Stowaway/protocol"
 	"Stowaway/utils"
-	"fmt"
 )
 
 const (
@@ -62,15 +62,15 @@ func (listen *Listen) LetListen(mgr *manager.Manager, route, uuid string) error 
 
 	if <-mgr.ListenManager.ListenReady {
 		if listen.Method == NORMAL {
-			fmt.Printf("\r\n[*]Node is listening on %s", listen.Addr)
+			printer.Success("\r\n[*] Node is listening on %s", listen.Addr)
 		} else {
-			fmt.Print("\r\n[*]Node is reusing port successfully,just waiting for child....")
+			printer.Success("\r\n[*] Node is reusing port successfully,just waiting for child....")
 		}
 	} else {
 		if listen.Method == NORMAL {
-			fmt.Printf("\r\n[*]Node cannot listen on %s", listen.Addr)
+			printer.Success("\r\n[*] Node cannot listen on %s", listen.Addr)
 		} else {
-			fmt.Print("\r\n[*]Node cannot reusing port,plz check if node is initialed via resusing!")
+			printer.Success("\r\n[*] Node cannot reusing port,plz check if node is initialed via resusing!")
 		}
 	}
 
@@ -123,7 +123,7 @@ func dispatchChildUUID(mgr *manager.Manager, topo *topology.Topology, parentUUID
 	protocol.ConstructMessage(sMessage, header, cUUIDResMess, false)
 	sMessage.SendMessage()
 
-	fmt.Printf("\r\n[*]New node come! Node id is %d\n", childIDNum)
+	printer.Success("\r\n[*] New node come! Node id is %d\n", childIDNum)
 }
 
 func DispatchListenMess(mgr *manager.Manager, topo *topology.Topology) {

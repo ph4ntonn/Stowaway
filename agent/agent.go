@@ -48,7 +48,7 @@ func main() {
 	case initial.SO_REUSE_PASSIVE:
 		conn, agent.UUID = initial.SoReusePassive(options)
 	default:
-		log.Fatal("[*]Unknown Mode")
+		log.Fatal("[*] Unknown Mode")
 	}
 
 	global.InitialGComponent(conn, options.Secret, agent.UUID)

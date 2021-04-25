@@ -9,6 +9,7 @@ package cli
 import (
 	"Stowaway/admin/handler"
 	"Stowaway/admin/manager"
+	"Stowaway/admin/printer"
 	"Stowaway/admin/topology"
 	"Stowaway/global"
 	"Stowaway/protocol"
@@ -251,7 +252,7 @@ func (console *Console) mainPanel() {
 			}
 		} else if event.Key == keyboard.KeyCtrlC {
 			// Ctrl+C? Then BYE!
-			fmt.Print("\r\n[*]BYE!\r\n")
+			printer.Warning("\r\n[*] BYE!\r\n")
 			break
 		} else {
 			if !console.shellMode && !console.sshMode {
@@ -302,7 +303,7 @@ func (console *Console) handleMainPanelCommand() {
 				console.status = "(admin) >> "
 				console.nodeMode = false
 			} else {
-				fmt.Printf("\n[*]Node %s doesn't exist!", fCommand[1])
+				printer.Fail("\n[*] Node %s doesn't exist!", fCommand[1])
 			}
 
 			console.ready <- true
@@ -348,10 +349,10 @@ func (console *Console) handleMainPanelCommand() {
 			if console.expectParams(fCommand, 1, MAIN, 0) {
 				break
 			}
-			fmt.Print("\n[*]BYE!")
+			printer.Warning("\n[*] BYE!")
 			os.Exit(0)
 		default:
-			fmt.Print("\n[*]Unknown Command!\n")
+			printer.Fail("\n[*] Unknown Command!\n")
 			ShowMainHelp()
 			console.ready <- true
 		}
@@ -399,18 +400,18 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 
 			handler.LetShellStart(route, uuid)
 
-			fmt.Print("\r\n[*]Waiting for response.....")
-			fmt.Print("\r\n[*]MENTION!UNDER SHELL MODE ARROW UP/DOWN/LEFT/RIGHT ARE ALL ABANDONED!")
+			printer.Warning("\r\n[*] Waiting for response.....")
+			printer.Warning("\r\n[*] MENTION!UNDER SHELL MODE ARROW UP/DOWN/LEFT/RIGHT ARE ALL ABANDONED!")
 
 			if <-console.mgr.ConsoleManager.OK {
-				fmt.Print("\r\n[*]Shell is started successfully!\r\n")
+				printer.Success("\r\n[*] Shell is started successfully!\r\n")
 				console.status = ""
 				console.shellMode = true
 				console.handleShellPanelCommand(route, uuid)
 				console.shellMode = false
 				console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
 			} else {
-				fmt.Print("\r\n[*]Shell cannot be started!")
+				printer.Fail("\r\n[*] Shell cannot be started!")
 				console.ready <- true
 			}
 		case "listen":
@@ -420,15 +421,15 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 
 			listen := handler.NewListen()
 
-			fmt.Print("\r\n[*]BE AWARE! If you choose IPTables Reuse or SOReuse,you MUST CONFIRM that the node you're controlling was started in the corresponding way!")
-			fmt.Print("\r\n[*]When you choose IPTables Reuse or SOReuse, the node will use the initial config(when node started) to reuse port!")
-			console.status = "[*]Please choose the mode(1.Normal passive/2.IPTables Reuse/3.SOReuse): "
+			printer.Warning("\r\n[*] BE AWARE! If you choose IPTables Reuse or SOReuse,you MUST CONFIRM that the node you're controlling was started in the corresponding way!")
+			printer.Warning("\r\n[*] When you choose IPTables Reuse or SOReuse, the node will use the initial config(when node started) to reuse port!")
+			console.status = "[*] Please choose the mode(1.Normal passive/2.IPTables Reuse/3.SOReuse): "
 			console.ready <- true
 
 			option := console.pretreatInput()
 			if option == "1" {
 				listen.Method = handler.NORMAL
-				console.status = "[*]Please input the [ip:]<port> : "
+				console.status = "[*] Please input the [ip:]<port> : "
 				console.ready <- true
 				option = console.pretreatInput()
 				listen.Addr = option
@@ -437,17 +438,17 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			} else if option == "3" {
 				listen.Method = handler.SOREUSE
 			} else {
-				fmt.Printf("\r\n[*]Please input 1/2/3!")
+				printer.Fail("\r\n[*] Please input 1/2/3!")
 				console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
 				console.ready <- true
 				continue
 			}
 
-			fmt.Print("\r\n[*]Waiting for response......")
+			printer.Warning("\r\n[*] Waiting for response......")
 
 			err := listen.LetListen(console.mgr, route, uuid)
 			if err != nil {
-				fmt.Printf("[*]Error: %s\n", err.Error())
+				printer.Fail("[*] Error: %s\n", err.Error())
 			}
 
 			console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
@@ -458,11 +459,11 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				break
 			}
 
-			fmt.Print("\r\n[*]Waiting for response......")
+			printer.Warning("\r\n[*] Waiting for response......")
 
 			err := handler.LetConnect(console.mgr, route, uuid, fCommand[1])
 			if err != nil {
-				fmt.Printf("[*]Error: %s\n", err.Error())
+				printer.Fail("[*] Error: %s\n", err.Error())
 			}
 
 			console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
@@ -475,7 +476,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 
 			ssh := handler.NewSSH(fCommand[1])
 
-			console.status = "[*]Please choose the auth method(1.username/password 2.certificate): "
+			console.status = "[*] Please choose the auth method(1.username/password 2.certificate): "
 			console.ready <- true
 
 			firstChoice := console.pretreatInput()
@@ -484,7 +485,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			} else if firstChoice == "2" {
 				ssh.Method = handler.CERMETHOD
 			} else {
-				fmt.Print("\r\n[*]Please input 1 or 2!")
+				printer.Fail("\r\n[*] Please input 1 or 2!")
 				console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
 				console.ready <- true
 				break
@@ -492,40 +493,40 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 
 			switch ssh.Method {
 			case handler.UPMETHOD:
-				console.status = "[*]Please enter the username: "
+				console.status = "[*] Please enter the username: "
 				console.ready <- true
 				ssh.Username = console.pretreatInput()
-				console.status = "[*]Please enter the password: "
+				console.status = "[*] Please enter the password: "
 				console.ready <- true
 				ssh.Password = console.pretreatInput()
 			case handler.CERMETHOD:
-				console.status = "[*]Please enter the username: "
+				console.status = "[*] Please enter the username: "
 				console.ready <- true
 				ssh.Username = console.pretreatInput()
-				console.status = "[*]Please enter the filepath of the privkey: "
+				console.status = "[*] Please enter the filepath of the privkey: "
 				console.ready <- true
 				ssh.CertificatePath = console.pretreatInput()
 			}
 
 			err := ssh.LetSSH(route, uuid)
 			if err != nil {
-				fmt.Printf("\r\n[*]Error: %s", err.Error())
+				printer.Fail("\r\n[*] Error: %s", err.Error())
 				console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
 				console.ready <- true
 				break
 			}
 
-			fmt.Print("\r\n[*]Waiting for response.....")
+			printer.Warning("\r\n[*] Waiting for response.....")
 
 			if <-console.mgr.ConsoleManager.OK {
-				fmt.Print("\r\n[*]Connect to target host via ssh successfully!")
+				printer.Success("\r\n[*] Connect to target host via ssh successfully!")
 				console.status = ""
 				console.sshMode = true
 				console.handleSSHPanelCommand(route, uuid)
 				console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
 				console.sshMode = false
 			} else {
-				fmt.Print("\r\n[*]Fail to connect to target host via ssh!")
+				printer.Fail("\r\n[*] Fail to connect to target host via ssh!")
 				console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
 				console.ready <- true
 			}
@@ -536,7 +537,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 
 			sshTunnel := handler.NewSSHTunnel(fCommand[2], fCommand[1])
 
-			console.status = "[*]Please choose the auth method(1.username/password 2.certificate): "
+			console.status = "[*] Please choose the auth method(1.username/password 2.certificate): "
 			console.ready <- true
 
 			firstChoice := console.pretreatInput()
@@ -545,7 +546,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			} else if firstChoice == "2" {
 				sshTunnel.Method = handler.CERMETHOD
 			} else {
-				fmt.Print("\r\n[*]Please input 1 or 2!")
+				printer.Fail("\r\n[*] Please input 1 or 2!")
 				console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
 				console.ready <- true
 				break
@@ -553,33 +554,33 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 
 			switch sshTunnel.Method {
 			case handler.UPMETHOD:
-				console.status = "[*]Please enter the username: "
+				console.status = "[*] Please enter the username: "
 				console.ready <- true
 				sshTunnel.Username = console.pretreatInput()
-				console.status = "[*]Please enter the password: "
+				console.status = "[*] Please enter the password: "
 				console.ready <- true
 				sshTunnel.Password = console.pretreatInput()
 			case handler.CERMETHOD:
-				console.status = "[*]Please enter the username: "
+				console.status = "[*] Please enter the username: "
 				console.ready <- true
 				sshTunnel.Username = console.pretreatInput()
-				console.status = "[*]Please enter the filepath of the privkey: "
+				console.status = "[*] Please enter the filepath of the privkey: "
 				console.ready <- true
 				sshTunnel.CertificatePath = console.pretreatInput()
 			}
 
-			fmt.Print("\r\n[*]Waiting for response.....")
+			printer.Warning("\r\n[*] Waiting for response.....")
 
 			err := sshTunnel.LetSSHTunnel(route, uuid)
 			if err != nil {
-				fmt.Printf("\r\n[*]Error: %s", err.Error())
+				printer.Fail("\r\n[*] Error: %s", err.Error())
 				console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
 				console.ready <- true
 				break
 			}
 
 			if ok := <-console.mgr.ConsoleManager.OK; !ok {
-				fmt.Print("\r\n[*]Fail to add target node via SSHTunnel!")
+				printer.Fail("\r\n[*] Fail to add target node via SSHTunnel!")
 			}
 
 			console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
@@ -595,15 +596,15 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				socks.Password = fCommand[3]
 			}
 
-			fmt.Printf("\r\n[*]Trying to listen on 0.0.0.0:%s......", fCommand[1])
-			fmt.Printf("\r\n[*]Waiting for agent's response......")
+			printer.Warning("\r\n[*] Trying to listen on 0.0.0.0:%s......", fCommand[1])
+			printer.Warning("\r\n[*] Waiting for agent's response......")
 
 			err := socks.LetSocks(console.mgr, route, uuid)
 
 			if err != nil {
-				fmt.Printf("\r\n[*]Error: %s", err.Error())
+				printer.Fail("\r\n[*] Error: %s", err.Error())
 			} else {
-				fmt.Print("\r\n[*]Socks start successfully!")
+				printer.Success("\r\n[*] Socks start successfully!")
 			}
 			console.ready <- true
 		case "stopsocks":
@@ -614,16 +615,16 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			IsRunning := handler.GetSocksInfo(console.mgr, uuid)
 
 			if IsRunning {
-				console.status = "[*]Do you really want to shutdown socks?(yes/no): "
+				console.status = "[*] Do you really want to shutdown socks?(yes/no): "
 				console.ready <- true
 				option := console.pretreatInput()
 				if option == "yes" {
-					fmt.Printf("\r\n[*]Closing......")
+					printer.Warning("\r\n[*] Closing......")
 					handler.StopSocks(console.mgr, uuid)
-					fmt.Printf("\r\n[*]Socks service has been closed successfully!")
+					printer.Success("\r\n[*] Socks service has been closed successfully!")
 				} else if option == "no" {
 				} else {
-					fmt.Printf("\r\n[*]Please input yes/no!")
+					printer.Fail("\r\n[*] Please input yes/no!")
 				}
 				console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
 			}
@@ -633,16 +634,16 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				break
 			}
 
-			fmt.Printf("\r\n[*]Trying to listen on 0.0.0.0:%s......", fCommand[1])
-			fmt.Printf("\r\n[*]Waiting for agent's response......")
+			printer.Warning("\r\n[*] Trying to listen on 0.0.0.0:%s......", fCommand[1])
+			printer.Warning("\r\n[*] Waiting for agent's response......")
 
 			forward := handler.NewForward(fCommand[1], fCommand[2])
 
 			err := forward.LetForward(console.mgr, route, uuid)
 			if err != nil {
-				fmt.Printf("\r\n[*]Error: %s", err.Error())
+				printer.Fail("\r\n[*] Error: %s", err.Error())
 			} else {
-				fmt.Print("\r\n[*]Forward start successfully!")
+				printer.Success("\r\n[*] Forward start successfully!")
 			}
 			console.ready <- true
 		case "stopforward":
@@ -653,26 +654,26 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			seq, isRunning := handler.GetForwardInfo(console.mgr, uuid)
 
 			if isRunning {
-				console.status = "[*]Do you really want to shutdown forward?(yes/no): "
+				console.status = "[*] Do you really want to shutdown forward?(yes/no): "
 				console.ready <- true
 				option := console.pretreatInput()
 				if option == "yes" {
-					console.status = "[*]Please choose one to close: "
+					console.status = "[*] Please choose one to close: "
 					console.ready <- true
 					option := console.pretreatInput()
 					choice, err := utils.Str2Int(option)
 					if err != nil {
-						fmt.Printf("\r\n[*]Please input integer!")
+						printer.Fail("\r\n[*] Please input integer!")
 					} else if choice > seq || choice < 0 {
-						fmt.Printf("\r\n[*]Please input integer between 0~%d", seq)
+						printer.Fail("\r\n[*] Please input integer between 0~%d", seq)
 					} else {
-						fmt.Printf("\r\n[*]Closing......")
+						printer.Warning("\r\n[*] Closing......")
 						handler.StopForward(console.mgr, uuid, choice)
-						fmt.Printf("\r\n[*]Forward service has been closed successfully!")
+						printer.Success("\r\n[*] Forward service has been closed successfully!")
 					}
 				} else if option == "no" {
 				} else {
-					fmt.Printf("\r\n[*]Please input yes/no!")
+					printer.Fail("\r\n[*] Please input yes/no!")
 				}
 				console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
 			}
@@ -682,16 +683,16 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				break
 			}
 
-			fmt.Printf("\r\n[*]Trying to ask node to listen on 0.0.0.0:%s......", fCommand[1])
-			fmt.Printf("\r\n[*]Waiting for agent's response......")
+			printer.Warning("\r\n[*] Trying to ask node to listen on 0.0.0.0:%s......", fCommand[1])
+			printer.Warning("\r\n[*] Waiting for agent's response......")
 
 			backward := handler.NewBackward(fCommand[2], fCommand[1])
 			// node is okay
 			err := backward.LetBackward(console.mgr, route, uuid)
 			if err != nil {
-				fmt.Printf("\r\n[*]Error: %s", err.Error())
+				printer.Fail("\r\n[*] Error: %s", err.Error())
 			} else {
-				fmt.Print("\r\n[*]Backward start successfully!")
+				printer.Success("\r\n[*] Backward start successfully!")
 			}
 			console.ready <- true
 		case "stopbackward":
@@ -702,26 +703,26 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			seq, isRunning := handler.GetBackwardInfo(console.mgr, uuid)
 
 			if isRunning {
-				console.status = "[*]Do you really want to shutdown backward?(yes/no): "
+				console.status = "[*] Do you really want to shutdown backward?(yes/no): "
 				console.ready <- true
 				option := console.pretreatInput()
 				if option == "yes" {
-					console.status = "[*]Please choose one to close: "
+					console.status = "[*] Please choose one to close: "
 					console.ready <- true
 					option := console.pretreatInput()
 					choice, err := utils.Str2Int(option)
 					if err != nil {
-						fmt.Printf("\r\n[*]Please input integer!")
+						printer.Fail("\r\n[*] Please input integer!")
 					} else if choice > seq || choice < 0 {
-						fmt.Printf("\r\n[*]Please input integer between 0~%d", seq)
+						printer.Fail("\r\n[*] Please input integer between 0~%d", seq)
 					} else {
-						fmt.Printf("\r\n[*]Closing......")
+						printer.Warning("\r\n[*] Closing......")
 						handler.StopBackward(console.mgr, uuid, route, choice)
-						fmt.Printf("\r\n[*]Backward service has been closed successfully!")
+						printer.Success("\r\n[*] Backward service has been closed successfully!")
 					}
 				} else if option == "no" {
 				} else {
-					fmt.Printf("\r\n[*]Please input yes/no!")
+					printer.Fail("\r\n[*] Please input yes/no!")
 				}
 				console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
 			}
@@ -740,9 +741,9 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				go handler.StartBar(console.mgr.FileManager.File.StatusChan, console.mgr.FileManager.File.FileSize)
 				console.mgr.FileManager.File.Upload(route, uuid, share.ADMIN)
 			} else if err != nil {
-				fmt.Printf("\r\n[*]Error: %s", err.Error())
+				printer.Fail("\r\n[*] Error: %s", err.Error())
 			} else {
-				fmt.Print("\r\n[*]Fail to upload file!")
+				printer.Fail("\r\n[*] Fail to upload file!")
 			}
 			console.ready <- true
 		case "download":
@@ -762,7 +763,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 					console.mgr.FileManager.File.Receive(route, uuid, share.ADMIN)
 				}
 			} else {
-				fmt.Print("\r\n[*]Unable to download file!")
+				printer.Fail("\r\n[*] Unable to download file!")
 			}
 			console.ready <- true
 		case "offline":
@@ -790,7 +791,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			}
 			return
 		default:
-			fmt.Print("\n[*]Unknown Command!\n")
+			printer.Fail("\n[*] Unknown Command!\n")
 			ShowNodeHelp()
 			console.ready <- true
 		}
@@ -858,7 +859,7 @@ func (console *Console) expectParams(params []string, numbers interface{}, mode 
 	case int:
 		num := numbers.(int)
 		if len(params) != num {
-			fmt.Print("\n[*]Format error!\n")
+			printer.Fail("\n[*] Format error!\n")
 			if mode == MAIN {
 				ShowMainHelp()
 			} else {
@@ -877,7 +878,7 @@ func (console *Console) expectParams(params []string, numbers interface{}, mode 
 		}
 
 		if !flag {
-			fmt.Print("\n[*]Format error!\n")
+			printer.Fail("\n[*] Format error!\n")
 			if mode == MAIN {
 				ShowMainHelp()
 			} else {
@@ -894,7 +895,7 @@ func (console *Console) expectParams(params []string, numbers interface{}, mode 
 		if needToBeInt != 0 {
 			_, err := utils.Str2Int(params[seq])
 			if err != nil {
-				fmt.Print("\n[*]Format error!\n")
+				printer.Fail("\n[*] Format error!\n")
 				if mode == MAIN {
 					ShowMainHelp()
 				} else {
@@ -917,7 +918,7 @@ func (console *Console) expectParams(params []string, numbers interface{}, mode 
 		}
 
 		if err != nil {
-			fmt.Print("\n[*]Format error!\n")
+			printer.Fail("\n[*] Format error!\n")
 			if mode == MAIN {
 				ShowMainHelp()
 			} else {

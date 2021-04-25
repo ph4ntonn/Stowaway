@@ -8,10 +8,10 @@ package handler
 
 import (
 	"Stowaway/admin/manager"
+	"Stowaway/admin/printer"
 	"Stowaway/admin/topology"
 	"Stowaway/global"
 	"Stowaway/protocol"
-	"fmt"
 )
 
 func AddMemo(taskChan chan *topology.TopoTask, info []string, uuid string, route string) {
@@ -46,7 +46,7 @@ func AddMemo(taskChan chan *topology.TopoTask, info []string, uuid string, route
 	protocol.ConstructMessage(sMessage, header, myMemoMess, false)
 	sMessage.SendMessage()
 
-	fmt.Print("\n[*]Memo added!")
+	printer.Success("\n[*] Memo added!")
 }
 
 func DelMemo(taskChan chan *topology.TopoTask, uuid string, route string) {
@@ -75,7 +75,7 @@ func DelMemo(taskChan chan *topology.TopoTask, uuid string, route string) {
 	protocol.ConstructMessage(sMessage, header, myMemoMess, false)
 	sMessage.SendMessage()
 
-	fmt.Print("\n[*]Memo deleted!")
+	printer.Success("\n[*] Memo deleted!")
 }
 
 func DispatchInfoMess(mgr *manager.Manager, topo *topology.Topology) {

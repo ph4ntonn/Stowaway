@@ -192,7 +192,7 @@ func (file *MyFile) Upload(route string, targetUUID string, identity int) {
 	}
 
 	if identity == ADMIN {
-		fmt.Println("\n[*]File transmitting, please wait...")
+		fmt.Println("\n[*] File transmitting, please wait...")
 		file.StatusChan <- &Status{Stat: START}
 	}
 
@@ -233,7 +233,7 @@ func (file *MyFile) Upload(route string, targetUUID string, identity int) {
 
 func (file *MyFile) Receive(route string, targetUUID string, identity int) {
 	if identity == ADMIN {
-		fmt.Println("\n[*]File transmitting, please wait...")
+		fmt.Println("\n[*] File transmitting, please wait...")
 		file.StatusChan <- &Status{Stat: START}
 	}
 

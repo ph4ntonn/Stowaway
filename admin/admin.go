@@ -7,13 +7,14 @@
 package main
 
 import (
+	"Stowaway/admin/printer"
 	"Stowaway/admin/process"
 	"Stowaway/admin/topology"
 	"Stowaway/global"
 	"Stowaway/protocol"
 	"Stowaway/share"
-	"log"
 	"net"
+	"os"
 	"runtime"
 
 	"Stowaway/admin/cli"
@@ -25,6 +26,8 @@ func init() {
 }
 
 func main() {
+	printer.InitPrinter()
+
 	options := initial.ParseOptions()
 
 	protocol.DecideType(options.Upstream, options.Downstream)
@@ -34,7 +37,7 @@ func main() {
 	topo := topology.NewTopology()
 	go topo.Run()
 
-	log.Println("[*]Waiting for new connection...")
+	printer.Warning("[*] Waiting for new connection...\n")
 	var conn net.Conn
 	switch options.Mode {
 	case initial.NORMAL_ACTIVE:
@@ -45,7 +48,8 @@ func main() {
 		proxy := share.NewProxy(options.Connect, options.Proxy, options.ProxyU, options.ProxyP)
 		conn = initial.NormalActive(options, topo, proxy)
 	default:
-		log.Fatal("[*]Unknown Mode")
+		printer.Fail("[*] Unknown Mode")
+		os.Exit(0)
 	}
 
 	admin := process.NewAdmin()

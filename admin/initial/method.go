@@ -7,12 +7,13 @@
 package initial
 
 import (
+	"Stowaway/admin/printer"
 	"Stowaway/admin/topology"
 	"Stowaway/protocol"
 	"Stowaway/share"
 	"Stowaway/utils"
-	"log"
 	"net"
+	"os"
 )
 
 func dispatchUUID(conn net.Conn, secret string) string {
@@ -79,11 +80,13 @@ func NormalActive(userOptions *Options, topo *topology.Topology, proxy *share.Pr
 		}
 
 		if err != nil {
-			log.Fatalf("[*]Error occured: %s", err.Error())
+			printer.Fail("[*] Error occured: %s", err.Error())
+			os.Exit(0)
 		}
 
 		if err := share.ActivePreAuth(conn, userOptions.Secret); err != nil {
-			log.Fatalf("[*]Error occured: %s", err.Error())
+			printer.Fail("[*] Error occured: %s", err.Error())
+			os.Exit(0)
 		}
 
 		sMessage = protocol.PrepareAndDecideWhichSProtoToLower(conn, userOptions.Secret, protocol.ADMIN_UUID)
@@ -96,7 +99,8 @@ func NormalActive(userOptions *Options, topo *topology.Topology, proxy *share.Pr
 
 		if err != nil {
 			conn.Close()
-			log.Fatalf("[*]Fail to connect node %s, Error: %s", conn.RemoteAddr().String(), err.Error())
+			printer.Fail("[*] Fail to connect node %s, Error: %s", conn.RemoteAddr().String(), err.Error())
+			os.Exit(0)
 		}
 
 		if fHeader.MessageType == protocol.HI {
@@ -114,7 +118,7 @@ func NormalActive(userOptions *Options, topo *topology.Topology, proxy *share.Pr
 
 					<-topo.ResultChan
 
-					log.Printf("[*]Connect to node %s successfully! Node id is 0\n", conn.RemoteAddr().String())
+					printer.Success("[*] Connect to node %s successfully! Node id is 0\n", conn.RemoteAddr().String())
 					return conn
 				} else {
 					node := topology.NewNode(mmess.UUID, conn.RemoteAddr().String())
@@ -128,26 +132,28 @@ func NormalActive(userOptions *Options, topo *topology.Topology, proxy *share.Pr
 
 					<-topo.ResultChan
 
-					log.Printf("[*]Connect to node %s successfully! Node id is 0\n", conn.RemoteAddr().String())
+					printer.Success("[*] Connect to node %s successfully! Node id is 0\n", conn.RemoteAddr().String())
 					return conn
 				}
 			}
 		}
 
 		conn.Close()
-		log.Fatal("[*]Target node seems illegal!\n")
+		printer.Fail("[*] Target node seems illegal!\n")
 	}
 }
 
 func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 	listenAddr, _, err := utils.CheckIPPort(userOptions.Listen)
 	if err != nil {
-		log.Fatalf("[*]Error occured: %s", err.Error())
+		printer.Fail("[*] Error occured: %s", err.Error())
+		os.Exit(0)
 	}
 
 	listener, err := net.Listen("tcp", listenAddr)
 	if err != nil {
-		log.Fatalf("[*]Error occured: %s", err.Error())
+		printer.Fail("[*] Error occured: %s", err.Error())
+		os.Exit(0)
 	}
 
 	defer func() {
@@ -177,20 +183,20 @@ func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Printf("[*]Error occured: %s\n", err.Error())
+			printer.Fail("[*] Error occured: %s\n", err.Error())
 			conn.Close()
 			continue
 		}
 
 		if err := share.PassivePreAuth(conn, userOptions.Secret); err != nil {
-			log.Fatalf("[*]Error occured: %s", err.Error())
+			printer.Fail("[*] Error occured: %s", err.Error())
 		}
 
 		rMessage = protocol.PrepareAndDecideWhichRProtoFromLower(conn, userOptions.Secret, protocol.ADMIN_UUID)
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 
 		if err != nil {
-			log.Printf("[*]Fail to set connection from %s, Error: %s\n", conn.RemoteAddr().String(), err.Error())
+			printer.Fail("[*] Fail to set connection from %s, Error: %s\n", conn.RemoteAddr().String(), err.Error())
 			conn.Close()
 			continue
 		}
@@ -214,7 +220,7 @@ func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 
 					<-topo.ResultChan
 
-					log.Printf("[*]Connection from node %s is set up successfully! Node id is 0\n", conn.RemoteAddr().String())
+					printer.Success("[*] Connection from node %s is set up successfully! Node id is 0\n", conn.RemoteAddr().String())
 				} else {
 					node := topology.NewNode(mmess.UUID, conn.RemoteAddr().String())
 					task := &topology.TopoTask{
@@ -227,7 +233,7 @@ func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 
 					<-topo.ResultChan
 
-					log.Printf("[*]Connection from node %s is set up successfully! Node id is 0\n", conn.RemoteAddr().String())
+					printer.Success("[*] Connection from node %s is set up successfully! Node id is 0\n", conn.RemoteAddr().String())
 				}
 
 				return conn
@@ -235,6 +241,6 @@ func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 		}
 
 		conn.Close()
-		log.Println("[*]Incoming connection seems illegal!")
+		printer.Fail("[*] Incoming connection seems illegal!")
 	}
 }

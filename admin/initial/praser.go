@@ -7,9 +7,9 @@
 package initial
 
 import (
+	"Stowaway/admin/printer"
 	"flag"
 	"fmt"
-	"log"
 	"net"
 	"os"
 )
@@ -69,20 +69,21 @@ func ParseOptions() *Options {
 
 	if Args.Listen != "" && Args.Connect == "" && Args.Proxy == "" { // ./stowaway_admin -l <port> -s [secret]
 		Args.Mode = NORMAL_PASSIVE
-		log.Printf("[*]Starting admin node on port %s\n", Args.Listen)
+		printer.Warning("[*] Starting admin node on port %s\n", Args.Listen)
 	} else if Args.Connect != "" && Args.Listen == "" && Args.Proxy == "" { // ./stowaway_admin -c <ip:port> -s [secret]
 		Args.Mode = NORMAL_ACTIVE
-		log.Println("[*]Trying to connect node actively without proxy")
+		printer.Warning("[*] Trying to connect node actively without proxy")
 	} else if Args.Connect != "" && Args.Listen == "" && Args.Proxy != "" { // ./stowaway_admin -c <ip:port> -s [secret] --proxy <ip:port> --proxyu [username] --proxyp [password]
 		Args.Mode = PROXY_ACTIVE
-		log.Printf("[*]Trying to connect node actively with proxy %s\n", Args.Proxy)
+		printer.Warning("[*] Trying to connect node actively with proxy %s\n", Args.Proxy)
 	} else { // Wrong format
 		flag.Usage()
 		os.Exit(1)
 	}
 
 	if err := checkOptions(Args); err != nil {
-		log.Fatalf("[*]Options err: %s\n", err.Error())
+		printer.Fail("[*] Options err: %s\n", err.Error())
+		os.Exit(0)
 	}
 
 	return Args

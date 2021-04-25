@@ -44,7 +44,7 @@ try:
     s.connect((options.ip, int(options.port)))
     s.send(data)
 except:
-    print "[*]Cannot connect to target"
+    print "[*] Cannot connect to target"
 
 try:
     s.recv(1024)
@@ -53,4 +53,4 @@ except:
 
 s.close()
 
-print "[*]Done!"
+print "[*] Done!"

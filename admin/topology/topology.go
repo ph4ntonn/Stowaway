@@ -7,6 +7,7 @@
 package topology
 
 import (
+	"Stowaway/admin/printer"
 	"Stowaway/protocol"
 	"Stowaway/utils"
 	"fmt"
@@ -291,7 +292,7 @@ func (topology *Topology) delNode(task *TopoTask) {
 	ready = append(ready, idNum)
 
 	for _, idNum := range ready {
-		fmt.Printf("\r\n[*]Node %d is offline!", idNum)
+		printer.Fail("\r\n[*] Node %d is offline!", idNum)
 		readyUUID = append(readyUUID, topology.idNum2ID(idNum))
 		delete(topology.nodes, idNum)
 	}

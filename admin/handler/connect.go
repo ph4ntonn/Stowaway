@@ -2,10 +2,10 @@ package handler
 
 import (
 	"Stowaway/admin/manager"
+	"Stowaway/admin/printer"
 	"Stowaway/global"
 	"Stowaway/protocol"
 	"Stowaway/utils"
-	"fmt"
 )
 
 func LetConnect(mgr *manager.Manager, route, uuid, addr string) error {
@@ -33,7 +33,7 @@ func LetConnect(mgr *manager.Manager, route, uuid, addr string) error {
 	sMessage.SendMessage()
 
 	if ok := <-mgr.ConnectManager.ConnectReady; !ok {
-		fmt.Printf("\r\n[*]Cannot connect to node %s", addr)
+		printer.Fail("\r\n[*] Cannot connect to node %s", addr)
 	}
 
 	return nil
