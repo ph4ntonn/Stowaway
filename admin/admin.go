@@ -24,7 +24,7 @@ func main() {
 
 	options := initial.ParseOptions()
 
-	protocol.DecideType(options.Upstream, options.Downstream)
+	protocol.DecideType("raw", options.Downstream)
 
 	cli.Banner()
 

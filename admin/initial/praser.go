@@ -23,7 +23,6 @@ type Options struct {
 	Proxy      string
 	ProxyU     string
 	ProxyP     string
-	Upstream   string
 	Downstream string
 }
 
@@ -38,7 +37,6 @@ func init() {
 	flag.StringVar(&Args.Proxy, "proxy", "", "The socks5 server ip:port you want to use")
 	flag.StringVar(&Args.ProxyU, "proxyu", "", "socks5 username")
 	flag.StringVar(&Args.ProxyP, "proxyp", "", "socks5 password")
-	flag.StringVar(&Args.Upstream, "up", "raw", "")
 	flag.StringVar(&Args.Downstream, "down", "raw", "")
 
 	flag.Usage = newUsage

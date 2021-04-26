@@ -41,6 +41,7 @@ func NewHelper() *Helper {
 	}
 
 	helper.nodeList = []string{
+		"help",
 		"listen",
 		"addmemo",
 		"delmemo",

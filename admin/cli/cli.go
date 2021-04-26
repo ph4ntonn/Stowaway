@@ -42,23 +42,23 @@ func ShowMainHelp() {
 // ShowNodeHelp 打印node模式下的帮助
 func ShowNodeHelp() {
 	fmt.Print(`
-	help                                     		Show help information
-	listen     [ip:]<port>                  		Start port listening on current node
-	addmemo    <string>                      		Add memo for current node
-	delmemo                                  		Delete memo of current node
-	ssh        <ip:port>    		                Start SSH through current node
-	shell                                    		Start an interactive shell on current node
-	socks      <lport> [username] [pass]     		Start a socks5 server.
-	connect    <ip:port>                     		Connect to a new node
-	sshtunnel  <ip:sshport> <agent port>    		Use sshtunnel to add the node into our topology
-	stopsocks                                		Shut down socks services
+	help                                            Show help information
+	listen                                          Start port listening on current node
+	addmemo    <string>                             Add memo for current node
+	delmemo                                         Delete memo of current node
+	ssh        <ip:port>                            Start SSH through current node
+	shell                                           Start an interactive shell on current node
+	socks      <lport> [username] [pass]            Start a socks5 server
+	stopsocks                                       Shut down socks services
+	connect    <ip:port>                            Connect to a new node
+	sshtunnel  <ip:sshport> <agent port>            Use sshtunnel to add the node into our topology
 	upload     <local filename> <remote filename>   Upload file to current node
 	download   <remote filename> <local filename>   Download file from current node
-	forward    <lport> <ip:port>             		Forward local port to specific remote ip:port
-	stopforward                                		Shut down forward services
-	backward    <rport> <lport>               		Backward remote port(agent) to local port(admin)
-	stopbackward                                	Shut down backward services
-	offline                                 		Terminate current node
-	exit                                     		Back to upper panel
+	forward    <lport> <ip:port>                    Forward local port to specific remote ip:port
+	stopforward                                     Shut down forward services
+	backward    <rport> <lport>                     Backward remote port(agent) to local port(admin)
+	stopbackward                                    Shut down backward services
+	offline                                         Terminate current node
+	exit                                            Back to upper panel
   `)
 }
