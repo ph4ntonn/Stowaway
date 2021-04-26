@@ -42,7 +42,7 @@ PPS:**请务必在使用前详细阅读使用方法及文末的注意事项**
 
 ## 下载及演示
 
-- 不想编译的盆油可以直接用[release](https://github.com/ph4ntonn/Stowaway/releases)下编译完成的程序.其中[Uncompressed](https://github.com/ph4ntonn/Stowaway/releases/download/v1.6.2/Uncompress_By_Upx.7z) 是未经压缩的程序合集，若需要更小体积的程序合集以此方便上传至服务器，请下载[Compressed](https://github.com/ph4ntonn/Stowaway/releases/download/v1.6.2/Compressed_By_Upx.tar)
+- 不想编译的盆油可以直接用[release](https://github.com/ph4ntonn/Stowaway/releases)下编译完成的程序.其中[Uncompressed](https://github.com/ph4ntonn/Stowaway/releases/download/v2.0/Uncompress_By_Upx.7z) 是未经压缩的程序合集，若需要更小体积的程序合集以此方便上传至服务器，请下载[Compressed](https://github.com/ph4ntonn/Stowaway/releases/download/v2.0/Compressed_By_Upx.tar)
 -  演示视频：还在制作中～
 
 ## 使用方法
@@ -631,7 +631,6 @@ $
 ### 注意事项
 
 - 此程序仅是闲暇时开发学习，结构及代码结构不够严谨，功能可能存在bug，请多多谅解
-- 本程序编译出来稍微有一些大，但是实测实际占有内存空间并不大，仅会比尽量压缩文件大小的情况下多出0.5m左右（在macos上大概一共占用5-7m内存空间）
 - admin不在线时，新节点将不允许加入
 - admin仅支持一个直接连接的agent节点，agent节点则无此限制
 - 如果用户使用windows下的admin端，请先下载[ansicon](https://github.com/adoxa/ansicon/releases)，或者在[这里]()下载，之后进入对应系统位数的文件夹，执行```ansicon.exe -i```即可，不然admin端会出现乱码的问题
