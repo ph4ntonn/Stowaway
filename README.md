@@ -100,9 +100,9 @@ Stowaway一共包含两种角色，分别是：
 
 若不指定IP地址，则默认监听在```0.0.0.0```上
 
-admin:  ```./stowaway_admin -l 9999``` or ```./stowaway_admin -l 127.0.0.1:9999```
+- admin:  ```./stowaway_admin -l 9999``` or ```./stowaway_admin -l 127.0.0.1:9999```
 
-agent:  ```./stowaway_agent -l 9999```  or ```./stowaway_agent -l 127.0.0.1:9999```
+- agent:  ```./stowaway_agent -l 9999```  or ```./stowaway_agent -l 127.0.0.1:9999```
 
 #### -s
 
@@ -110,9 +110,9 @@ agent:  ```./stowaway_agent -l 9999```  or ```./stowaway_agent -l 127.0.0.1:9999
 
 可选，若为空，则代表通信不被加密，反之则通信基于用户所给出的密钥加密
 
-admin:  ```./stowaway_admin -l 9999 -s 123``` 
+- admin:  ```./stowaway_admin -l 9999 -s 123``` 
 
-agent:  ```./stowaway_agent -l 9999 -s 123``` 
+- agent:  ```./stowaway_agent -l 9999 -s 123``` 
 
 #### -c
 
@@ -120,27 +120,27 @@ agent:  ```./stowaway_agent -l 9999 -s 123```
 
 代表了希望连接到的节点的地址
 
-admin:  ```./stowaway_admin -c 127.0.0.1:9999``` 
+- admin:  ```./stowaway_admin -c 127.0.0.1:9999``` 
 
-agent:  ```./stowaway_agent -c 127.0.0.1:9999``` 
+- agent:  ```./stowaway_agent -c 127.0.0.1:9999``` 
 
 #### --proxy/--proxyu/--proxyp
 
 这三个参数admin&&agent用法一致，仅用在主动模式下
 
---proxy代表socks5代理服务器地址，--proxyu以及--proxyp可选
+```--proxy```代表socks5代理服务器地址，```--proxyu```以及```--proxyp```可选
 
 无用户名密码：
 
-admin:  ```./stowaway_admin -c 127.0.0.1:9999 --proxy xxx.xxx.xxx.xxx```
+- admin:  ```./stowaway_admin -c 127.0.0.1:9999 --proxy xxx.xxx.xxx.xxx```
 
-agent:  ```./stowaway_agent -c 127.0.0.1:9999 --proxy xxx.xxx.xxx.xxx``` 
+- agent:  ```./stowaway_agent -c 127.0.0.1:9999 --proxy xxx.xxx.xxx.xxx``` 
 
 有用户名密码:
 
-admin:  ```./stowaway_admin -c 127.0.0.1:9999 --proxy xxx.xxx.xxx.xxx --proxyu xxx --proxyp xxx```
+- admin:  ```./stowaway_admin -c 127.0.0.1:9999 --proxy xxx.xxx.xxx.xxx --proxyu xxx --proxyp xxx```
 
-agent:  ```./stowaway_agent -c 127.0.0.1:9999 --proxy xxx.xxx.xxx.xxx--proxyu xxx --proxyp xxx``` 
+- agent:  ```./stowaway_agent -c 127.0.0.1:9999 --proxy xxx.xxx.xxx.xxx--proxyu xxx --proxyp xxx``` 
 
 #### --up/--down
 
@@ -152,27 +152,27 @@ agent:  ```./stowaway_agent -c 127.0.0.1:9999 --proxy xxx.xxx.xxx.xxx--proxyu xx
 
 若希望上/下游流量为HTTP流量，设置此两参数即可
 
-admin:  ```./stowaway_admin -c 127.0.0.1:9999 --down http``` 
+- admin:  ```./stowaway_admin -c 127.0.0.1:9999 --down http``` 
 
-agent:  ```./stowaway_agent -c 127.0.0.1:9999 --up http```  or ```./stowaway_agent -c 127.0.0.1:9999 --up http --down http```
+- agent:  ```./stowaway_agent -c 127.0.0.1:9999 --up http```  or ```./stowaway_agent -c 127.0.0.1:9999 --up http --down http```
 
 **注意一点，当你设置了某一节点上/下游为TCP/HTTP流量后，与其连接的父/子节点的下/上游流量必须设置为一致！！！**
 
 如下
 
-admin:  ```./stowaway_admin -c 127.0.0.1:9999 --down http``` 
+- admin:  ```./stowaway_admin -c 127.0.0.1:9999 --down http``` 
 
-agent:  ```./stowaway_agent -l 9999 --up http```
+- agent:  ```./stowaway_agent -l 9999 --up http```
 
-上面这种情况，agent必须设置up为http，否则会导致网络出错
+上面这种情况，agent必须设置```--up```为http，否则会导致网络出错
 
 agent间也一样
 
 假设agent-1正在```127.0.0.1:10000```端口上等待子节点的连接，并且设置了```--down http```
 
-agent-2:  ```./stowaway_agent -c 127.0.0.1:10000 --up http```
+- agent-2:  ```./stowaway_agent -c 127.0.0.1:10000 --up http```
 
-上面这种情况，agent-2也必须设置up为http，否则会导致网络出错
+上面这种情况，agent-2也必须设置```--up```为http，否则会导致网络出错
 
 #### --reconnect
 
@@ -180,15 +180,15 @@ agent-2:  ```./stowaway_agent -c 127.0.0.1:10000 --up http```
 
 参数可选，若不设置，则代表节点在网络连接断开后不会主动重连，若设置，则代表节点会每隔x(你设置的秒数)秒尝试重连至父节点
 
-admin:  ```./stowaway_admin -l 9999``` 
+- admin:  ```./stowaway_admin -l 9999``` 
 
-agent:  ```./stowaway_agent -c 127.0.0.1:9999 --reconnect 10```
+- agent:  ```./stowaway_agent -c 127.0.0.1:9999 --reconnect 10```
 
 上面这种情况下，代表如果agent与admin之间的连接断开，agent会每隔十秒尝试重连回admin
 
 agent之间也与上面情况一致
 
-并且--reconnect参数可以与--proxy/--proxyu/--proxyp一起使用，agent将会参照启动时的设置，通过代理尝试重连
+并且```--reconnect```参数可以与```--proxy```/```--proxyu```/```--proxyp```一起使用，agent将会参照启动时的设置，通过代理尝试重连
 
 #### --rehost/--report
 
@@ -209,13 +209,13 @@ agent之间也与上面情况一致
 
   假设agent端采用端口复用机制复用80端口
 
-  此时agent端必须设置--rehost&&--report&&-s参数
+  此时agent端必须设置```--rehost```&&```--report```&&```-s```参数
 
-  --rehost代表希望复用的IP地址，不可为0.0.0.0，普遍应当是网卡的外部地址
+  - --rehost代表希望复用的IP地址，不可为0.0.0.0，普遍应当是网卡的外部地址
 
-  --report代表希望复用的端口
+  - --report代表希望复用的端口
 
-  -s代表通信密钥
+  - -s代表通信密钥
 
   **主要支持windows、mac环境下的复用,linux亦可，但限制较多**
   
@@ -227,13 +227,13 @@ agent之间也与上面情况一致
 
   假设agent端采用端口复用机制复用22端口
 
-  此时agent端必须设置-l&&--report&&-s参数
+  此时agent端必须设置```-l```&&```--report```&&```-s```参数
 
-  -l 代表无法被正常访问的端口，也就是你真正想让agent监听并接受连接的端口
+  - -l 代表无法被正常访问的端口，也就是你真正想让agent监听并接受连接的端口
 
-  --report代表希望复用的端口
+  - --report代表希望复用的端口
 
-  -s代表通信密钥
+  - -s代表通信密钥
 
   **仅支持linux环境下的复用，需要root权限**
 
@@ -245,9 +245,9 @@ agent之间也与上面情况一致
 
     之后执行：```python reuse.py --start --rhost xxx.xxx.xxx.xxx --rport xxx```
 
-    --rhost代表agent的地址
+    - --rhost代表agent的地址
 
-    --rport代表被复用的端口,在本例中应当为22
+    - --rport代表被复用的端口,在本例中应当为22
   
   - 此时admin端就可以连接：```./stowaway_admin -c 192.168.0.105:22 -s 123```
   
@@ -275,15 +275,15 @@ agent之间也与上面情况一致
 
 举一个简单的例子
 
-admin: ```./stowaway_admin -l 9999 -s 123``` 
+- admin: ```./stowaway_admin -l 9999 -s 123``` 
 
 此时agent-1已经连上admin
 
-agent-1:  ```./stowaway_agent -c 127.0.0.1:9999 -s 123```
+- agent-1:  ```./stowaway_agent -c 127.0.0.1:9999 -s 123```
 
  此时用户还想连接agent-2，如下
 
-agent-2:  ```./stowaway_agent -l 10000 -s 123```
+- agent-2:  ```./stowaway_agent -l 10000 -s 123```
 
 那么，此时用户可以通过admin,输入```use 0``` -> ```connect agent-2的IP:10000```来将其加入网络，并成为agent-1的一个子节点
 
@@ -293,7 +293,7 @@ agent-2:  ```./stowaway_agent -l 10000 -s 123```
 
 等admin操作完成后，agent-3启动如下
 
-agent-3: ```./stowaway_agent -c 127.0.0.1:10001 -s 123```
+- agent-3: ```./stowaway_agent -c 127.0.0.1:10001 -s 123```
 
 就可以将agent-3作为agent-1的另一个子节点加入网络了
 
