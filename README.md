@@ -148,7 +148,7 @@ Stowaway一共包含两种角色，分别是：
 
 但注意admin上没有```--up```参数
 
-这个参数可选，若为空，则代表上/下游流量为裸TCP流量
+这两个参数可选，若为空，则代表上/下游流量为裸TCP流量
 
 若希望上/下游流量为HTTP流量，设置此两参数即可
 
@@ -202,7 +202,6 @@ agent之间也与上面情况一致
 
    - 在windows下不可复用iis，rdp端口，可以复用mysql，apache服务的端口
 
-   - nginx在默认状态下不可复用
 
 ### 复用方式
 - SO_REUSEPORT和SO_REUSEADDR模式
@@ -219,7 +218,7 @@ agent之间也与上面情况一致
 
   **主要支持windows、mac环境下的复用,linux亦可，但限制较多**
   
-  - admin端：```./stowaway_admin -c 192.168.0.105:80-s 123```
+  - admin端：```./stowaway_admin -c 192.168.0.105:80 -s 123```
   - agent端： ```./stowaway_agent  --report 80 --rehost 192.168.0.105 -s 123```
 
 
@@ -325,11 +324,11 @@ admin控制台分为两个层级，第一层为主panel，包含的命令如下
 
 ```
 (admin) >> help
-	help                                     		Show help information
-	detail                                  		Display connected nodes' detail
-	topo                                     		Display nodes' topology
-	use        <id>                          		Select the target node you want to use
-	exit                                     		Exit
+  help                                     		Show help information
+  detail                                  		Display connected nodes' detail
+  topo                                     		Display nodes' topology
+  use        <id>                          		Select the target node you want to use
+  exit                                     		Exit
 ```
 
 - detail: 展示在线节点的详细信息
@@ -370,24 +369,24 @@ Node[1]'s children ->
 
 ```
 (node 0) >> help
-	help                                            Show help information
-	listen                                          Start port listening on current node
-	addmemo    <string>                             Add memo for current node
-	delmemo                                         Delete memo of current node
-	ssh        <ip:port>                            Start SSH through current node
-	shell                                           Start an interactive shell on current node
-	socks      <lport> [username] [pass]            Start a socks5 server
-	stopsocks                                       Shut down socks services
-	connect    <ip:port>                            Connect to a new node
-	sshtunnel  <ip:sshport> <agent port>            Use sshtunnel to add the node into our topology
-	upload     <local filename> <remote filename>   Upload file to current node
-	download   <remote filename> <local filename>   Download file from current node
-	forward    <lport> <ip:port>                    Forward local port to specific remote ip:port
-	stopforward                                     Shut down forward services
-	backward    <rport> <lport>                     Backward remote port(agent) to local port(admin)
-	stopbackward                                    Shut down backward services
-	offline                                         Terminate current node
-	exit                                            Back to upper panel
+  help                                            Show help information
+  listen                                          Start port listening on current node
+  addmemo    <string>                             Add memo for current node
+  delmemo                                         Delete memo of current node
+  ssh        <ip:port>                            Start SSH through current node
+  shell                                           Start an interactive shell on current node
+  socks      <lport> [username] [pass]            Start a socks5 server
+  stopsocks                                       Shut down socks services
+  connect    <ip:port>                            Connect to a new node
+  sshtunnel  <ip:sshport> <agent port>            Use sshtunnel to add the node into our topology
+  upload     <local filename> <remote filename>   Upload file to current node
+  download   <remote filename> <local filename>   Download file from current node
+  forward    <lport> <ip:port>                    Forward local port to specific remote ip:port
+  stopforward                                     Shut down forward services
+  backward    <rport> <lport>                     Backward remote port(agent) to local port(admin)
+  stopbackward                                    Shut down backward services
+  offline                                         Terminate current node
+  exit                                            Back to upper panel
 ```
 
 - listen: 命令agent监听某个端口并等待子节点的连入
