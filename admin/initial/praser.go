@@ -65,7 +65,7 @@ func ParseOptions() *Options {
 		printer.Warning("[*] Starting admin node on port %s\n", Args.Listen)
 	} else if Args.Connect != "" && Args.Listen == "" && Args.Proxy == "" { // ./stowaway_admin -c <ip:port> -s [secret]
 		Args.Mode = NORMAL_ACTIVE
-		printer.Warning("[*] Trying to connect node actively without proxy")
+		printer.Warning("[*] Trying to connect node actively")
 	} else if Args.Connect != "" && Args.Listen == "" && Args.Proxy != "" { // ./stowaway_admin -c <ip:port> -s [secret] --proxy <ip:port> --proxyu [username] --proxyp [password]
 		Args.Mode = PROXY_ACTIVE
 		printer.Warning("[*] Trying to connect node actively with proxy %s\n", Args.Proxy)
