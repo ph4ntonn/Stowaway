@@ -1,18 +1,13 @@
-/*
- * @Author: ph4ntom
- * @Date: 2021-03-19 12:24:52
- * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-31 17:02:24
- */
 package handler
 
 import (
+	"fmt"
+	"io/ioutil"
+
 	"Stowaway/admin/manager"
 	"Stowaway/global"
 	"Stowaway/protocol"
 	"Stowaway/utils"
-	"fmt"
-	"io/ioutil"
 )
 
 const (

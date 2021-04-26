@@ -1,19 +1,14 @@
-/*
- * @Author: ph4ntom
- * @Date: 2021-03-17 18:38:28
- * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-29 18:51:51
- */
 package handler
 
 import (
+	"io"
+	"os/exec"
+	"runtime"
+
 	"Stowaway/agent/manager"
 	"Stowaway/global"
 	"Stowaway/protocol"
 	"Stowaway/utils"
-	"io"
-	"os/exec"
-	"runtime"
 )
 
 type Shell struct {

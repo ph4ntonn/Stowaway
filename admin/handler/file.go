@@ -1,9 +1,3 @@
-/*
- * @Author: ph4ntom
- * @Date: 2021-03-23 11:49:40
- * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-01 15:16:13
- */
 package handler
 
 import (
@@ -14,7 +8,7 @@ import (
 	"github.com/cheggaaa/pb"
 )
 
-// NewBar 生成新的进度条
+// generate new bar
 func NewBar(length int64) *pb.ProgressBar {
 	var bar *pb.ProgressBar
 

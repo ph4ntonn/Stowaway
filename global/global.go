@@ -1,8 +1,9 @@
 package global
 
 import (
-	"Stowaway/protocol"
 	"net"
+
+	"Stowaway/protocol"
 )
 
 var G_Component *protocol.MessageComponent

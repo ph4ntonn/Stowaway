@@ -1,12 +1,11 @@
-/*
- * @Author: ph4ntom
- * @Date: 2021-03-10 18:11:41
- * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-04 15:45:17
- */
 package cli
 
 import (
+	"bytes"
+	"fmt"
+	"os"
+	"strings"
+
 	"Stowaway/admin/handler"
 	"Stowaway/admin/manager"
 	"Stowaway/admin/printer"
@@ -15,10 +14,6 @@ import (
 	"Stowaway/protocol"
 	"Stowaway/share"
 	"Stowaway/utils"
-	"bytes"
-	"fmt"
-	"os"
-	"strings"
 
 	"github.com/eiannone/keyboard"
 )
@@ -81,10 +76,11 @@ func (console *Console) mainPanel() {
 	defer keyboard.Close()
 
 	// Tested on:
-	// Macos Catalina iterm/original terminal
+	// Macos Catalina iterm2/original terminal
 	// Ubuntu desktop 16.04/18.04
 	// Ubuntu server 16.04
 	// Centos 7
+	// Win10 x64 Professional
 	// May have problems when the console working on some terminal since I'm using escape sequence,so if ur checking code after face this situation,let me know if possible
 	fmt.Print(console.status)
 	for {
@@ -251,7 +247,7 @@ func (console *Console) mainPanel() {
 				fmt.Print(string(leftCommand))
 			}
 		} else if event.Key == keyboard.KeyCtrlC {
-			// Ctrl+C? Then BYE!
+			// Ctrl+C? Exit
 			printer.Warning("\r\n[*] BYE!\r\n")
 			break
 		} else {
@@ -320,13 +316,13 @@ func (console *Console) handleMainPanelCommand() {
 			<-console.topology.ResultChan
 
 			console.ready <- true
-		case "tree":
+		case "topo":
 			if console.expectParams(fCommand, 1, MAIN, 0) {
 				break
 			}
 
 			task := &topology.TopoTask{
-				Mode: topology.SHOWTREE,
+				Mode: topology.SHOWTOPO,
 			}
 			console.topology.TaskChan <- task
 			<-console.topology.ResultChan
@@ -401,7 +397,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			handler.LetShellStart(route, uuid)
 
 			printer.Warning("\r\n[*] Waiting for response.....")
-			printer.Warning("\r\n[*] MENTION!UNDER SHELL MODE ARROW UP/DOWN/LEFT/RIGHT ARE ALL ABANDONED!")
+			printer.Warning("\r\n[*] MENTION!UNDER SHELL MODE, ARROW UP/DOWN/LEFT/RIGHT ARE ALL ABANDONED!")
 
 			if <-console.mgr.ConsoleManager.OK {
 				printer.Success("\r\n[*] Shell is started successfully!\r\n")
@@ -421,9 +417,9 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 
 			listen := handler.NewListen()
 
-			printer.Warning("\r\n[*] BE AWARE! If you choose IPTables Reuse or SOReuse,you MUST CONFIRM that the node you're controlling was started in the corresponding way!")
+			printer.Warning("\r\n[*] MENTION! If you choose IPTables Reuse or SOReuse,you MUST CONFIRM that the node was initially started in the corresponding way!")
 			printer.Warning("\r\n[*] When you choose IPTables Reuse or SOReuse, the node will use the initial config(when node started) to reuse port!")
-			console.status = "[*] Please choose the mode(1.Normal passive/2.IPTables Reuse/3.SOReuse): "
+			console.status = "[*] Please choose the mode(1.Normal passive / 2.IPTables Reuse / 3.SOReuse): "
 			console.ready <- true
 
 			option := console.pretreatInput()
@@ -476,7 +472,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 
 			ssh := handler.NewSSH(fCommand[1])
 
-			console.status = "[*] Please choose the auth method(1.username/password 2.certificate): "
+			console.status = "[*] Please choose the auth method(1.username&&password / 2.certificate): "
 			console.ready <- true
 
 			firstChoice := console.pretreatInput()
@@ -537,7 +533,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 
 			sshTunnel := handler.NewSSHTunnel(fCommand[2], fCommand[1])
 
-			console.status = "[*] Please choose the auth method(1.username/password 2.certificate): "
+			console.status = "[*] Please choose the auth method(1.username&&password / 2.certificate): "
 			console.ready <- true
 
 			firstChoice := console.pretreatInput()
@@ -597,7 +593,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			}
 
 			printer.Warning("\r\n[*] Trying to listen on 0.0.0.0:%s......", fCommand[1])
-			printer.Warning("\r\n[*] Waiting for agent's response......")
+			printer.Warning("\r\n[*] Waiting for response......")
 
 			err := socks.LetSocks(console.mgr, route, uuid)
 
@@ -635,7 +631,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			}
 
 			printer.Warning("\r\n[*] Trying to listen on 0.0.0.0:%s......", fCommand[1])
-			printer.Warning("\r\n[*] Waiting for agent's response......")
+			printer.Warning("\r\n[*] Waiting for response......")
 
 			forward := handler.NewForward(fCommand[1], fCommand[2])
 
@@ -684,7 +680,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			}
 
 			printer.Warning("\r\n[*] Trying to ask node to listen on 0.0.0.0:%s......", fCommand[1])
-			printer.Warning("\r\n[*] Waiting for agent's response......")
+			printer.Warning("\r\n[*] Waiting for response......")
 
 			backward := handler.NewBackward(fCommand[2], fCommand[1])
 			// node is okay

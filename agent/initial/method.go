@@ -1,15 +1,6 @@
-/*
- * @Author: ph4ntom
- * @Date: 2021-03-10 15:28:20
- * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-26 16:53:34
- */
 package initial
 
 import (
-	"Stowaway/protocol"
-	"Stowaway/share"
-	"Stowaway/utils"
 	"fmt"
 	"io"
 	"log"
@@ -20,6 +11,10 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"Stowaway/protocol"
+	"Stowaway/share"
+	"Stowaway/utils"
 
 	reuseport "github.com/libp2p/go-reuseport"
 )

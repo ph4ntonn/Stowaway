@@ -1,16 +1,11 @@
-/*
- * @Author: ph4ntom
- * @Date: 2021-03-16 17:46:15
- * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-30 16:40:25
- */
 package handler
 
 import (
+	"fmt"
+
 	"Stowaway/admin/manager"
 	"Stowaway/global"
 	"Stowaway/protocol"
-	"fmt"
 )
 
 func LetShellStart(route string, uuid string) {

@@ -1,13 +1,11 @@
-/*
- * @Author: ph4ntom
- * @Date: 2021-03-10 15:27:30
- * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-03 13:47:15
- */
-
 package process
 
 import (
+	"log"
+	"net"
+	"os"
+	"strings"
+
 	"Stowaway/agent/handler"
 	"Stowaway/agent/initial"
 	"Stowaway/agent/manager"
@@ -15,10 +13,6 @@ import (
 	"Stowaway/protocol"
 	"Stowaway/share"
 	"Stowaway/utils"
-	"log"
-	"net"
-	"os"
-	"strings"
 )
 
 type Agent struct {

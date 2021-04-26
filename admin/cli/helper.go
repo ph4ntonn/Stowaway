@@ -1,9 +1,3 @@
-/*
- * @Author: ph4ntom
- * @Date: 2021-04-03 17:25:40
- * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-04 11:38:50
- */
 package cli
 
 import "sort"
@@ -41,7 +35,7 @@ func NewHelper() *Helper {
 	helper.adminList = []string{
 		"use",
 		"detail",
-		"tree",
+		"topo",
 		"help",
 		"exit",
 	}

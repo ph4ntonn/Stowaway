@@ -1,17 +1,12 @@
-/*
- * @Author: ph4ntom
- * @Date: 2021-03-11 19:10:16
- * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-03 13:26:10
- */
 package topology
 
 import (
+	"fmt"
+	"strings"
+
 	"Stowaway/admin/printer"
 	"Stowaway/protocol"
 	"Stowaway/utils"
-	"fmt"
-	"strings"
 )
 
 const (
@@ -27,7 +22,7 @@ const (
 	// User-friendly
 	UPDATEDETAIL
 	SHOWDETAIL
-	SHOWTREE
+	SHOWTOPO
 	UPDATEMEMO
 )
 
@@ -106,8 +101,8 @@ func (topology *Topology) Run() {
 			topology.updateDetail(task)
 		case SHOWDETAIL:
 			topology.showDetail()
-		case SHOWTREE:
-			topology.showTree()
+		case SHOWTOPO:
+			topology.showTopo()
 		case UPDATEMEMO:
 			topology.updateMemo(task)
 		case CALCULATE:
@@ -243,7 +238,7 @@ func (topology *Topology) showDetail() {
 	topology.ResultChan <- &topoResult{} // Just tell upstream: work done!
 }
 
-func (topology *Topology) showTree() {
+func (topology *Topology) showTopo() {
 	var nodes []int
 	for uuidNum := range topology.nodes {
 		nodes = append(nodes, uuidNum)

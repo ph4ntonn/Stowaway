@@ -1,17 +1,12 @@
-/*
- * @Author: ph4ntom
- * @Date: 2021-03-08 14:51:56
- * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-16 18:04:38
- */
 package initial
 
 import (
-	"Stowaway/admin/printer"
 	"flag"
 	"fmt"
 	"net"
 	"os"
+
+	"Stowaway/admin/printer"
 )
 
 const (

@@ -33,7 +33,7 @@ func ShowMainHelp() {
 	fmt.Print(`
 	help                                     		Show help information
 	detail                                  		Display connected nodes' detail
-	tree                                     		Display nodes' topology
+	topo                                     		Display nodes' topology
 	use        <id>                          		Select the target node you want to use
 	exit                                     		Exit
   `)
@@ -51,13 +51,13 @@ func ShowNodeHelp() {
 	socks      <lport> [username] [pass]     		Start a socks5 server.
 	connect    <ip:port>                     		Connect to a new node
 	sshtunnel  <ip:sshport> <agent port>    		Use sshtunnel to add the node into our topology
-	stopsocks                                		Shut down all socks services
-	upload     <filename>                    		Upload file to current node
-	download   <filename>                   		Download file from current node
-	forward    <lport> <ip:port>             		Forward local port to specific remote ip:port (eg:forward 8888 192.168.0.100:22)
-	stopforward                                		Shut down all forward services
-	backward    <rport> <lport>               		Reflect remote port(agent) to local port(admin) (eg:reflect 22 80)
-	stopbackward                                	Shut down all reflect services
+	stopsocks                                		Shut down socks services
+	upload     <local filename> <remote filename>   Upload file to current node
+	download   <remote filename> <local filename>   Download file from current node
+	forward    <lport> <ip:port>             		Forward local port to specific remote ip:port
+	stopforward                                		Shut down forward services
+	backward    <rport> <lport>               		Backward remote port(agent) to local port(admin)
+	stopbackward                                	Shut down backward services
 	offline                                 		Terminate current node
 	exit                                     		Back to upper panel
   `)

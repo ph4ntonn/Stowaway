@@ -1,9 +1,3 @@
-/*
- * @Author: ph4ntom
- * @Date: 2021-04-02 17:03:45
- * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-02 17:33:47
- */
 package manager
 
 import "net"

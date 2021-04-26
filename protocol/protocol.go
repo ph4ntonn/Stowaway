@@ -1,14 +1,9 @@
-/*
- * @Author: ph4ntom
- * @Date: 2021-03-08 18:19:04
- * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-03 13:21:39
- */
 package protocol
 
 import (
-	"Stowaway/crypto"
 	"net"
+
+	"Stowaway/crypto"
 )
 
 var Upstream string

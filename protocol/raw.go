@@ -1,18 +1,13 @@
-/*
- * @Author: ph4ntom
- * @Date: 2021-03-09 14:02:57
- * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-03 13:22:01
- */
 package protocol
 
 import (
-	"Stowaway/crypto"
 	"bytes"
 	"encoding/binary"
 	"errors"
 	"io"
 	"net"
+
+	"Stowaway/crypto"
 )
 
 type RawMessage struct {

@@ -1,17 +1,12 @@
-/*
- * @Author: ph4ntom
- * @Date: 2021-03-11 14:21:46
- * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-11 14:28:56
- */
 package share
 
 import (
-	"Stowaway/utils"
 	"errors"
 	"io"
 	"net"
 	"time"
+
+	"Stowaway/utils"
 )
 
 func ActivePreAuth(conn net.Conn, key string) error {

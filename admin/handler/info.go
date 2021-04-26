@@ -1,9 +1,3 @@
-/*
- * @Author: ph4ntom
- * @Date: 2021-03-18 16:59:46
- * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-30 16:40:15
- */
 package handler
 
 import (

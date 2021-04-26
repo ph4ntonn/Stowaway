@@ -1,12 +1,13 @@
 package share
 
 import (
-	"Stowaway/utils"
 	"encoding/binary"
 	"errors"
 	"io"
 	"net"
 	"strconv"
+
+	"Stowaway/utils"
 )
 
 type Proxy struct {

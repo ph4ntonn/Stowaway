@@ -1,13 +1,14 @@
 package handler
 
 import (
+	"errors"
+	"net"
+	"time"
+
 	"Stowaway/agent/manager"
 	"Stowaway/global"
 	"Stowaway/protocol"
 	"Stowaway/share"
-	"errors"
-	"net"
-	"time"
 )
 
 type Connect struct {

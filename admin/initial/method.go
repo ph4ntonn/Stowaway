@@ -1,19 +1,14 @@
-/*
- * @Author: ph4ntom
- * @Date: 2021-03-08 18:03:48
- * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-26 16:50:20
- */
 package initial
 
 import (
+	"net"
+	"os"
+
 	"Stowaway/admin/printer"
 	"Stowaway/admin/topology"
 	"Stowaway/protocol"
 	"Stowaway/share"
 	"Stowaway/utils"
-	"net"
-	"os"
 )
 
 func dispatchUUID(conn net.Conn, secret string) string {
@@ -41,11 +36,6 @@ func dispatchUUID(conn net.Conn, secret string) string {
 	return uuid
 }
 
-/**
- * @description: Connect to node actively
- * @param {*Options} userOptions
- * @return {*}
- */
 func NormalActive(userOptions *Options, topo *topology.Topology, proxy *share.Proxy) net.Conn {
 
 	var sMessage, rMessage protocol.Message

@@ -1,10 +1,3 @@
-/*
- * @Author: ph4ntom
- * @Date: 2021-03-09 18:29:02
- * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-20 16:00:34
- */
-
 package utils
 
 import (
@@ -21,15 +14,13 @@ import (
 	"github.com/gofrs/uuid"
 )
 
-// GenerateNodeID 生成一个nodeid
 func GenerateUUID() string {
 	u2, _ := uuid.NewV4()
 	uu := strings.Replace(u2.String(), "-", "", -1)
-	uuid := uu[11:21] //取10位，尽量减少包头长度
+	uuid := uu[11:21]
 	return uuid
 }
 
-// GetStringMd5 生成md5值
 func GetStringMd5(s string) string {
 	md5 := md5.New()
 	md5.Write([]byte(s))
@@ -37,7 +28,6 @@ func GetStringMd5(s string) string {
 	return md5Str
 }
 
-// StringSliceReverse 倒置[]string
 func StringSliceReverse(src []string) {
 	if src == nil {
 		return
@@ -52,7 +42,6 @@ func StringSliceReverse(src []string) {
 	}
 }
 
-// StrUint32 string转换至uint32
 func Str2Int(str string) (int, error) {
 	num, err := strconv.ParseInt(str, 10, 32)
 	return int(uint32(num)), err
@@ -63,7 +52,6 @@ func Int2Str(num int) string {
 	return b
 }
 
-// CheckSystem 检查所在的操作系统
 func CheckSystem() (sysType uint32) {
 	var os = runtime.GOOS
 	switch os {
@@ -77,7 +65,6 @@ func CheckSystem() (sysType uint32) {
 	return
 }
 
-// GetInfoViaSystem 获得系统信息
 func GetSystemInfo() (string, string) {
 	var os = runtime.GOOS
 	switch os {
@@ -104,7 +91,6 @@ func GetSystemInfo() (string, string) {
 	}
 }
 
-// CheckIPPort检查输入ip+port是否合法
 func CheckIPPort(info string) (normalAddr string, reuseAddr string, err error) {
 	var (
 		readyIP   string
@@ -135,7 +121,6 @@ func CheckIPPort(info string) (normalAddr string, reuseAddr string, err error) {
 	return
 }
 
-// CheckIfIP4 检查是否是ipv4地址
 func CheckIfIP4(ip string) bool {
 	for i := 0; i < len(ip); i++ {
 		switch ip[i] {

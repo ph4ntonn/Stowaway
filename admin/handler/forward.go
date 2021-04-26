@@ -1,17 +1,12 @@
-/*
- * @Author: ph4ntom
- * @Date: 2021-04-02 13:22:25
- * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-03 16:01:31
- */
 package handler
 
 import (
+	"fmt"
+	"net"
+
 	"Stowaway/admin/manager"
 	"Stowaway/global"
 	"Stowaway/protocol"
-	"fmt"
-	"net"
 )
 
 type Forward struct {

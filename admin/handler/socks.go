@@ -1,19 +1,14 @@
-/*
- * @Author: ph4ntom
- * @Date: 2021-03-19 18:40:13
- * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-03 13:28:55
- */
 package handler
 
 import (
+	"errors"
+	"fmt"
+	"net"
+
 	"Stowaway/admin/manager"
 	"Stowaway/admin/topology"
 	"Stowaway/global"
 	"Stowaway/protocol"
-	"errors"
-	"fmt"
-	"net"
 )
 
 type Socks struct {

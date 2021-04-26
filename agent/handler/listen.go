@@ -1,22 +1,17 @@
-/*
- * @Author: ph4ntom
- * @Date: 2021-03-18 18:33:57
- * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-18 18:55:47
- */
 package handler
 
 import (
+	"fmt"
+	"io"
+	"net"
+	"time"
+
 	"Stowaway/agent/initial"
 	"Stowaway/agent/manager"
 	"Stowaway/global"
 	"Stowaway/protocol"
 	"Stowaway/share"
 	"Stowaway/utils"
-	"fmt"
-	"io"
-	"net"
-	"time"
 
 	reuseport "github.com/libp2p/go-reuseport"
 )

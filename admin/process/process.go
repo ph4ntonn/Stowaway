@@ -1,12 +1,8 @@
-/*
- * @Author: ph4ntom
- * @Date: 2021-03-16 16:10:23
- * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-04 11:45:55
- */
 package process
 
 import (
+	"os"
+
 	"Stowaway/admin/cli"
 	"Stowaway/admin/handler"
 	"Stowaway/admin/manager"
@@ -15,7 +11,6 @@ import (
 	"Stowaway/global"
 	"Stowaway/protocol"
 	"Stowaway/share"
-	"os"
 )
 
 type Admin struct {

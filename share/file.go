@@ -1,18 +1,13 @@
-/*
- * @Author: ph4ntom
- * @Date: 2021-03-22 15:30:51
- * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-26 16:55:38
- */
 package share
 
 import (
-	"Stowaway/global"
-	"Stowaway/protocol"
 	"fmt"
 	"io"
 	"os"
 	"runtime"
+
+	"Stowaway/global"
+	"Stowaway/protocol"
 )
 
 const (

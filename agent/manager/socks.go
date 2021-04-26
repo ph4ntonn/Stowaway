@@ -1,9 +1,3 @@
-/*
- * @Author: ph4ntom
- * @Date: 2021-04-02 16:53:15
- * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-02 17:33:10
- */
 package manager
 
 import (

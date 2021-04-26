@@ -1,9 +1,3 @@
-/*
- * @Author: ph4ntom
- * @Date: 2021-03-08 14:35:15
- * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-20 16:34:07
- */
 package main
 
 import (

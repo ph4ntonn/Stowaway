@@ -1,24 +1,18 @@
-/*
- * @Author: ph4ntom
- * @Date: 2021-03-08 14:35:02
- * @LastEditors: ph4ntom
- * @LastEditTime: 2021-03-30 16:16:44
- */
 package main
 
 import (
-	"Stowaway/admin/printer"
-	"Stowaway/admin/process"
-	"Stowaway/admin/topology"
-	"Stowaway/global"
-	"Stowaway/protocol"
-	"Stowaway/share"
 	"net"
 	"os"
 	"runtime"
 
 	"Stowaway/admin/cli"
 	"Stowaway/admin/initial"
+	"Stowaway/admin/printer"
+	"Stowaway/admin/process"
+	"Stowaway/admin/topology"
+	"Stowaway/global"
+	"Stowaway/protocol"
+	"Stowaway/share"
 )
 
 func init() {

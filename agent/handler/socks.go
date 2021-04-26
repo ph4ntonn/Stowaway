@@ -1,21 +1,16 @@
-/*
- * @Author: ph4ntom
- * @Date: 2021-03-23 18:57:46
- * @LastEditors: ph4ntom
- * @LastEditTime: 2021-04-02 17:17:58
- */
 package handler
 
 import (
-	"Stowaway/agent/manager"
-	"Stowaway/global"
-	"Stowaway/protocol"
-	"Stowaway/utils"
 	"fmt"
 	"net"
 	"strconv"
 	"strings"
 	"time"
+
+	"Stowaway/agent/manager"
+	"Stowaway/global"
+	"Stowaway/protocol"
+	"Stowaway/utils"
 )
 
 type Socks struct {

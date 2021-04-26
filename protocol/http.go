@@ -1,9 +1,10 @@
 package protocol
 
 import (
-	"Stowaway/utils"
 	"fmt"
 	"io"
+
+	"Stowaway/utils"
 )
 
 type HTTPMessage struct {
