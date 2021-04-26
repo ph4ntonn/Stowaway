@@ -97,6 +97,7 @@ func (agent *Agent) handleDataFromUpstream() {
 		header, message, err := protocol.DestructMessage(rMessage)
 		if err != nil {
 			upstreamOffline(agent.mgr, agent.options)
+			// Update rMessage
 			rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 			go agent.sendMyInfo()
 			continue
@@ -228,7 +229,7 @@ func (agent *Agent) handleDataFromDownstream(conn net.Conn, uuid string) {
 
 func changeRoute(header *protocol.Header) string {
 	route := header.Route
-	//找到下一个节点id号
+	// find next uuid
 	routes := strings.Split(route, ":")
 	if len(routes) == 1 {
 		header.Route = ""

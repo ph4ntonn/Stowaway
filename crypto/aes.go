@@ -7,11 +7,6 @@ import (
 	"errors"
 )
 
-/**
- * @description: Padding key to 32 bytes
- * @param {[]byte} key
- * @return {*}
- */
 func KeyPadding(key []byte) ([]byte, error) {
 	// if no key,just return
 	if key == nil {
@@ -27,12 +22,6 @@ func KeyPadding(key []byte) ([]byte, error) {
 	return append(key, padText...), nil
 }
 
-/**
- * @description: Decrypt data
- * @param {*} cryptedData
- * @param {[]byte} key
- * @return {*}
- */
 func AESDecrypt(cryptedData, key []byte) []byte {
 	if key == nil {
 		return cryptedData
@@ -47,23 +36,12 @@ func AESDecrypt(cryptedData, key []byte) []byte {
 	return origData
 }
 
-/**
- * @description: Unpadding data -- follow PKCS7 rules
- * @param {[]byte} origData
- * @return {*}
- */
 func PKCS7UnPadding(origData []byte) []byte {
 	length := len(origData)
 	unpadding := int(origData[length-1])
 	return origData[:length-unpadding]
 }
 
-/**
- * @description: Encrypt clear data
- * @param {*} origData
- * @param {[]byte} key
- * @return {*}
- */
 func AESEncrypt(origData, key []byte) []byte {
 	if key == nil {
 		return origData
@@ -77,12 +55,6 @@ func AESEncrypt(origData, key []byte) []byte {
 	return crypted
 }
 
-/**
- * @description: Padding data -- follow PKCS7 rules
- * @param {[]byte} origData
- * @param {int} blockSize
- * @return {*}
- */
 func PKCS7Padding(origData []byte, blockSize int) []byte {
 	padding := blockSize - len(origData)%blockSize
 	padText := bytes.Repeat([]byte{byte(padding)}, padding)

@@ -20,18 +20,8 @@ type RawMessage struct {
 	DataBuffer   []byte
 }
 
-/**
- * @description: Tcp raw meesage do not need special header
- * @param {*}
- * @return {*}
- */
 func (message *RawMessage) ConstructHeader() {}
 
-/**
- * @description: Construct our own raw tcp data
- * @param {*}
- * @return {*}
- */
 func (message *RawMessage) ConstructData(header *Header, mess interface{}, isPass bool) {
 	var headerBuffer, dataBuffer bytes.Buffer
 	// First, construct own header
@@ -713,25 +703,10 @@ func (message *RawMessage) ConstructData(header *Header, mess interface{}, isPas
 	message.HeaderBuffer = headerBuffer.Bytes()
 }
 
-/**
- * @description: Tcp raw meesage do not need special suffix
- * @param {*}
- * @return {*}
- */
 func (message *RawMessage) ConstructSuffix() {}
 
-/**
- * @description: Tcp raw meesage do not need to deconstruct special header
- * @param {*}
- * @return {*}
- */
 func (message *RawMessage) DeconstructHeader() {}
 
-/**
- * @description: Deconstruct our own raw tcp data
- * @param {*}
- * @return {*}
- */
 func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 	var (
 		header         = new(Header)
@@ -1103,18 +1078,8 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 	return header, nil, errors.New("Unknown error!")
 }
 
-/**
- * @description: Tcp raw meesage do not need to deconstruct special suffix
- * @param {*}
- * @return {*}
- */
 func (message *RawMessage) DeconstructSuffix() {}
 
-/**
- * @description: Send message to peer node
- * @param {*}
- * @return {*}
- */
 func (message *RawMessage) SendMessage() {
 	finalBuffer := append(message.HeaderBuffer, message.DataBuffer...)
 	message.Conn.Write(finalBuffer)

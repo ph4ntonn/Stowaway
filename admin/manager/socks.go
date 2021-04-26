@@ -141,11 +141,6 @@ func (manager *socksManager) run() {
 	}
 }
 
-/**
- * @description: register a new socks;If manager.socksMap[task.UUIDNum] not exist(!ok),register a new one,otherwise return false
- * @param {*SocksTask} task
- * @return {*}
- */
 func (manager *socksManager) newSocks(task *SocksTask) {
 	if _, ok := manager.socksMap[task.UUID]; !ok {
 		manager.socksMap[task.UUID] = new(socks)
@@ -160,11 +155,6 @@ func (manager *socksManager) newSocks(task *SocksTask) {
 	}
 }
 
-/**
- * @description: add a new TCP conn;If manager.socksMap[task.UUIDNum] exist(ok),register a new conn,otherwise return false
- * @param {*SocksTask} task
- * @return {*}
- */
 func (manager *socksManager) addSocksTCPSocket(task *SocksTask) {
 	if _, ok := manager.socksMap[task.UUID]; ok {
 		manager.socksMap[task.UUID].socksStatusMap[task.Seq] = new(socksStatus)
@@ -177,11 +167,6 @@ func (manager *socksManager) addSocksTCPSocket(task *SocksTask) {
 	}
 }
 
-/**
- * @description: receive a valid socks seq num
- * @param {*SocksTask} task
- * @return {*}
- */
 func (manager *socksManager) getSocksSeq(task *SocksTask) {
 	// Use seqmap to record the UUIDNum <-> Seq relationship to make search quicker
 	manager.socksSeqMap[manager.socksSeq] = task.UUID
@@ -189,11 +174,6 @@ func (manager *socksManager) getSocksSeq(task *SocksTask) {
 	manager.socksSeq++
 }
 
-/**
- * @description: get a TCP corresponding datachan;If manager.socksMap[task.UUIDNum] exist(ok),return the corresponding datachan,otherwise return false
- * @param {*SocksTask} task
- * @return {*}
- */
 func (manager *socksManager) getTCPDataChan(task *SocksTask) {
 	if _, ok := manager.socksMap[task.UUID]; ok {
 		manager.ResultChan <- &socksResult{
@@ -205,11 +185,6 @@ func (manager *socksManager) getTCPDataChan(task *SocksTask) {
 	}
 }
 
-/**
- * @description: get a UDP corresponding datachan;If manager.socksMap[task.UUIDNum] exist(ok),return the corresponding datachan,otherwise return false
- * @param {*SocksTask} task
- * @return {*}
- */
 func (manager *socksManager) getUDPDataChan(task *SocksTask) {
 	if _, ok := manager.socksMap[task.UUID]; ok {
 		if _, ok := manager.socksMap[task.UUID].socksStatusMap[task.Seq]; ok {
@@ -225,11 +200,6 @@ func (manager *socksManager) getUDPDataChan(task *SocksTask) {
 	}
 }
 
-/**
- * @description: get a TCP corresponding datachan without requiring uuid;If manager.socksSeqMap[task.Seq] exist(ok),return the corresponding datachan,otherwise return false
- * @param {*SocksTask} task
- * @return {*}
- */
 func (manager *socksManager) getTCPDataChanWithoutUUID(task *SocksTask) {
 	if _, ok := manager.socksSeqMap[task.Seq]; !ok {
 		manager.ResultChan <- &socksResult{OK: false}
@@ -248,11 +218,6 @@ func (manager *socksManager) getTCPDataChanWithoutUUID(task *SocksTask) {
 	}
 }
 
-/**
- * @description: get a UDP corresponding datachan without requiring uuid;If manager.socksSeqMap[task.Seq] exist(ok),return the corresponding datachan,otherwise return false
- * @param {*SocksTask} task
- * @return {*}
- */
 func (manager *socksManager) getUDPDataChanWithoutUUID(task *SocksTask) {
 	if _, ok := manager.socksSeqMap[task.Seq]; !ok {
 		manager.ResultChan <- &socksResult{OK: false}

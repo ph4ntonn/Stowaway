@@ -79,24 +79,12 @@ type Message interface {
 	SendMessage()
 }
 
-/**
- * @description:
- * @param {Message} message
- * @param {Header} header
- * @param {interface{}} mess
- * @return {*}
- */
 func ConstructMessage(message Message, header *Header, mess interface{}, isPass bool) {
 	message.ConstructData(header, mess, isPass)
 	message.ConstructHeader()
 	message.ConstructSuffix()
 }
 
-/**
- * @description: See function name
- * @param {Message} message
- * @return {*}
- */
 func DestructMessage(message Message) (*Header, interface{}, error) {
 	message.DeconstructHeader()
 	header, mess, err := message.DeconstructData()
@@ -416,11 +404,6 @@ type Offline struct {
 	OK uint16
 }
 
-/**
- * @description: The struct containing  essential components to use "PrepareAndDecideWhichSProtoToUpper" or "PrepareAndDecideWhichRProtoFromUpper"
- * @param {*}
- * @return {*}
- */
 type MessageComponent struct {
 	UUID   string
 	Conn   net.Conn
@@ -441,11 +424,6 @@ func DecideType(upstream, downstream string) {
 	}
 }
 
-/**
- * @description: Decide which transmission protocol you want to use for sending message,Never cross use the same "Message" !!!
- * @param {net.Conn} conn
- * @return {*}
- */
 func PrepareAndDecideWhichSProtoToUpper(conn net.Conn, secret string, uuid string) Message {
 	switch Upstream {
 	case "raw":
@@ -486,11 +464,6 @@ func PrepareAndDecideWhichSProtoToLower(conn net.Conn, secret string, uuid strin
 	return nil
 }
 
-/**
- * @description: Decide which transmission protocol you want to use for receving message,Never cross use the same "Message" !!!
- * @param {net.Conn} conn
- * @return {*}
- */
 func PrepareAndDecideWhichRProtoFromUpper(conn net.Conn, secret string, uuid string) Message {
 	switch Upstream {
 	case "raw":
