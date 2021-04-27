@@ -170,9 +170,9 @@ agent间也一样
 
 假设agent-1正在```127.0.0.1:10000```端口上等待子节点的连接，并且设置了```--down http```
 
-- agent-2:  ```./stowaway_agent -c 127.0.0.1:10000 --up http```
+那么agent-2也必须设置```--up```为http，否则会导致网络出错
 
-上面这种情况，agent-2也必须设置```--up```为http，否则会导致网络出错
+- agent-2:  ```./stowaway_agent -c 127.0.0.1:10000 --up http```
 
 #### --reconnect
 
@@ -238,7 +238,7 @@ agent之间也与上面情况一致
 
   - agent端： ```./stowaway_agent --report 22 -l 10000 -s 123```
 
-    在agent启动后，请使用script目录下的reuse.py
+    在agent启动后，请使用```script```目录下的```reuse.py```
 
     先设置SECRET的值(SECRET的值就是在启动各个节点时所设置的通信密钥),
 
