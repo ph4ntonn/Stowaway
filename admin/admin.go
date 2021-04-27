@@ -31,7 +31,7 @@ func main() {
 	topo := topology.NewTopology()
 	go topo.Run()
 
-	printer.Warning("[*] Waiting for new connection...\n")
+	printer.Warning("[*] Waiting for new connection...\r\n")
 	var conn net.Conn
 	switch options.Mode {
 	case initial.NORMAL_ACTIVE:

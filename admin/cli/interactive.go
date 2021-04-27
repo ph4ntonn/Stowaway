@@ -61,8 +61,8 @@ func (console *Console) Run() {
 func (console *Console) mainPanel() {
 	var (
 		isGoingOn    bool
-		leftCommand  []rune
-		rightCommand []rune
+		leftCommand  string
+		rightCommand string
 	)
 	// start history
 	history := NewHistory()
@@ -72,8 +72,6 @@ func (console *Console) mainPanel() {
 	go helper.Run()
 
 	keysEvents, _ := keyboard.GetKeys(10)
-
-	defer keyboard.Close()
 
 	// Tested on:
 	// Macos Catalina iterm2/original terminal
@@ -96,21 +94,29 @@ func (console *Console) mainPanel() {
 				fmt.Print(console.status)
 
 				if len(leftCommand) >= 1 {
-					leftCommand = leftCommand[:len(leftCommand)-1]
+					leftCommand = string([]rune(leftCommand)[:len([]rune(leftCommand))-1])
 				}
 
-				fmt.Print(string(leftCommand) + string(rightCommand))
+				fmt.Print(leftCommand + rightCommand)
 
-				notSingleNum := (len(string(rightCommand)) - len(rightCommand)) / 2 // count non-english characters‘ num
-				singleNum := len(rightCommand) - notSingleNum                       // count English characters
+				notSingleNum := (len(rightCommand) - len([]rune(rightCommand))) / 2 // count non-english characters‘ num
+				singleNum := len([]rune(rightCommand)) - notSingleNum               // count English characters
 				// every non-english character need two '\b'(Actually,i don't know why,i just tested a lot and find this stupid solution(on Mac,linux). So if u know,plz tell me,thx :) )
 				fmt.Print(string(bytes.Repeat([]byte("\b"), notSingleNum*2+singleNum)))
 			} else {
-				console.getCommand <- string(event.Key)
+				if len(leftCommand) >= 1 {
+					delete := string([]rune(leftCommand)[len([]rune(leftCommand))-1])
+					leftCommand = string([]rune(leftCommand)[:len([]rune(leftCommand))-1])
+					if len(delete) != 1 {
+						fmt.Print("\b\b  \b\b")
+					} else {
+						fmt.Print("\b \b")
+					}
+				}
 			}
 		} else if event.Key == keyboard.KeyEnter {
 			if !console.shellMode && !console.sshMode {
-				command := string(leftCommand) + string(rightCommand)
+				command := leftCommand + rightCommand
 				// if command is not "",send it to history
 				if command != "" {
 					task := &HistoryTask{
@@ -124,14 +130,17 @@ func (console *Console) mainPanel() {
 				// set searching->false
 				isGoingOn = false
 				// set both left/right command -> []rune{},new start!
-				leftCommand = []rune{}
-				rightCommand = []rune{}
+				leftCommand = ""
+				rightCommand = ""
 				// avoid scenario that console.status is printed before it's changed
 				<-console.ready
 				fmt.Print("\r\n")
 				fmt.Print(console.status)
 			} else {
-				console.getCommand <- string(event.Key)
+				fmt.Print("\r\n")
+				leftCommand = leftCommand + "\n"
+				console.getCommand <- leftCommand
+				leftCommand = ""
 			}
 		} else if event.Key == keyboard.KeyArrowUp {
 			if !console.shellMode && !console.sshMode {
@@ -154,8 +163,8 @@ func (console *Console) mainPanel() {
 				result := <-history.ResultChan
 				fmt.Print(result)
 				// set rightcommand -> []rune{}
-				leftCommand = []rune(result)
-				rightCommand = []rune{}
+				leftCommand = result
+				rightCommand = ""
 			}
 		} else if event.Key == keyboard.KeyArrowDown {
 			if !console.shellMode && !console.sshMode {
@@ -171,12 +180,12 @@ func (console *Console) mainPanel() {
 					result := <-history.ResultChan
 
 					fmt.Print(result)
-					leftCommand = []rune(result)
+					leftCommand = result
 				} else {
 					// not started,then just erase user's input and output nothing
-					leftCommand = []rune{}
+					leftCommand = ""
 				}
-				rightCommand = []rune{}
+				rightCommand = ""
 			}
 		} else if event.Key == keyboard.KeyArrowLeft {
 			if !console.shellMode && !console.sshMode {
@@ -184,14 +193,14 @@ func (console *Console) mainPanel() {
 				fmt.Print(console.status)
 				// concat left command's last character with right command
 				if len(leftCommand) >= 1 {
-					rightCommand = []rune(string(leftCommand[len(leftCommand)-1:]) + string(rightCommand))
+					rightCommand = leftCommand[len(leftCommand)-1:] + rightCommand
 					leftCommand = leftCommand[:len(leftCommand)-1]
 				}
 				// print command
-				fmt.Print(string(leftCommand) + string(rightCommand))
+				fmt.Print(leftCommand + rightCommand)
 				// print \b
-				notSingleNum := (len(string(rightCommand)) - len(rightCommand)) / 2 // count non-english characters‘ num
-				singleNum := len(rightCommand) - notSingleNum
+				notSingleNum := (len(rightCommand) - len([]rune(rightCommand))) / 2 // count non-english characters‘ num
+				singleNum := len([]rune(rightCommand)) - notSingleNum
 				fmt.Print(string(bytes.Repeat([]byte("\b"), notSingleNum*2+singleNum)))
 			}
 		} else if event.Key == keyboard.KeyArrowRight {
@@ -200,33 +209,28 @@ func (console *Console) mainPanel() {
 				fmt.Print(console.status)
 				// concat right command's first character with left command
 				if len(rightCommand) > 1 {
-					leftCommand = []rune(string(leftCommand) + string(rightCommand[:1]))
+					leftCommand = leftCommand + rightCommand[:1]
 					rightCommand = rightCommand[1:]
 				} else if len(rightCommand) == 1 {
-					leftCommand = []rune(string(leftCommand) + string(rightCommand[:1]))
-					rightCommand = []rune{}
+					leftCommand = leftCommand + rightCommand[:1]
+					rightCommand = ""
 				}
 
-				fmt.Print(string(leftCommand) + string(rightCommand))
+				fmt.Print(leftCommand + rightCommand)
 
-				notSingleNum := (len(string(rightCommand)) - len(rightCommand)) / 2
-				singleNum := len(rightCommand) - notSingleNum
+				notSingleNum := (len(rightCommand) - len([]rune(rightCommand))) / 2
+				singleNum := len([]rune(rightCommand)) - notSingleNum
 				fmt.Print(string(bytes.Repeat([]byte("\b"), notSingleNum*2+singleNum)))
 			}
 		} else if event.Key == keyboard.KeyTab {
-			if console.shellMode || console.sshMode {
-				console.getCommand <- string(event.Key)
-				continue
-			}
-
-			if len(rightCommand) != 0 {
+			if len(rightCommand) != 0 || console.shellMode || console.sshMode {
 				continue
 			}
 
 			// Tell helper the scenario
 			task := &HelperTask{
 				IsNodeMode: console.nodeMode,
-				Uncomplete: string(leftCommand),
+				Uncomplete: leftCommand,
 			}
 			helper.TaskChan <- task
 			compelete := <-helper.ResultChan
@@ -235,7 +239,7 @@ func (console *Console) mainPanel() {
 				fmt.Print("\r\033[K")
 				fmt.Print(console.status)
 				fmt.Print(compelete[0])
-				leftCommand = []rune(compelete[0])
+				leftCommand = compelete[0]
 			} else if len(compelete) > 1 {
 				// if multiple matches,then mimic linux's style
 				fmt.Print("\r\n")
@@ -244,10 +248,11 @@ func (console *Console) mainPanel() {
 				}
 				fmt.Print("\r\n")
 				fmt.Print(console.status)
-				fmt.Print(string(leftCommand))
+				fmt.Print(leftCommand)
 			}
 		} else if event.Key == keyboard.KeyCtrlC {
-			// Ctrl+C? Exit
+			// Ctrl+C?
+			keyboard.Close()
 			printer.Warning("\r\n[*] BYE!\r\n")
 			break
 		} else {
@@ -256,18 +261,24 @@ func (console *Console) mainPanel() {
 				fmt.Print(console.status)
 				// save every single input
 				if event.Key == keyboard.KeySpace {
-					leftCommand = []rune(string(leftCommand) + " ")
+					leftCommand = leftCommand + " "
 				} else {
-					leftCommand = []rune(string(leftCommand) + string(event.Rune))
+					leftCommand = leftCommand + string(event.Rune)
 				}
 				// print command && keep cursor at right position
-				fmt.Print(string(leftCommand) + string(rightCommand))
+				fmt.Print(leftCommand + rightCommand)
 
-				notSingleNum := (len(string(rightCommand)) - len(rightCommand)) / 2
-				singleNum := len(rightCommand) - notSingleNum
+				notSingleNum := (len(rightCommand) - len([]rune(rightCommand))) / 2
+				singleNum := len([]rune(rightCommand)) - notSingleNum
 				fmt.Print(string(bytes.Repeat([]byte("\b"), notSingleNum*2+singleNum)))
 			} else {
-				console.getCommand <- string(event.Rune)
+				if event.Key == keyboard.KeySpace {
+					fmt.Print(" ")
+					leftCommand = leftCommand + " "
+				} else {
+					fmt.Print(string(event.Rune))
+					leftCommand = leftCommand + string(event.Rune)
+				}
 			}
 		}
 	}
@@ -299,7 +310,7 @@ func (console *Console) handleMainPanelCommand() {
 				console.status = "(admin) >> "
 				console.nodeMode = false
 			} else {
-				printer.Fail("\n[*] Node %s doesn't exist!", fCommand[1])
+				printer.Fail("\r\n[*] Node %s doesn't exist!", fCommand[1])
 			}
 
 			console.ready <- true
@@ -345,10 +356,10 @@ func (console *Console) handleMainPanelCommand() {
 			if console.expectParams(fCommand, 1, MAIN, 0) {
 				break
 			}
-			printer.Warning("\n[*] BYE!")
+			printer.Warning("\r\n[*] BYE!")
 			os.Exit(0)
 		default:
-			printer.Fail("\n[*] Unknown Command!\n")
+			printer.Fail("\r\n[*] Unknown Command!\r\n")
 			ShowMainHelp()
 			console.ready <- true
 		}
@@ -394,13 +405,12 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				break
 			}
 
+			printer.Warning("\r\n[*] Waiting for response.....")
+			printer.Warning("\r\n[*] MENTION!UNDER SHELL MODE ARROW UP/DOWN/LEFT/RIGHT && TAB ARE ALL ABANDONED!\r\n")
+
 			handler.LetShellStart(route, uuid)
 
-			printer.Warning("\r\n[*] Waiting for response.....")
-			printer.Warning("\r\n[*] MENTION!UNDER SHELL MODE, ARROW UP/DOWN/LEFT/RIGHT ARE ALL ABANDONED!")
-
 			if <-console.mgr.ConsoleManager.OK {
-				printer.Success("\r\n[*] Shell is started successfully!\r\n")
 				console.status = ""
 				console.shellMode = true
 				console.handleShellPanelCommand(route, uuid)
@@ -417,9 +427,9 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 
 			listen := handler.NewListen()
 
-			printer.Warning("\r\n[*] MENTION! If you choose IPTables Reuse or SOReuse,you MUST CONFIRM that the node was initially started in the corresponding way!")
+			printer.Warning("\r\n[*] BE AWARE! If you choose IPTables Reuse or SOReuse,you MUST CONFIRM that the node you're controlling was started in the corresponding way!")
 			printer.Warning("\r\n[*] When you choose IPTables Reuse or SOReuse, the node will use the initial config(when node started) to reuse port!")
-			console.status = "[*] Please choose the mode(1.Normal passive / 2.IPTables Reuse / 3.SOReuse): "
+			console.status = "[*] Please choose the mode(1.Normal passive/2.IPTables Reuse/3.SOReuse): "
 			console.ready <- true
 
 			option := console.pretreatInput()
@@ -472,7 +482,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 
 			ssh := handler.NewSSH(fCommand[1])
 
-			console.status = "[*] Please choose the auth method(1.username&&password / 2.certificate): "
+			console.status = "[*] Please choose the auth method(1.username/password 2.certificate): "
 			console.ready <- true
 
 			firstChoice := console.pretreatInput()
@@ -504,6 +514,8 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				ssh.CertificatePath = console.pretreatInput()
 			}
 
+			printer.Warning("\r\n[*] Waiting for response.....")
+
 			err := ssh.LetSSH(route, uuid)
 			if err != nil {
 				printer.Fail("\r\n[*] Error: %s", err.Error())
@@ -512,10 +524,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				break
 			}
 
-			printer.Warning("\r\n[*] Waiting for response.....")
-
 			if <-console.mgr.ConsoleManager.OK {
-				printer.Success("\r\n[*] Connect to target host via ssh successfully!")
 				console.status = ""
 				console.sshMode = true
 				console.handleSSHPanelCommand(route, uuid)
@@ -533,7 +542,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 
 			sshTunnel := handler.NewSSHTunnel(fCommand[2], fCommand[1])
 
-			console.status = "[*] Please choose the auth method(1.username&&password / 2.certificate): "
+			console.status = "[*] Please choose the auth method(1.username/password 2.certificate): "
 			console.ready <- true
 
 			firstChoice := console.pretreatInput()
@@ -593,7 +602,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			}
 
 			printer.Warning("\r\n[*] Trying to listen on 0.0.0.0:%s......", fCommand[1])
-			printer.Warning("\r\n[*] Waiting for response......")
+			printer.Warning("\r\n[*] Waiting for agent's response......")
 
 			err := socks.LetSocks(console.mgr, route, uuid)
 
@@ -631,7 +640,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			}
 
 			printer.Warning("\r\n[*] Trying to listen on 0.0.0.0:%s......", fCommand[1])
-			printer.Warning("\r\n[*] Waiting for response......")
+			printer.Warning("\r\n[*] Waiting for agent's response......")
 
 			forward := handler.NewForward(fCommand[1], fCommand[2])
 
@@ -680,7 +689,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			}
 
 			printer.Warning("\r\n[*] Trying to ask node to listen on 0.0.0.0:%s......", fCommand[1])
-			printer.Warning("\r\n[*] Waiting for response......")
+			printer.Warning("\r\n[*] Waiting for agent's response......")
 
 			backward := handler.NewBackward(fCommand[2], fCommand[1])
 			// node is okay
@@ -787,7 +796,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			}
 			return
 		default:
-			printer.Fail("\n[*] Unknown Command!\n")
+			printer.Fail("\r\n[*] Unknown Command!\r\n")
 			ShowNodeHelp()
 			console.ready <- true
 		}
@@ -855,7 +864,7 @@ func (console *Console) expectParams(params []string, numbers interface{}, mode 
 	case int:
 		num := numbers.(int)
 		if len(params) != num {
-			printer.Fail("\n[*] Format error!\n")
+			printer.Fail("\r\n[*] Format error!\r\n")
 			if mode == MAIN {
 				ShowMainHelp()
 			} else {
@@ -874,7 +883,7 @@ func (console *Console) expectParams(params []string, numbers interface{}, mode 
 		}
 
 		if !flag {
-			printer.Fail("\n[*] Format error!\n")
+			printer.Fail("\r\n[*] Format error!\r\n")
 			if mode == MAIN {
 				ShowMainHelp()
 			} else {
@@ -891,7 +900,7 @@ func (console *Console) expectParams(params []string, numbers interface{}, mode 
 		if needToBeInt != 0 {
 			_, err := utils.Str2Int(params[seq])
 			if err != nil {
-				printer.Fail("\n[*] Format error!\n")
+				printer.Fail("\r\n[*] Format error!\r\n")
 				if mode == MAIN {
 					ShowMainHelp()
 				} else {
@@ -914,7 +923,7 @@ func (console *Console) expectParams(params []string, numbers interface{}, mode 
 		}
 
 		if err != nil {
-			printer.Fail("\n[*] Format error!\n")
+			printer.Fail("\r\n[*] Format error!\r\n")
 			if mode == MAIN {
 				ShowMainHelp()
 			} else {

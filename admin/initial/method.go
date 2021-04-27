@@ -108,7 +108,7 @@ func NormalActive(userOptions *Options, topo *topology.Topology, proxy *share.Pr
 
 					<-topo.ResultChan
 
-					printer.Success("[*] Connect to node %s successfully! Node id is 0\n", conn.RemoteAddr().String())
+					printer.Success("[*] Connect to node %s successfully! Node id is 0\r\n", conn.RemoteAddr().String())
 					return conn
 				} else {
 					node := topology.NewNode(mmess.UUID, conn.RemoteAddr().String())
@@ -122,7 +122,7 @@ func NormalActive(userOptions *Options, topo *topology.Topology, proxy *share.Pr
 
 					<-topo.ResultChan
 
-					printer.Success("[*] Connect to node %s successfully! Node id is 0\n", conn.RemoteAddr().String())
+					printer.Success("[*] Connect to node %s successfully! Node id is 0\r\n", conn.RemoteAddr().String())
 					return conn
 				}
 			}
@@ -173,7 +173,7 @@ func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			printer.Fail("[*] Error occured: %s\n", err.Error())
+			printer.Fail("[*] Error occured: %s\r\n", err.Error())
 			conn.Close()
 			continue
 		}
@@ -186,7 +186,7 @@ func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 
 		if err != nil {
-			printer.Fail("[*] Fail to set connection from %s, Error: %s\n", conn.RemoteAddr().String(), err.Error())
+			printer.Fail("[*] Fail to set connection from %s, Error: %s\r\n", conn.RemoteAddr().String(), err.Error())
 			conn.Close()
 			continue
 		}
@@ -210,7 +210,7 @@ func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 
 					<-topo.ResultChan
 
-					printer.Success("[*] Connection from node %s is set up successfully! Node id is 0\n", conn.RemoteAddr().String())
+					printer.Success("[*] Connection from node %s is set up successfully! Node id is 0\r\n", conn.RemoteAddr().String())
 				} else {
 					node := topology.NewNode(mmess.UUID, conn.RemoteAddr().String())
 					task := &topology.TopoTask{
@@ -223,7 +223,7 @@ func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 
 					<-topo.ResultChan
 
-					printer.Success("[*] Connection from node %s is set up successfully! Node id is 0\n", conn.RemoteAddr().String())
+					printer.Success("[*] Connection from node %s is set up successfully! Node id is 0\r\n", conn.RemoteAddr().String())
 				}
 
 				return conn

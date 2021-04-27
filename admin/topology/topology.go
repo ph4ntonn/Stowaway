@@ -226,7 +226,7 @@ func (topology *Topology) showDetail() {
 	utils.CheckRange(nodes)
 
 	for _, uuidNum := range nodes {
-		fmt.Printf("\nNode[%d] -> IP: %s  Hostname: %s  User: %s\nMemo: %s\n",
+		fmt.Printf("\r\nNode[%d] -> IP: %s  Hostname: %s  User: %s\r\nMemo: %s\r\n",
 			uuidNum,
 			topology.nodes[uuidNum].currentIP,
 			topology.nodes[uuidNum].currentHostname,
@@ -247,9 +247,9 @@ func (topology *Topology) showTopo() {
 	utils.CheckRange(nodes)
 
 	for _, uuidNum := range nodes {
-		fmt.Printf("\nNode[%d]'s children ->\n", uuidNum)
+		fmt.Printf("\r\nNode[%d]'s children ->\r\n", uuidNum)
 		for _, child := range topology.nodes[uuidNum].childrenUUID {
-			fmt.Printf("Node[%d]\n", topology.id2IDNum(child))
+			fmt.Printf("Node[%d]\r\n", topology.id2IDNum(child))
 		}
 	}
 

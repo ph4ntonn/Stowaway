@@ -29,7 +29,7 @@ PPS: **Please read the usage method and the precautions at the end of the articl
 - TCP/HTTP can be selected for inter-node traffic
 - Multi-level socks5 traffic proxy forwarding, support UDP/TCP, IPV4/IPV6
 - Multi-hop ssh traffic proxy
-- Remote interactive shell
+- Remote shell
 - Upload/download functions
 - Port local/remote mapping
 - Port Reuse
@@ -450,7 +450,7 @@ ph4ntom
 $
 ```
 
-In this mode, the tab key will be available and the arrow keys will be forbidden
+Under this mode, the tab key and the arrow keys will be forbidden
 
 - shell: Get the shell of the current node
 
@@ -470,7 +470,7 @@ ph4ntom
 bash-3.2$
 ```
 
-In this mode, the tab key will be available and the arrow keys will be forbidden
+Under this mode, the tab key and the arrow keys will be forbidden
 
 - socks：Start the socks5 service on the current node
 

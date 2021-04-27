@@ -120,7 +120,7 @@ func (admin *Admin) handleMessFromDownstream(console *cli.Console) {
 		case protocol.NODEOFFLINE:
 			admin.mgr.ChildrenManager.ChildrenMessChan <- message
 		default:
-			printer.Fail("\n[*] Unknown Message!")
+			printer.Fail("\r\n[*] Unknown Message!")
 		}
 	}
 }

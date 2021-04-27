@@ -62,20 +62,20 @@ func ParseOptions() *Options {
 
 	if Args.Listen != "" && Args.Connect == "" && Args.Proxy == "" { // ./stowaway_admin -l <port> -s [secret]
 		Args.Mode = NORMAL_PASSIVE
-		printer.Warning("[*] Starting admin node on port %s\n", Args.Listen)
+		printer.Warning("[*] Starting admin node on port %s\r\n", Args.Listen)
 	} else if Args.Connect != "" && Args.Listen == "" && Args.Proxy == "" { // ./stowaway_admin -c <ip:port> -s [secret]
 		Args.Mode = NORMAL_ACTIVE
 		printer.Warning("[*] Trying to connect node actively")
 	} else if Args.Connect != "" && Args.Listen == "" && Args.Proxy != "" { // ./stowaway_admin -c <ip:port> -s [secret] --proxy <ip:port> --proxyu [username] --proxyp [password]
 		Args.Mode = PROXY_ACTIVE
-		printer.Warning("[*] Trying to connect node actively with proxy %s\n", Args.Proxy)
+		printer.Warning("[*] Trying to connect node actively with proxy %s\r\n", Args.Proxy)
 	} else { // Wrong format
 		flag.Usage()
 		os.Exit(1)
 	}
 
 	if err := checkOptions(Args); err != nil {
-		printer.Fail("[*] Options err: %s\n", err.Error())
+		printer.Fail("[*] Options err: %s\r\n", err.Error())
 		os.Exit(0)
 	}
 
