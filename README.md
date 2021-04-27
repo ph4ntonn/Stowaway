@@ -38,7 +38,8 @@ PPS:**请务必在使用前详细阅读使用方法及文末的注意事项**
 - 自由开关各类服务
 - 节点间相互认证
 - 节点间流量以AES-256(CBC)进行加密
-- 相较于1.0版本，文件体积减小25%
+- 相较于v1.0，文件体积减小25%
+- 支持各类平台(Linux/Mac/Windows/MIPS/ARM)
 
 ## 下载及演示
 
@@ -216,7 +217,7 @@ agent之间也与上面情况一致
 
   - -s代表通信密钥
 
-  **主要支持windows、mac环境下的复用,linux亦可，但限制较多**
+  **主要支持windows、mac环境下的复用，linux亦可，但限制较多**
   
   - admin端：```./stowaway_admin -c 192.168.0.105:80 -s 123```
   - agent端： ```./stowaway_agent  --report 80 --rehost 192.168.0.105 -s 123```
@@ -320,7 +321,7 @@ Stowaway当前支持多种方式的重连，简单概括如下
 
 admin控制台分为两个层级，第一层为主panel，包含的命令如下
 
-- help: 展示主panel的帮助信息
+- ```help```: 展示主panel的帮助信息
 
 ```
 (admin) >> help
@@ -331,7 +332,7 @@ admin控制台分为两个层级，第一层为主panel，包含的命令如下
   exit                                     		Exit
 ```
 
-- detail: 展示在线节点的详细信息
+- ```detail```: 展示在线节点的详细信息
 
 ```
 (admin) >> detail
@@ -339,7 +340,7 @@ Node[0] -> IP: 127.0.0.1:10000  Hostname: ph4ntoms-MBP.lan  User: ph4ntom
 Memo:
 ```
 
-- topo: 展示在线节点的父子关系
+- ```topo```: 展示在线节点的父子关系
 
 ```
 (admin) >> topo
@@ -349,14 +350,14 @@ Node[1]
 Node[1]'s children ->
 ```
 
-- use: 使用某个agent
+- ```use```: 使用某个agent
 
 ```
 (admin) >> use 0
 (node 0) >>
 ```
 
-- exit: 退出stowaway
+- ```exit```: 退出stowaway
 
 ```
 (admin) >> exit
@@ -365,7 +366,7 @@ Node[1]'s children ->
 
 当用户使用```use```命令选择了一个agent后，进入第二层node panel，其包含的命令如下
 
-- help: 展示node panel的帮助信息
+- ```help```: 展示node panel的帮助信息
 
 ```
 (node 0) >> help
@@ -389,7 +390,7 @@ Node[1]'s children ->
   exit                                            Back to upper panel
 ```
 
-- listen: 命令agent监听某个端口并等待子节点的连入
+- ```listen```: 命令agent监听某个端口并等待子节点的连入
 
 ```
 (node 0) >> listen
@@ -401,11 +402,11 @@ Node[1]'s children ->
 [*] Node is listening on 10001
 ```
 
-注意，listen是比较特殊的一个命令，可以看到，listen命令有三种模式
+注意，```listen```是比较特殊的一个命令，可以看到，```listen```命令有三种模式
 
-1. Normal passive: 此选项意味着agent将会以普通的方式监听在目标端口，并等待子节点连入
-2. IPTables Reuse：此选项意味着agent将会以IPTables Reuse的方式复用端口，并等待子节点连入
-3. SOReuse：此选项意味着agent将会以SOReuse的方式复用端口，并等待子节点连入
+1. ```Normal passive```: 此选项意味着agent将会以普通的方式监听在目标端口，并等待子节点连入
+2. ```IPTables Reuse```：此选项意味着agent将会以IPTables Reuse的方式复用端口，并等待子节点连入
+3. ```SOReuse```：此选项意味着agent将会以SOReuse的方式复用端口，并等待子节点连入
 
 第一个模式是最普遍使用的，若父节点以这种方式监听，那么子节点仅需要```-c 父节点ip:port```就可以加入网络
 
@@ -413,9 +414,9 @@ Node[1]'s children ->
 
 第二和第三个模式将不需要用户输入任何信息，节点将会自动使用其自身启动时的参数来复用端口，并准备接受子节点的连接
 
-另外，listen一次只能接受一个子节点的连入，若需要多个子节点连入，请执行相应次数的listen命令
+另外，```listen```一次只能接受一个子节点的连入，若需要多个子节点连入，请执行相应次数的```listen```命令
 
-- addmemo: 为当前节点添加备忘
+- ```addmemo```: 为当前节点添加备忘
 
 ```
 (node 0) >> addmemo test
@@ -426,7 +427,7 @@ Node[0] -> IP: 127.0.0.1:10000  Hostname: ph4ntoms-MBP.lan  User: ph4ntom
 Memo:  test
 ```
 
-- delmemo: 删除当前节点的备忘
+- ```delmemo```: 删除当前节点的备忘
 
 ```
 (node 0) >> delmemo
@@ -437,7 +438,7 @@ Node[0] -> IP: 127.0.0.1:10000  Hostname: ph4ntoms-MBP.lan  User: ph4ntom
 Memo:
 ```
 
-- ssh: 命令节点以ssh方式连接目标机器并打开terminal
+- ```ssh```: 命令节点以ssh方式连接目标机器
 
 ```
 (node 0) >> ssh 127.0.0.1:22
@@ -455,7 +456,7 @@ $
 
 在此模式下，tab键以及方向键将被禁止
 
-- shell: 获取当前节点的shell
+- ```shell```: 获取当前节点的shell
 
 ```
 (node 0) >> shell
@@ -475,7 +476,7 @@ bash-3.2$
 
 在此模式下，tab键以及方向键将被禁止
 
-- socks：在当前节点上启动socks5服务
+- ```socks```：在当前节点上启动socks5服务
 
 ```
 (node 0) >> socks 7777
@@ -489,7 +490,7 @@ bash-3.2$
 
 另外，若需要设置用户名密码，可将上方命令改为```socks 7777 <your username> <your password>```
 
-- stopsocks: 停止在当前节点上的socks5服务
+- ```stopsocks```: 停止在当前节点上的socks5服务
 
 ```
 (node 0) >> stopsocks
@@ -500,7 +501,7 @@ Socks Info ---> ListenAddr: 0.0.0.0:7777    Username: <null>    Password: <null>
 (node 0) >>
 ```
 
-- connect: 命令当前节点连接至另一个子节点
+- ```connect```: 命令当前节点连接至另一个子节点
 
 ```
 agent-1: ./stowaway_agent -l 10002
@@ -514,7 +515,7 @@ agent-1: ./stowaway_agent -l 10002
 (node 0) >>
 ```
 
-- sshtunnel: 命令当前节点以ssh隧道的方式连接至另一个子节点
+- ```sshtunnel```: 命令当前节点以ssh隧道的方式连接至另一个子节点
 
 ```
 agent-2: ./stowaway_agent -l 10003
@@ -533,7 +534,7 @@ agent-2: ./stowaway_agent -l 10003
 
 在严格受限的网络环境下，可以利用ssh隧道的方式来将stowaway的流量伪装为ssh流量，从而避开防火墙的限制
 
-- upload: 向当前节点上传文件
+- ```upload```: 向当前节点上传文件
 
 ```
 (node 0) >> upload test.7z test.xxx
@@ -541,7 +542,7 @@ agent-2: ./stowaway_agent -l 10003
 136.07 KiB / 136.07 KiB [-----------------------------------------------------------------------------------] 100.00% ? p/s 0s
 ```
 
-- download: 下载当前节点上的文件
+- ```download```: 下载当前节点上的文件
 
 ```
 (node 0) >> download test.xxx test.xxxx
@@ -549,7 +550,7 @@ agent-2: ./stowaway_agent -l 10003
 136.07 KiB / 136.07 KiB [-----------------------------------------------------------------------------------] 100.00% ? p/s 0s
 ```
 
-- forward: 映射admin上的端口至远程端口
+- ```forward```: 映射admin上的端口至远程端口
 
 ```
 (node 0) >> forward 9000 127.0.0.1:22
@@ -566,7 +567,7 @@ Password:
 $
 ```
 
-- stopforward: 关闭当前节点的远程映射
+- ```stopforward```: 关闭当前节点的远程映射
 
 ```
 (node 0) >> stopforward
@@ -578,7 +579,7 @@ $
 [*] Forward service has been closed successfully!
 ```
 
-- backward: 反向映射当前agent上的端口至admin的本地端口
+- ```backward```: 反向映射当前agent上的端口至admin的本地端口
 
 ```
 (node 0) >> backward 9001 22
@@ -595,7 +596,7 @@ Password:
 $
 ```
 
-- stopbackward: 关闭当前节点的反向映射
+- ```stopbackward```: 关闭当前节点的反向映射
 
 ```
 (node 0) >> stopbackward
@@ -607,7 +608,7 @@ $
 [*] Backward service has been closed successfully!
 ```
 
-- offline: 命令当前节点下线
+- ```offline```: 命令当前节点下线
 
 ```
 (node 1) >> offline
@@ -616,7 +617,7 @@ $
 (node 1) >>
 ```
 
-- exit: 退回到主panel
+- ```exit```: 退回到主panel
 
 ```
 (node 1) >> exit
@@ -625,7 +626,7 @@ $
 
 ## TODO
 
-- [ ] 增强程序的健壮性
+- [ ] 修复可能出现的bug
 
 ### 注意事项
 
@@ -633,7 +634,7 @@ $
 - admin不在线时，新节点将不允许加入
 - admin仅支持一个直接连接的agent节点，agent节点则无此限制
 - 如果用户使用windows下的admin端，请先下载[ansicon](https://github.com/adoxa/ansicon/releases)，或者在[这里]()下载，之后进入对应系统位数的文件夹，执行```ansicon.exe -i```即可，不然admin端会出现乱码的问题
-- 本程序仅支持标准的基于[RFC1928](https://www.ietf.org/rfc/rfc1928.txt)所阐述的UDP ASSOCIATE(即支持UDP代理)，请在使用socks5 udp代理时注意您所使用的程序(例如扫描器等)，包构造方式必须遵守标准的[RFC1928](https://www.ietf.org/rfc/rfc1928.txt)，并且需要自行处理丢包状况。
+- 本程序仅支持标准的基于[RFC1928](https://www.ietf.org/rfc/rfc1928.txt)所阐述的```UDP ASSOCIATE```，请在使用socks5 udp代理时注意您所使用的程序(例如扫描器等)，包构造方式必须遵守标准的[RFC1928](https://www.ietf.org/rfc/rfc1928.txt)，并且需要自行处理丢包状况。
 
 ### 致谢
 

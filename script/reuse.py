@@ -7,7 +7,7 @@ import sys
 import hashlib
 
 # eg: when start node like: ./linux_x64_agent --report 80 -l 10000 -s ph4ntom ,set SECRET = "ph4ntom"
-SECRET = "123" # set SECRET as you secret key(-s option) ,if you do not set the -s option,just leave it like SECRET = ""
+SECRET = "" # set SECRET as you secret key(-s option) ,if you do not set the -s option,just leave it like SECRET = ""
 
 # Usage:
 # python reuse.py --start --rhost 192.168.1.2 --rport 80  Start the port reuse function
