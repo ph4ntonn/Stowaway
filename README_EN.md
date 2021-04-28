@@ -233,7 +233,7 @@ These two parameters are quite special and can be only used on the agent side. F
 
   - ```-s``` represents communication key
 
-  **This method only support linux, root permission is required**
+  **This method only support linux, agent will manipulate IPTABLES automatically,root permission is required**
 
   - agent： ```./stowaway_agent --report 22 -l 10000 -s 123```
 

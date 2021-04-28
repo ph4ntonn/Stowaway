@@ -235,7 +235,7 @@ agent之间也与上面情况一致
 
   - -s代表通信密钥
 
-  **仅支持linux环境下的复用，需要root权限**
+  **仅支持linux环境下的复用，agent会自动修改IPTABLES，需要root权限**
 
   - agent端： ```./stowaway_agent --report 22 -l 10000 -s 123```
 
