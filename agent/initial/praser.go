@@ -79,7 +79,6 @@ func ParseOptions() *Options {
 		Args.Mode = PROXY_RECONNECT_ACTIVE
 		log.Printf("[*] Starting agent node actively.Connecting to %s via proxy %s.Reconnecting every %d seconds\n", Args.Connect, Args.Proxy, Args.Reconnect)
 	} else {
-		log.Println("[*] Bad options!")
 		os.Exit(1)
 	}
 

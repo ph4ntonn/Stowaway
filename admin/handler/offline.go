@@ -5,21 +5,21 @@ import (
 	"Stowaway/protocol"
 )
 
-func LetOffline(route string, uuid string) {
+func LetShutdown(route string, uuid string) {
 	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
 		Accepter:    uuid,
-		MessageType: protocol.OFFLINE,
+		MessageType: protocol.SHUTDOWN,
 		RouteLen:    uint32(len([]byte(route))),
 		Route:       route,
 	}
 
-	offlineMess := &protocol.Offline{
+	shutdownMess := &protocol.Shutdown{
 		OK: 1,
 	}
 
-	protocol.ConstructMessage(sMessage, header, offlineMess, false)
+	protocol.ConstructMessage(sMessage, header, shutdownMess, false)
 	sMessage.SendMessage()
 }

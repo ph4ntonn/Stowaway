@@ -62,7 +62,7 @@ const (
 	NODEREONLINE
 	UPSTREAMOFFLINE
 	UPSTREAMREONLINE
-	OFFLINE
+	SHUTDOWN
 )
 
 const ADMIN_UUID = "IAMADMINXD"
@@ -400,7 +400,7 @@ type UpstreamReonline struct {
 	OK uint16
 }
 
-type Offline struct {
+type Shutdown struct {
 	OK uint16
 }
 

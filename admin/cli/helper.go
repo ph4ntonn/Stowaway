@@ -57,7 +57,8 @@ func NewHelper() *Helper {
 		"stopforward",
 		"backward",
 		"stopbackward",
-		"offline",
+		"shutdown",
+		"back",
 		"exit",
 	}
 

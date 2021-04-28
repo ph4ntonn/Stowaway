@@ -329,7 +329,7 @@ admin控制台分为两个层级，第一层为主panel，包含的命令如下
   detail                                  		Display connected nodes' detail
   topo                                     		Display nodes' topology
   use        <id>                          		Select the target node you want to use
-  exit                                     		Exit
+  exit                                     		Exit Stowaway
 ```
 
 - ```detail```: 展示在线节点的详细信息
@@ -361,6 +361,7 @@ Node[1]'s children ->
 
 ```
 (admin) >> exit
+[*] Do you really want to exit stowaway?(y/n): y
 [*] BYE!
 ```
 
@@ -386,8 +387,9 @@ Node[1]'s children ->
   stopforward                                     Shut down forward services
   backward    <rport> <lport>                     Backward remote port(agent) to local port(admin)
   stopbackward                                    Shut down backward services
-  offline                                         Terminate current node
-  exit                                            Back to upper panel
+  shutdwon                                        Terminate current node
+  back                                            Back to parent panel
+  exit                                            Exit Stowaway 
 ```
 
 - ```listen```: 命令agent监听某个端口并等待子节点的连入
@@ -608,20 +610,27 @@ $
 [*] Backward service has been closed successfully!
 ```
 
-- ```offline```: 命令当前节点下线
+- ```shutdown```: 命令当前节点下线
 
 ```
-(node 1) >> offline
+(node 1) >> shutdown
 (node 1) >>
 [*] Node 1 is offline!
-(node 1) >>
 ```
 
-- ```exit```: 退回到主panel
+- ```back```: 退回到主panel
+
+```
+(node 1) >> back
+(admin) >>
+```
+
+- ```exit```: 退出stowaway
 
 ```
 (node 1) >> exit
-(admin) >>
+[*] Do you really want to exit stowaway?(y/n): y
+[*] BYE!
 ```
 
 ## TODO

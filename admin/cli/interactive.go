@@ -252,9 +252,11 @@ func (console *Console) mainPanel() {
 			}
 		} else if event.Key == keyboard.KeyCtrlC {
 			// Ctrl+C?
-			keyboard.Close()
-			printer.Warning("\r\n[*] BYE!\r\n")
-			break
+			if !console.shellMode && !console.sshMode {
+				printer.Warning("\r\n[*]Please use 'exit' to exit stowaway or use 'back' to return to parent panel")
+			} else {
+				printer.Warning("\r\n[*]Please use 'exit' to exit shell/sshmode")
+			}
 		} else {
 			if !console.shellMode && !console.sshMode {
 				fmt.Print("\r\033[K")
@@ -288,7 +290,18 @@ func (console *Console) mainPanel() {
 func (console *Console) handleMainPanelCommand() {
 	for {
 		tCommand := console.pretreatInput()
-		fCommand := strings.Split(tCommand, " ")
+
+		var fCommand []string
+		for _, command := range strings.Split(tCommand, " ") {
+			if command != "" {
+				fCommand = append(fCommand, command)
+			}
+		}
+
+		if len(fCommand) == 0 {
+			fCommand = append(fCommand, "")
+		}
+
 		switch fCommand[0] {
 		case "use":
 			if console.expectParams(fCommand, 2, MAIN, 1) {
@@ -356,8 +369,19 @@ func (console *Console) handleMainPanelCommand() {
 			if console.expectParams(fCommand, 1, MAIN, 0) {
 				break
 			}
-			printer.Warning("\r\n[*] BYE!")
-			os.Exit(0)
+
+			console.status = "[*] Do you really want to exit stowaway?(y/n): "
+			console.ready <- true
+			option := console.pretreatInput()
+
+			if option == "y" {
+				keyboard.Close()
+				printer.Warning("\r\n[*] BYE!")
+				os.Exit(0)
+			}
+
+			console.status = fmt.Sprintf("(admin) >> ")
+			console.ready <- true
 		default:
 			printer.Fail("\r\n[*] Unknown Command!\r\n")
 			ShowMainHelp()
@@ -620,16 +644,16 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			IsRunning := handler.GetSocksInfo(console.mgr, uuid)
 
 			if IsRunning {
-				console.status = "[*] Do you really want to shutdown socks?(yes/no): "
+				console.status = "[*] Do you really want to shutdown socks?(y/n): "
 				console.ready <- true
 				option := console.pretreatInput()
-				if option == "yes" {
+				if option == "y" {
 					printer.Warning("\r\n[*] Closing......")
 					handler.StopSocks(console.mgr, uuid)
 					printer.Success("\r\n[*] Socks service has been closed successfully!")
-				} else if option == "no" {
+				} else if option == "n" {
 				} else {
-					printer.Fail("\r\n[*] Please input yes/no!")
+					printer.Fail("\r\n[*] Please input y/n!")
 				}
 				console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
 			}
@@ -659,10 +683,10 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			seq, isRunning := handler.GetForwardInfo(console.mgr, uuid)
 
 			if isRunning {
-				console.status = "[*] Do you really want to shutdown forward?(yes/no): "
+				console.status = "[*] Do you really want to shutdown forward?(y/n): "
 				console.ready <- true
 				option := console.pretreatInput()
-				if option == "yes" {
+				if option == "y" {
 					console.status = "[*] Please choose one to close: "
 					console.ready <- true
 					option := console.pretreatInput()
@@ -676,9 +700,9 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 						handler.StopForward(console.mgr, uuid, choice)
 						printer.Success("\r\n[*] Forward service has been closed successfully!")
 					}
-				} else if option == "no" {
+				} else if option == "n" {
 				} else {
-					printer.Fail("\r\n[*] Please input yes/no!")
+					printer.Fail("\r\n[*] Please input y/n!")
 				}
 				console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
 			}
@@ -708,10 +732,10 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			seq, isRunning := handler.GetBackwardInfo(console.mgr, uuid)
 
 			if isRunning {
-				console.status = "[*] Do you really want to shutdown backward?(yes/no): "
+				console.status = "[*] Do you really want to shutdown backward?(y/n): "
 				console.ready <- true
 				option := console.pretreatInput()
-				if option == "yes" {
+				if option == "y" {
 					console.status = "[*] Please choose one to close: "
 					console.ready <- true
 					option := console.pretreatInput()
@@ -725,9 +749,9 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 						handler.StopBackward(console.mgr, uuid, route, choice)
 						printer.Success("\r\n[*] Backward service has been closed successfully!")
 					}
-				} else if option == "no" {
+				} else if option == "n" {
 				} else {
-					printer.Fail("\r\n[*] Please input yes/no!")
+					printer.Fail("\r\n[*] Please input y/n!")
 				}
 				console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
 			}
@@ -771,12 +795,12 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				printer.Fail("\r\n[*] Unable to download file!")
 			}
 			console.ready <- true
-		case "offline":
+		case "shutdown":
 			if console.expectParams(fCommand, 1, NODE, 0) {
 				break
 			}
 
-			handler.LetOffline(route, uuid)
+			handler.LetShutdown(route, uuid)
 			console.ready <- true
 		case "":
 			if console.expectParams(fCommand, 1, NODE, 0) {
@@ -790,11 +814,28 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 
 			ShowNodeHelp()
 			console.ready <- true
-		case "exit":
+		case "back":
 			if console.expectParams(fCommand, 1, NODE, 0) {
 				break
 			}
 			return
+		case "exit":
+			if console.expectParams(fCommand, 1, NODE, 0) {
+				break
+			}
+
+			console.status = "[*] Do you really want to exit stowaway?(y/n): "
+			console.ready <- true
+			option := console.pretreatInput()
+
+			if option == "y" {
+				keyboard.Close()
+				printer.Warning("\r\n[*] BYE!")
+				os.Exit(0)
+			}
+
+			console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
+			console.ready <- true
 		default:
 			printer.Fail("\r\n[*] Unknown Command!\r\n")
 			ShowNodeHelp()

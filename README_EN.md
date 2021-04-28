@@ -325,7 +325,7 @@ The admin console is divided into two levels, the first level is the main panel,
   detail                                  		Display connected nodes' detail
   topo                                     		Display nodes' topology
   use        <id>                          		Select the target node you want to use
-  exit                                     		Exit
+  exit                                     		Exit Stowaway
 ```
 
 - ```detail```: Show detailed information of online nodes
@@ -357,6 +357,7 @@ Node[1]'s children ->
 
 ```
 (admin) >> exit
+[*] Do you really want to exit stowaway?(y/n): y
 [*] BYE!
 ```
 
@@ -382,8 +383,9 @@ When the user selects an agent via ```use``` command, he will enter the second l
   stopforward                                     Shut down forward services
   backward    <rport> <lport>                     Backward remote port(agent) to local port(admin)
   stopbackward                                    Shut down backward services
-  offline                                         Terminate current node
-  exit                                            Back to upper panel
+  shutdwon                                        Terminate current node
+  back                                            Back to parent panel
+  exit                                            Exit Stowaway 
 ```
 
 - ```listen```: Ask the agent to monitor on certain port and wait for the connection of the child node
@@ -604,20 +606,27 @@ $
 [*] Backward service has been closed successfully!
 ```
 
-- ```offline```: Ask the current node to go offline
+- ```shutdown```: Shutdown the current node 
 
 ```
-(node 1) >> offline
+(node 1) >> shutdown
 (node 1) >>
 [*] Node 1 is offline!
-(node 1) >>
 ```
 
-- ```exit```: Return to main panel
+- ```back```: Return to main panel
+
+```
+(node 1) >> back
+(admin) >>
+```
+
+- ```exit```: Exit Stowaway 
 
 ```
 (node 1) >> exit
-(admin) >>
+[*] Do you really want to exit stowaway?(y/n): y
+[*] BYE!
 ```
 
 ## TODO

@@ -677,8 +677,8 @@ func (message *RawMessage) ConstructData(header *Header, mess interface{}, isPas
 			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
 
 			dataBuffer.Write(OKBuf)
-		case OFFLINE:
-			mmess := mess.(*Offline)
+		case SHUTDOWN:
+			mmess := mess.(*Shutdown)
 			OKBuf := make([]byte, 2)
 			binary.BigEndian.PutUint16(OKBuf, mmess.OK)
 
@@ -1068,8 +1068,8 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 		mmess := new(UpstreamReonline)
 		mmess.OK = binary.BigEndian.Uint16(dataBuf[:2])
 		return header, mmess, nil
-	case OFFLINE:
-		mmess := new(Offline)
+	case SHUTDOWN:
+		mmess := new(Shutdown)
 		mmess.OK = binary.BigEndian.Uint16(dataBuf[:2])
 		return header, mmess, nil
 	default:

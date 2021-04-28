@@ -35,7 +35,7 @@ func ShowMainHelp() {
 	detail                                  		Display connected nodes' detail
 	topo                                     		Display nodes' topology
 	use        <id>                          		Select the target node you want to use
-	exit                                     		Exit
+	exit                                     		Exit Stowaway
   `)
 }
 
@@ -58,7 +58,8 @@ func ShowNodeHelp() {
 	stopforward                                     Shut down forward services
 	backward    <rport> <lport>                     Backward remote port(agent) to local port(admin)
 	stopbackward                                    Shut down backward services
-	offline                                         Terminate current node
-	exit                                            Back to upper panel
+	shutdown                                        Terminate current node
+	back                                            Back to parent panel
+	exit                                            Exit Stowaway
   `)
 }

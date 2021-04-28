@@ -166,7 +166,7 @@ func (agent *Agent) handleDataFromUpstream() {
 				fallthrough
 			case protocol.UPSTREAMREONLINE:
 				agent.mgr.OfflineManager.OfflineMessChan <- message
-			case protocol.OFFLINE:
+			case protocol.SHUTDOWN:
 				os.Exit(0)
 			default:
 				log.Println("[*] Unknown Message!")
