@@ -1,4 +1,4 @@
-// +build !windows
+// +build windows
 
 package cli
 
@@ -17,7 +17,7 @@ import (
 	"Stowaway/share"
 	"Stowaway/utils"
 
-	"github.com/nsf/termbox-go"
+	"github.com/eiannone/keyboard"
 )
 
 const (
@@ -73,6 +73,8 @@ func (console *Console) mainPanel() {
 	helper := NewHelper()
 	go helper.Run()
 
+	keysEvents, _ := keyboard.GetKeys(10)
+
 	// Tested on:
 	// Macos Catalina iterm2/original terminal
 	// Ubuntu desktop 16.04/18.04
@@ -82,14 +84,14 @@ func (console *Console) mainPanel() {
 	// May have problems when the console working on some terminal since I'm using escape sequence,so if ur checking code after face this situation,let me know if possible
 	fmt.Print(console.status)
 	for {
-		event := termbox.PollEvent()
+		event := <-keysEvents
 		if event.Err != nil {
 			continue
 		}
 
 		// under shell&&ssh mode,we cannot just erase the whole line and reprint,so there are two different ways to handle input
 		// BTW,all arrow stuff under shell&&ssh mode will be abandoned
-		if event.Key == termbox.KeyBackspace || event.Key == termbox.KeyBackspace2 {
+		if event.Key == keyboard.KeyBackspace2 || event.Key == keyboard.KeyBackspace {
 			if !console.shellMode && !console.sshMode {
 				fmt.Print("\r\033[K")
 				fmt.Print(console.status)
@@ -120,7 +122,7 @@ func (console *Console) mainPanel() {
 				singleNum = len([]rune(rightCommand)) - notSingleNum
 				fmt.Print(string(bytes.Repeat([]byte("\b"), notSingleNum*2+singleNum)))
 			}
-		} else if event.Key == termbox.KeyEnter {
+		} else if event.Key == keyboard.KeyEnter {
 			if !console.shellMode && !console.sshMode {
 				command := leftCommand + rightCommand
 				// if command is not "",send it to history
@@ -168,7 +170,7 @@ func (console *Console) mainPanel() {
 				leftCommand = ""
 				rightCommand = ""
 			}
-		} else if event.Key == termbox.KeyArrowUp {
+		} else if event.Key == keyboard.KeyArrowUp {
 			if !console.shellMode && !console.sshMode {
 				fmt.Print("\r\033[K")
 				fmt.Print(console.status)
@@ -223,7 +225,7 @@ func (console *Console) mainPanel() {
 				leftCommand = command
 				rightCommand = ""
 			}
-		} else if event.Key == termbox.KeyArrowDown {
+		} else if event.Key == keyboard.KeyArrowDown {
 			if !console.shellMode && !console.sshMode {
 				fmt.Print("\r\033[K")
 				fmt.Print(console.status)
@@ -274,7 +276,7 @@ func (console *Console) mainPanel() {
 				leftCommand = command
 				rightCommand = ""
 			}
-		} else if event.Key == termbox.KeyArrowLeft {
+		} else if event.Key == keyboard.KeyArrowLeft {
 			if !console.shellMode && !console.sshMode {
 				fmt.Print("\r\033[K")
 				fmt.Print(console.status)
@@ -306,7 +308,7 @@ func (console *Console) mainPanel() {
 				singleNum = len([]rune(rightCommand)) - notSingleNum
 				fmt.Print(string(bytes.Repeat([]byte("\b"), notSingleNum*2+singleNum)))
 			}
-		} else if event.Key == termbox.KeyArrowRight {
+		} else if event.Key == keyboard.KeyArrowRight {
 			if !console.shellMode && !console.sshMode {
 				fmt.Print("\r\033[K")
 				fmt.Print(console.status)
@@ -344,7 +346,7 @@ func (console *Console) mainPanel() {
 				singleNum = len([]rune(rightCommand)) - notSingleNum
 				fmt.Print(string(bytes.Repeat([]byte("\b"), notSingleNum*2+singleNum)))
 			}
-		} else if event.Key == termbox.KeyTab {
+		} else if event.Key == keyboard.KeyTab {
 			if len(rightCommand) != 0 || console.shellMode || console.sshMode {
 				continue
 			}
@@ -372,7 +374,7 @@ func (console *Console) mainPanel() {
 				fmt.Print(console.status)
 				fmt.Print(leftCommand)
 			}
-		} else if event.Key == termbox.KeyCtrlC {
+		} else if event.Key == keyboard.KeyCtrlC {
 			// Ctrl+C?
 			if !console.shellMode && !console.sshMode {
 				printer.Warning("\r\n[*]Please use 'exit' to exit stowaway or use 'back' to return to parent panel")
@@ -384,10 +386,10 @@ func (console *Console) mainPanel() {
 				fmt.Print("\r\033[K")
 				fmt.Print(console.status)
 				// save every single input
-				if event.Key == termbox.KeySpace {
+				if event.Key == keyboard.KeySpace {
 					leftCommand = leftCommand + " "
 				} else {
-					leftCommand = leftCommand + string(event.Ch)
+					leftCommand = leftCommand + string(event.Rune)
 				}
 				// print command && keep cursor at right position
 				fmt.Print(leftCommand + rightCommand)
@@ -401,10 +403,10 @@ func (console *Console) mainPanel() {
 				fmt.Print(string(bytes.Repeat([]byte("\b"), notSingleNum*2+singleNum)))
 				fmt.Print("\033[K")
 
-				if event.Key == termbox.KeySpace {
+				if event.Key == keyboard.KeySpace {
 					leftCommand = leftCommand + " "
 				} else {
-					leftCommand = leftCommand + string(event.Ch)
+					leftCommand = leftCommand + string(event.Rune)
 				}
 
 				fmt.Print(leftCommand + rightCommand)
@@ -506,8 +508,8 @@ func (console *Console) handleMainPanelCommand() {
 			option := console.pretreatInput()
 
 			if option == "y" {
+				keyboard.Close()
 				printer.Warning("\r\n[*] BYE!")
-				termbox.Close()
 				os.Exit(0)
 			}
 
@@ -959,8 +961,8 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			option := console.pretreatInput()
 
 			if option == "y" {
+				keyboard.Close()
 				printer.Warning("\r\n[*] BYE!")
-				termbox.Close()
 				os.Exit(0)
 			}
 

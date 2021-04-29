@@ -1,4 +1,4 @@
-// +build !windows
+// +build windows
 
 package initial
 
@@ -9,8 +9,6 @@ import (
 	"os"
 
 	"Stowaway/admin/printer"
-
-	"github.com/nsf/termbox-go"
 )
 
 const (
@@ -75,13 +73,11 @@ func ParseOptions() *Options {
 		printer.Warning("[*] Trying to connect node actively with proxy %s\r\n", Args.Proxy)
 	} else { // Wrong format
 		flag.Usage()
-		termbox.Close()
 		os.Exit(0)
 	}
 
 	if err := checkOptions(Args); err != nil {
 		printer.Fail("[*] Options err: %s\r\n", err.Error())
-		termbox.Close()
 		os.Exit(0)
 	}
 

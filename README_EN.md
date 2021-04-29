@@ -452,7 +452,7 @@ ph4ntom
 $
 ```
 
-Under this mode, the tab key and the arrow keys will be forbidden
+Under this mode, the tab key will be forbidden
 
 - ```shell```: Get the shell of the current node
 
@@ -472,7 +472,7 @@ ph4ntom
 bash-3.2$
 ```
 
-Under this mode, the tab key and the arrow keys will be forbidden
+Under this mode, the tab key will be forbidden
 
 - ```socks```：Start the socks5 service on the current node
 

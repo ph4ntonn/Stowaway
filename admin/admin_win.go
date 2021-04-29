@@ -1,4 +1,4 @@
-// +build !windows
+// +build windows
 
 package main
 
@@ -15,8 +15,6 @@ import (
 	"Stowaway/global"
 	"Stowaway/protocol"
 	"Stowaway/share"
-
-	"github.com/nsf/termbox-go"
 )
 
 func init() {
@@ -25,8 +23,6 @@ func init() {
 
 func main() {
 	printer.InitPrinter()
-
-	termbox.Init()
 
 	options := initial.ParseOptions()
 

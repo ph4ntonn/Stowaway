@@ -1,4 +1,4 @@
-// +build !windows
+// +build windows
 
 package process
 
@@ -13,8 +13,6 @@ import (
 	"Stowaway/global"
 	"Stowaway/protocol"
 	"Stowaway/share"
-
-	"github.com/nsf/termbox-go"
 )
 
 type Admin struct {
@@ -57,7 +55,6 @@ func (admin *Admin) handleMessFromDownstream(console *cli.Console) {
 		header, message, err := protocol.DestructMessage(rMessage)
 		if err != nil {
 			printer.Fail("\r\n[*] Peer node seems offline!")
-			termbox.Close()
 			os.Exit(0)
 		}
 
