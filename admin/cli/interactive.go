@@ -54,13 +54,13 @@ func (console *Console) Init(tTopology *topology.Topology, myManager *manager.Ma
 
 func (console *Console) Run() {
 	go console.handleMainPanelCommand()
-	console.mainPanel()
+	console.start()
 }
 
 // At first,i think "interactive console? That's too fxxking easy"
 // But after i actually sit down and code this part,i changed my mind Orz
 // iTerm2 yyds(FYI,yyds means sth is the best)
-func (console *Console) mainPanel() {
+func (console *Console) start() {
 	var (
 		isGoingOn    bool
 		leftCommand  string
@@ -440,14 +440,8 @@ func (console *Console) handleMainPanelCommand() {
 			}
 
 			uuidNum, _ := utils.Str2Int(fCommand[1])
-			task := &topology.TopoTask{
-				Mode:    topology.CHECKNODE,
-				UUIDNum: uuidNum,
-			}
-			console.topology.TaskChan <- task
 
-			result := <-console.topology.ResultChan
-			if result.IsExist {
+			if console.isOnline(uuidNum) {
 				console.nodeMode = true
 				console.status = fmt.Sprintf("(node %s) >> ", fCommand[1])
 				console.handleNodePanelCommand(uuidNum)
@@ -546,9 +540,17 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 
 		switch fCommand[0] {
 		case "addmemo":
+			if !console.isOnline(uuidNum) {
+				return
+			}
+
 			handler.AddMemo(console.topology.TaskChan, fCommand[1:], uuid, route)
 			console.ready <- true
 		case "delmemo":
+			if !console.isOnline(uuidNum) {
+				return
+			}
+
 			if console.expectParams(fCommand, 1, NODE, 0) {
 				break
 			}
@@ -556,6 +558,10 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			handler.DelMemo(console.topology.TaskChan, uuid, route)
 			console.ready <- true
 		case "shell":
+			if !console.isOnline(uuidNum) {
+				return
+			}
+
 			if console.expectParams(fCommand, 1, NODE, 0) {
 				break
 			}
@@ -575,6 +581,10 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				console.ready <- true
 			}
 		case "listen":
+			if !console.isOnline(uuidNum) {
+				return
+			}
+
 			if console.expectParams(fCommand, 1, NODE, 0) {
 				break
 			}
@@ -615,6 +625,10 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 
 			console.ready <- true
 		case "connect":
+			if !console.isOnline(uuidNum) {
+				return
+			}
+
 			if console.expectParams(fCommand, 2, NODE, 0) {
 				break
 			}
@@ -630,6 +644,10 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 
 			console.ready <- true
 		case "ssh":
+			if !console.isOnline(uuidNum) {
+				return
+			}
+
 			if console.expectParams(fCommand, 2, NODE, 0) {
 				break
 			}
@@ -690,6 +708,10 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				console.ready <- true
 			}
 		case "sshtunnel":
+			if !console.isOnline(uuidNum) {
+				return
+			}
+
 			if console.expectParams(fCommand, 3, NODE, 2) {
 				break
 			}
@@ -745,6 +767,10 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
 			console.ready <- true
 		case "socks":
+			if !console.isOnline(uuidNum) {
+				return
+			}
+
 			if console.expectParams(fCommand, []int{2, 4}, NODE, 0) {
 				break
 			}
@@ -767,6 +793,10 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			}
 			console.ready <- true
 		case "stopsocks":
+			if !console.isOnline(uuidNum) {
+				return
+			}
+
 			if console.expectParams(fCommand, 1, NODE, 0) {
 				break
 			}
@@ -789,6 +819,10 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			}
 			console.ready <- true
 		case "forward":
+			if !console.isOnline(uuidNum) {
+				return
+			}
+
 			if console.expectParams(fCommand, 3, NODE, 1) {
 				break
 			}
@@ -806,6 +840,10 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			}
 			console.ready <- true
 		case "stopforward":
+			if !console.isOnline(uuidNum) {
+				return
+			}
+
 			if console.expectParams(fCommand, 1, NODE, 0) {
 				break
 			}
@@ -838,6 +876,10 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			}
 			console.ready <- true
 		case "backward":
+			if !console.isOnline(uuidNum) {
+				return
+			}
+
 			if console.expectParams(fCommand, 3, NODE, []int{1, 2}) {
 				break
 			}
@@ -855,6 +897,10 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			}
 			console.ready <- true
 		case "stopbackward":
+			if !console.isOnline(uuidNum) {
+				return
+			}
+
 			if console.expectParams(fCommand, 1, NODE, 0) {
 				break
 			}
@@ -887,6 +933,10 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			}
 			console.ready <- true
 		case "upload":
+			if !console.isOnline(uuidNum) {
+				return
+			}
+
 			if console.expectParams(fCommand, 3, NODE, 0) {
 				break
 			}
@@ -906,6 +956,10 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			}
 			console.ready <- true
 		case "download":
+			if !console.isOnline(uuidNum) {
+				return
+			}
+
 			if console.expectParams(fCommand, 3, NODE, 0) {
 				break
 			}
@@ -926,6 +980,10 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 			}
 			console.ready <- true
 		case "shutdown":
+			if !console.isOnline(uuidNum) {
+				return
+			}
+
 			if console.expectParams(fCommand, 1, NODE, 0) {
 				break
 			}
@@ -1112,4 +1170,20 @@ func (console *Console) pretreatInput() string {
 	tCommand := <-console.getCommand
 	tCommand = strings.TrimRight(tCommand, " \t\r\n")
 	return tCommand
+}
+
+func (console *Console) isOnline(uuidNum int) bool {
+	task := &topology.TopoTask{
+		Mode:    topology.CHECKNODE,
+		UUIDNum: uuidNum,
+	}
+	console.topology.TaskChan <- task
+
+	result := <-console.topology.ResultChan
+	if result.IsExist {
+		return true
+	}
+
+	printer.Fail("\r\n[*] Node %d seems offline!", uuidNum)
+	return false
 }
