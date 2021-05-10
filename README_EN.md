@@ -459,7 +459,6 @@ Under this mode, the tab key will be forbidden
 ```
 (node 0) >> shell
 [*] Waiting for response.....
-[*] MENTION!UNDER SHELL MODE, ARROW UP/DOWN/LEFT/RIGHT ARE ALL ABANDONED!
 [*] Shell is started successfully!
 
 bash: no job control in this shell
