@@ -18,5 +18,5 @@ CGO_ENABLED=0 GOOS=linux GOARCH=mipsle go build -trimpath -ldflags="-w -s" -o re
 # First, see the detail in "agent/shell.go", follow my instruction and change some codes
 # Then,compile Stowaway(Windows platform) solo by using the following two sentences and get your bonus!
 
-#CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="-w -s -H=windowsgui" -o windows_x64_agent.exe
-#CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -trimpath -ldflags="-w -s -H=windowsgui" -o windows_x86_agent.exe
+#CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="-w -s -H=windowsgui" -o release/windows_x64_agent.exe agent/agent.go 
+#CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -trimpath -ldflags="-w -s -H=windowsgui" -o release/windows_x86_agent.exe agent/agent.go 
