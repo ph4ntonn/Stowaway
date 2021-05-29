@@ -47,6 +47,8 @@ func init() {
 }
 
 func newUsage() {
+	termbox.Close()
+
 	fmt.Fprintf(os.Stderr, `
 Usages:
 	>> ./stowaway_admin -l <port> -s [secret]
@@ -74,14 +76,14 @@ func ParseOptions() *Options {
 		Args.Mode = PROXY_ACTIVE
 		printer.Warning("[*] Trying to connect node actively with proxy %s\r\n", Args.Proxy)
 	} else { // Wrong format
-		flag.Usage()
 		termbox.Close()
+		flag.Usage()
 		os.Exit(0)
 	}
 
 	if err := checkOptions(Args); err != nil {
-		printer.Fail("[*] Options err: %s\r\n", err.Error())
 		termbox.Close()
+		printer.Fail("[*] Options err: %s\r\n", err.Error())
 		os.Exit(0)
 	}
 
