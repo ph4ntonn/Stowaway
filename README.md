@@ -44,7 +44,7 @@ PPS:**请务必在使用前详细阅读使用方法及文末的注意事项**
 ## 下载及演示
 
 - 不想编译的盆油可以直接用[release](https://github.com/ph4ntonn/Stowaway/releases)下编译完成的程序.其中[Uncompressed](https://github.com/ph4ntonn/Stowaway/releases/download/v2.0/Uncompress_By_Upx.7z) 是未经压缩的程序合集，若需要更小体积的程序合集以此方便上传至服务器，请下载[Compressed](https://github.com/ph4ntonn/Stowaway/releases/download/v2.0/Compressed_By_Upx.tar)
--  演示视频：还在制作中～
+-  演示视频：[Youtube](https://www.youtube.com/watch?v=Lh5Q0RPWKMU&list=PLkbGxnHFIhA_g5XZtKzN4u-JXRq41L2g-)
 
 ## 使用方法
 

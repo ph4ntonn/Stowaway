@@ -43,7 +43,7 @@ PPS: **Please read the usage method and the precautions at the end of the articl
 
 - Check the [release](https://github.com/ph4ntonn/Stowaway/releases) to get one.And if you want the Uncompressed collection，check [Uncompressed](https://github.com/ph4ntonn/Stowaway/releases/download/v2.0/Uncompress_By_Upx.7z) or you can choose the Compressed collection [Compressed](https://github.com/ph4ntonn/Stowaway/releases/download/v2.0/Compressed_By_Upx.tar) (much more easier for u to upload agent to target server)
 
-- Demo video: Still working~
+- Demo video: [Youtube](https://www.youtube.com/watch?v=Lh5Q0RPWKMU&list=PLkbGxnHFIhA_g5XZtKzN4u-JXRq41L2g-)
 
 ## Usage
 
