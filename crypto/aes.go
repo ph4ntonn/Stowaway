@@ -9,7 +9,7 @@ import (
 
 func KeyPadding(key []byte) ([]byte, error) {
 	// if no key,just return
-	if key == nil {
+	if string(key) == "" {
 		return nil, nil
 	}
 	// if key is set,padding it
