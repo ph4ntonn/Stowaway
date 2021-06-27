@@ -66,6 +66,8 @@ func (shell *Shell) start() {
 		if runtime.GOARCH == "386" || runtime.GOARCH == "amd64" {
 			cmd = exec.Command("/bin/bash", "-i")
 		}
+		cmd.SysProcAttr = &syscall.SysProcAttr{Foreground: true}
+		signal.Ignore(syscall.SIGTTIN, syscall.SIGTTOU)
 	}
 
 	shell.stdout, err = cmd.StdoutPipe()
