@@ -66,8 +66,9 @@ func (shell *Shell) start() {
 		if runtime.GOARCH == "386" || runtime.GOARCH == "amd64" {
 			cmd = exec.Command("/bin/bash", "-i")
 		}
-		cmd.SysProcAttr = &syscall.SysProcAttr{Foreground: true}
-		signal.Ignore(syscall.SIGTTIN, syscall.SIGTTOU)
+		// If you want to start agent with "&" and you also want to use command "shell",plz recompile a brand new agent by removing "//" in the front of line 70&&71
+		// cmd.SysProcAttr = &syscall.SysProcAttr{Foreground: true}
+		// signal.Ignore(syscall.SIGTTIN, syscall.SIGTTOU)
 	}
 
 	shell.stdout, err = cmd.StdoutPipe()
