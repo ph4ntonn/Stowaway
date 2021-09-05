@@ -178,3 +178,39 @@ func GetRandomInt(max int) int {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	return r.Intn(max)
 }
+
+func ParseFileCommand(commands []string) (string, string, error) {
+	if len(commands) == 2 {
+		return commands[0], commands[1], nil
+	} else if len(commands) > 2 {
+		var count int
+		full := strings.Join(commands, " ")
+
+		for _, char := range full {
+			if char == '"' {
+				count++
+			}
+		}
+
+		print("count is ", count)
+
+		if count > 0 && count%2 == 0 {
+			var final []string
+			for _, part := range strings.Split(full, "\"") {
+				if ready := strings.Trim(part, " \t\r\n"); ready != "" {
+					final = append(final, ready)
+				}
+			}
+
+			if len(final) == 2 {
+				return final[0], final[1], nil
+			} else {
+				return "", "", errors.New("Wrong format")
+			}
+		} else {
+			return "", "", errors.New("Wrong format")
+		}
+	}
+
+	return "", "", errors.New("No enough arguments")
+}

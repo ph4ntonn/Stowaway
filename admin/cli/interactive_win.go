@@ -938,14 +938,16 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				return
 			}
 
-			if console.expectParams(fCommand, 3, NODE, 0) {
+			var err error
+
+			console.mgr.FileManager.File.FilePath, console.mgr.FileManager.File.FileName, err = utils.ParseFileCommand(fCommand[1:])
+			if err != nil {
+				printer.Fail("\r\n[*] Error: %s", err.Error())
+				console.ready <- true
 				break
 			}
 
-			console.mgr.FileManager.File.FilePath = fCommand[1]
-			console.mgr.FileManager.File.FileName = fCommand[2]
-
-			err := console.mgr.FileManager.File.SendFileStat(route, uuid, share.ADMIN)
+			err = console.mgr.FileManager.File.SendFileStat(route, uuid, share.ADMIN)
 
 			if err == nil && <-console.mgr.ConsoleManager.OK {
 				go handler.StartBar(console.mgr.FileManager.File.StatusChan, console.mgr.FileManager.File.FileSize)
@@ -961,12 +963,14 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				return
 			}
 
-			if console.expectParams(fCommand, 3, NODE, 0) {
+			var err error
+
+			console.mgr.FileManager.File.FilePath, console.mgr.FileManager.File.FileName, err = utils.ParseFileCommand(fCommand[1:])
+			if err != nil {
+				printer.Fail("\r\n[*] Error: %s", err.Error())
+				console.ready <- true
 				break
 			}
-
-			console.mgr.FileManager.File.FilePath = fCommand[1]
-			console.mgr.FileManager.File.FileName = fCommand[2]
 
 			console.mgr.FileManager.File.Ask4Download(route, uuid)
 
