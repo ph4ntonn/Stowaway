@@ -505,7 +505,7 @@ func (console *Console) handleMainPanelCommand() {
 				os.Exit(0)
 			}
 
-			console.status = fmt.Sprintf("(admin) >> ")
+			console.status = "(admin) >> "
 			console.ready <- true
 		default:
 			printer.Fail("\r\n[*] Unknown Command!\r\n")
@@ -1093,10 +1093,9 @@ func (console *Console) handleSSHPanelCommand(route string, uuid string) {
 }
 
 func (console *Console) expectParams(params []string, numbers interface{}, mode int, needToBeInt interface{}) bool {
-	switch numbers.(type) {
+	switch nums := numbers.(type) {
 	case int:
-		num := numbers.(int)
-		if len(params) != num {
+		if len(params) != nums {
 			printer.Fail("\r\n[*] Format error!\r\n")
 			if mode == MAIN {
 				ShowMainHelp()
@@ -1107,7 +1106,6 @@ func (console *Console) expectParams(params []string, numbers interface{}, mode 
 			return true
 		}
 	case []int:
-		nums := numbers.([]int)
 		var flag bool
 		for _, num := range nums {
 			if len(params) == num {
@@ -1127,11 +1125,10 @@ func (console *Console) expectParams(params []string, numbers interface{}, mode 
 		}
 	}
 
-	switch needToBeInt.(type) {
+	switch seqs := needToBeInt.(type) {
 	case int:
-		seq := needToBeInt.(int)
 		if needToBeInt != 0 {
-			_, err := utils.Str2Int(params[seq])
+			_, err := utils.Str2Int(params[seqs])
 			if err != nil {
 				printer.Fail("\r\n[*] Format error!\r\n")
 				if mode == MAIN {
@@ -1144,7 +1141,6 @@ func (console *Console) expectParams(params []string, numbers interface{}, mode 
 			}
 		}
 	case []int:
-		seqs := needToBeInt.([]int)
 		var err error
 		for _, seq := range seqs {
 			if seq != 0 {

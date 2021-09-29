@@ -1075,7 +1075,7 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 	default:
 	}
 
-	return header, nil, errors.New("Unknown error!")
+	return header, nil, errors.New("unknown error")
 }
 
 func (message *RawMessage) DeconstructSuffix() {}

@@ -133,11 +133,10 @@ func DispatchShellMess(mgr *manager.Manager) {
 	for {
 		message := <-mgr.ShellManager.ShellMessChan
 
-		switch message.(type) {
+		switch mess := message.(type) {
 		case *protocol.ShellReq:
 			go shell.start()
 		case *protocol.ShellCommand:
-			mess := message.(*protocol.ShellCommand)
 			shell.input(mess.Command)
 		}
 	}

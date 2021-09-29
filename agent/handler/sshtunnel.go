@@ -183,17 +183,15 @@ func (sshTunnel *SSHTunnel) start(mgr *manager.Manager) {
 	}
 
 	conn.Close()
-	err = errors.New("Node seems illegal!")
-	return
+	err = errors.New("node seems illegal")
 }
 
 func DispatchSSHTunnelMess(mgr *manager.Manager) {
 	for {
 		message := <-mgr.SSHTunnelManager.SSHTunnelMessChan
 
-		switch message.(type) {
+		switch mess := message.(type) {
 		case *protocol.SSHTunnelReq:
-			mess := message.(*protocol.SSHTunnelReq)
 			sshTunnel := newSSHTunnel(int(mess.Method), mess.Addr, mess.Port, mess.Username, mess.Password, mess.Certificate)
 			go sshTunnel.start(mgr)
 		}

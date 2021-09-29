@@ -78,12 +78,10 @@ func DispatchChildrenMess(mgr *manager.Manager, topo *topology.Topology) {
 	for {
 		message := <-mgr.ChildrenManager.ChildrenMessChan
 
-		switch message.(type) {
+		switch mess := message.(type) {
 		case *protocol.NodeOffline:
-			mess := message.(*protocol.NodeOffline)
 			nodeOffline(mgr, topo, mess.UUID)
 		case *protocol.NodeReonline:
-			mess := message.(*protocol.NodeReonline)
 			nodeReonline(mgr, topo, mess)
 		}
 	}

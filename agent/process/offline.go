@@ -47,8 +47,6 @@ func upstreamOffline(mgr *manager.Manager, options *initial.Options) {
 	tellAdminReonline(mgr)
 
 	broadcastReonlineMess(mgr)
-
-	return
 }
 
 func normalPassiveReconn(options *initial.Options) net.Conn {

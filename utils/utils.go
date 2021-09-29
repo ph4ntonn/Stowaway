@@ -106,12 +106,12 @@ func CheckIPPort(info string) (normalAddr string, reuseAddr string, err error) {
 		readyIP = spliltedInfo[0]
 		readyPort, err = strconv.Atoi(spliltedInfo[1])
 	} else {
-		err = errors.New("Please input either port(1~65535) or ip:port(1-65535)!")
+		err = errors.New("please input either port(1~65535) or ip:port(1-65535)")
 		return
 	}
 
 	if err != nil || readyPort < 1 || readyPort > 65535 || readyIP == "" {
-		err = errors.New("Please input either port(1~65535) or ip:port(1-65535)!")
+		err = errors.New("please input either port(1~65535) or ip:port(1-65535)")
 		return
 	}
 
@@ -205,12 +205,12 @@ func ParseFileCommand(commands []string) (string, string, error) {
 			if len(final) == 2 {
 				return final[0], final[1], nil
 			} else {
-				return "", "", errors.New("Wrong format")
+				return "", "", errors.New("wrong format")
 			}
 		} else {
-			return "", "", errors.New("Wrong format")
+			return "", "", errors.New("wrong format")
 		}
 	}
 
-	return "", "", errors.New("No enough arguments")
+	return "", "", errors.New("not enough arguments")
 }

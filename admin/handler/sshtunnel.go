@@ -80,9 +80,8 @@ func DispatchSSHTunnelMess(mgr *manager.Manager) {
 	for {
 		message := <-mgr.SSHTunnelManager.SSHTunnelMessChan
 
-		switch message.(type) {
+		switch mess := message.(type) {
 		case *protocol.SSHTunnelRes:
-			mess := message.(*protocol.SSHTunnelRes)
 			if mess.OK == 1 {
 				mgr.ConsoleManager.OK <- true
 			} else {

@@ -31,16 +31,14 @@ func DispatchShellMess(mgr *manager.Manager) {
 	for {
 		message := <-mgr.ShellManager.ShellMessChan
 
-		switch message.(type) {
+		switch mess := message.(type) {
 		case *protocol.ShellRes:
-			mess := message.(*protocol.ShellRes)
 			if mess.OK == 1 {
 				mgr.ConsoleManager.OK <- true
 			} else {
 				mgr.ConsoleManager.OK <- false
 			}
 		case *protocol.ShellResult:
-			mess := message.(*protocol.ShellResult)
 			fmt.Print(mess.Result)
 		case *protocol.ShellExit:
 			mgr.ConsoleManager.Exit <- true

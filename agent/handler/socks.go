@@ -89,20 +89,20 @@ func (socks *Socks) handleSocks(mgr *manager.Manager, dataChan chan []byte, seq 
 	}()
 
 	for {
-		if setting.isAuthed == false && setting.method == "" {
+		if !setting.isAuthed && setting.method == "" {
 			data, ok := <-dataChan
 			if !ok { //重连后原先引用失效，当chan释放后，若不捕捉，会无限循环
 				return
 			}
 			socks.checkMethod(setting, data, seq)
-		} else if setting.isAuthed == false && setting.method == "PASSWORD" {
+		} else if !setting.isAuthed && setting.method == "PASSWORD" {
 			data, ok := <-dataChan
 			if !ok {
 				return
 			}
 
 			socks.auth(setting, data, seq)
-		} else if setting.isAuthed == true && setting.tcpConnected == false && !setting.isUDP {
+		} else if setting.isAuthed && !setting.tcpConnected && !setting.isUDP {
 			data, ok := <-dataChan
 			if !ok {
 				return
@@ -110,14 +110,14 @@ func (socks *Socks) handleSocks(mgr *manager.Manager, dataChan chan []byte, seq 
 
 			socks.buildConn(mgr, setting, data, seq)
 
-			if setting.tcpConnected == false && !setting.isUDP {
+			if !setting.tcpConnected && !setting.isUDP {
 				return
 			}
-		} else if setting.isAuthed == true && setting.tcpConnected == true && !setting.isUDP { //All done!
+		} else if setting.isAuthed && setting.tcpConnected && !setting.isUDP { //All done!
 			go proxyC2STCP(setting.tcpConn, dataChan)
 			proxyS2CTCP(setting.tcpConn, seq)
 			return
-		} else if setting.isAuthed == true && setting.isUDP && setting.success {
+		} else if setting.isAuthed && setting.isUDP && setting.success {
 			go proxyC2SUDP(mgr, setting.udpListener, seq)
 			proxyS2CUDP(mgr, setting.udpListener, seq)
 			return
@@ -716,14 +716,12 @@ func DispathSocksMess(mgr *manager.Manager) {
 	for {
 		message := <-mgr.SocksManager.SocksMessChan
 
-		switch message.(type) {
+		switch mess := message.(type) {
 		case *protocol.SocksStart:
-			mess := message.(*protocol.SocksStart)
 			socks.Username = mess.Username
 			socks.Password = mess.Password
 			go socks.start(mgr)
 		case *protocol.SocksTCPData:
-			mess := message.(*protocol.SocksTCPData)
 			mgrTask := &manager.SocksTask{
 				Mode: manager.S_GETTCPDATACHAN,
 				Seq:  mess.Seq,
@@ -738,15 +736,12 @@ func DispathSocksMess(mgr *manager.Manager) {
 				go socks.handleSocks(mgr, result.DataChan, mess.Seq)
 			}
 		case *protocol.SocksTCPFin:
-			mess := message.(*protocol.SocksTCPFin)
 			mgrTask := &manager.SocksTask{
 				Mode: manager.S_CLOSETCP,
 				Seq:  mess.Seq,
 			}
 			mgr.SocksManager.TaskChan <- mgrTask
 		case *protocol.SocksUDPData:
-			mess := message.(*protocol.SocksUDPData)
-
 			mgrTask := &manager.SocksTask{
 				Mode: manager.S_GETUDPCHANS,
 				Seq:  mess.Seq,
@@ -758,8 +753,6 @@ func DispathSocksMess(mgr *manager.Manager) {
 				result.DataChan <- mess.Data
 			}
 		case *protocol.UDPAssRes:
-			mess := message.(*protocol.UDPAssRes)
-
 			mgrTask := &manager.SocksTask{
 				Mode: manager.S_GETUDPCHANS,
 				Seq:  mess.Seq,
