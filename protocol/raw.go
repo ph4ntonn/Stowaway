@@ -763,7 +763,7 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 	}
 
 	if header.Accepter == TEMP_UUID || message.UUID == ADMIN_UUID || message.UUID == header.Accepter {
-		dataBuf = crypto.AESDecrypt(dataBuf[:], message.CryptoSecret) // use dataBuf directly to save the memory
+		dataBuf = crypto.AESDecrypt(dataBuf, message.CryptoSecret) // use dataBuf directly to save the memory
 	} else {
 		return header, dataBuf, nil
 	}
