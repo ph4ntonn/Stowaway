@@ -46,7 +46,7 @@ func (backward *Backward) LetBackward(mgr *manager.Manager, route string, uuid s
 	// node can listen on assigned port?
 	if ready := <-mgr.BackwardManager.BackwardReady; !ready {
 		// can't listen
-		err := fmt.Errorf("Fail to map remote port %s to local port %s,node cannot listen on port %s", backward.RPort, backward.LPort, backward.RPort)
+		err := fmt.Errorf("fail to map remote port %s to local port %s,node cannot listen on port %s", backward.RPort, backward.LPort, backward.RPort)
 		return err
 	}
 	// node can listen,it means no backward service is running on the assigned port,so just register a brand new backward
@@ -252,9 +252,8 @@ func DispatchBackwardMess(mgr *manager.Manager, topo *topology.Topology) {
 	for {
 		message := <-mgr.BackwardManager.BackwardMessChan
 
-		switch message.(type) {
+		switch mess := message.(type) {
 		case *protocol.BackwardReady:
-			mess := message.(*protocol.BackwardReady)
 			if mess.OK == 1 {
 				mgr.BackwardManager.BackwardReady <- true
 			} else {
@@ -262,12 +261,10 @@ func DispatchBackwardMess(mgr *manager.Manager, topo *topology.Topology) {
 			}
 		case *protocol.BackwardStart:
 			// get the start message from node,so just start a backward
-			mess := message.(*protocol.BackwardStart)
 			backward := NewBackward(mess.LPort, mess.RPort)
 			go backward.start(mgr, topo, mess.UUID)
 		case *protocol.BackwardData:
 			// get node's data,just put it in the corresponding chan
-			mess := message.(*protocol.BackwardData)
 			mgrTask := &manager.BackwardTask{
 				Mode: manager.B_GETDATACHAN_WITHOUTUUID,
 				Seq:  mess.Seq,
@@ -278,14 +275,12 @@ func DispatchBackwardMess(mgr *manager.Manager, topo *topology.Topology) {
 				result.DataChan <- mess.Data
 			}
 		case *protocol.BackWardFin:
-			mess := message.(*protocol.BackWardFin)
 			mgrTask := &manager.BackwardTask{
 				Mode: manager.B_CLOSETCP,
 				Seq:  mess.Seq,
 			}
 			mgr.BackwardManager.TaskChan <- mgrTask
 		case *protocol.BackwardStopDone:
-			mess := message.(*protocol.BackwardStopDone)
 			if mess.All == 1 {
 				backwardTask := &manager.BackwardTask{
 					Mode: manager.B_CLOSESINGLEALL,

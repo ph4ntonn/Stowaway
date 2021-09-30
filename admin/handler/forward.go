@@ -48,7 +48,7 @@ func (forward *Forward) LetForward(mgr *manager.Manager, route string, uuid stri
 
 	if ready := <-mgr.ForwardManager.ForwardReady; !ready {
 		listener.Close()
-		err := fmt.Errorf("Fail to forward port %s to remote addr %s,remote addr is not responding", forward.Port, forward.Addr)
+		err := fmt.Errorf("fail to forward port %s to remote addr %s,remote addr is not responding", forward.Port, forward.Addr)
 		return err
 	}
 
@@ -242,16 +242,14 @@ func DispatchForwardMess(mgr *manager.Manager) {
 	for {
 		message := <-mgr.ForwardManager.ForwardMessChan
 
-		switch message.(type) {
+		switch mess := message.(type) {
 		case *protocol.ForwardReady:
-			mess := message.(*protocol.ForwardReady)
 			if mess.OK == 1 {
 				mgr.ForwardManager.ForwardReady <- true
 			} else {
 				mgr.ForwardManager.ForwardReady <- false
 			}
 		case *protocol.ForwardData:
-			mess := message.(*protocol.ForwardData)
 			mgrTask := &manager.ForwardTask{
 				Mode: manager.F_GETDATACHAN_WITHOUTUUID,
 				Seq:  mess.Seq,
@@ -263,7 +261,6 @@ func DispatchForwardMess(mgr *manager.Manager) {
 			}
 			mgr.ForwardManager.Done <- true
 		case *protocol.ForwardFin:
-			mess := message.(*protocol.ForwardFin)
 			mgrTask := &manager.ForwardTask{
 				Mode: manager.F_CLOSETCP,
 				Seq:  mess.Seq,

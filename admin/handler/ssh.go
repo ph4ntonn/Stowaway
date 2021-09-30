@@ -82,16 +82,14 @@ func DispatchSSHMess(mgr *manager.Manager) {
 	for {
 		message := <-mgr.SSHManager.SSHMessChan
 
-		switch message.(type) {
+		switch mess := message.(type) {
 		case *protocol.SSHRes:
-			mess := message.(*protocol.SSHRes)
 			if mess.OK == 1 {
 				mgr.ConsoleManager.OK <- true
 			} else {
 				mgr.ConsoleManager.OK <- false
 			}
 		case *protocol.SSHResult:
-			mess := message.(*protocol.SSHResult)
 			fmt.Print(mess.Result)
 		case *protocol.SSHExit:
 			mgr.ConsoleManager.Exit <- true

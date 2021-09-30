@@ -10,7 +10,7 @@ import (
 )
 
 func ActivePreAuth(conn net.Conn, key string) error {
-	var NOT_VALID = errors.New("Not valid secret,check the secret!")
+	var NOT_VALID = errors.New("invalid secret, check the secret")
 
 	defer conn.SetReadDeadline(time.Time{})
 	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
@@ -41,7 +41,7 @@ func ActivePreAuth(conn net.Conn, key string) error {
 }
 
 func PassivePreAuth(conn net.Conn, key string) error {
-	var NOT_VALID = errors.New("Not valid secret,check the secret!")
+	var NOT_VALID = errors.New("invalid secret, check the secret")
 
 	defer conn.SetReadDeadline(time.Time{})
 	conn.SetReadDeadline(time.Now().Add(10 * time.Second))

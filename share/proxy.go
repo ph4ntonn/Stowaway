@@ -27,11 +27,11 @@ func NewProxy(peerAddr, proxyAddr, username, password string) *Proxy {
 }
 
 func (proxy *Proxy) Dial() (net.Conn, error) {
-	var NOT_SUPPORT = errors.New("Unknown protocol")
-	var WRONG_AUTH = errors.New("Wrong auth method")
-	var SERVER_ERROR = errors.New("Proxy server error")
-	var TOO_LONG = errors.New("User/Pass too long(max 255)")
-	var AUTH_FAIL = errors.New("Wrong username/password")
+	var NOT_SUPPORT = errors.New("unknown protocol")
+	var WRONG_AUTH = errors.New("wrong auth method")
+	var SERVER_ERROR = errors.New("proxy server error")
+	var TOO_LONG = errors.New("user/pass too long(max 255)")
+	var AUTH_FAIL = errors.New("wrong username/password")
 
 	proxyConn, err := net.Dial("tcp", proxy.ProxyAddr)
 	if err != nil {
@@ -43,6 +43,10 @@ func (proxy *Proxy) Dial() (net.Conn, error) {
 		return proxyConn, err
 	}
 	portUint64, err := strconv.ParseUint(portS, 10, 16)
+	if err != nil {
+		return proxyConn, err
+	}
+
 	port := uint16(portUint64)
 	portB := make([]byte, 2)
 	binary.BigEndian.PutUint16(portB, port)
@@ -99,24 +103,29 @@ func (proxy *Proxy) Dial() (net.Conn, error) {
 			return proxyConn, NOT_SUPPORT
 		}
 
+		var (
+			buff []byte
+			ip   net.IP
+		)
 		isV4 := utils.CheckIfIP4(host)
 		if isV4 {
-			buff := make([]byte, 0, 10)
-			ip := net.ParseIP(host).To4()
+			buff = make([]byte, 0, 10)
+			ip = net.ParseIP(host).To4()
 			buff = append(buff, []byte{0x05, 0x01, 0x00, 0x01}...)
-			buff = append(buff, []byte(ip)...)
-			buff = append(buff, portB...)
-			proxyConn.Write(buff)
 		} else {
-			buff := make([]byte, 0, 22)
-			ip := net.ParseIP(host).To16()
+			buff = make([]byte, 0, 22)
+			ip = net.ParseIP(host).To16()
 			buff = append(buff, []byte{0x05, 0x01, 0x00, 0x04}...)
-			buff = append(buff, []byte(ip)...)
-			buff = append(buff, portB...)
 		}
+		buff = append(buff, []byte(ip)...)
+		buff = append(buff, portB...)
+		proxyConn.Write(buff)
 
 		respBuf := make([]byte, 4)
 		_, err = io.ReadFull(proxyConn, respBuf)
+		if err != nil {
+			return proxyConn, err
+		}
 		if respBuf[0] == 0x05 {
 			if respBuf[1] != 0x00 {
 				return proxyConn, SERVER_ERROR
@@ -131,6 +140,10 @@ func (proxy *Proxy) Dial() (net.Conn, error) {
 			default:
 				return proxyConn, NOT_SUPPORT
 			}
+			if err != nil {
+				return proxyConn, err
+			}
+
 			return proxyConn, nil
 		} else {
 			return proxyConn, NOT_SUPPORT

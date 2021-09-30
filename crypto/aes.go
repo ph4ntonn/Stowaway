@@ -15,7 +15,7 @@ func KeyPadding(key []byte) ([]byte, error) {
 	// if key is set,padding it
 	keyLength := float32(len(key))
 	if keyLength/8 >= 4 {
-		return nil, errors.New("Key too long! Should shorter than 32 bytes")
+		return nil, errors.New("key too long! Should be shorter than 32 bytes")
 	}
 	padding := 32 - len(key)
 	padText := bytes.Repeat([]byte{byte(0)}, padding)

@@ -69,7 +69,7 @@ func (socks *Socks) LetSocks(mgr *manager.Manager, route string, uuid string) er
 	sMessage.SendMessage()
 
 	if ready := <-mgr.SocksManager.SocksReady; !ready {
-		err := errors.New("Fail to start socks.If you just stop socks service,please wait for the cleanup done")
+		err := errors.New("fail to start socks.If you just stop socks service,please wait for the cleanup done")
 		StopSocks(mgr, uuid)
 		return err
 	}
@@ -288,7 +288,7 @@ func startUDPAss(mgr *manager.Manager, topo *topology.Topology, seq uint64) {
 		mgr.SocksManager.TaskChan <- mgrTask
 		socksResult = <-mgr.SocksManager.ResultChan
 		if !socksResult.OK {
-			err = errors.New("TCP conn seems disconnected!")
+			err = errors.New("TCP conn seems disconnected")
 			return
 		}
 
@@ -304,7 +304,7 @@ func startUDPAss(mgr *manager.Manager, topo *topology.Topology, seq uint64) {
 		protocol.ConstructMessage(sMessage, header, succMess, false)
 		sMessage.SendMessage()
 	} else {
-		err = errors.New("TCP conn seems disconnected!")
+		err = errors.New("TCP conn seems disconnected")
 		return
 	}
 }
@@ -394,16 +394,14 @@ func DispathSocksMess(mgr *manager.Manager, topo *topology.Topology) {
 	for {
 		message := <-mgr.SocksManager.SocksMessChan
 
-		switch message.(type) {
+		switch mess := message.(type) {
 		case *protocol.SocksReady:
-			mess := message.(*protocol.SocksReady)
 			if mess.OK == 1 {
 				mgr.SocksManager.SocksReady <- true
 			} else {
 				mgr.SocksManager.SocksReady <- false
 			}
 		case *protocol.SocksTCPData:
-			mess := message.(*protocol.SocksTCPData)
 			mgrTask := &manager.SocksTask{
 				Mode: manager.S_GETTCPDATACHAN_WITHOUTUUID,
 				Seq:  mess.Seq,
@@ -416,17 +414,14 @@ func DispathSocksMess(mgr *manager.Manager, topo *topology.Topology) {
 
 			mgr.SocksManager.Done <- true
 		case *protocol.SocksTCPFin:
-			mess := message.(*protocol.SocksTCPFin)
 			mgrTask := &manager.SocksTask{
 				Mode: manager.S_CLOSETCP,
 				Seq:  mess.Seq,
 			}
 			mgr.SocksManager.TaskChan <- mgrTask
 		case *protocol.UDPAssStart:
-			mess := message.(*protocol.UDPAssStart)
 			go startUDPAss(mgr, topo, mess.Seq)
 		case *protocol.SocksUDPData:
-			mess := message.(*protocol.SocksUDPData)
 			mgrTask := &manager.SocksTask{
 				Mode: manager.S_GETUDPDATACHAN_WITHOUTUUID,
 				Seq:  mess.Seq,

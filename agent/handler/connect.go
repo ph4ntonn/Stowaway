@@ -180,17 +180,15 @@ func (connect *Connect) start(mgr *manager.Manager) {
 	}
 
 	conn.Close()
-	err = errors.New("Node seems illegal!")
-	return
+	err = errors.New("node seems illegal")
 }
 
 func DispatchConnectMess(mgr *manager.Manager) {
 	for {
 		message := <-mgr.ConnectManager.ConnectMessChan
 
-		switch message.(type) {
+		switch mess := message.(type) {
 		case *protocol.ConnectStart:
-			mess := message.(*protocol.ConnectStart)
 			connect := newConnect(mess.Addr)
 			go connect.start(mgr)
 		}

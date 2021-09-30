@@ -124,16 +124,14 @@ func DispatchListenMess(mgr *manager.Manager, topo *topology.Topology) {
 	for {
 		message := <-mgr.ListenManager.ListenMessChan
 
-		switch message.(type) {
+		switch mess := message.(type) {
 		case *protocol.ListenRes:
-			mess := message.(*protocol.ListenRes)
 			if mess.OK == 1 {
 				mgr.ListenManager.ListenReady <- true
 			} else {
 				mgr.ListenManager.ListenReady <- false
 			}
 		case *protocol.ChildUUIDReq:
-			mess := message.(*protocol.ChildUUIDReq)
 			go dispatchChildUUID(mgr, topo, mess.ParentUUID, mess.IP)
 		}
 	}

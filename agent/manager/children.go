@@ -87,7 +87,7 @@ func (manager *childrenManager) getConn(task *ChildrenTask) {
 func (manager *childrenManager) getAllChildren() {
 	var children []string
 
-	for child, _ := range manager.children {
+	for child := range manager.children {
 		children = append(children, child)
 	}
 

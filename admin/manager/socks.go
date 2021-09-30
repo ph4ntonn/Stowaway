@@ -312,7 +312,7 @@ func (manager *socksManager) getSocksInfo(task *SocksTask) {
 			}
 		}
 	} else {
-		info := fmt.Sprint("\r\nSocks service isn't running!")
+		info := "\r\nSocks service isn't running!"
 		manager.ResultChan <- &socksResult{
 			OK:        false,
 			SocksInfo: info,

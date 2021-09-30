@@ -1,6 +1,9 @@
 package cli
 
-import "sort"
+import (
+	"fmt"
+	"sort"
+)
 
 type Helper struct {
 	adminList []string
@@ -182,7 +185,7 @@ func (helper *Helper) getSuffix(node *tireNode, suffix *[]string, tSuffix string
 
 	if len(node.children) != 0 {
 		for char := range node.children {
-			ttSuffix := tSuffix + string(char)
+			ttSuffix := tSuffix + fmt.Sprint(char)
 			tNode := node.children[char]
 			helper.getSuffix(tNode, suffix, ttSuffix)
 		}

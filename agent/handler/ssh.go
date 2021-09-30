@@ -182,9 +182,8 @@ func DispatchSSHMess(mgr *manager.Manager) {
 	for {
 		message := <-mgr.SSHManager.SSHMessChan
 
-		switch message.(type) {
+		switch mess := message.(type) {
 		case *protocol.SSHReq:
-			mess := message.(*protocol.SSHReq)
 			mySSH.Addr = mess.Addr
 			mySSH.Method = int(mess.Method)
 			mySSH.Username = mess.Username
@@ -192,7 +191,6 @@ func DispatchSSHMess(mgr *manager.Manager) {
 			mySSH.Certificate = mess.Certificate
 			go mySSH.start()
 		case *protocol.SSHCommand:
-			mess := message.(*protocol.SSHCommand)
 			mySSH.input(mess.Command)
 		}
 	}

@@ -428,7 +428,6 @@ func PrepareAndDecideWhichSProtoToUpper(conn net.Conn, secret string, uuid strin
 	switch Upstream {
 	case "raw":
 		tMessage := new(RawMessage)
-		tMessage = new(RawMessage)
 		tMessage.Conn = conn
 		tMessage.UUID = uuid
 		tMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
@@ -448,7 +447,6 @@ func PrepareAndDecideWhichSProtoToLower(conn net.Conn, secret string, uuid strin
 	switch Downstream {
 	case "raw":
 		tMessage := new(RawMessage)
-		tMessage = new(RawMessage)
 		tMessage.Conn = conn
 		tMessage.UUID = uuid
 		tMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
@@ -468,7 +466,6 @@ func PrepareAndDecideWhichRProtoFromUpper(conn net.Conn, secret string, uuid str
 	switch Upstream {
 	case "raw":
 		tMessage := new(RawMessage)
-		tMessage = new(RawMessage)
 		tMessage.Conn = conn
 		tMessage.UUID = uuid
 		tMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
@@ -488,7 +485,6 @@ func PrepareAndDecideWhichRProtoFromLower(conn net.Conn, secret string, uuid str
 	switch Downstream {
 	case "raw":
 		tMessage := new(RawMessage)
-		tMessage = new(RawMessage)
 		tMessage.Conn = conn
 		tMessage.UUID = uuid
 		tMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))

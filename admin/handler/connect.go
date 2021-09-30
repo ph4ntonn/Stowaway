@@ -43,9 +43,8 @@ func DispatchConnectMess(mgr *manager.Manager) {
 	for {
 		message := <-mgr.ConnectManager.ConnectMessChan
 
-		switch message.(type) {
+		switch mess := message.(type) {
 		case *protocol.ConnectDone:
-			mess := message.(*protocol.ConnectDone)
 			if mess.OK == 1 {
 				mgr.ConnectManager.ConnectReady <- true
 			} else {

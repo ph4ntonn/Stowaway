@@ -585,13 +585,11 @@ func DispatchListenMess(mgr *manager.Manager, options *initial.Options) {
 	for {
 		message := <-mgr.ListenManager.ListenMessChan
 
-		switch message.(type) {
+		switch mess := message.(type) {
 		case *protocol.ListenReq:
-			mess := message.(*protocol.ListenReq)
 			listen := newListen(int(mess.Method), mess.Addr)
 			go listen.start(mgr, options)
 		case *protocol.ChildUUIDRes:
-			mess := message.(*protocol.ChildUUIDRes)
 			mgr.ListenManager.ChildUUIDChan <- mess.UUID
 		}
 	}

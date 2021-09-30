@@ -144,12 +144,10 @@ func DispatchForwardMess(mgr *manager.Manager) {
 	for {
 		message := <-mgr.ForwardManager.ForwardMessChan
 
-		switch message.(type) {
+		switch mess := message.(type) {
 		case *protocol.ForwardTest:
-			mess := message.(*protocol.ForwardTest)
 			go testForward(mess.Addr)
 		case *protocol.ForwardStart:
-			mess := message.(*protocol.ForwardStart)
 			task := &manager.ForwardTask{
 				Mode: manager.F_NEWFORWARD,
 				Seq:  mess.Seq,
@@ -159,7 +157,6 @@ func DispatchForwardMess(mgr *manager.Manager) {
 			forward := newForward(mess.Seq, mess.Addr)
 			go forward.start(mgr)
 		case *protocol.ForwardData:
-			mess := message.(*protocol.ForwardData)
 			mgrTask := &manager.ForwardTask{
 				Mode: manager.F_GETDATACHAN,
 				Seq:  mess.Seq,
@@ -170,7 +167,6 @@ func DispatchForwardMess(mgr *manager.Manager) {
 				result.DataChan <- mess.Data
 			}
 		case *protocol.ForwardFin:
-			mess := message.(*protocol.ForwardFin)
 			mgrTask := &manager.ForwardTask{
 				Mode: manager.F_CLOSETCP,
 				Seq:  mess.Seq,

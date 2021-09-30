@@ -10,9 +10,7 @@ import (
 
 // generate new bar
 func NewBar(length int64) *pb.ProgressBar {
-	var bar *pb.ProgressBar
-
-	bar = pb.New64(int64(length))
+	bar := pb.New64(int64(length))
 	bar.SetTemplate(pb.Full)
 	bar.Set(pb.Bytes, true)
 
@@ -40,14 +38,12 @@ func DispatchFileMess(mgr *manager.Manager) {
 	for {
 		message := <-mgr.FileManager.FileMessChan
 
-		switch message.(type) {
+		switch mess := message.(type) {
 		case *protocol.FileStatReq:
-			mess := message.(*protocol.FileStatReq)
 			mgr.FileManager.File.FileSize = int64(mess.FileSize)
 			mgr.FileManager.File.SliceNum = mess.SliceNum
 			mgr.ConsoleManager.OK <- true
 		case *protocol.FileStatRes:
-			mess := message.(*protocol.FileStatRes)
 			if mess.OK == 1 {
 				mgr.ConsoleManager.OK <- true
 			} else {
@@ -57,7 +53,6 @@ func DispatchFileMess(mgr *manager.Manager) {
 		case *protocol.FileDownRes:
 			mgr.ConsoleManager.OK <- false
 		case *protocol.FileData:
-			mess := message.(*protocol.FileData)
 			mgr.FileManager.File.DataChan <- mess.Data
 		case *protocol.FileErr:
 			mgr.FileManager.File.ErrChan <- true

@@ -233,13 +233,10 @@ func DispatchBackwardMess(mgr *manager.Manager) {
 	for {
 		message := <-mgr.BackwardManager.BackwardMessChan
 
-		switch message.(type) {
+		switch mess := message.(type) {
 		case *protocol.BackwardTest:
-			mess := message.(*protocol.BackwardTest)
 			go testBackward(mgr, mess.LPort, mess.RPort)
 		case *protocol.BackwardSeq:
-			mess := message.(*protocol.BackwardSeq)
-
 			mgrTask := &manager.BackwardTask{
 				Mode:  manager.B_GETSEQCHAN,
 				RPort: mess.RPort,
@@ -270,8 +267,6 @@ func DispatchBackwardMess(mgr *manager.Manager) {
 				sMessage.SendMessage()
 			}
 		case *protocol.BackwardData:
-			mess := message.(*protocol.BackwardData)
-
 			mgrTask := &manager.BackwardTask{
 				Mode: manager.B_GETDATACHAN_WITHOUTUUID,
 				Seq:  mess.Seq,
@@ -283,14 +278,12 @@ func DispatchBackwardMess(mgr *manager.Manager) {
 				result.DataChan <- mess.Data
 			}
 		case *protocol.BackWardFin:
-			mess := message.(*protocol.BackWardFin)
 			mgrTask := &manager.BackwardTask{
 				Mode: manager.B_CLOSETCP,
 				Seq:  mess.Seq,
 			}
 			mgr.BackwardManager.TaskChan <- mgrTask
 		case *protocol.BackwardStop:
-			mess := message.(*protocol.BackwardStop)
 			if mess.All == 1 {
 				mgrTask := &manager.BackwardTask{
 					Mode: manager.B_CLOSESINGLEALL,
