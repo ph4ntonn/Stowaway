@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"fmt"
 	"sort"
 )
 
@@ -185,7 +184,7 @@ func (helper *Helper) getSuffix(node *tireNode, suffix *[]string, tSuffix string
 
 	if len(node.children) != 0 {
 		for char := range node.children {
-			ttSuffix := tSuffix + fmt.Sprint(char)
+			ttSuffix := tSuffix + string(char)
 			tNode := node.children[char]
 			helper.getSuffix(tNode, suffix, ttSuffix)
 		}
