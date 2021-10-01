@@ -4,22 +4,33 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
-	"errors"
+	"crypto/rand"
+	"io"
 )
 
-func KeyPadding(key []byte) ([]byte, error) {
+// 2021.10.1 Switch AES-CBC to AES-GCM
+// Faster(serial computing to parallel computing) and safer(avoid Padding Oracle Attack)
+
+func KeyPadding(key []byte) []byte {
 	// if no key,just return
 	if string(key) == "" {
-		return nil, nil
+		return nil
 	}
-	// if key is set,padding it
-	keyLength := float32(len(key))
-	if keyLength/8 >= 4 {
-		return nil, errors.New("key too long! Should be shorter than 32 bytes")
+	// if key is set & == 32 bytes, return it
+	keyLength := len(key)
+	if keyLength > 32 {
+		return key[:32]
 	}
-	padding := 32 - len(key)
+	// if key < 32 bytes, pad it
+	padding := 32 - keyLength
 	padText := bytes.Repeat([]byte{byte(0)}, padding)
-	return append(key, padText...), nil
+	return append(key, padText...)
+}
+
+func genNonce(nonceSize int) []byte {
+	nonce := make([]byte, nonceSize)
+	io.ReadFull(rand.Reader, nonce)
+	return nonce
 }
 
 func AESDecrypt(cryptedData, key []byte) []byte {
@@ -28,18 +39,11 @@ func AESDecrypt(cryptedData, key []byte) []byte {
 	}
 
 	block, _ := aes.NewCipher(key)
-	blockSize := block.BlockSize()
-	blockMode := cipher.NewCBCDecrypter(block, key[:blockSize])
-	origData := make([]byte, len(cryptedData))
-	blockMode.CryptBlocks(origData, cryptedData)
-	origData = PKCS7UnPadding(origData)
+	gcm, _ := cipher.NewGCM(block)
+	nonceSize := gcm.NonceSize()
+	nonce, cryptedData := cryptedData[:nonceSize], cryptedData[nonceSize:]
+	origData, _ := gcm.Open(nil, nonce, cryptedData, nil)
 	return origData
-}
-
-func PKCS7UnPadding(origData []byte) []byte {
-	length := len(origData)
-	unpadding := int(origData[length-1])
-	return origData[:length-unpadding]
 }
 
 func AESEncrypt(origData, key []byte) []byte {
@@ -48,15 +52,7 @@ func AESEncrypt(origData, key []byte) []byte {
 	}
 
 	block, _ := aes.NewCipher(key)
-	origData = PKCS7Padding(origData, block.BlockSize())
-	blockMode := cipher.NewCBCEncrypter(block, key[:block.BlockSize()])
-	crypted := make([]byte, len(origData))
-	blockMode.CryptBlocks(crypted, origData)
-	return crypted
-}
-
-func PKCS7Padding(origData []byte, blockSize int) []byte {
-	padding := blockSize - len(origData)%blockSize
-	padText := bytes.Repeat([]byte{byte(padding)}, padding)
-	return append(origData, padText...)
+	gcm, _ := cipher.NewGCM(block)
+	nonce := genNonce(gcm.NonceSize())
+	return gcm.Seal(nonce, nonce, origData, nil)
 }

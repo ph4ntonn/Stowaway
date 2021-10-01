@@ -35,7 +35,7 @@ PPS: **Please read the usage method and the precautions at the end of the articl
 - Port Reuse
 - Open/Close all the services arbitrarily
 - Authenicate each other between nodes
-- Traffic encryption with AES-256(CBC)
+- Traffic encryption with AES-256-GCM
 - Compared with v1.0, the file size is reduced by 25%
 - Multiple platforms support(Linux/Mac/Windows/MIPS/ARM)
 

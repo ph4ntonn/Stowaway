@@ -430,14 +430,14 @@ func PrepareAndDecideWhichSProtoToUpper(conn net.Conn, secret string, uuid strin
 		tMessage := new(RawMessage)
 		tMessage.Conn = conn
 		tMessage.UUID = uuid
-		tMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
+		tMessage.CryptoSecret = crypto.KeyPadding([]byte(secret))
 		return tMessage
 	case "http":
 		tMessage := new(HTTPMessage)
 		tMessage.RawMessage = new(RawMessage)
 		tMessage.RawMessage.Conn = conn
 		tMessage.RawMessage.UUID = uuid
-		tMessage.RawMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
+		tMessage.RawMessage.CryptoSecret = crypto.KeyPadding([]byte(secret))
 		return tMessage
 	}
 	return nil
@@ -449,14 +449,14 @@ func PrepareAndDecideWhichSProtoToLower(conn net.Conn, secret string, uuid strin
 		tMessage := new(RawMessage)
 		tMessage.Conn = conn
 		tMessage.UUID = uuid
-		tMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
+		tMessage.CryptoSecret = crypto.KeyPadding([]byte(secret))
 		return tMessage
 	case "http":
 		tMessage := new(HTTPMessage)
 		tMessage.RawMessage = new(RawMessage)
 		tMessage.RawMessage.Conn = conn
 		tMessage.RawMessage.UUID = uuid
-		tMessage.RawMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
+		tMessage.RawMessage.CryptoSecret = crypto.KeyPadding([]byte(secret))
 		return tMessage
 	}
 	return nil
@@ -468,14 +468,14 @@ func PrepareAndDecideWhichRProtoFromUpper(conn net.Conn, secret string, uuid str
 		tMessage := new(RawMessage)
 		tMessage.Conn = conn
 		tMessage.UUID = uuid
-		tMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
+		tMessage.CryptoSecret = crypto.KeyPadding([]byte(secret))
 		return tMessage
 	case "http":
 		tMessage := new(HTTPMessage)
 		tMessage.RawMessage = new(RawMessage)
 		tMessage.RawMessage.Conn = conn
 		tMessage.RawMessage.UUID = uuid
-		tMessage.RawMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
+		tMessage.RawMessage.CryptoSecret = crypto.KeyPadding([]byte(secret))
 		return tMessage
 	}
 	return nil
@@ -487,14 +487,14 @@ func PrepareAndDecideWhichRProtoFromLower(conn net.Conn, secret string, uuid str
 		tMessage := new(RawMessage)
 		tMessage.Conn = conn
 		tMessage.UUID = uuid
-		tMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
+		tMessage.CryptoSecret = crypto.KeyPadding([]byte(secret))
 		return tMessage
 	case "http":
 		tMessage := new(HTTPMessage)
 		tMessage.RawMessage = new(RawMessage)
 		tMessage.RawMessage.Conn = conn
 		tMessage.RawMessage.UUID = uuid
-		tMessage.RawMessage.CryptoSecret, _ = crypto.KeyPadding([]byte(secret))
+		tMessage.RawMessage.CryptoSecret = crypto.KeyPadding([]byte(secret))
 		return tMessage
 	}
 	return nil
