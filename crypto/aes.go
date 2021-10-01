@@ -8,16 +8,20 @@ import (
 	"io"
 )
 
+// 2021.10.1 Switch AES-CBC to AES-GCM
+// Faster(serial computing to parallel computing) and safer(avoid Padding Oracle Attack)
+
 func KeyPadding(key []byte) []byte {
 	// if no key,just return
 	if string(key) == "" {
 		return nil
 	}
-	// if key is set, pad it
+	// if key is set & == 32 bytes, return it
 	keyLength := len(key)
 	if keyLength > 32 {
 		return key[:32]
 	}
+	// if key < 32 bytes, pad it
 	padding := 32 - keyLength
 	padText := bytes.Repeat([]byte{byte(0)}, padding)
 	return append(key, padText...)
