@@ -694,7 +694,8 @@ func (message *RawMessage) ConstructData(header *Header, mess interface{}, isPas
 	message.DataBuffer = dataBuffer.Bytes()
 
 	if !isPass {
-		message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
+		//message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
+		message.DataBuffer = crypto.GzipCompress(message.DataBuffer)
 	}
 	// Calculate the whole data's length
 	dataLenBuf := make([]byte, 8)
@@ -763,7 +764,8 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 	}
 
 	if header.Accepter == TEMP_UUID || message.UUID == ADMIN_UUID || message.UUID == header.Accepter {
-		dataBuf = crypto.AESDecrypt(dataBuf, message.CryptoSecret) // use dataBuf directly to save the memory
+		//dataBuf = crypto.AESDecrypt(dataBuf, message.CryptoSecret) // use dataBuf directly to save the memory
+		dataBuf = crypto.GzipDecompress(dataBuf)
 	} else {
 		return header, dataBuf, nil
 	}

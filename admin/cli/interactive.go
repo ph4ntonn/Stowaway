@@ -3,6 +3,7 @@
 package cli
 
 import (
+	"Stowaway/protocol"
 	"bytes"
 	"fmt"
 	"os"
@@ -13,7 +14,6 @@ import (
 	"Stowaway/admin/printer"
 	"Stowaway/admin/topology"
 	"Stowaway/global"
-	"Stowaway/protocol"
 	"Stowaway/share"
 	"Stowaway/utils"
 

@@ -1,6 +1,10 @@
 package initial
 
 import (
+	"Stowaway/pkg/transport"
+	net2 "Stowaway/pkg/util/net"
+	"Stowaway/protocol"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"log"
@@ -12,7 +16,6 @@ import (
 	"syscall"
 	"time"
 
-	"Stowaway/protocol"
 	"Stowaway/share"
 	"Stowaway/utils"
 
@@ -70,7 +73,21 @@ func NormalActive(userOptions *Options, proxy *share.Proxy) (net.Conn, string) {
 		)
 
 		if proxy == nil {
-			conn, err = net.Dial("tcp", userOptions.Connect)
+			var tlsConfig *tls.Config
+			// 封装tls
+			if Args.TlsEnable {
+				// TODO: Args.Connect不准确, 这里用domain来解决这个问题，正好也能解决sni问题。
+				tlsConfig, err = transport.NewClientTLSConfig("", "", "", userOptions.Domain)
+				if err != nil {
+					log.Fatalf("[*] Error occured: %s", err.Error())
+					//os.Exit(0)
+				}
+			}
+
+			// TODO: userOptions.Upstream只适用于第一个节点，后续得调整。
+			// 实际上确实只能用Upstream
+			conn, err = net2.ConnectServerByProxyWithTLS("", userOptions.Upstream, userOptions.Connect, tlsConfig, userOptions.Domain)
+			//conn, err = net.Dial("tcp", userOptions.Connect)
 		} else {
 			conn, err = proxy.Dial()
 		}
@@ -79,7 +96,17 @@ func NormalActive(userOptions *Options, proxy *share.Proxy) (net.Conn, string) {
 			log.Fatalf("[*] Error occured: %s", err.Error())
 		}
 
-		if err := share.ActivePreAuth(conn, userOptions.Secret); err != nil {
+		//// 封装tls
+		//if proxy == nil && Args.TlsEnable {
+		//	// TODO:  Args.Connect不准确
+		//	tlsConfig, err := transport.NewClientTLSConfig("", "", "", Args.Connect)
+		//	if err != nil {
+		//		log.Fatalf("[*] Error occured: %s", err.Error())
+		//	}
+		//	conn = net2.WrapTLSClientConn(conn, tlsConfig)
+		//}
+
+		if err := share.ActivePreAuth(conn, userOptions.Token); err != nil {
 			log.Fatalf("[*] Error occured: %s", err.Error())
 		}
 
@@ -147,11 +174,27 @@ func NormalPassive(userOptions *Options) (net.Conn, string) {
 		conn, err := listener.Accept()
 		if err != nil {
 			log.Printf("[*] Error occured: %s\n", err.Error())
-			conn.Close()
+			net2.CloseConnSafe(conn)
 			continue
 		}
-
-		if err := share.PassivePreAuth(conn, userOptions.Secret); err != nil {
+		// tls
+		var tlsConfig *tls.Config
+		if Args.TlsEnable {
+			tlsConfig, err = transport.NewServerTLSConfig("", "", "")
+			if err != nil {
+				log.Printf("[*] Error occured: %s\n", err.Error())
+				conn.Close()
+				continue
+			}
+			//conn = net2.WrapTLSServerConn(conn, tlsConfig)
+		}
+		conn, err = net2.ListenerWithTLS(conn, userOptions.Upstream, tlsConfig)
+		if err != nil {
+			net2.CloseConnSafe(conn)
+			log.Printf("[*] Error occured: %s\r\n", err.Error())
+			continue
+		}
+		if err := share.PassivePreAuth(conn, userOptions.Token); err != nil {
 			log.Fatalf("[*] Error occured: %s", err.Error())
 		}
 
@@ -279,7 +322,25 @@ func SoReusePassive(options *Options) (net.Conn, string) {
 		conn, err := listener.Accept()
 
 		if err != nil {
-			conn.Close()
+			net2.CloseConnSafe(conn)
+			continue
+		}
+		// tls
+		var tlsConfig *tls.Config
+		if Args.TlsEnable {
+			tlsConfig, err = transport.NewServerTLSConfig("", "", "")
+			if err != nil {
+				log.Printf("[*] Error occured: %s\n", err.Error())
+				conn.Close()
+				continue
+			}
+			//conn = net2.WrapTLSServerConn(conn, tlsConfig)
+		}
+		// 用于下级节点连接，所以用Downstream
+		conn, err = net2.ListenerWithTLS(conn, options.Downstream, tlsConfig)
+		if err != nil {
+			net2.CloseConnSafe(conn)
+			log.Printf("[*] Error occured: %s\r\n", err.Error())
 			continue
 		}
 

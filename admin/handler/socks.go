@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"Stowaway/protocol"
 	"errors"
 	"fmt"
 	"net"
@@ -8,7 +9,6 @@ import (
 	"Stowaway/admin/manager"
 	"Stowaway/admin/topology"
 	"Stowaway/global"
-	"Stowaway/protocol"
 )
 
 type Socks struct {
@@ -116,6 +116,7 @@ func (socks *Socks) handleSocksListener(mgr *manager.Manager, listener net.Liste
 }
 
 func (socks *Socks) handleSocks(mgr *manager.Manager, conn net.Conn, route string, uuid string, seq uint64) {
+	defer conn.Close()
 	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
@@ -136,7 +137,6 @@ func (socks *Socks) handleSocks(mgr *manager.Manager, conn net.Conn, route strin
 	if !result.OK {
 		return
 	}
-
 	tcpDataChan := result.TCPDataChan
 
 	// handle data from dispatcher
@@ -190,7 +190,7 @@ func (socks *Socks) handleSocks(mgr *manager.Manager, conn net.Conn, route strin
 	// avoid browser to close the conn but sends nothing
 	length, err := conn.Read(buffer)
 	if err != nil {
-		conn.Close() // close conn immediately
+		//conn.Close() // close conn immediately
 		return
 	}
 
@@ -205,14 +205,14 @@ func (socks *Socks) handleSocks(mgr *manager.Manager, conn net.Conn, route strin
 
 	// browser sends sth, so handling conn normally and setting sendSth->true
 	for {
-		length, err := conn.Read(buffer)
+		length, err = conn.Read(buffer)
 		if err != nil {
 			sendSth = true
-			conn.Close() // close conn immediately,in case of sth is sended after TCPFin
+			//conn.Close() // close conn immediately,in case of sth is sended after TCPFin
 			return
 		}
 
-		socksDataMess := &protocol.SocksTCPData{
+		socksDataMess = &protocol.SocksTCPData{
 			Seq:     seq,
 			DataLen: uint64(length),
 			Data:    buffer[:length],
@@ -413,12 +413,12 @@ func DispathSocksMess(mgr *manager.Manager, topo *topology.Topology) {
 			}
 
 			mgr.SocksManager.Done <- true
-		case *protocol.SocksTCPFin:
-			mgrTask := &manager.SocksTask{
-				Mode: manager.S_CLOSETCP,
-				Seq:  mess.Seq,
-			}
-			mgr.SocksManager.TaskChan <- mgrTask
+		/*case *protocol.SocksTCPFin:
+		mgrTask := &manager.SocksTask{
+			Mode: manager.S_CLOSETCP,
+			Seq:  mess.Seq,
+		}
+		mgr.SocksManager.TaskChan <- mgrTask*/
 		case *protocol.UDPAssStart:
 			go startUDPAss(mgr, topo, mess.Seq)
 		case *protocol.SocksUDPData:

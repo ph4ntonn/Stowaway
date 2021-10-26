@@ -28,6 +28,7 @@ type Options struct {
 	ProxyU     string
 	ProxyP     string
 	Downstream string
+	TlsEnable  bool
 }
 
 var Args *Options
@@ -41,7 +42,8 @@ func init() {
 	flag.StringVar(&Args.Proxy, "proxy", "", "The socks5 server ip:port you want to use")
 	flag.StringVar(&Args.ProxyU, "proxyu", "", "socks5 username")
 	flag.StringVar(&Args.ProxyP, "proxyp", "", "socks5 password")
-	flag.StringVar(&Args.Downstream, "down", "raw", "")
+	flag.StringVar(&Args.Downstream, "down", "tcp", "tcp")
+	flag.BoolVar(&Args.TlsEnable, "tls", false, "")
 
 	flag.Usage = newUsage
 }

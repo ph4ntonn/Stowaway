@@ -1,23 +1,28 @@
 package handler
 
 import (
+	"Stowaway/agent/initial"
+	"Stowaway/pkg/util"
+	"Stowaway/protocol"
 	"io"
 	"os/exec"
 	"runtime"
 
 	"Stowaway/agent/manager"
 	"Stowaway/global"
-	"Stowaway/protocol"
 	"Stowaway/utils"
 )
 
 type Shell struct {
-	stdin  io.Writer
-	stdout io.Reader
+	stdin   io.Writer
+	stdout  io.Reader
+	charset string
 }
 
-func newShell() *Shell {
-	return new(Shell)
+func newShell(charset string) *Shell {
+	s := new(Shell)
+	s.charset = charset
+	return s
 }
 
 func (shell *Shell) start() {
@@ -113,9 +118,16 @@ func (shell *Shell) start() {
 			return
 		}
 
+		// 执行结果和系统编码一致，需要转换成UTF-8，这样发送给admin时才是正常的。
+		result := string(buffer[:count])
+		if shell.charset == "GBK" {
+			result = util.ConvertGBK2Str(result)
+			count = len(result)
+		}
+
 		shellResultMess := &protocol.ShellResult{
 			ResultLen: uint64(count),
-			Result:    string(buffer[:count]),
+			Result:    result,
 		}
 
 		protocol.ConstructMessage(sMessage, shellResultHeader, shellResultMess, false)
@@ -124,11 +136,15 @@ func (shell *Shell) start() {
 }
 
 func (shell *Shell) input(command string) {
+	// 这里将admin输入的UNICODE字符串转换成系统编码，这样执行才不会报错
+	if shell.charset == "GBK" {
+		command = util.ConvertStr2GBK(command)
+	}
 	shell.stdin.Write([]byte(command))
 }
 
-func DispatchShellMess(mgr *manager.Manager) {
-	shell := newShell()
+func DispatchShellMess(mgr *manager.Manager, options *initial.Options) {
+	shell := newShell(options.Charset)
 
 	for {
 		message := <-mgr.ShellManager.ShellMessChan

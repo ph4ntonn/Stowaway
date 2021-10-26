@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 
 	"Stowaway/admin/printer"
 )
@@ -26,6 +27,9 @@ type Options struct {
 	ProxyU     string
 	ProxyP     string
 	Downstream string
+	TlsEnable  bool
+	Domain     string
+	Token      string
 }
 
 var Args *Options
@@ -39,7 +43,10 @@ func init() {
 	flag.StringVar(&Args.Proxy, "proxy", "", "The socks5 server ip:port you want to use")
 	flag.StringVar(&Args.ProxyU, "proxyu", "", "socks5 username")
 	flag.StringVar(&Args.ProxyP, "proxyp", "", "socks5 password")
-	flag.StringVar(&Args.Downstream, "down", "raw", "")
+	flag.StringVar(&Args.Downstream, "down", "tcp", "")
+	flag.BoolVar(&Args.TlsEnable, "tls", false, "")
+	flag.StringVar(&Args.Domain, "domain", "", "")
+	flag.StringVar(&Args.Token, "token", "just fun", "")
 
 	flag.Usage = newUsage
 }
@@ -75,7 +82,11 @@ func ParseOptions() *Options {
 		flag.Usage()
 		os.Exit(0)
 	}
-
+	// domain
+	if Args.Domain == "" && Args.Connect != "" {
+		addrSlice := strings.SplitN(Args.Connect, ":", 2)
+		Args.Domain = addrSlice[0]
+	}
 	if err := checkOptions(Args); err != nil {
 		printer.Fail("[*] Options err: %s\r\n", err.Error())
 		os.Exit(0)

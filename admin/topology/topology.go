@@ -1,11 +1,11 @@
 package topology
 
 import (
+	"Stowaway/protocol"
 	"fmt"
 	"strings"
 
 	"Stowaway/admin/printer"
-	"Stowaway/protocol"
 	"Stowaway/utils"
 )
 
@@ -45,6 +45,7 @@ type node struct {
 	currentHostname string
 	currentIP       string
 	memo            string
+	charset         string
 }
 
 type TopoTask struct {
@@ -82,6 +83,7 @@ func NewNode(uuid string, ip string) *node {
 	node := new(node)
 	node.uuid = uuid
 	node.currentIP = ip
+	node.charset = "UTF-8"
 	return node
 }
 

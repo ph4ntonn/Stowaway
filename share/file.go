@@ -1,13 +1,13 @@
 package share
 
 import (
+	"Stowaway/protocol"
 	"fmt"
 	"io"
 	"os"
 	"runtime"
 
 	"Stowaway/global"
-	"Stowaway/protocol"
 )
 
 const (

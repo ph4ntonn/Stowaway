@@ -1,12 +1,13 @@
 package handler
 
 import (
+	net2 "Stowaway/pkg/util/net"
+	"Stowaway/protocol"
 	"fmt"
 	"net"
 
 	"Stowaway/agent/manager"
 	"Stowaway/global"
-	"Stowaway/protocol"
 )
 
 type Backward struct {
@@ -38,6 +39,7 @@ func (backward *Backward) start(mgr *manager.Manager) {
 	for {
 		conn, err := backward.Listener.Accept()
 		if err != nil {
+			net2.CloseConnSafe(conn)
 			backward.Listener.Close() // todo:closebackward消息处理
 			return
 		}
@@ -84,6 +86,7 @@ func (backward *Backward) start(mgr *manager.Manager) {
 }
 
 func (backward *Backward) handleBackward(mgr *manager.Manager, conn net.Conn, seq uint64) {
+	defer conn.Close()
 	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	defer func() {
@@ -113,7 +116,7 @@ func (backward *Backward) handleBackward(mgr *manager.Manager, conn net.Conn, se
 	result := <-mgr.BackwardManager.ResultChan
 	mgr.BackwardManager.SeqReady <- true
 	if !result.OK {
-		conn.Close()
+		//conn.Close()
 		return
 	}
 
@@ -154,7 +157,7 @@ func (backward *Backward) handleBackward(mgr *manager.Manager, conn net.Conn, se
 	for {
 		length, err := conn.Read(buffer)
 		if err != nil {
-			conn.Close()
+			//conn.Close()
 			return
 		}
 
@@ -277,12 +280,12 @@ func DispatchBackwardMess(mgr *manager.Manager) {
 			if result.OK {
 				result.DataChan <- mess.Data
 			}
-		case *protocol.BackWardFin:
-			mgrTask := &manager.BackwardTask{
-				Mode: manager.B_CLOSETCP,
-				Seq:  mess.Seq,
-			}
-			mgr.BackwardManager.TaskChan <- mgrTask
+			/*		case *protocol.BackWardFin:
+					mgrTask := &manager.BackwardTask{
+						Mode: manager.B_CLOSETCP,
+						Seq:  mess.Seq,
+					}
+					mgr.BackwardManager.TaskChan <- mgrTask*/
 		case *protocol.BackwardStop:
 			if mess.All == 1 {
 				mgrTask := &manager.BackwardTask{

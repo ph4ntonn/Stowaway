@@ -1,13 +1,13 @@
 package handler
 
 import (
+	"Stowaway/protocol"
 	"errors"
 	"fmt"
 	"time"
 
 	"Stowaway/agent/manager"
 	"Stowaway/global"
-	"Stowaway/protocol"
 	"Stowaway/share"
 
 	"golang.org/x/crypto/ssh"
@@ -90,7 +90,7 @@ func (sshTunnel *SSHTunnel) start(mgr *manager.Manager) {
 		return
 	}
 
-	if err = share.ActivePreAuth(conn, global.G_Component.Secret); err != nil {
+	if err = share.ActivePreAuth(conn, global.G_Component.Token); err != nil {
 		return
 	}
 

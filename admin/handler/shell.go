@@ -1,11 +1,11 @@
 package handler
 
 import (
+	"Stowaway/protocol"
 	"fmt"
 
 	"Stowaway/admin/manager"
 	"Stowaway/global"
-	"Stowaway/protocol"
 )
 
 func LetShellStart(route string, uuid string) {
@@ -39,6 +39,10 @@ func DispatchShellMess(mgr *manager.Manager) {
 				mgr.ConsoleManager.OK <- false
 			}
 		case *protocol.ShellResult:
+			//tmp, err := gcharset.ToUTF8("GBK", mess.Result)
+			//if err == nil {
+			//	mess.Result = tmp
+			//}
 			fmt.Print(mess.Result)
 		case *protocol.ShellExit:
 			mgr.ConsoleManager.Exit <- true

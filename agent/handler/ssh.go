@@ -1,12 +1,12 @@
 package handler
 
 import (
+	"Stowaway/protocol"
 	"io"
 	"time"
 
 	"Stowaway/agent/manager"
 	"Stowaway/global"
-	"Stowaway/protocol"
 	"Stowaway/utils"
 
 	"golang.org/x/crypto/ssh"
