@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"Stowaway/protocol"
 	"fmt"
 	"net"
 	"strconv"
@@ -9,7 +10,6 @@ import (
 
 	"Stowaway/agent/manager"
 	"Stowaway/global"
-	"Stowaway/protocol"
 	"Stowaway/utils"
 )
 

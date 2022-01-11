@@ -1,14 +1,16 @@
 package handler
 
 import (
-	"errors"
-	"net"
-	"time"
-
+	"Stowaway/agent/initial"
 	"Stowaway/agent/manager"
 	"Stowaway/global"
+	"Stowaway/pkg/transport"
+	net2 "Stowaway/pkg/util/net"
 	"Stowaway/protocol"
 	"Stowaway/share"
+	"crypto/tls"
+	"errors"
+	"net"
 )
 
 type Connect struct {
@@ -21,7 +23,7 @@ func newConnect(addr string) *Connect {
 	return connect
 }
 
-func (connect *Connect) start(mgr *manager.Manager) {
+func (connect *Connect) start(mgr *manager.Manager, options *initial.Options) {
 	var sUMessage, sLMessage, rMessage protocol.Message
 
 	sUMessage = protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
@@ -72,13 +74,25 @@ func (connect *Connect) start(mgr *manager.Manager) {
 		}
 	}()
 
-	conn, err = net.DialTimeout("tcp", connect.Addr, 10*time.Second)
+	//conn, err = net.DialTimeout("tcp", connect.Addr, 10*time.Second)
 
+	var tlsConfig *tls.Config
+	// 封装tls
+	if options.TlsEnable {
+		// TODO: userOptions.Connect
+		tlsConfig, err = transport.NewClientTLSConfig("", "", "", "")
+		if err != nil {
+			return
+		}
+	}
+	// TODO: domain是否需要添加后续待商榷
+	conn, err = net2.ConnectServerByProxyWithTLS("", options.Downstream, connect.Addr, tlsConfig, "")
 	if err != nil {
+		net2.CloseConnSafe(conn)
 		return
 	}
 
-	if err = share.ActivePreAuth(conn, global.G_Component.Secret); err != nil {
+	if err = share.ActivePreAuth(conn, global.G_Component.Token); err != nil {
 		return
 	}
 
@@ -183,14 +197,14 @@ func (connect *Connect) start(mgr *manager.Manager) {
 	err = errors.New("node seems illegal")
 }
 
-func DispatchConnectMess(mgr *manager.Manager) {
+func DispatchConnectMess(mgr *manager.Manager, options *initial.Options) {
 	for {
 		message := <-mgr.ConnectManager.ConnectMessChan
 
 		switch mess := message.(type) {
 		case *protocol.ConnectStart:
 			connect := newConnect(mess.Addr)
-			go connect.start(mgr)
+			go connect.start(mgr, options)
 		}
 	}
 }

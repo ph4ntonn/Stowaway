@@ -1,6 +1,7 @@
 package process
 
 import (
+	"Stowaway/protocol"
 	"log"
 	"net"
 	"os"
@@ -10,7 +11,6 @@ import (
 	"Stowaway/agent/initial"
 	"Stowaway/agent/manager"
 	"Stowaway/global"
-	"Stowaway/protocol"
 	"Stowaway/share"
 	"Stowaway/utils"
 )
@@ -45,14 +45,14 @@ func (agent *Agent) Run() {
 	go agent.mgr.Run()
 	// run dispatchers to dispatch all kinds of message
 	go handler.DispatchListenMess(agent.mgr, agent.options)
-	go handler.DispatchConnectMess(agent.mgr)
+	go handler.DispatchConnectMess(agent.mgr, agent.options)
 	go handler.DispathSocksMess(agent.mgr)
 	go handler.DispatchForwardMess(agent.mgr)
 	go handler.DispatchBackwardMess(agent.mgr)
 	go handler.DispatchFileMess(agent.mgr)
 	go handler.DispatchSSHMess(agent.mgr)
 	go handler.DispatchSSHTunnelMess(agent.mgr)
-	go handler.DispatchShellMess(agent.mgr)
+	go handler.DispatchShellMess(agent.mgr, agent.options)
 	go DispatchOfflineMess(agent)
 	// run dispatcher to dispatch children's message
 	go agent.dispatchChildrenMess()

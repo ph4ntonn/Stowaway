@@ -6,12 +6,15 @@ require (
 	github.com/cheggaaa/pb v2.0.7+incompatible
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/eiannone/keyboard v0.0.0-20200508000154-caf4b762e807
-	github.com/fatih/color v1.10.0
+	github.com/fatih/color v1.12.0
 	github.com/gofrs/uuid v4.0.0+incompatible
+	github.com/gogf/gf v1.16.6
 	github.com/libp2p/go-reuseport v0.0.2
 	github.com/nsf/termbox-go v1.1.0
+	github.com/ying32/govcl v2.0.10+incompatible
 	golang.org/x/crypto v0.0.0-20201012173705-84dcc777aaee
-	golang.org/x/sys v0.0.0-20210104204734-6f8348627aad // indirect
+	golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f // indirect
+	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/VividCortex/ewma.v1 v1.1.1 // indirect
 	gopkg.in/cheggaaa/pb.v2 v2.0.7 // indirect
 	gopkg.in/fatih/color.v1 v1.7.0 // indirect

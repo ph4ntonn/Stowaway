@@ -1,12 +1,12 @@
 package handler
 
 import (
+	"Stowaway/protocol"
 	"fmt"
 	"net"
 
 	"Stowaway/admin/manager"
 	"Stowaway/global"
-	"Stowaway/protocol"
 )
 
 type Forward struct {
@@ -104,6 +104,7 @@ func (forward *Forward) handleForwardListener(mgr *manager.Manager, listener net
 }
 
 func (forward *Forward) handleForward(mgr *manager.Manager, conn net.Conn, route string, uuid string, seq uint64) {
+	defer conn.Close()
 	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 	// tell agent to start
 	startHeader := &protocol.Header{
@@ -189,7 +190,7 @@ func (forward *Forward) handleForward(mgr *manager.Manager, conn net.Conn, route
 	for {
 		length, err := conn.Read(buffer)
 		if err != nil {
-			conn.Close()
+			//conn.Close()
 			return
 		}
 
@@ -260,12 +261,12 @@ func DispatchForwardMess(mgr *manager.Manager) {
 				result.DataChan <- mess.Data
 			}
 			mgr.ForwardManager.Done <- true
-		case *protocol.ForwardFin:
-			mgrTask := &manager.ForwardTask{
-				Mode: manager.F_CLOSETCP,
-				Seq:  mess.Seq,
-			}
-			mgr.ForwardManager.TaskChan <- mgrTask
+			/*		case *protocol.ForwardFin:
+					mgrTask := &manager.ForwardTask{
+						Mode: manager.F_CLOSETCP,
+						Seq:  mess.Seq,
+					}
+					mgr.ForwardManager.TaskChan <- mgrTask*/
 		}
 	}
 }

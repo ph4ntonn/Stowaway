@@ -1,15 +1,19 @@
 package handler
 
 import (
+	"Stowaway/pkg/transport"
+	net2 "Stowaway/pkg/util/net"
+	"Stowaway/protocol"
+	"crypto/tls"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"time"
 
 	"Stowaway/agent/initial"
 	"Stowaway/agent/manager"
 	"Stowaway/global"
-	"Stowaway/protocol"
 	"Stowaway/share"
 	"Stowaway/utils"
 
@@ -108,11 +112,30 @@ func (listen *Listen) normalListen(mgr *manager.Manager, options *initial.Option
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			conn.Close()
+			net2.CloseConnSafe(conn)
 			continue
 		}
 
-		if err := share.PassivePreAuth(conn, global.G_Component.Secret); err != nil {
+		// tls
+		var tlsConfig *tls.Config
+		if options.TlsEnable {
+			tlsConfig, err = transport.NewServerTLSConfig("", "", "")
+			if err != nil {
+				log.Printf("[*] Error occured: %s\n", err.Error())
+				conn.Close()
+				continue
+			}
+			//conn = net2.WrapTLSServerConn(conn, tlsConfig)
+		}
+		// 用于下级节点连接，所以用Downstream
+		conn, err = net2.ListenerWithTLS(conn, options.Downstream, tlsConfig)
+		if err != nil {
+			net2.CloseConnSafe(conn)
+			log.Printf("[*] Error occured: %s\r\n", err.Error())
+			continue
+		}
+
+		if err := share.PassivePreAuth(conn, global.G_Component.Token); err != nil {
 			conn.Close()
 			continue
 		}
@@ -272,11 +295,30 @@ func (listen *Listen) iptablesListen(mgr *manager.Manager, options *initial.Opti
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			conn.Close()
+			net2.CloseConnSafe(conn)
 			continue
 		}
 
-		if err := share.PassivePreAuth(conn, global.G_Component.Secret); err != nil {
+		// tls
+		var tlsConfig *tls.Config
+		if options.TlsEnable {
+			tlsConfig, err = transport.NewServerTLSConfig("", "", "")
+			if err != nil {
+				log.Printf("[*] Error occured: %s\n", err.Error())
+				conn.Close()
+				continue
+			}
+			//conn = net2.WrapTLSServerConn(conn, tlsConfig)
+		}
+		// 用于下级节点连接，所以用Downstream
+		conn, err = net2.ListenerWithTLS(conn, options.Downstream, tlsConfig)
+		if err != nil {
+			net2.CloseConnSafe(conn)
+			log.Printf("[*] Error occured: %s\r\n", err.Error())
+			continue
+		}
+
+		if err := share.PassivePreAuth(conn, global.G_Component.Token); err != nil {
 			conn.Close()
 			continue
 		}
@@ -436,7 +478,25 @@ func (listen *Listen) soReuseListen(mgr *manager.Manager, options *initial.Optio
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			conn.Close()
+			net2.CloseConnSafe(conn)
+			continue
+		}
+		// tls
+		var tlsConfig *tls.Config
+		if options.TlsEnable {
+			tlsConfig, err = transport.NewServerTLSConfig("", "", "")
+			if err != nil {
+				log.Printf("[*] Error occured: %s\n", err.Error())
+				conn.Close()
+				continue
+			}
+			//conn = net2.WrapTLSServerConn(conn, tlsConfig)
+		}
+		// 用于下级节点连接，所以用Downstream
+		conn, err = net2.ListenerWithTLS(conn, options.Downstream, tlsConfig)
+		if err != nil {
+			net2.CloseConnSafe(conn)
+			log.Printf("[*] Error occured: %s\r\n", err.Error())
 			continue
 		}
 

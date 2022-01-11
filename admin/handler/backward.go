@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"Stowaway/protocol"
 	"fmt"
 	"net"
 	"time"
@@ -8,7 +9,6 @@ import (
 	"Stowaway/admin/manager"
 	"Stowaway/admin/topology"
 	"Stowaway/global"
-	"Stowaway/protocol"
 )
 
 type Backward struct {

@@ -1,12 +1,12 @@
 package handler
 
 import (
+	"Stowaway/protocol"
 	"net"
 	"time"
 
 	"Stowaway/agent/manager"
 	"Stowaway/global"
-	"Stowaway/protocol"
 )
 
 type Forward struct {

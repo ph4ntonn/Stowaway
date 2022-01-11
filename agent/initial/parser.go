@@ -1,11 +1,13 @@
 package initial
 
 import (
+	"Stowaway/utils"
 	"errors"
 	"flag"
 	"log"
 	"net"
 	"os"
+	"strings"
 )
 
 const (
@@ -31,23 +33,35 @@ type Options struct {
 	ProxyP     string
 	Upstream   string
 	Downstream string
+	TlsEnable  bool
+	Charset    string
+	Domain     string
+	Token      string
 }
 
 var Args *Options
+
+var (
+	charsetSlice = []string{"UTF-8", "GBK"}
+)
 
 func init() {
 	Args = new(Options)
 	flag.StringVar(&Args.Secret, "s", "", "")
 	flag.StringVar(&Args.Listen, "l", "", "")
-	flag.Uint64Var(&Args.Reconnect, "reconnect", 0, "")
+	flag.Uint64Var(&Args.Reconnect, "reconnect", 10, "")
 	flag.StringVar(&Args.Connect, "c", "", "")
 	flag.StringVar(&Args.ReuseHost, "rehost", "", "")
 	flag.StringVar(&Args.ReusePort, "report", "", "")
 	flag.StringVar(&Args.Proxy, "proxy", "", "")
 	flag.StringVar(&Args.ProxyU, "proxyu", "", "")
 	flag.StringVar(&Args.ProxyP, "proxyp", "", "")
-	flag.StringVar(&Args.Upstream, "up", "raw", "")
-	flag.StringVar(&Args.Downstream, "down", "raw", "")
+	flag.StringVar(&Args.Upstream, "up", "tcp", "")
+	flag.StringVar(&Args.Downstream, "down", "tcp", "")
+	flag.BoolVar(&Args.TlsEnable, "tls", false, "")
+	flag.StringVar(&Args.Charset, "cs", "", "")
+	flag.StringVar(&Args.Domain, "domain", "", "")
+	flag.StringVar(&Args.Token, "token", "just fun", "")
 
 	flag.Usage = func() {}
 }
@@ -80,6 +94,35 @@ func ParseOptions() *Options {
 		log.Printf("[*] Starting agent node actively.Connecting to %s via proxy %s.Reconnecting every %d seconds\n", Args.Connect, Args.Proxy, Args.Reconnect)
 	} else {
 		os.Exit(1)
+	}
+
+	// charset parser
+	autoCharset := false
+	if Args.Charset == "" {
+		autoCharset = true
+	} else {
+		for _, i := range charsetSlice {
+			if Args.Charset == i {
+				goto manual
+			}
+		}
+		autoCharset = true
+	manual:
+	}
+	if autoCharset {
+		switch utils.CheckSystem() {
+		case 0x01:
+			Args.Charset = "GBK"
+			// cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true} // If you don't want the cmd window, remove "//"
+		default:
+			Args.Charset = "UTF-8"
+		}
+	}
+
+	// domain
+	if Args.Domain == "" && Args.Connect != "" {
+		addrSlice := strings.SplitN(Args.Connect, ":", 2)
+		Args.Domain = addrSlice[0]
 	}
 
 	if err := checkOptions(Args); err != nil {

@@ -3,6 +3,7 @@
 package process
 
 import (
+	"Stowaway/protocol"
 	"os"
 
 	"Stowaway/admin/cli"
@@ -11,7 +12,6 @@ import (
 	"Stowaway/admin/printer"
 	"Stowaway/admin/topology"
 	"Stowaway/global"
-	"Stowaway/protocol"
 	"Stowaway/share"
 )
 

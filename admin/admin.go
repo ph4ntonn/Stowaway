@@ -3,6 +3,7 @@
 package main
 
 import (
+	"Stowaway/protocol"
 	"net"
 	"os"
 	"runtime"
@@ -13,7 +14,6 @@ import (
 	"Stowaway/admin/process"
 	"Stowaway/admin/topology"
 	"Stowaway/global"
-	"Stowaway/protocol"
 	"Stowaway/share"
 
 	"github.com/nsf/termbox-go"
@@ -62,7 +62,7 @@ func main() {
 	topo.TaskChan <- topoTask
 	<-topo.ResultChan
 
-	global.InitialGComponent(conn, options.Secret, protocol.ADMIN_UUID)
+	global.InitialGComponent(conn, options.Secret, protocol.ADMIN_UUID, options.Token)
 
 	admin.Run()
 }

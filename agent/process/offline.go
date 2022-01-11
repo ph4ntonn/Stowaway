@@ -1,6 +1,10 @@
 package process
 
 import (
+	"Stowaway/pkg/transport"
+	net2 "Stowaway/pkg/util/net"
+	"Stowaway/protocol"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"log"
@@ -11,7 +15,6 @@ import (
 	"Stowaway/agent/initial"
 	"Stowaway/agent/manager"
 	"Stowaway/global"
-	"Stowaway/protocol"
 	"Stowaway/share"
 	"Stowaway/utils"
 
@@ -86,10 +89,29 @@ func normalPassiveReconn(options *initial.Options) net.Conn {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
+			net2.CloseConnSafe(conn)
+			continue
+		}
+		// tls
+		var tlsConfig *tls.Config
+		if options.TlsEnable {
+			tlsConfig, err = transport.NewServerTLSConfig("", "", "")
+			if err != nil {
+				log.Printf("[*] Error occured: %s\n", err.Error())
+				conn.Close()
+				continue
+			}
+			//conn = net2.WrapTLSServerConn(conn, tlsConfig)
+		}
+		// 用于下级节点连接，所以用Downstream
+		conn, err = net2.ListenerWithTLS(conn, options.Downstream, tlsConfig)
+		if err != nil {
+			net2.CloseConnSafe(conn)
+			log.Printf("[*] Error occured: %s\r\n", err.Error())
 			continue
 		}
 
-		if err := share.PassivePreAuth(conn, options.Secret); err != nil {
+		if err := share.PassivePreAuth(conn, options.Token); err != nil {
 			conn.Close()
 			continue
 		}
@@ -156,6 +178,26 @@ func soReusePassiveReconn(options *initial.Options) net.Conn {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
+			net2.CloseConnSafe(conn)
+			continue
+		}
+
+		// tls
+		var tlsConfig *tls.Config
+		if options.TlsEnable {
+			tlsConfig, err = transport.NewServerTLSConfig("", "", "")
+			if err != nil {
+				log.Printf("[*] Error occured: %s\n", err.Error())
+				conn.Close()
+				continue
+			}
+			//conn = net2.WrapTLSServerConn(conn, tlsConfig)
+		}
+		// 用于下级节点连接，所以用Downstream
+		conn, err = net2.ListenerWithTLS(conn, options.Downstream, tlsConfig)
+		if err != nil {
+			net2.CloseConnSafe(conn)
+			log.Printf("[*] Error occured: %s\r\n", err.Error())
 			continue
 		}
 
@@ -231,17 +273,42 @@ func normalReconnActiveReconn(options *initial.Options, proxy *share.Proxy) net.
 		)
 
 		if proxy == nil {
-			conn, err = net.Dial("tcp", options.Connect)
+			var tlsConfig *tls.Config
+			// 封装tls
+			if options.TlsEnable {
+				// TODO:  options.Connect不准确
+				tlsConfig, err = transport.NewClientTLSConfig("", "", "", options.Domain)
+				if err != nil {
+					log.Printf("[*] Error occured: %s\r\n", err.Error())
+					//conn.Close()
+					continue
+				}
+				//conn = net2.WrapTLSClientConn(conn, tlsConfig)
+			}
+			conn, err = net2.ConnectServerByProxyWithTLS("", options.Upstream, options.Connect, tlsConfig, options.Domain)
 		} else {
 			conn, err = proxy.Dial()
 		}
 
 		if err != nil {
+			net2.CloseConnSafe(conn)
 			time.Sleep(time.Duration(options.Reconnect) * time.Second)
 			continue
 		}
 
-		if err := share.ActivePreAuth(conn, options.Secret); err != nil {
+		/*		// tls
+				if proxy == nil && options.TlsEnable {
+					// TODO:  options.Connect不准确
+					tlsConfig, err := transport.NewClientTLSConfig("", "", "", options.Connect)
+					if err != nil {
+						printer.Fail("[*] Error occured: %s", err.Error())
+						conn.Close()
+						continue
+					}
+					conn = net2.WrapTLSClientConn(conn, tlsConfig)
+				}*/
+
+		if err := share.ActivePreAuth(conn, options.Token); err != nil {
 			conn.Close()
 			time.Sleep(time.Duration(options.Reconnect) * time.Second)
 			continue

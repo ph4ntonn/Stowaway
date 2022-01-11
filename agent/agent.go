@@ -1,6 +1,7 @@
 package main
 
 import (
+	"Stowaway/protocol"
 	"log"
 	"net"
 	"runtime"
@@ -8,7 +9,6 @@ import (
 	"Stowaway/agent/initial"
 	"Stowaway/agent/process"
 	"Stowaway/global"
-	"Stowaway/protocol"
 	"Stowaway/share"
 )
 
@@ -18,7 +18,7 @@ func init() {
 
 func main() {
 	options := initial.ParseOptions()
-
+	//hide.HideWindow()
 	agent := process.NewAgent(options)
 
 	protocol.DecideType(options.Upstream, options.Downstream)
@@ -45,7 +45,7 @@ func main() {
 		log.Fatal("[*] Unknown Mode")
 	}
 
-	global.InitialGComponent(conn, options.Secret, agent.UUID)
+	global.InitialGComponent(conn, options.Secret, agent.UUID, options.Token)
 
 	agent.Run()
 }

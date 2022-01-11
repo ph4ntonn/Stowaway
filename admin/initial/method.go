@@ -1,12 +1,15 @@
 package initial
 
 import (
+	"Stowaway/pkg/transport"
+	net2 "Stowaway/pkg/util/net"
+	"Stowaway/protocol"
+	"crypto/tls"
 	"net"
 	"os"
 
 	"Stowaway/admin/printer"
 	"Stowaway/admin/topology"
-	"Stowaway/protocol"
 	"Stowaway/share"
 	"Stowaway/utils"
 )
@@ -64,7 +67,18 @@ func NormalActive(userOptions *Options, topo *topology.Topology, proxy *share.Pr
 		)
 
 		if proxy == nil {
-			conn, err = net.Dial("tcp", userOptions.Connect)
+			var tlsConfig *tls.Config
+			// 封装tls
+			if Args.TlsEnable {
+				// TODO: userOptions.Connect
+				tlsConfig, err = transport.NewClientTLSConfig("", "", "", userOptions.Domain)
+				if err != nil {
+					printer.Fail("[*] Error occured: %s", err.Error())
+					os.Exit(0)
+				}
+			}
+			conn, err = net2.ConnectServerByProxyWithTLS("", userOptions.Downstream, userOptions.Connect, tlsConfig, userOptions.Domain)
+			//conn, err = net.Dial("tcp", userOptions.Connect)
 		} else {
 			conn, err = proxy.Dial()
 		}
@@ -74,7 +88,7 @@ func NormalActive(userOptions *Options, topo *topology.Topology, proxy *share.Pr
 			os.Exit(0)
 		}
 
-		if err := share.ActivePreAuth(conn, userOptions.Secret); err != nil {
+		if err := share.ActivePreAuth(conn, userOptions.Token); err != nil {
 			printer.Fail("[*] Error occured: %s", err.Error())
 			os.Exit(0)
 		}
@@ -174,11 +188,26 @@ func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 		conn, err := listener.Accept()
 		if err != nil {
 			printer.Fail("[*] Error occured: %s\r\n", err.Error())
-			conn.Close()
+			continue
+		}
+		// tls
+		var tlsConfig *tls.Config
+		if Args.TlsEnable {
+			tlsConfig, err = transport.NewServerTLSConfig("", "", "")
+			if err != nil {
+				printer.Fail("[*] Error occured: %s", err.Error())
+				conn.Close()
+				continue
+			}
+			//conn = net2.WrapTLSServerConn(conn, tlsConfig)
+		}
+		conn, err = net2.ListenerWithTLS(conn, userOptions.Downstream, tlsConfig)
+		if err != nil {
+			printer.Fail("[*] Error occured: %s", err.Error())
 			continue
 		}
 
-		if err := share.PassivePreAuth(conn, userOptions.Secret); err != nil {
+		if err := share.PassivePreAuth(conn, userOptions.Token); err != nil {
 			printer.Fail("[*] Error occured: %s", err.Error())
 		}
 
