@@ -67,7 +67,7 @@ Stowaway has two kinds of characters:
 parameter:
 -l Listening address in passive mode [ip]:<port>
 -s node communication encryption key, all nodes (admin&&agent) must be consistent
--c target node address in active mode
+-c target node address under active mode
 --proxy socks5 proxy server address
 --proxyu socks5 proxy server username (optional)
 --proxyp socks5 proxy server password (optional)
@@ -80,7 +80,7 @@ parameter:
 parameter:
 -l Listening address in passive mode [ip]:<port>
 -s node communication encryption key
--c target node address in active mode
+-c target node address under active mode
 --proxy socks5 proxy server address
 --proxyu socks5 proxy server username (optional)
 --proxyp socks5 proxy server password (optional)
@@ -89,6 +89,7 @@ parameter:
 --report the Port number to be reused
 --up upstream protocol type, default is bare TCP traffic, optional HTTP
 --down downstream protocol type, default is bare TCP traffic, optional HTTP
+--cs platform's console encoding type,default is utf-8，optional gbk
 ```
 
 ### Parameter usage
@@ -115,7 +116,7 @@ This parameter is optional, if it is not set, it means that the communication is
 
 #### -c
 
-This parameter  can be used on admin&&agent, only can be used in active mode 
+This parameter  can be used on admin&&agent, only can be used under active mode 
 
 Declaring the address of the node you want to connect to
 
@@ -125,7 +126,7 @@ Declaring the address of the node you want to connect to
 
 #### --proxy/--proxyu/--proxyp
 
-These three parameters can be used on admin&&agent , only can be used in active mode
+These three parameters can be used on admin&&agent , only can be used under active mode
 
 ```--proxy``` represents the address of the socks5 proxy server, ```--proxyu``` and ```--proxyp``` are optional
 
@@ -143,7 +144,7 @@ Username and password:
 
 #### --up/--down
 
-These two parameter can be used on admin&&agent, can be used both in active && passive mode
+These two parameter can be used on admin&&agent, can be used both under active && passive mode
 
 But note that there is no ```--up``` parameter on admin
 
@@ -175,7 +176,7 @@ Then, agent-2 must also set ```--up``` to http, otherwise it will cause network 
 
 #### --reconnect
 
-This parameter can be used on agent , only can be used in active mode
+This parameter can be used on agent , only can be used under active mode
 
 The parameter is optional. If not set, it means that the node will not actively reconnect after the network connection is disconnected.Otherwise, it means that the node will try to reconnect to the parent node every x (the number of seconds you set) seconds.
 
@@ -193,6 +194,10 @@ And ```--reconnect``` parameter can be used together with ```--proxy```/```--pro
 
 These two parameters are quite special and can be only used on the agent side. For details, please check the port reuse mechanism below
 
+#### --cs
+This parameter can be used on agent, can be used both under active && passive mode
+This parameter is aim to solve the problem of garbled characters between different platforms. When the user runs the agent on a platform whose console is encoded as gbk (such as Windows in general) and meanwhile the admin is running on a platform whose console is encoded as utf-8 , please be sure to set this parameter as 'gbk' 
+- Windows: ```./stowaway_agent -c 127.0.0.1:9999 -s 123 --cs gbk```
 ## Port reuse
 
   Now Stowaway provide two port reuse functions:One is based on SO_REUSEPORT/SO_REUSEADDR features and the other is base on IPTABLES features
@@ -298,7 +303,7 @@ For a detailed introduction of ```listen``` and ```sshtunnel```, please check th
 
 Stowaway currently supports multiple ways of reconnection, briefly summarized as follows
 
-First of all, when the parent node goes offline, only one kind of node will voluntarily exit: The node in active mode and has no reconnection settings at startup.
+First of all, when the parent node goes offline, only one kind of node will voluntarily exit: The node under active mode and has no reconnection settings at startup.
 
 If reconnection setting is set, the node will try to reconnect in the specified time interval
 
@@ -639,7 +644,19 @@ $
 - If users use the admin on windows, please download [ansicon](https://github.com/adoxa/ansicon/releases) first, or download from [here](), and then enter the folder corresponding to the number of system bits. Execute ```ansicon.exe -i```, otherwise garbled characters will appear on the admin
 - This program only supports standard ```UDP ASSOCIATE``` described in [RFC1928](https://www.ietf.org/rfc/rfc1928.txt). Please check the programs(such as scanners, etc.) you are using, make sure if the packet construction method comply with the standard [RFC1928](https://www.ietf.org/rfc/rfc1928.txt). Besides, the packet loss situation also needs to be handled by yourself.
 
-### Thanks
+## 404Starlink
+<img src="https://github.com/knownsec/404StarLink/raw/master/Images/logo.png" width="30%">
+
+Stowaway has joined [404Starlink](https://github.com/knownsec/404StarLink)
+## Thanks
+
+This project exists thanks to all the people who contribute
+
+- [lz520520](https://github.com/lz520520)
+- [SignorMercurio](https://github.com/SignorMercurio)
+- [MM0x00](https://github.com/MM0x00)
+- [r0ck3rt](https://github.com/r0ck3rt)
+### Reference
 
 - [rootkiter#Termite](https://github.com/rootkiter/Termite)
 - [Venom](https://github.com/Dliv3/Venom)
