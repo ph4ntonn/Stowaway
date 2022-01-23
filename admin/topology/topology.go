@@ -184,9 +184,9 @@ func (topology *Topology) calculate() {
 		for {
 			if topology.nodes[tempIDNum].parentUUID != protocol.ADMIN_UUID {
 				tempRoute = append(tempRoute, topology.nodes[tempIDNum].uuid)
-				for i := 0; i < len(topology.nodes); i++ {
-					if topology.nodes[i].uuid == topology.nodes[tempIDNum].parentUUID {
-						tempIDNum = i
+				for nextIDNum := range topology.nodes { // Fix bug,thanks to @lz520520
+					if topology.nodes[nextIDNum].uuid == topology.nodes[tempIDNum].parentUUID {
+						tempIDNum = nextIDNum
 						break
 					}
 				}
