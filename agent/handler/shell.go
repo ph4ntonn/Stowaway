@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"runtime"
 
+	"Stowaway/agent/initial"
 	"Stowaway/agent/manager"
 	"Stowaway/global"
 	"Stowaway/protocol"
@@ -12,12 +13,15 @@ import (
 )
 
 type Shell struct {
-	stdin  io.Writer
-	stdout io.Reader
+	stdin   io.Writer
+	stdout  io.Reader
+	charset string
 }
 
-func newShell() *Shell {
-	return new(Shell)
+func newShell(options *initial.Options) *Shell {
+	shell := new(Shell)
+	shell.charset = options.Charset
+	return shell
 }
 
 func (shell *Shell) start() {
@@ -113,9 +117,15 @@ func (shell *Shell) start() {
 			return
 		}
 
+		result := string(buffer[:count])
+		if shell.charset == "gbk" { // Fix shell output bug when agent is running on Windows,thanks to @lz520520
+			result = utils.ConvertGBK2Str(result)
+			count = len(result)
+		}
+
 		shellResultMess := &protocol.ShellResult{
 			ResultLen: uint64(count),
-			Result:    string(buffer[:count]),
+			Result:    result,
 		}
 
 		protocol.ConstructMessage(sMessage, shellResultHeader, shellResultMess, false)
@@ -124,11 +134,15 @@ func (shell *Shell) start() {
 }
 
 func (shell *Shell) input(command string) {
+	if shell.charset == "gbk" {
+		command = utils.ConvertStr2GBK(command)
+	}
+
 	shell.stdin.Write([]byte(command))
 }
 
-func DispatchShellMess(mgr *manager.Manager) {
-	shell := newShell()
+func DispatchShellMess(mgr *manager.Manager, options *initial.Options) {
+	shell := newShell(options)
 
 	for {
 		message := <-mgr.ShellManager.ShellMessChan

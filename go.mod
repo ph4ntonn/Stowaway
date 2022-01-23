@@ -12,6 +12,7 @@ require (
 	github.com/nsf/termbox-go v1.1.0
 	golang.org/x/crypto v0.0.0-20201012173705-84dcc777aaee
 	golang.org/x/sys v0.0.0-20210104204734-6f8348627aad // indirect
+	golang.org/x/text v0.3.0
 	gopkg.in/VividCortex/ewma.v1 v1.1.1 // indirect
 	gopkg.in/cheggaaa/pb.v2 v2.0.7 // indirect
 	gopkg.in/fatih/color.v1 v1.7.0 // indirect

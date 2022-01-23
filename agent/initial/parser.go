@@ -31,6 +31,7 @@ type Options struct {
 	ProxyP     string
 	Upstream   string
 	Downstream string
+	Charset    string
 }
 
 var Args *Options
@@ -48,6 +49,7 @@ func init() {
 	flag.StringVar(&Args.ProxyP, "proxyp", "", "")
 	flag.StringVar(&Args.Upstream, "up", "raw", "")
 	flag.StringVar(&Args.Downstream, "down", "raw", "")
+	flag.StringVar(&Args.Charset, "cs", "utf-8", "")
 
 	flag.Usage = func() {}
 }
@@ -80,6 +82,10 @@ func ParseOptions() *Options {
 		log.Printf("[*] Starting agent node actively.Connecting to %s via proxy %s.Reconnecting every %d seconds\n", Args.Connect, Args.Proxy, Args.Reconnect)
 	} else {
 		os.Exit(1)
+	}
+
+	if Args.Charset != "utf-8" && Args.Charset != "gbk" {
+		log.Fatalf("[*] Charset must be set as 'utf-8'(default) or 'gbk'")
 	}
 
 	if err := checkOptions(Args); err != nil {

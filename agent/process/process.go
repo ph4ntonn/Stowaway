@@ -52,7 +52,7 @@ func (agent *Agent) Run() {
 	go handler.DispatchFileMess(agent.mgr)
 	go handler.DispatchSSHMess(agent.mgr)
 	go handler.DispatchSSHTunnelMess(agent.mgr)
-	go handler.DispatchShellMess(agent.mgr)
+	go handler.DispatchShellMess(agent.mgr, agent.options)
 	go DispatchOfflineMess(agent)
 	// run dispatcher to dispatch children's message
 	go agent.dispatchChildrenMess()

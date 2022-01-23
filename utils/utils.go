@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid"
+	"golang.org/x/text/encoding/simplifiedchinese"
 )
 
 func GenerateUUID() string {
@@ -213,4 +214,21 @@ func ParseFileCommand(commands []string) (string, string, error) {
 	}
 
 	return "", "", errors.New("not enough arguments")
+}
+
+func ConvertStr2GBK(str string) string {
+	ret, err := simplifiedchinese.GBK.NewEncoder().String(str)
+	if err != nil {
+		ret = str
+	}
+	return ret
+}
+
+func ConvertGBK2Str(gbkStr string) string {
+	ret, err := simplifiedchinese.GBK.NewDecoder().String(gbkStr)
+	if err != nil {
+		ret = gbkStr
+	}
+	return ret
+
 }
