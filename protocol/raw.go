@@ -104,27 +104,44 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 	var err error
 	// Read header's element one by one
 	_, err = io.ReadFull(message.Conn, senderBuf)
+	if err != nil {
+		return header, nil, err
+	}
 	header.Sender = string(senderBuf)
 
 	_, err = io.ReadFull(message.Conn, accepterBuf)
+	if err != nil {
+		return header, nil, err
+	}
 	header.Accepter = string(accepterBuf)
 
 	_, err = io.ReadFull(message.Conn, messageTypeBuf)
+	if err != nil {
+		return header, nil, err
+	}
 	header.MessageType = binary.BigEndian.Uint16(messageTypeBuf)
 
 	_, err = io.ReadFull(message.Conn, routeLenBuf)
+	if err != nil {
+		return header, nil, err
+	}
 	header.RouteLen = binary.BigEndian.Uint32(routeLenBuf)
 
 	routeBuf := make([]byte, header.RouteLen)
 	_, err = io.ReadFull(message.Conn, routeBuf)
+	if err != nil {
+		return header, nil, err
+	}
 	header.Route = string(routeBuf)
 
 	_, err = io.ReadFull(message.Conn, dataLenBuf)
+	if err != nil {
+		return header, nil, err
+	}
 	header.DataLen = binary.BigEndian.Uint64(dataLenBuf)
 
 	dataBuf := make([]byte, header.DataLen)
 	_, err = io.ReadFull(message.Conn, dataBuf)
-
 	if err != nil {
 		return header, nil, err
 	}
