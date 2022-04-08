@@ -47,7 +47,6 @@ type ForwardTask struct {
 	RemoteAddr  string
 	CloseTarget int
 	Listener    net.Listener
-	Conn        net.Conn
 }
 
 type forwardResult struct {
@@ -67,7 +66,6 @@ type forward struct {
 
 type forwardStatus struct {
 	dataChan chan []byte
-	conn     net.Conn
 }
 
 type fwSeqRelationship struct {
@@ -147,7 +145,6 @@ func (manager *forwardManager) addConn(task *ForwardTask) {
 	}
 
 	manager.forwardMap[task.UUID][task.Port].forwardStatusMap[task.Seq] = new(forwardStatus)
-	manager.forwardMap[task.UUID][task.Port].forwardStatusMap[task.Seq].conn = task.Conn
 	manager.forwardMap[task.UUID][task.Port].forwardStatusMap[task.Seq].dataChan = make(chan []byte, 5)
 	manager.ResultChan <- &forwardResult{OK: true}
 }
@@ -218,7 +215,6 @@ func (manager *forwardManager) closeTCP(task *ForwardTask) {
 	uuid := manager.forwardSeqMap[task.Seq].uuid
 	port := manager.forwardSeqMap[task.Seq].port
 
-	manager.forwardMap[uuid][port].forwardStatusMap[task.Seq].conn.Close()
 	close(manager.forwardMap[uuid][port].forwardStatusMap[task.Seq].dataChan)
 
 	delete(manager.forwardMap[uuid][port].forwardStatusMap, task.Seq)
@@ -231,7 +227,6 @@ func (manager *forwardManager) closeSingle(task *ForwardTask) {
 	manager.forwardMap[task.UUID][port].listener.Close()
 	// clear every single connection's resources
 	for seq, status := range manager.forwardMap[task.UUID][port].forwardStatusMap {
-		status.conn.Close()
 		close(status.dataChan)
 		delete(manager.forwardMap[task.UUID][port].forwardStatusMap, seq)
 	}
@@ -256,7 +251,6 @@ func (manager *forwardManager) closeSingleAll(task *ForwardTask) {
 		forward.listener.Close()
 
 		for seq, status := range forward.forwardStatusMap {
-			status.conn.Close()
 			close(status.dataChan)
 			delete(forward.forwardStatusMap, seq)
 		}

@@ -145,6 +145,7 @@ func (socks *Socks) handleSocks(mgr *manager.Manager, conn net.Conn, route strin
 			if data, ok := <-tcpDataChan; ok {
 				conn.Write(data)
 			} else {
+				conn.Close()
 				return
 			}
 		}
@@ -345,6 +346,7 @@ func handleUDPAss(mgr *manager.Manager, listener *net.UDPConn, route string, uui
 					if data, ok := <-udpDataChan; ok {
 						listener.WriteToUDP(data, addr)
 					} else {
+						listener.Close()
 						return
 					}
 				}

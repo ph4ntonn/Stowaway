@@ -90,7 +90,6 @@ func (forward *Forward) handleForwardListener(mgr *manager.Manager, listener net
 			UUID: uuid,
 			Seq:  seq,
 			Port: forward.Port,
-			Conn: conn,
 		}
 		mgr.ForwardManager.TaskChan <- mgrTask
 		result = <-mgr.ForwardManager.ResultChan
@@ -171,6 +170,7 @@ func (forward *Forward) handleForward(mgr *manager.Manager, conn net.Conn, route
 			if data, ok := <-dataChan; ok {
 				conn.Write(data)
 			} else {
+				conn.Close()
 				return
 			}
 		}

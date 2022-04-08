@@ -1,11 +1,9 @@
 package manager
 
-import "net"
-
 const (
 	F_NEWFORWARD = iota
 	F_GETDATACHAN
-	F_UPDATEFORWARD
+	F_CHECKFORWARD
 	F_CLOSETCP
 	F_FORCESHUTDOWN
 )
@@ -21,8 +19,6 @@ type forwardManager struct {
 type ForwardTask struct {
 	Mode int
 	Seq  uint64
-
-	ForwardSocket net.Conn
 }
 
 type forwardResult struct {
@@ -33,7 +29,6 @@ type forwardResult struct {
 
 type forwardStatus struct {
 	dataChan chan []byte
-	conn     net.Conn
 }
 
 func newForwardManager() *forwardManager {
@@ -57,8 +52,8 @@ func (manager *forwardManager) run() {
 			manager.newForward(task)
 		case F_GETDATACHAN:
 			manager.getDataChan(task)
-		case F_UPDATEFORWARD:
-			manager.updateForward(task)
+		case F_CHECKFORWARD:
+			manager.checkForward(task)
 		case F_CLOSETCP:
 			manager.closeTCP(task)
 		case F_FORCESHUTDOWN:
@@ -73,9 +68,8 @@ func (manager *forwardManager) newForward(task *ForwardTask) {
 	manager.ResultChan <- &forwardResult{OK: true}
 }
 
-func (manager *forwardManager) updateForward(task *ForwardTask) {
+func (manager *forwardManager) checkForward(task *ForwardTask) {
 	if _, ok := manager.forwardStatusMap[task.Seq]; ok {
-		manager.forwardStatusMap[task.Seq].conn = task.ForwardSocket
 		manager.ResultChan <- &forwardResult{OK: true}
 	} else {
 		manager.ResultChan <- &forwardResult{OK: false}
@@ -94,10 +88,6 @@ func (manager *forwardManager) getDataChan(task *ForwardTask) {
 }
 
 func (manager *forwardManager) closeTCP(task *ForwardTask) {
-	if manager.forwardStatusMap[task.Seq].conn != nil {
-		manager.forwardStatusMap[task.Seq].conn.Close()
-	}
-
 	close(manager.forwardStatusMap[task.Seq].dataChan)
 
 	delete(manager.forwardStatusMap, task.Seq)
@@ -105,12 +95,7 @@ func (manager *forwardManager) closeTCP(task *ForwardTask) {
 
 func (manager *forwardManager) forceShutdown() {
 	for seq, status := range manager.forwardStatusMap {
-		if status.conn != nil {
-			status.conn.Close()
-		}
-
 		close(status.dataChan)
-
 		delete(manager.forwardStatusMap, seq)
 	}
 

@@ -132,11 +132,10 @@ func (backward *Backward) start(mgr *manager.Manager, topo *topology.Topology, u
 	}
 
 	backwardTask = &manager.BackwardTask{
-		Mode:  manager.B_UPDATEBACKWARD,
+		Mode:  manager.B_CHECKBACKWARD,
 		RPort: backward.RPort,
 		UUID:  uuid,
 		Seq:   seq,
-		Conn:  backwardConn,
 	}
 	mgr.BackwardManager.TaskChan <- backwardTask
 	result = <-mgr.BackwardManager.ResultChan
@@ -165,6 +164,7 @@ func (backward *Backward) start(mgr *manager.Manager, topo *topology.Topology, u
 			if data, ok := <-dataChan; ok {
 				backwardConn.Write(data)
 			} else {
+				backwardConn.Close()
 				return
 			}
 		}

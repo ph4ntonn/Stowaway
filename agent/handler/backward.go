@@ -104,10 +104,9 @@ func (backward *Backward) handleBackward(mgr *manager.Manager, conn net.Conn, se
 	}()
 
 	mgrTask := &manager.BackwardTask{
-		Mode:           manager.B_ADDCONN,
-		RPort:          backward.Rport,
-		Seq:            seq,
-		BackwardSocket: conn,
+		Mode:  manager.B_ADDCONN,
+		RPort: backward.Rport,
+		Seq:   seq,
 	}
 	mgr.BackwardManager.TaskChan <- mgrTask
 	result := <-mgr.BackwardManager.ResultChan
@@ -136,6 +135,7 @@ func (backward *Backward) handleBackward(mgr *manager.Manager, conn net.Conn, se
 			if data, ok := <-dataChan; ok {
 				conn.Write(data)
 			} else {
+				conn.Close()
 				return
 			}
 		}

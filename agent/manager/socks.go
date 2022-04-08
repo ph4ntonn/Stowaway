@@ -1,12 +1,8 @@
 package manager
 
-import (
-	"net"
-)
-
 const (
-	S_UPDATETCP = iota
-	S_UPDATEUDP
+	S_CHECKTCP = iota
+	S_CHECKUDP
 	S_UPDATEUDPHEADER
 	S_GETTCPDATACHAN
 	S_GETUDPCHANS
@@ -28,8 +24,6 @@ type SocksTask struct {
 	Mode int
 	Seq  uint64
 
-	SocksSocket     net.Conn
-	SocksListener   *net.UDPConn
 	SocksHeaderAddr string
 	SocksHeader     []byte
 }
@@ -52,14 +46,12 @@ type socksStatus struct {
 
 type tcpSocks struct {
 	dataChan chan []byte
-	conn     net.Conn
 }
 
 type udpSocks struct {
 	dataChan    chan []byte
 	readyChan   chan string
 	headerPairs map[string][]byte
-	listener    *net.UDPConn
 }
 
 func newSocksManager() *socksManager {
@@ -85,10 +77,10 @@ func (manager *socksManager) run() {
 			manager.getUDPChans(task)
 		case S_GETUDPHEADER:
 			manager.getUDPHeader(task)
-		case S_UPDATETCP:
-			manager.updateTCP(task)
-		case S_UPDATEUDP:
-			manager.updateUDP(task)
+		case S_CHECKTCP:
+			manager.checkTCP(task)
+		case S_CHECKUDP:
+			manager.checkUDP(task)
 		case S_UPDATEUDPHEADER:
 			manager.updateUDPHeader(task)
 		case S_CLOSETCP:
@@ -130,23 +122,21 @@ func (manager *socksManager) getUDPChans(task *SocksTask) {
 	}
 }
 
-func (manager *socksManager) updateTCP(task *SocksTask) {
+func (manager *socksManager) checkTCP(task *SocksTask) {
 	if _, ok := manager.socksStatusMap[task.Seq]; ok {
-		manager.socksStatusMap[task.Seq].tcp.conn = task.SocksSocket
 		manager.ResultChan <- &socksResult{OK: true}
 	} else {
 		manager.ResultChan <- &socksResult{OK: false} // avoid the scenario that admin conn ask to fin before "socks.buildConn()" call "updateTCP()"
 	}
 }
 
-func (manager *socksManager) updateUDP(task *SocksTask) {
+func (manager *socksManager) checkUDP(task *SocksTask) {
 	if _, ok := manager.socksStatusMap[task.Seq]; ok {
 		manager.socksStatusMap[task.Seq].isUDP = true
 		manager.socksStatusMap[task.Seq].udp = new(udpSocks)
 		manager.socksStatusMap[task.Seq].udp.dataChan = make(chan []byte, 5)
 		manager.socksStatusMap[task.Seq].udp.readyChan = make(chan string)
 		manager.socksStatusMap[task.Seq].udp.headerPairs = make(map[string][]byte)
-		manager.socksStatusMap[task.Seq].udp.listener = task.SocksListener
 		manager.ResultChan <- &socksResult{OK: true} // tell upstream work done
 	} else {
 		manager.ResultChan <- &socksResult{OK: false}
@@ -176,14 +166,9 @@ func (manager *socksManager) getUDPHeader(task *SocksTask) {
 }
 
 func (manager *socksManager) closeTCP(task *SocksTask) {
-	if manager.socksStatusMap[task.Seq].tcp.conn != nil {
-		manager.socksStatusMap[task.Seq].tcp.conn.Close() // avoid the scenario that admin conn ask to fin before "socks.buildConn()" call "updateTCP()"
-	}
-
 	close(manager.socksStatusMap[task.Seq].tcp.dataChan)
 
 	if manager.socksStatusMap[task.Seq].isUDP {
-		manager.socksStatusMap[task.Seq].udp.listener.Close()
 		close(manager.socksStatusMap[task.Seq].udp.dataChan)
 		close(manager.socksStatusMap[task.Seq].udp.readyChan)
 		manager.socksStatusMap[task.Seq].udp.headerPairs = nil
@@ -202,14 +187,9 @@ func (manager *socksManager) checkSocksReady() {
 
 func (manager *socksManager) forceShutdown() {
 	for seq, status := range manager.socksStatusMap {
-		if status.tcp.conn != nil {
-			status.tcp.conn.Close()
-		}
-
 		close(status.tcp.dataChan)
 
 		if status.isUDP {
-			status.udp.listener.Close()
 			close(status.udp.dataChan)
 			close(status.udp.readyChan)
 			status.udp.headerPairs = nil

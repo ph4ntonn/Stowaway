@@ -47,10 +47,10 @@ func (forward *Forward) start(mgr *manager.Manager) {
 	}
 
 	task := &manager.ForwardTask{
-		Mode:          manager.F_UPDATEFORWARD,
-		Seq:           forward.Seq,
-		ForwardSocket: conn,
+		Mode: manager.F_CHECKFORWARD,
+		Seq:  forward.Seq,
 	}
+
 	mgr.ForwardManager.TaskChan <- task
 	result := <-mgr.ForwardManager.ResultChan
 	if !result.OK {
@@ -75,6 +75,7 @@ func (forward *Forward) start(mgr *manager.Manager) {
 			if data, ok := <-dataChan; ok {
 				conn.Write(data)
 			} else {
+				conn.Close()
 				return
 			}
 		}

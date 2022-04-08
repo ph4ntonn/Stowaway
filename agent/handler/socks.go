@@ -355,9 +355,8 @@ func tcpConnect(mgr *manager.Manager, setting *Setting, data []byte, seq uint64,
 	}
 
 	mgrTask := &manager.SocksTask{
-		Mode:        manager.S_UPDATETCP,
-		Seq:         seq,
-		SocksSocket: setting.tcpConn,
+		Mode: manager.S_CHECKTCP,
+		Seq:  seq,
 	}
 	mgr.SocksManager.TaskChan <- mgrTask
 	socksResult := <-mgr.SocksManager.ResultChan
@@ -378,6 +377,7 @@ func proxyC2STCP(conn net.Conn, dataChan chan []byte) {
 	for {
 		data, ok := <-dataChan
 		if !ok { // no need to send FIN actively
+			conn.Close()
 			return
 		}
 		conn.Write(data)
@@ -507,9 +507,8 @@ func udpAssociate(mgr *manager.Manager, setting *Setting, data []byte, seq uint6
 	sourceAddr := net.JoinHostPort(host, port)
 
 	mgrTask := &manager.SocksTask{
-		Mode:          manager.S_UPDATEUDP,
-		Seq:           seq,
-		SocksListener: udpListener,
+		Mode: manager.S_CHECKUDP,
+		Seq:  seq,
 	}
 
 	mgr.SocksManager.TaskChan <- mgrTask
@@ -607,6 +606,7 @@ func proxyC2SUDP(mgr *manager.Manager, listener *net.UDPConn, seq uint64) {
 
 		data, ok := <-dataChan
 		if !ok {
+			listener.Close()
 			return
 		}
 

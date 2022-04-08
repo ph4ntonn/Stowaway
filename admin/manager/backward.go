@@ -2,14 +2,13 @@ package manager
 
 import (
 	"fmt"
-	"net"
 )
 
 const (
 	B_NEWBACKWARD = iota
 	B_GETNEWSEQ
 	B_ADDCONN
-	B_UPDATEBACKWARD
+	B_CHECKBACKWARD
 	B_GETDATACHAN
 	B_GETDATACHAN_WITHOUTUUID
 	B_CLOSETCP
@@ -40,7 +39,6 @@ type BackwardTask struct {
 
 	LPort  string
 	RPort  string
-	Conn   net.Conn
 	Choice int
 }
 
@@ -61,7 +59,6 @@ type backward struct {
 
 type backwardStatus struct {
 	dataChan chan []byte
-	conn     net.Conn
 }
 
 type bwSeqRelationship struct {
@@ -94,8 +91,8 @@ func (manager *backwardManager) run() {
 			manager.getNewSeq(task)
 		case B_ADDCONN:
 			manager.addConn(task)
-		case B_UPDATEBACKWARD:
-			manager.updateBackward(task)
+		case B_CHECKBACKWARD:
+			manager.checkBackward(task)
 		case B_GETDATACHAN:
 			manager.getDataChan(task)
 		case B_GETDATACHAN_WITHOUTUUID:
@@ -147,14 +144,13 @@ func (manager *backwardManager) addConn(task *BackwardTask) {
 	manager.ResultChan <- &backwardResult{OK: true}
 }
 
-func (manager *backwardManager) updateBackward(task *BackwardTask) {
+func (manager *backwardManager) checkBackward(task *BackwardTask) {
 	if _, ok := manager.backwardSeqMap[task.Seq]; !ok {
 		manager.ResultChan <- &backwardResult{OK: false}
 		return
 	}
 
 	if _, ok := manager.backwardMap[task.UUID][task.RPort].backwardStatusMap[task.Seq]; ok {
-		manager.backwardMap[task.UUID][task.RPort].backwardStatusMap[task.Seq].conn = task.Conn
 		manager.ResultChan <- &backwardResult{OK: true}
 	} else {
 		manager.ResultChan <- &backwardResult{OK: false}
@@ -201,10 +197,6 @@ func (manager *backwardManager) closeTCP(task *BackwardTask) {
 
 	uuid := manager.backwardSeqMap[task.Seq].uuid
 	rPort := manager.backwardSeqMap[task.Seq].rPort
-
-	if manager.backwardMap[uuid][rPort].backwardStatusMap[task.Seq].conn != nil {
-		manager.backwardMap[uuid][rPort].backwardStatusMap[task.Seq].conn.Close()
-	}
 
 	close(manager.backwardMap[uuid][rPort].backwardStatusMap[task.Seq].dataChan)
 
@@ -280,9 +272,6 @@ func (manager *backwardManager) forceShutdown(task *BackwardTask) {
 	if _, ok := manager.backwardMap[task.UUID]; ok {
 		for rPort := range manager.backwardMap[task.UUID] {
 			for seq, status := range manager.backwardMap[task.UUID][rPort].backwardStatusMap {
-				if status.conn != nil {
-					status.conn.Close()
-				}
 				close(status.dataChan)
 				delete(manager.backwardMap[task.UUID][rPort].backwardStatusMap, seq)
 			}

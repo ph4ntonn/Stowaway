@@ -30,9 +30,8 @@ type BackwardTask struct {
 	Mode int
 	Seq  uint64
 
-	Listener       net.Listener
-	RPort          string
-	BackwardSocket net.Conn
+	Listener net.Listener
+	RPort    string
 }
 
 type backwardResult struct {
@@ -51,7 +50,6 @@ type backward struct {
 
 type backwardStatus struct {
 	dataChan chan []byte
-	conn     net.Conn
 }
 
 func newBackwardManager() *backwardManager {
@@ -118,7 +116,6 @@ func (manager *backwardManager) addConn(task *BackwardTask) {
 	if _, ok := manager.backwardMap[task.RPort]; ok {
 		manager.backwardSeqMap[task.Seq] = task.RPort
 		manager.backwardMap[task.RPort].backwardStatusMap[task.Seq] = new(backwardStatus)
-		manager.backwardMap[task.RPort].backwardStatusMap[task.Seq].conn = task.BackwardSocket
 		manager.backwardMap[task.RPort].backwardStatusMap[task.Seq].dataChan = make(chan []byte, 5)
 		manager.ResultChan <- &backwardResult{OK: true}
 	} else {
@@ -166,8 +163,6 @@ func (manager *backwardManager) closeTCP(task *BackwardTask) {
 
 	rPort := manager.backwardSeqMap[task.Seq]
 
-	manager.backwardMap[rPort].backwardStatusMap[task.Seq].conn.Close()
-
 	close(manager.backwardMap[rPort].backwardStatusMap[task.Seq].dataChan)
 
 	delete(manager.backwardMap[rPort].backwardStatusMap, task.Seq)
@@ -179,7 +174,6 @@ func (manager *backwardManager) closeSingle(task *BackwardTask) {
 	close(manager.backwardMap[task.RPort].seqChan)
 
 	for seq, status := range manager.backwardMap[task.RPort].backwardStatusMap {
-		status.conn.Close()
 		close(status.dataChan)
 		delete(manager.backwardMap[task.RPort].backwardStatusMap, seq)
 	}
@@ -201,7 +195,6 @@ func (manager *backwardManager) closeSingleAll() {
 		close(bw.seqChan)
 
 		for seq, status := range bw.backwardStatusMap {
-			status.conn.Close()
 			close(status.dataChan)
 			delete(manager.backwardMap[rPort].backwardStatusMap, seq)
 		}

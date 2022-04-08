@@ -244,11 +244,10 @@ func (manager *socksManager) closeTCP(task *SocksTask) {
 
 	uuid := manager.socksSeqMap[task.Seq]
 
-	manager.socksMap[uuid].socksStatusMap[task.Seq].tcp.conn.Close() // socksStatusMap[task.Seq] must exist, no need to check
+	// bugfix: In order to avoid data loss,so not close conn&listener here.Thx to @lz520520
 	close(manager.socksMap[uuid].socksStatusMap[task.Seq].tcp.dataChan)
 
 	if manager.socksMap[uuid].socksStatusMap[task.Seq].isUDP {
-		manager.socksMap[uuid].socksStatusMap[task.Seq].udp.listener.Close()
 		close(manager.socksMap[uuid].socksStatusMap[task.Seq].udp.dataChan)
 	}
 
@@ -323,10 +322,9 @@ func (manager *socksManager) getSocksInfo(task *SocksTask) {
 func (manager *socksManager) closeSocks(task *SocksTask) {
 	manager.socksMap[task.UUID].listener.Close()
 	for seq, status := range manager.socksMap[task.UUID].socksStatusMap {
-		status.tcp.conn.Close()
+		// bugfix: In order to avoid data loss,so not close conn&listener here.Thx to @lz520520
 		close(status.tcp.dataChan)
 		if status.isUDP {
-			status.udp.listener.Close()
 			close(status.udp.dataChan)
 		}
 		delete(manager.socksMap[task.UUID].socksStatusMap, seq)
