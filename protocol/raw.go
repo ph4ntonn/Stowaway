@@ -74,10 +74,10 @@ func (message *RawMessage) ConstructData(header *Header, mess interface{}, isPas
 		dataBuffer.Write(mmess)
 	}
 
-	// Encrypt data
 	message.DataBuffer = dataBuffer.Bytes()
-
+	// Encrypt&Compress data
 	if !isPass {
+		message.DataBuffer = crypto.GzipCompress(message.DataBuffer)
 		message.DataBuffer = crypto.AESEncrypt(message.DataBuffer, message.CryptoSecret)
 	}
 	// Calculate the whole data's length
@@ -134,9 +134,10 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 	} else {
 		return header, dataBuf, nil
 	}
+	// Decompress the data
+	dataBuf = crypto.GzipDecompress(dataBuf)
 	// Use reflect to deconstruct data
 	var mess interface{}
-
 	switch header.MessageType {
 	case HI:
 		mess = new(HIMess)
