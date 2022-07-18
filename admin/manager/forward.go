@@ -118,9 +118,9 @@ func (manager *forwardManager) run() {
 	}
 }
 
+// 2022.7.19 Fix nil pointer bug,thx to @zyylhn
 func (manager *forwardManager) newForward(task *ForwardTask) {
 	if _, ok := manager.forwardMap[task.UUID]; !ok {
-		manager.forwardMap = make(map[string]map[string]*forward)
 		manager.forwardMap[task.UUID] = make(map[string]*forward)
 	}
 

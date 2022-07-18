@@ -114,9 +114,9 @@ func (manager *backwardManager) run() {
 }
 
 // register a brand new backforward
+// 2022.7.19 Fix nil pointer bug,thx to @zyylhn
 func (manager *backwardManager) newBackward(task *BackwardTask) {
 	if _, ok := manager.backwardMap[task.UUID]; !ok {
-		manager.backwardMap = make(map[string]map[string]*backward)
 		manager.backwardMap[task.UUID] = make(map[string]*backward)
 	}
 
