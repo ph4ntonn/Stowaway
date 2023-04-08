@@ -54,10 +54,6 @@ Usages:
 	>> ./stowaway_admin -l <port> -s [secret]
 	>> ./stowaway_admin -c <ip:port> -s [secret] 
 	>> ./stowaway_admin -c <ip:port> -s [secret] --proxy <ip:port> --proxyu [username] --proxyp [password]
-	>> ./stowaway_admin -c <ip:port> -s [secret] --rhostreuse
-	>> ./stowaway_admin -c <ip:port> -s [secret] --proxy <ip:port> --proxyu [username] --proxyp [password] --rhostreuse
-
-Options:
 `)
 	flag.PrintDefaults()
 }
