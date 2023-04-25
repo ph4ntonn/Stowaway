@@ -39,8 +39,9 @@ PPS: **Please read the usage method and the precautions at the end of the articl
 - Compared with v1.0, the file size is reduced by 25%
 - Multiple platforms support(Linux/Mac/Windows/MIPS/ARM)
 
-## Download and Demo
+## Build and Demo
 
+- Use ```make``` to directly compile complete multi-platform programs, or check the Makefile to compile specific type of program
 - Check the [release](https://github.com/ph4ntonn/Stowaway/releases) to get one
 - Demo video: [Youtube](https://www.youtube.com/watch?v=Lh5Q0RPWKMU&list=PLkbGxnHFIhA_g5XZtKzN4u-JXRq41L2g-)
 

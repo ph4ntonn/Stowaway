@@ -41,10 +41,11 @@ PPS:**请务必在使用前详细阅读使用方法及文末的注意事项**
 - 相较于v1.0，文件体积减小25%
 - 支持各类平台(Linux/Mac/Windows/MIPS/ARM)
 
-## 下载及演示
+## 编译及演示
 
+- 使用```make```直接编译多平台完整程序，或参看Makefile编译特定程序
 - 不想编译的盆油可以直接用[release](https://github.com/ph4ntonn/Stowaway/releases)下编译完成的程序
--  演示视频：[Youtube](https://www.youtube.com/watch?v=Lh5Q0RPWKMU&list=PLkbGxnHFIhA_g5XZtKzN4u-JXRq41L2g-)
+- 演示视频：[Youtube](https://www.youtube.com/watch?v=Lh5Q0RPWKMU&list=PLkbGxnHFIhA_g5XZtKzN4u-JXRq41L2g-)
 
 ## 使用方法
 
