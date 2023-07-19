@@ -24,7 +24,7 @@ PPS: **Please read the usage method and the precautions at the end of the articl
 - Clear information display of nodes
 - Active/Passive connection between nodes
 - Support reconnection between nodes
-- Nodes can be connected through socks5 proxy
+- Nodes can be connected through socks5/http proxy
 - Nodes can be connected through ssh tunnel
 - TCP/HTTP can be selected for inter-node traffic
 - Multi-hop socks5 traffic proxy forwarding, support UDP/TCP, IPV4/IPV6
@@ -69,9 +69,10 @@ parameter:
 -l Listening address in passive mode [ip]:<port>
 -s node communication encryption key, all nodes (admin&&agent) must be consistent
 -c target node address under active mode
---proxy socks5 proxy server address
---proxyu socks5 proxy server username (optional)
---proxyp socks5 proxy server password (optional)
+--socks5-proxy socks5 proxy server address
+--socks5-proxyu socks5 proxy server username (optional)
+--socks5-proxyp socks5 proxy server password (optional)
+--http-proxy http proxy server address
 --down downstream protocol type, default is bare TCP traffic, optional HTTP
 ```
 
@@ -82,9 +83,10 @@ parameter:
 -l Listening address in passive mode [ip]:<port>
 -s node communication encryption key
 -c target node address under active mode
---proxy socks5 proxy server address
---proxyu socks5 proxy server username (optional)
---proxyp socks5 proxy server password (optional)
+--socks5-proxy socks5 proxy server address
+--socks5-proxyu socks5 proxy server username (optional)
+--socks5-proxyp socks5 proxy server password (optional)
+--http-proxy http proxy server address
 --reconnect reconnect time interval
 --rehost the IP address to be reused
 --report the Port number to be reused
@@ -125,23 +127,25 @@ Declaring the address of the node you want to connect to
 
 - agent:  ```./stowaway_agent -c 127.0.0.1:9999``` 
 
-#### --proxy/--proxyu/--proxyp
+#### --socks5-proxy/--socks5-proxyu/--socks5-proxyp/--http-proxy
 
-These three parameters can be used on admin&&agent , only can be used under active mode
+These four parameters can be used on admin&&agent , only can be used under active mode
 
-```--proxy``` represents the address of the socks5 proxy server, ```--proxyu``` and ```--proxyp``` are optional
+```--socks5-proxy``` represents the address of the socks5 proxy server, ```--socks5-proxyu``` and ```--socks5-proxyp``` are optional
+
+```--http-proxy``` represents the address of the http proxy server, the usage is as same as socks5
 
 No username and password：
 
-- admin:  ```./stowaway_admin -c 127.0.0.1:9999 --proxy xxx.xxx.xxx.xxx```
+- admin:  ```./stowaway_admin -c 127.0.0.1:9999 --socks5-proxy xxx.xxx.xxx.xxx```
 
-- agent:  ```./stowaway_agent -c 127.0.0.1:9999 --proxy xxx.xxx.xxx.xxx``` 
+- agent:  ```./stowaway_agent -c 127.0.0.1:9999 --socks5-proxy xxx.xxx.xxx.xxx``` 
 
 Username and password:
 
-- admin:  ```./stowaway_admin -c 127.0.0.1:9999 --proxy xxx.xxx.xxx.xxx --proxyu xxx --proxyp xxx```
+- admin:  ```./stowaway_admin -c 127.0.0.1:9999 --socks5-proxy xxx.xxx.xxx.xxx --socks5-proxyu xxx --socks5-proxyp xxx```
 
-- agent:  ```./stowaway_agent -c 127.0.0.1:9999 --proxy xxx.xxx.xxx.xxx--proxyu xxx --proxyp xxx``` 
+- agent:  ```./stowaway_agent -c 127.0.0.1:9999 --socks5-proxy xxx.xxx.xxx.xxx --socks5-proxyu xxx --socks5-proxyp xxx``` 
 
 #### --up/--down
 
@@ -189,7 +193,7 @@ In the above case, it means that if the connection between the agent and the adm
 
 The rules between admin--agent is as same as agent--agent
 
-And ```--reconnect``` parameter can be used together with ```--proxy```/```--proxyu```/```--proxyp```. The agent will base on its own settings at startup and try to reconnect through the proxy when the parent node disconnected
+And ```--reconnect``` parameter can be used together with ```--socks5-proxy```/```--socks5-proxyu```/```--socks5-proxy```/```--http-proxy```. The agent will base on its own settings at startup and try to reconnect through the proxy when the parent node disconnected
 
 #### --rehost/--report
 

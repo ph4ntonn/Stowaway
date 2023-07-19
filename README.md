@@ -26,7 +26,7 @@ PPS:**请务必在使用前详细阅读使用方法及文末的注意事项**
 - 丰富的节点信息展示
 - 节点间正向/反向连接
 - 节点间支持重连
-- 节点间可通过socks5代理进行连接
+- 节点间可通过socks5/http代理进行连接
 - 节点间可通过ssh隧道连接
 - 节点间流量可选择TCP/HTTP
 - 多级socks5流量代理转发,支持UDP/TCP,IPV4/IPV6
@@ -71,9 +71,10 @@ Stowaway一共包含两种角色，分别是：
 -l 被动模式下的监听地址[ip]:<port>
 -s 节点通信加密密钥,所有节点(admin&&agent)必须一致
 -c 主动模式下的目标节点地址
---proxy socks5代理服务器地址
---proxyu socks5代理服务器用户名(可选)
---proxyp socks5代理服务器密码(可选)
+--socks5-proxy socks5代理服务器地址
+--socks5-proxyu socks5代理服务器用户名(可选)
+--socks5-proxyp socks5代理服务器密码(可选)
+--http-proxy http代理服务器地址
 --down 下游协议类型,默认为裸TCP流量,可选HTTP
 ```
 
@@ -84,9 +85,10 @@ Stowaway一共包含两种角色，分别是：
 -l 被动模式下的监听地址[ip]:<port>
 -s 节点通信加密密钥
 -c 主动模式下的目标节点地址
---proxy socks5代理服务器地址
---proxyu socks5代理服务器用户名(可选)
---proxyp socks5代理服务器密码(可选)
+--socks5-proxy socks5代理服务器地址
+--socks5-proxyu socks5代理服务器用户名(可选)
+--socks5-proxyp socks5代理服务器密码(可选)
+--http-proxy http代理服务器地址
 --reconnect 重连时间间隔
 --rehost 端口复用时复用的IP地址
 --report 端口复用时复用的端口号
@@ -127,23 +129,25 @@ Stowaway一共包含两种角色，分别是：
 
 - agent:  ```./stowaway_agent -c 127.0.0.1:9999``` 
 
-#### --proxy/--proxyu/--proxyp
+#### --socks5-proxy/--socks5-proxyu/--socks5-proxyp/--http-proxy
 
-这三个参数admin&&agent用法一致，仅用在主动模式下
+这四个参数admin&&agent用法一致，仅用在主动模式下
 
-```--proxy```代表socks5代理服务器地址，```--proxyu```以及```--proxyp```可选
+```--socks5-proxy```代表socks5代理服务器地址，```--socks5-proxyu```以及```--socks5-proxyp```可选
+
+```--http-proxy```代表http代理服务器地址,与socks5使用方式相同
 
 无用户名密码：
 
-- admin:  ```./stowaway_admin -c 127.0.0.1:9999 --proxy xxx.xxx.xxx.xxx```
+- admin:  ```./stowaway_admin -c 127.0.0.1:9999 --socks5-proxy xxx.xxx.xxx.xxx```
 
-- agent:  ```./stowaway_agent -c 127.0.0.1:9999 --proxy xxx.xxx.xxx.xxx``` 
+- agent:  ```./stowaway_agent -c 127.0.0.1:9999 --socks5-proxy xxx.xxx.xxx.xxx``` 
 
 有用户名密码:
 
-- admin:  ```./stowaway_admin -c 127.0.0.1:9999 --proxy xxx.xxx.xxx.xxx --proxyu xxx --proxyp xxx```
+- admin:  ```./stowaway_admin -c 127.0.0.1:9999 --socks5-proxy xxx.xxx.xxx.xxx --socks5-proxyu xxx --socks5-proxyp xxx```
 
-- agent:  ```./stowaway_agent -c 127.0.0.1:9999 --proxy xxx.xxx.xxx.xxx--proxyu xxx --proxyp xxx``` 
+- agent:  ```./stowaway_agent -c 127.0.0.1:9999 --socks5-proxy xxx.xxx.xxx.xxx --socks5-proxyu xxx --socks5-proxyp xxx``` 
 
 #### --up/--down
 
@@ -191,7 +195,7 @@ agent间也一样
 
 agent之间也与上面情况一致
 
-并且```--reconnect```参数可以与```--proxy```/```--proxyu```/```--proxyp```一起使用，agent将会参照启动时的设置，通过代理尝试重连
+并且```--reconnect```参数可以与```--socks5-proxy```/```--socks5-proxyu```/```--socks5-proxyp```/```--http-proxy```一起使用，agent将会参照启动时的设置，通过代理尝试重连
 
 #### --rehost/--report
 
