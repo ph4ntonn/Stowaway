@@ -56,7 +56,7 @@ func newUsage() {
 Usages:
 	>> ./stowaway_admin -l <port> -s [secret]
 	>> ./stowaway_admin -c <ip:port> -s [secret] 
-	>> ./stowaway_admin -c <ip:port> -s [secret] --proxy <ip:port> --proxyu [username] --proxyp [password]
+	>> ./stowaway_admin -c <ip:port> -s [secret] --socks5-proxy <ip:port> --socks5-proxyu [username] --socks5-proxyp [password]
 `)
 	flag.PrintDefaults()
 }
