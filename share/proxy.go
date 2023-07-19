@@ -3,6 +3,7 @@ package share
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"strconv"
@@ -10,15 +11,19 @@ import (
 	"Stowaway/utils"
 )
 
-type Proxy struct {
+type Proxy interface {
+	Dial() (net.Conn, error)
+}
+
+type Socks5Proxy struct {
 	PeerAddr  string
 	ProxyAddr string
 	UserName  string
 	Password  string
 }
 
-func NewProxy(peerAddr, proxyAddr, username, password string) *Proxy {
-	proxy := new(Proxy)
+func NewSocks5Proxy(peerAddr, proxyAddr, username, password string) *Socks5Proxy {
+	proxy := new(Socks5Proxy)
 	proxy.PeerAddr = peerAddr
 	proxy.ProxyAddr = proxyAddr
 	proxy.UserName = username
@@ -26,7 +31,7 @@ func NewProxy(peerAddr, proxyAddr, username, password string) *Proxy {
 	return proxy
 }
 
-func (proxy *Proxy) Dial() (net.Conn, error) {
+func (proxy *Socks5Proxy) Dial() (net.Conn, error) {
 	var NOT_SUPPORT = errors.New("unknown protocol")
 	var WRONG_AUTH = errors.New("wrong auth method")
 	var SERVER_ERROR = errors.New("proxy server error")
@@ -150,5 +155,58 @@ func (proxy *Proxy) Dial() (net.Conn, error) {
 		}
 	} else {
 		return proxyConn, NOT_SUPPORT
+	}
+}
+
+type HTTPProxy struct {
+	PeerAddr  string
+	ProxyAddr string
+}
+
+func NewHTTPProxy(peerAddr, proxyAddr string) *HTTPProxy {
+	proxy := new(HTTPProxy)
+	proxy.PeerAddr = peerAddr
+	proxy.ProxyAddr = proxyAddr
+	return proxy
+}
+
+func (proxy *HTTPProxy) Dial() (net.Conn, error) {
+	var SERVER_ERROR = errors.New("proxy server error")
+	var RESPONSE_TOO_LARGE = errors.New("http connect response is too large > 40KB")
+
+	proxyConn, err := net.Dial("tcp", proxy.ProxyAddr)
+	if err != nil {
+		return proxyConn, SERVER_ERROR
+	}
+
+	var http_proxy_payload_template = "CONNECT %s HTTP/1.1\r\n" +
+		"Content-Length: 0\r\n\r\n"
+	var payload = fmt.Sprintf(http_proxy_payload_template, proxy.PeerAddr)
+	var buf = []byte(payload)
+
+	proxyConn.Write(buf)
+
+	var done = "\r\n\r\n"
+	var success = "HTTP/1.1 200"
+	var begin = 0
+	var resultBuf = make([]byte, 40960)
+
+	for {
+		count, err := proxyConn.Read(resultBuf[begin:])
+		if err != nil {
+			return proxyConn, SERVER_ERROR
+		}
+
+		begin += count
+		if begin >= 40960 {
+			return proxyConn, RESPONSE_TOO_LARGE
+		}
+
+		if string(resultBuf[begin-4:begin]) == done {
+			if string(resultBuf[:len(success)]) == success {
+				return proxyConn, nil
+			}
+			return proxyConn, SERVER_ERROR
+		}
 	}
 }

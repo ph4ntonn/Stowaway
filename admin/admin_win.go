@@ -40,8 +40,11 @@ func main() {
 		conn = initial.NormalActive(options, topo, nil)
 	case initial.NORMAL_PASSIVE:
 		conn = initial.NormalPassive(options, topo)
-	case initial.PROXY_ACTIVE:
-		proxy := share.NewProxy(options.Connect, options.Proxy, options.ProxyU, options.ProxyP)
+	case initial.SOCKS5_PROXY_ACTIVE:
+		proxy := share.NewSocks5Proxy(options.Connect, options.Socks5Proxy, options.Socks5ProxyU, options.Socks5ProxyP)
+		conn = initial.NormalActive(options, topo, proxy)
+	case initial.HTTP_PROXY_ACTIVE:
+		proxy := share.NewHTTPProxy(options.Connect, options.HttpProxy)
 		conn = initial.NormalActive(options, topo, proxy)
 	default:
 		printer.Fail("[*] Unknown Mode")

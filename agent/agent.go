@@ -31,10 +31,15 @@ func main() {
 		fallthrough
 	case initial.NORMAL_ACTIVE:
 		conn, agent.UUID = initial.NormalActive(options, nil)
-	case initial.PROXY_RECONNECT_ACTIVE:
+	case initial.SOCKS5_PROXY_RECONNECT_ACTIVE:
 		fallthrough
-	case initial.PROXY_ACTIVE:
-		proxy := share.NewProxy(options.Connect, options.Proxy, options.ProxyU, options.ProxyP)
+	case initial.SOCKS5_PROXY_ACTIVE:
+		proxy := share.NewSocks5Proxy(options.Connect, options.Socks5Proxy, options.Socks5ProxyU, options.Socks5ProxyP)
+		conn, agent.UUID = initial.NormalActive(options, proxy)
+	case initial.HTTP_PROXY_RECONNECT_ACTIVE:
+		fallthrough
+	case initial.HTTP_PROXY_ACTIVE:
+		proxy := share.NewHTTPProxy(options.Connect, options.HttpProxy)
 		conn, agent.UUID = initial.NormalActive(options, proxy)
 	case initial.IPTABLES_REUSE_PASSIVE:
 		defer initial.DeletePortReuseRules(options.Listen, options.ReusePort)

@@ -57,6 +57,10 @@ func (admin *Admin) handleMessFromDownstream(console *cli.Console) {
 		header, message, err := protocol.DestructMessage(rMessage)
 		if err != nil {
 			printer.Fail("\r\n[*] Peer node seems offline!")
+			// wait for user to exit
+			printer.Fail("\r\n[*] Press any key to exit")
+			termbox.PollEvent()
+			// close termbox
 			termbox.Close()
 			os.Exit(0)
 		}

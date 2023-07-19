@@ -15,19 +15,21 @@ import (
 
 const (
 	NORMAL_ACTIVE = iota
-	PROXY_ACTIVE
 	NORMAL_PASSIVE
+	SOCKS5_PROXY_ACTIVE
+	HTTP_PROXY_ACTIVE
 )
 
 type Options struct {
-	Mode       uint8
-	Secret     string
-	Listen     string
-	Connect    string
-	Proxy      string
-	ProxyU     string
-	ProxyP     string
-	Downstream string
+	Mode         uint8
+	Secret       string
+	Listen       string
+	Connect      string
+	Socks5Proxy  string
+	Socks5ProxyU string
+	Socks5ProxyP string
+	HttpProxy    string
+	Downstream   string
 }
 
 var Args *Options
@@ -38,9 +40,10 @@ func init() {
 	flag.StringVar(&Args.Secret, "s", "", "Communication secret")
 	flag.StringVar(&Args.Listen, "l", "", "Listen port")
 	flag.StringVar(&Args.Connect, "c", "", "The node address when you actively connect to it")
-	flag.StringVar(&Args.Proxy, "proxy", "", "The socks5 server ip:port you want to use")
-	flag.StringVar(&Args.ProxyU, "proxyu", "", "socks5 username")
-	flag.StringVar(&Args.ProxyP, "proxyp", "", "socks5 password")
+	flag.StringVar(&Args.Socks5Proxy, "socks5-proxy", "", "The socks5 server ip:port you want to use")
+	flag.StringVar(&Args.Socks5ProxyU, "socks5-proxyu", "", "socks5 username")
+	flag.StringVar(&Args.Socks5ProxyP, "socks5-proxyp", "", "socks5 password")
+	flag.StringVar(&Args.HttpProxy, "http-proxy", "", "The http proxy server ip:port you want to use")
 	flag.StringVar(&Args.Downstream, "down", "raw", "")
 
 	flag.Usage = newUsage
@@ -62,17 +65,19 @@ Usages:
 func ParseOptions() *Options {
 	flag.Parse()
 
-	if Args.Listen != "" && Args.Connect == "" && Args.Proxy == "" { // ./stowaway_admin -l <port> -s [secret]
+	if Args.Listen != "" && Args.Connect == "" && Args.Socks5Proxy == "" && Args.HttpProxy == "" { // ./stowaway_admin -l <port> -s [secret]
 		Args.Mode = NORMAL_PASSIVE
 		printer.Warning("[*] Starting admin node on port %s\r\n", Args.Listen)
-	} else if Args.Connect != "" && Args.Listen == "" && Args.Proxy == "" { // ./stowaway_admin -c <ip:port> -s [secret]
+	} else if Args.Connect != "" && Args.Listen == "" && Args.Socks5Proxy == "" && Args.HttpProxy == "" { // ./stowaway_admin -c <ip:port> -s [secret]
 		Args.Mode = NORMAL_ACTIVE
 		printer.Warning("[*] Trying to connect node actively")
-	} else if Args.Connect != "" && Args.Listen == "" && Args.Proxy != "" { // ./stowaway_admin -c <ip:port> -s [secret] --proxy <ip:port> --proxyu [username] --proxyp [password]
-		Args.Mode = PROXY_ACTIVE
-		printer.Warning("[*] Trying to connect node actively with proxy %s\r\n", Args.Proxy)
+	} else if Args.Connect != "" && Args.Listen == "" && Args.Socks5Proxy != "" && Args.HttpProxy == "" { // ./stowaway_admin -c <ip:port> -s [secret] --proxy <ip:port> --proxyu [username] --proxyp [password]
+		Args.Mode = SOCKS5_PROXY_ACTIVE
+		printer.Warning("[*] Trying to connect node actively via socks5 proxy %s\r\n", Args.Socks5Proxy)
+	} else if Args.Connect != "" && Args.Listen == "" && Args.Socks5Proxy == "" && Args.HttpProxy != "" {
+		Args.Mode = HTTP_PROXY_ACTIVE
+		printer.Warning("[*] Trying to connect node actively via http proxy %s\r\n", Args.HttpProxy)
 	} else { // Wrong format
-		termbox.Close()
 		flag.Usage()
 		os.Exit(0)
 	}
@@ -93,8 +98,12 @@ func checkOptions(option *Options) error {
 		_, err = net.ResolveTCPAddr("", option.Connect)
 	}
 
-	if Args.Proxy != "" {
-		_, err = net.ResolveTCPAddr("", option.Proxy)
+	if Args.Socks5Proxy != "" {
+		_, err = net.ResolveTCPAddr("", option.Socks5Proxy)
+	}
+
+	if Args.HttpProxy != "" {
+		_, err = net.ResolveTCPAddr("", option.HttpProxy)
 	}
 
 	return err

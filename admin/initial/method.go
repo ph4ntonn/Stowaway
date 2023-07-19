@@ -36,7 +36,7 @@ func dispatchUUID(conn net.Conn, secret string) string {
 	return uuid
 }
 
-func NormalActive(userOptions *Options, topo *topology.Topology, proxy *share.Proxy) net.Conn {
+func NormalActive(userOptions *Options, topo *topology.Topology, proxy share.Proxy) net.Conn {
 
 	var sMessage, rMessage protocol.Message
 

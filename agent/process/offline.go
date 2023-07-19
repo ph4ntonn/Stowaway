@@ -19,7 +19,7 @@ import (
 )
 
 func upstreamOffline(mgr *manager.Manager, options *initial.Options) {
-	if options.Mode == initial.NORMAL_ACTIVE || options.Mode == initial.PROXY_ACTIVE { // not passive && no reconn,exit immediately
+	if options.Mode == initial.NORMAL_ACTIVE || options.Mode == initial.SOCKS5_PROXY_ACTIVE || options.Mode == initial.HTTP_PROXY_ACTIVE { // not passive && no reconn,exit immediately
 		os.Exit(0)
 	}
 
@@ -37,8 +37,11 @@ func upstreamOffline(mgr *manager.Manager, options *initial.Options) {
 		newConn = soReusePassiveReconn(options)
 	case initial.NORMAL_RECONNECT_ACTIVE:
 		newConn = normalReconnActiveReconn(options, nil)
-	case initial.PROXY_RECONNECT_ACTIVE:
-		proxy := share.NewProxy(options.Connect, options.Proxy, options.ProxyU, options.ProxyP)
+	case initial.SOCKS5_PROXY_RECONNECT_ACTIVE:
+		proxy := share.NewSocks5Proxy(options.Connect, options.Socks5Proxy, options.Socks5ProxyU, options.Socks5ProxyP)
+		newConn = normalReconnActiveReconn(options, proxy)
+	case initial.HTTP_PROXY_RECONNECT_ACTIVE:
+		proxy := share.NewHTTPProxy(options.Connect, options.HttpProxy)
 		newConn = normalReconnActiveReconn(options, proxy)
 	}
 
@@ -204,7 +207,7 @@ func soReusePassiveReconn(options *initial.Options) net.Conn {
 	}
 }
 
-func normalReconnActiveReconn(options *initial.Options, proxy *share.Proxy) net.Conn {
+func normalReconnActiveReconn(options *initial.Options, proxy share.Proxy) net.Conn {
 	var sMessage, rMessage protocol.Message
 
 	hiMess := &protocol.HIMess{
