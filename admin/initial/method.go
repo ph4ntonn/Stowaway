@@ -179,7 +179,9 @@ func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 		}
 
 		if err := share.PassivePreAuth(conn, userOptions.Secret); err != nil {
-			printer.Fail("[*] Error occured: %s", err.Error())
+			printer.Fail("[*] Error occured: %s\r\n", err.Error())
+			conn.Close()
+			continue
 		}
 
 		rMessage = protocol.PrepareAndDecideWhichRProtoFromLower(conn, userOptions.Secret, protocol.ADMIN_UUID)

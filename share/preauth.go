@@ -11,6 +11,7 @@ import (
 
 func ActivePreAuth(conn net.Conn, key string) error {
 	var NOT_VALID = errors.New("invalid secret, check the secret")
+	var TIMEOUT = errors.New("connection timeout")
 
 	defer conn.SetReadDeadline(time.Time{})
 	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
@@ -23,12 +24,12 @@ func ActivePreAuth(conn net.Conn, key string) error {
 
 	if timeoutErr, ok := err.(net.Error); ok && timeoutErr.Timeout() {
 		conn.Close()
-		return NOT_VALID
+		return TIMEOUT
 	}
 
 	if err != nil {
 		conn.Close()
-		return NOT_VALID
+		return errors.New(err.Error())
 	}
 
 	if string(buffer[:count]) == secret[:16] {
@@ -42,6 +43,7 @@ func ActivePreAuth(conn net.Conn, key string) error {
 
 func PassivePreAuth(conn net.Conn, key string) error {
 	var NOT_VALID = errors.New("invalid secret, check the secret")
+	var TIMEOUT = errors.New("connection timeout")
 
 	defer conn.SetReadDeadline(time.Time{})
 	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
@@ -53,12 +55,12 @@ func PassivePreAuth(conn net.Conn, key string) error {
 
 	if timeoutErr, ok := err.(net.Error); ok && timeoutErr.Timeout() {
 		conn.Close()
-		return NOT_VALID
+		return TIMEOUT
 	}
 
 	if err != nil {
 		conn.Close()
-		return NOT_VALID
+		return errors.New(err.Error())
 	}
 
 	if string(buffer[:count]) == secret[:16] {
