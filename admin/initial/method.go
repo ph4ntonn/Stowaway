@@ -70,12 +70,12 @@ func NormalActive(userOptions *Options, topo *topology.Topology, proxy share.Pro
 		}
 
 		if err != nil {
-			printer.Fail("[*] Error occured: %s", err.Error())
+			printer.Fail("[*] Error occurred: %s", err.Error())
 			os.Exit(0)
 		}
 
 		if err := share.ActivePreAuth(conn, userOptions.Secret); err != nil {
-			printer.Fail("[*] Error occured: %s", err.Error())
+			printer.Fail("[*] Error occurred: %s", err.Error())
 			os.Exit(0)
 		}
 
@@ -136,13 +136,13 @@ func NormalActive(userOptions *Options, topo *topology.Topology, proxy share.Pro
 func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 	listenAddr, _, err := utils.CheckIPPort(userOptions.Listen)
 	if err != nil {
-		printer.Fail("[*] Error occured: %s", err.Error())
+		printer.Fail("[*] Error occurred: %s", err.Error())
 		os.Exit(0)
 	}
 
 	listener, err := net.Listen("tcp", listenAddr)
 	if err != nil {
-		printer.Fail("[*] Error occured: %s", err.Error())
+		printer.Fail("[*] Error occurred: %s", err.Error())
 		os.Exit(0)
 	}
 
@@ -173,13 +173,13 @@ func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			printer.Fail("[*] Error occured: %s\r\n", err.Error())
+			printer.Fail("[*] Error occurred: %s\r\n", err.Error())
 			conn.Close()
 			continue
 		}
 
 		if err := share.PassivePreAuth(conn, userOptions.Secret); err != nil {
-			printer.Fail("[*] Error occured: %s\r\n", err.Error())
+			printer.Fail("[*] Error occurred: %s\r\n", err.Error())
 			conn.Close()
 			continue
 		}

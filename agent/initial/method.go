@@ -76,11 +76,11 @@ func NormalActive(userOptions *Options, proxy share.Proxy) (net.Conn, string) {
 		}
 
 		if err != nil {
-			log.Fatalf("[*] Error occured: %s", err.Error())
+			log.Fatalf("[*] Error occurred: %s", err.Error())
 		}
 
 		if err := share.ActivePreAuth(conn, userOptions.Secret); err != nil {
-			log.Fatalf("[*] Error occured: %s", err.Error())
+			log.Fatalf("[*] Error occurred: %s", err.Error())
 		}
 
 		sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(conn, userOptions.Secret, protocol.TEMP_UUID)
@@ -112,12 +112,12 @@ func NormalActive(userOptions *Options, proxy share.Proxy) (net.Conn, string) {
 func NormalPassive(userOptions *Options) (net.Conn, string) {
 	listenAddr, _, err := utils.CheckIPPort(userOptions.Listen)
 	if err != nil {
-		log.Fatalf("[*] Error occured: %s", err.Error())
+		log.Fatalf("[*] Error occurred: %s", err.Error())
 	}
 
 	listener, err := net.Listen("tcp", listenAddr)
 	if err != nil {
-		log.Fatalf("[*] Error occured: %s", err.Error())
+		log.Fatalf("[*] Error occurred: %s", err.Error())
 	}
 
 	defer func() {
@@ -146,13 +146,13 @@ func NormalPassive(userOptions *Options) (net.Conn, string) {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Printf("[*] Error occured: %s\n", err.Error())
+			log.Printf("[*] Error occurred: %s\n", err.Error())
 			conn.Close()
 			continue
 		}
 
 		if err := share.PassivePreAuth(conn, userOptions.Secret); err != nil {
-			log.Fatalf("[*] Error occured: %s", err.Error())
+			log.Fatalf("[*] Error occurred: %s", err.Error())
 		}
 
 		rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, userOptions.Secret, protocol.TEMP_UUID)
@@ -247,7 +247,7 @@ func SoReusePassive(options *Options) (net.Conn, string) {
 
 	listener, err := reuseport.Listen("tcp", listenAddr)
 	if err != nil {
-		log.Fatalf("[*] Error occured: %s", err.Error())
+		log.Fatalf("[*] Error occurred: %s", err.Error())
 	}
 
 	defer func() {
