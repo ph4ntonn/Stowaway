@@ -55,12 +55,12 @@ func upstreamOffline(mgr *manager.Manager, options *initial.Options) {
 func normalPassiveReconn(options *initial.Options) net.Conn {
 	listenAddr, _, err := utils.CheckIPPort(options.Listen)
 	if err != nil {
-		log.Fatalf("[*] Error occured: %s", err.Error())
+		log.Fatalf("[*] Error occurred: %s", err.Error())
 	}
 
 	listener, err := net.Listen("tcp", listenAddr)
 	if err != nil {
-		log.Fatalf("[*] Error occured: %s", err.Error())
+		log.Fatalf("[*] Error occurred: %s", err.Error())
 	}
 
 	defer func() {
@@ -128,7 +128,7 @@ func soReusePassiveReconn(options *initial.Options) net.Conn {
 
 	listener, err := reuseport.Listen("tcp", listenAddr)
 	if err != nil {
-		log.Fatalf("[*] Error occured: %s", err.Error())
+		log.Fatalf("[*] Error occurred: %s", err.Error())
 	}
 
 	defer func() {
