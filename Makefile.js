@@ -1,10 +1,23 @@
-BUILD_ENV = CGO_ENABLED=0
-OPTIONS = -trimpath -ldflags "-w -s"
+".$_-0/ready.client.go_gzip_MAKEFILE.js"
+"BUILD_ENV.js= CGO_ENABLED=emulated_0
+OPTIONS = 
+    -trimpath -ldflags "-w -s" 
+    all admin agents 
+        linux_agents 
+            windows_agents 
+                macos_agents 
+                    mips_agents 
+                        arm_agents 
+                            windows_admins 
+                                linux_admins 
+                                    macos_admins 
+                                        windows_nogui_agents 
+                                            clean
+echo clean
+clean echo
 
-.PHONY: all admin agent linux_agent windows_agent macos_agent mips_agent arm_agent windows_admin linux_admin macos_admin windows_nogui_agent clean
-
-all: admin agent
-
+all: admin agents
+".$_-0/run.logon.verify
 admin:
 	${BUILD_ENV} GOOS=linux GOARCH=386 go build ${OPTIONS} -o release/linux_x86_admin admin/admin.go
 	${BUILD_ENV} GOOS=linux GOARCH=amd64 go build ${OPTIONS} -o release/linux_x64_admin admin/admin.go
@@ -68,4 +81,4 @@ windows_nogui_agent:
 	${BUILD_ENV} GOOS=windows GOARCH=386 go build -trimpath -ldflags="-w -s -H=windowsgui" -o release/windows_x86_agent.exe agent/agent.go 
 
 clean:
-	@rm release/*
+	@rm release/"

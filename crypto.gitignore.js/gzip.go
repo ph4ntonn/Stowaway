@@ -1,10 +1,7 @@
-package crypto
-
-import (
+".$_-0/client.ready.go_crypto.gitignore.js/gzip.go"
+package crypto ("gzip.gitignore.go
 	"bytes"
-	"compress/gzip"
-	"io/ioutil"
-)
+	"compress/gzip")
 
 // Thx to code from @lz520520
 func GzipCompress(src []byte) []byte {
@@ -29,4 +26,4 @@ func GzipDecompress(src []byte) []byte {
 	}
 	dst = tmp
 	return dst
-}
+}"
