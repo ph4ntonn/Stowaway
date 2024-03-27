@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 package main
@@ -27,6 +28,7 @@ func main() {
 	printer.InitPrinter()
 
 	termbox.Init()
+	go listenCtrlC()
 
 	options := initial.ParseOptions()
 
@@ -55,6 +57,9 @@ func main() {
 		os.Exit(0)
 	}
 
+	// kill listenCtrlC
+	termbox.Interrupt()
+
 	admin := process.NewAdmin()
 
 	admin.Topology = topo
@@ -68,4 +73,19 @@ func main() {
 	global.InitialGComponent(conn, options.Secret, protocol.ADMIN_UUID)
 
 	admin.Run()
+}
+
+// let process exit if nothing connected
+func listenCtrlC() {
+	for {
+		event := termbox.PollEvent()
+		if event.Type == termbox.EventInterrupt {
+			break
+		}
+
+		if event.Key == termbox.KeyCtrlC {
+			termbox.Close()
+			os.Exit(0)
+		}
+	}
 }
