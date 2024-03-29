@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 package cli
@@ -781,7 +782,12 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				socks.Password = fCommand[3]
 			}
 
-			printer.Warning("\r\n[*] Trying to listen on 0.0.0.0:%s......", fCommand[1])
+			if socks.Addr != "" {
+				printer.Warning("\r\n[*] Trying to listen on %s:%s......", socks.Addr, socks.Port)
+			} else {
+				printer.Warning("\r\n[*] Trying to listen on 0.0.0.0:%s......", socks.Port)
+			}
+
 			printer.Warning("\r\n[*] Waiting for agent's response......")
 
 			err := socks.LetSocks(console.mgr, route, uuid)
