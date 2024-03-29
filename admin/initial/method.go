@@ -1,6 +1,7 @@
 package initial
 
 import (
+	"crypto/tls"
 	"net"
 	"os"
 
@@ -8,6 +9,7 @@ import (
 	"Stowaway/admin/topology"
 	"Stowaway/protocol"
 	"Stowaway/share"
+	"Stowaway/share/transport"
 	"Stowaway/utils"
 )
 
@@ -74,9 +76,23 @@ func NormalActive(userOptions *Options, topo *topology.Topology, proxy share.Pro
 			os.Exit(0)
 		}
 
-		if err := share.ActivePreAuth(conn, userOptions.Secret); err != nil {
+		if err := share.ActivePreAuth(conn); err != nil {
 			printer.Fail("[*] Error occurred: %s", err.Error())
 			os.Exit(0)
+		}
+
+		if userOptions.TlsEnable {
+			var tlsConfig *tls.Config
+			tlsConfig, err = transport.NewClientTLSConfig(userOptions.Domain)
+			if err != nil {
+				printer.Fail("[*] Error occured: %s", err.Error())
+				conn.Close()
+				continue
+			}
+			conn = transport.WrapTLSClientConn(conn, tlsConfig)
+			// As we have already used TLS, we don't need to use aes inside
+			// Set userOptions.Secret as null to disable aes
+			userOptions.Secret = ""
 		}
 
 		sMessage = protocol.PrepareAndDecideWhichSProtoToLower(conn, userOptions.Secret, protocol.ADMIN_UUID)
@@ -178,10 +194,24 @@ func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 			continue
 		}
 
-		if err := share.PassivePreAuth(conn, userOptions.Secret); err != nil {
+		if err := share.PassivePreAuth(conn); err != nil {
 			printer.Fail("[*] Error occurred: %s\r\n", err.Error())
 			conn.Close()
 			continue
+		}
+
+		if userOptions.TlsEnable {
+			var tlsConfig *tls.Config
+			tlsConfig, err = transport.NewServerTLSConfig()
+			if err != nil {
+				printer.Fail("[*] Error occured: %s", err.Error())
+				conn.Close()
+				continue
+			}
+			conn = transport.WrapTLSServerConn(conn, tlsConfig)
+			// As we have already used TLS, we don't need to use aes inside
+			// Set userOptions.Secret as null to disable aes
+			userOptions.Secret = ""
 		}
 
 		rMessage = protocol.PrepareAndDecideWhichRProtoFromLower(conn, userOptions.Secret, protocol.ADMIN_UUID)

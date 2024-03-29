@@ -90,7 +90,7 @@ func (sshTunnel *SSHTunnel) start(mgr *manager.Manager) {
 		return
 	}
 
-	if err = share.ActivePreAuth(conn, global.G_Component.Secret); err != nil {
+	if err = share.ActivePreAuth(conn); err != nil {
 		return
 	}
 

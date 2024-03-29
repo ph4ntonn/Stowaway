@@ -32,6 +32,8 @@ func main() {
 
 	options := initial.ParseOptions()
 
+	share.GeneratePreAuthToken(options.Secret)
+
 	protocol.DecideType("raw", options.Downstream)
 
 	cli.Banner()

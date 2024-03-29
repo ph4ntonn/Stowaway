@@ -1,6 +1,7 @@
 package initial
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
 	"log"
@@ -14,6 +15,7 @@ import (
 
 	"Stowaway/protocol"
 	"Stowaway/share"
+	"Stowaway/share/transport"
 	"Stowaway/utils"
 
 	reuseport "github.com/libp2p/go-reuseport"
@@ -25,9 +27,7 @@ var START_FORWARDING string
 var STOP_FORWARDING string
 
 func achieveUUID(conn net.Conn, secret string) (uuid string) {
-	var rMessage protocol.Message
-
-	rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, secret, protocol.TEMP_UUID)
+	rMessage := protocol.PrepareAndDecideWhichRProtoFromUpper(conn, secret, protocol.TEMP_UUID)
 	fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 
 	if err != nil {
@@ -79,8 +79,22 @@ func NormalActive(userOptions *Options, proxy share.Proxy) (net.Conn, string) {
 			log.Fatalf("[*] Error occurred: %s", err.Error())
 		}
 
-		if err := share.ActivePreAuth(conn, userOptions.Secret); err != nil {
+		if err := share.ActivePreAuth(conn); err != nil {
 			log.Fatalf("[*] Error occurred: %s", err.Error())
+		}
+
+		if userOptions.TlsEnable {
+			var tlsConfig *tls.Config
+			tlsConfig, err = transport.NewClientTLSConfig(userOptions.Domain)
+			if err != nil {
+				log.Printf("[*] Error occured: %s", err.Error())
+				conn.Close()
+				continue
+			}
+			conn = transport.WrapTLSClientConn(conn, tlsConfig)
+			// As we have already used TLS, we don't need to use aes inside
+			// Set userOptions.Secret as null to disable aes
+			userOptions.Secret = ""
 		}
 
 		sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(conn, userOptions.Secret, protocol.TEMP_UUID)
@@ -151,8 +165,22 @@ func NormalPassive(userOptions *Options) (net.Conn, string) {
 			continue
 		}
 
-		if err := share.PassivePreAuth(conn, userOptions.Secret); err != nil {
+		if err := share.PassivePreAuth(conn); err != nil {
 			log.Fatalf("[*] Error occurred: %s", err.Error())
+		}
+
+		if userOptions.TlsEnable {
+			var tlsConfig *tls.Config
+			tlsConfig, err = transport.NewServerTLSConfig()
+			if err != nil {
+				log.Printf("[*] Error occured: %s", err.Error())
+				conn.Close()
+				continue
+			}
+			conn = transport.WrapTLSServerConn(conn, tlsConfig)
+			// As we have already used TLS, we don't need to use aes inside
+			// Set userOptions.Secret as null to disable aes
+			userOptions.Secret = ""
 		}
 
 		rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, userOptions.Secret, protocol.TEMP_UUID)
@@ -181,11 +209,12 @@ func NormalPassive(userOptions *Options) (net.Conn, string) {
 }
 
 // IPTable reuse port functions
-func IPTableReusePassive(options *Options) (net.Conn, string) {
-	setReuseSecret(options)
-	SetPortReuseRules(options.Listen, options.ReusePort)
-	go waitForExit(options.Listen, options.ReusePort)
-	conn, uuid := NormalPassive(options)
+func IPTableReusePassive(userOptions *Options) (net.Conn, string) {
+	// call setReuseSecret first, cuz userOptions.Secret may be cleared if tls is enabled
+	setReuseSecret(userOptions)
+	SetPortReuseRules(userOptions.Listen, userOptions.ReusePort)
+	go waitForExit(userOptions.Listen, userOptions.ReusePort)
+	conn, uuid := NormalPassive(userOptions)
 	return conn, uuid
 }
 
@@ -199,8 +228,8 @@ func waitForExit(localPort, reusedPort string) {
 	}
 }
 
-func setReuseSecret(options *Options) {
-	firstSecret := utils.GetStringMd5(options.Secret)
+func setReuseSecret(userOptions *Options) {
+	firstSecret := utils.GetStringMd5(userOptions.Secret)
 	secondSecret := utils.GetStringMd5(firstSecret)
 	finalSecret := firstSecret[:24] + secondSecret[:24]
 	START_FORWARDING = finalSecret[16:32]
@@ -242,8 +271,8 @@ func SetPortReuseRules(localPort string, reusedPort string) error {
 }
 
 // soreuse port functions
-func SoReusePassive(options *Options) (net.Conn, string) {
-	listenAddr := fmt.Sprintf("%s:%s", options.ReuseHost, options.ReusePort)
+func SoReusePassive(userOptions *Options) (net.Conn, string) {
+	listenAddr := fmt.Sprintf("%s:%s", userOptions.ReuseHost, userOptions.ReusePort)
 
 	listener, err := reuseport.Listen("tcp", listenAddr)
 	if err != nil {
@@ -273,8 +302,6 @@ func SoReusePassive(options *Options) (net.Conn, string) {
 		Route:       protocol.TEMP_ROUTE,
 	}
 
-	secret := utils.GetStringMd5(options.Secret)
-
 	for {
 		conn, err := listener.Accept()
 
@@ -291,7 +318,7 @@ func SoReusePassive(options *Options) (net.Conn, string) {
 
 		if err != nil {
 			if timeoutErr, ok := err.(net.Error); ok && timeoutErr.Timeout() {
-				go ProxyStream(conn, buffer[:count], options.ReusePort)
+				go ProxyStream(conn, buffer[:count], userOptions.ReusePort)
 				continue
 			} else {
 				conn.Close()
@@ -299,14 +326,28 @@ func SoReusePassive(options *Options) (net.Conn, string) {
 			}
 		}
 
-		if string(buffer[:count]) == secret[:16] {
-			conn.Write([]byte(secret[:16]))
+		if string(buffer[:count]) == share.AuthToken {
+			conn.Write([]byte(share.AuthToken))
 		} else {
-			go ProxyStream(conn, buffer[:count], options.ReusePort)
+			go ProxyStream(conn, buffer[:count], userOptions.ReusePort)
 			continue
 		}
 
-		rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, options.Secret, protocol.TEMP_UUID)
+		if userOptions.TlsEnable {
+			var tlsConfig *tls.Config
+			tlsConfig, err = transport.NewServerTLSConfig()
+			if err != nil {
+				log.Printf("[*] Error occured: %s", err.Error())
+				conn.Close()
+				continue
+			}
+			conn = transport.WrapTLSServerConn(conn, tlsConfig)
+			// As we have already used TLS, we don't need to use aes inside
+			// Set userOptions.Secret as null to disable aes
+			userOptions.Secret = ""
+		}
+
+		rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, userOptions.Secret, protocol.TEMP_UUID)
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 
 		if err != nil {
@@ -318,10 +359,10 @@ func SoReusePassive(options *Options) (net.Conn, string) {
 		if fHeader.MessageType == protocol.HI {
 			mmess := fMessage.(*protocol.HIMess)
 			if mmess.Greeting == "Shhh..." && mmess.IsAdmin == 1 {
-				sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(conn, options.Secret, protocol.TEMP_UUID)
+				sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(conn, userOptions.Secret, protocol.TEMP_UUID)
 				protocol.ConstructMessage(sMessage, header, hiMess, false)
 				sMessage.SendMessage()
-				uuid := achieveUUID(conn, options.Secret)
+				uuid := achieveUUID(conn, userOptions.Secret)
 				return conn, uuid
 			}
 		}
@@ -331,7 +372,7 @@ func SoReusePassive(options *Options) (net.Conn, string) {
 	}
 }
 
-// ProxyStream 不是来自Stowaway的连接，进行代理
+// conn is not for stowaway, proxy conn to right port
 func ProxyStream(conn net.Conn, message []byte, report string) {
 	reuseAddr := fmt.Sprintf("127.0.0.1:%s", report)
 
@@ -341,14 +382,13 @@ func ProxyStream(conn net.Conn, message []byte, report string) {
 		fmt.Println(err)
 		return
 	}
-	//把读出来的字节“归还”回去
+	// send back the bytes we read before
 	reuseConn.Write(message)
 
 	go CopyTraffic(conn, reuseConn)
 	CopyTraffic(reuseConn, conn)
 }
 
-// CopyTraffic 将流量代理至正确的port
 func CopyTraffic(input, output net.Conn) {
 	defer input.Close()
 
@@ -366,6 +406,4 @@ func CopyTraffic(input, output net.Conn) {
 			output.Write(buf[:count])
 		}
 	}
-
-	return
 }

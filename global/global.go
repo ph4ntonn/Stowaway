@@ -6,6 +6,7 @@ import (
 	"Stowaway/protocol"
 )
 
+var G_TLSEnable bool
 var G_Component *protocol.MessageComponent
 
 func InitialGComponent(conn net.Conn, secret, uuid string) {

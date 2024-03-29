@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"time"
 
@@ -11,7 +13,7 @@ import (
 	"Stowaway/global"
 	"Stowaway/protocol"
 	"Stowaway/share"
-	"Stowaway/utils"
+	"Stowaway/share/transport"
 
 	reuseport "github.com/libp2p/go-reuseport"
 )
@@ -112,9 +114,20 @@ func (listen *Listen) normalListen(mgr *manager.Manager, options *initial.Option
 			continue
 		}
 
-		if err := share.PassivePreAuth(conn, global.G_Component.Secret); err != nil {
+		if err := share.PassivePreAuth(conn); err != nil {
 			conn.Close()
 			continue
+		}
+
+		if global.G_TLSEnable {
+			var tlsConfig *tls.Config
+			tlsConfig, err = transport.NewServerTLSConfig()
+			if err != nil {
+				log.Printf("[*] Error occured: %s", err.Error())
+				conn.Close()
+				continue
+			}
+			conn = transport.WrapTLSServerConn(conn, tlsConfig)
 		}
 
 		rMessage := protocol.PrepareAndDecideWhichRProtoFromLower(conn, global.G_Component.Secret, protocol.ADMIN_UUID) //fake admin
@@ -276,9 +289,20 @@ func (listen *Listen) iptablesListen(mgr *manager.Manager, options *initial.Opti
 			continue
 		}
 
-		if err := share.PassivePreAuth(conn, global.G_Component.Secret); err != nil {
+		if err := share.PassivePreAuth(conn); err != nil {
 			conn.Close()
 			continue
+		}
+
+		if global.G_TLSEnable {
+			var tlsConfig *tls.Config
+			tlsConfig, err = transport.NewServerTLSConfig()
+			if err != nil {
+				log.Printf("[*] Error occured: %s", err.Error())
+				conn.Close()
+				continue
+			}
+			conn = transport.WrapTLSServerConn(conn, tlsConfig)
 		}
 
 		rMessage := protocol.PrepareAndDecideWhichRProtoFromLower(conn, global.G_Component.Secret, protocol.ADMIN_UUID) //fake admin
@@ -431,8 +455,6 @@ func (listen *Listen) soReuseListen(mgr *manager.Manager, options *initial.Optio
 	protocol.ConstructMessage(sUMessage, resHeader, succMess, false)
 	sUMessage.SendMessage()
 
-	secret := utils.GetStringMd5(options.Secret)
-
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -456,11 +478,22 @@ func (listen *Listen) soReuseListen(mgr *manager.Manager, options *initial.Optio
 			}
 		}
 
-		if string(buffer[:count]) == secret[:16] {
-			conn.Write([]byte(secret[:16]))
+		if string(buffer[:count]) == share.AuthToken {
+			conn.Write([]byte(share.AuthToken))
 		} else {
 			go initial.ProxyStream(conn, buffer[:count], options.ReusePort)
 			continue
+		}
+
+		if global.G_TLSEnable {
+			var tlsConfig *tls.Config
+			tlsConfig, err = transport.NewServerTLSConfig()
+			if err != nil {
+				log.Printf("[*] Error occured: %s", err.Error())
+				conn.Close()
+				continue
+			}
+			conn = transport.WrapTLSServerConn(conn, tlsConfig)
 		}
 
 		rMessage := protocol.PrepareAndDecideWhichRProtoFromLower(conn, global.G_Component.Secret, protocol.ADMIN_UUID) //fake admin

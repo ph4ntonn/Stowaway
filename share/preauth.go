@@ -9,15 +9,21 @@ import (
 	"Stowaway/utils"
 )
 
-func ActivePreAuth(conn net.Conn, key string) error {
+var AuthToken string
+
+func GeneratePreAuthToken(secret string) {
+	token := utils.GetStringMd5(secret)
+	AuthToken = token[:16]
+}
+
+func ActivePreAuth(conn net.Conn) error {
 	var NOT_VALID = errors.New("invalid secret, check the secret")
 	var TIMEOUT = errors.New("connection timeout")
 
 	defer conn.SetReadDeadline(time.Time{})
 	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
 
-	secret := utils.GetStringMd5(key)
-	conn.Write([]byte(secret[:16]))
+	conn.Write([]byte(AuthToken))
 
 	buffer := make([]byte, 16)
 	count, err := io.ReadFull(conn, buffer)
@@ -32,7 +38,7 @@ func ActivePreAuth(conn net.Conn, key string) error {
 		return errors.New(err.Error())
 	}
 
-	if string(buffer[:count]) == secret[:16] {
+	if string(buffer[:count]) == AuthToken {
 		return nil
 	}
 
@@ -41,14 +47,12 @@ func ActivePreAuth(conn net.Conn, key string) error {
 	return NOT_VALID
 }
 
-func PassivePreAuth(conn net.Conn, key string) error {
+func PassivePreAuth(conn net.Conn) error {
 	var NOT_VALID = errors.New("invalid secret, check the secret")
 	var TIMEOUT = errors.New("connection timeout")
 
 	defer conn.SetReadDeadline(time.Time{})
 	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
-
-	secret := utils.GetStringMd5(key)
 
 	buffer := make([]byte, 16)
 	count, err := io.ReadFull(conn, buffer)
@@ -63,8 +67,8 @@ func PassivePreAuth(conn net.Conn, key string) error {
 		return errors.New(err.Error())
 	}
 
-	if string(buffer[:count]) == secret[:16] {
-		conn.Write([]byte(secret[:16]))
+	if string(buffer[:count]) == AuthToken {
+		conn.Write([]byte(AuthToken))
 		return nil
 	}
 

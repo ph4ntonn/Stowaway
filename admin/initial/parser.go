@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 package initial
@@ -7,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 
 	"Stowaway/admin/printer"
 
@@ -30,21 +32,25 @@ type Options struct {
 	Socks5ProxyP string
 	HttpProxy    string
 	Downstream   string
+	Domain       string
+	TlsEnable    bool
 }
 
-var Args *Options
+var args *Options
 
 func init() {
-	Args = new(Options)
+	args = new(Options)
 
-	flag.StringVar(&Args.Secret, "s", "", "Communication secret")
-	flag.StringVar(&Args.Listen, "l", "", "Listen port")
-	flag.StringVar(&Args.Connect, "c", "", "The node address when you actively connect to it")
-	flag.StringVar(&Args.Socks5Proxy, "socks5-proxy", "", "The socks5 server ip:port you want to use")
-	flag.StringVar(&Args.Socks5ProxyU, "socks5-proxyu", "", "socks5 username")
-	flag.StringVar(&Args.Socks5ProxyP, "socks5-proxyp", "", "socks5 password")
-	flag.StringVar(&Args.HttpProxy, "http-proxy", "", "The http proxy server ip:port you want to use")
-	flag.StringVar(&Args.Downstream, "down", "raw", "")
+	flag.StringVar(&args.Secret, "s", "", "Communication secret")
+	flag.StringVar(&args.Listen, "l", "", "Listen port")
+	flag.StringVar(&args.Connect, "c", "", "The node address when you actively connect to it")
+	flag.StringVar(&args.Socks5Proxy, "socks5-proxy", "", "The socks5 server ip:port you want to use")
+	flag.StringVar(&args.Socks5ProxyU, "socks5-proxyu", "", "socks5 username")
+	flag.StringVar(&args.Socks5ProxyP, "socks5-proxyp", "", "socks5 password")
+	flag.StringVar(&args.HttpProxy, "http-proxy", "", "The http proxy server ip:port you want to use")
+	flag.StringVar(&args.Downstream, "down", "raw", "Downstream data type you want to use")
+	flag.StringVar(&args.Domain, "domain", "", "Domain name for TLS SNI")
+	flag.BoolVar(&args.TlsEnable, "tls-enable", false, "Encrypt connection by TLS")
 
 	flag.Usage = newUsage
 }
@@ -65,44 +71,49 @@ Usages:
 func ParseOptions() *Options {
 	flag.Parse()
 
-	if Args.Listen != "" && Args.Connect == "" && Args.Socks5Proxy == "" && Args.HttpProxy == "" { // ./stowaway_admin -l <port> -s [secret]
-		Args.Mode = NORMAL_PASSIVE
-		printer.Warning("[*] Starting admin node on port %s\r\n", Args.Listen)
-	} else if Args.Connect != "" && Args.Listen == "" && Args.Socks5Proxy == "" && Args.HttpProxy == "" { // ./stowaway_admin -c <ip:port> -s [secret]
-		Args.Mode = NORMAL_ACTIVE
+	if args.Listen != "" && args.Connect == "" && args.Socks5Proxy == "" && args.HttpProxy == "" { // ./stowaway_admin -l <port> -s [secret]
+		args.Mode = NORMAL_PASSIVE
+		printer.Warning("[*] Starting admin node on port %s\r\n", args.Listen)
+	} else if args.Connect != "" && args.Listen == "" && args.Socks5Proxy == "" && args.HttpProxy == "" { // ./stowaway_admin -c <ip:port> -s [secret]
+		args.Mode = NORMAL_ACTIVE
 		printer.Warning("[*] Trying to connect node actively")
-	} else if Args.Connect != "" && Args.Listen == "" && Args.Socks5Proxy != "" && Args.HttpProxy == "" { // ./stowaway_admin -c <ip:port> -s [secret] --proxy <ip:port> --proxyu [username] --proxyp [password]
-		Args.Mode = SOCKS5_PROXY_ACTIVE
-		printer.Warning("[*] Trying to connect node actively via socks5 proxy %s\r\n", Args.Socks5Proxy)
-	} else if Args.Connect != "" && Args.Listen == "" && Args.Socks5Proxy == "" && Args.HttpProxy != "" {
-		Args.Mode = HTTP_PROXY_ACTIVE
-		printer.Warning("[*] Trying to connect node actively via http proxy %s\r\n", Args.HttpProxy)
+	} else if args.Connect != "" && args.Listen == "" && args.Socks5Proxy != "" && args.HttpProxy == "" { // ./stowaway_admin -c <ip:port> -s [secret] --proxy <ip:port> --proxyu [username] --proxyp [password]
+		args.Mode = SOCKS5_PROXY_ACTIVE
+		printer.Warning("[*] Trying to connect node actively via socks5 proxy %s\r\n", args.Socks5Proxy)
+	} else if args.Connect != "" && args.Listen == "" && args.Socks5Proxy == "" && args.HttpProxy != "" {
+		args.Mode = HTTP_PROXY_ACTIVE
+		printer.Warning("[*] Trying to connect node actively via http proxy %s\r\n", args.HttpProxy)
 	} else { // Wrong format
 		flag.Usage()
 		os.Exit(0)
 	}
 
-	if err := checkOptions(Args); err != nil {
+	if args.Domain == "" && args.Connect != "" {
+		addrSlice := strings.SplitN(args.Connect, ":", 2)
+		args.Domain = addrSlice[0]
+	}
+
+	if err := checkOptions(args); err != nil {
 		termbox.Close()
 		printer.Fail("[*] Options err: %s\r\n", err.Error())
 		os.Exit(0)
 	}
 
-	return Args
+	return args
 }
 
 func checkOptions(option *Options) error {
 	var err error
 
-	if Args.Connect != "" {
+	if args.Connect != "" {
 		_, err = net.ResolveTCPAddr("", option.Connect)
 	}
 
-	if Args.Socks5Proxy != "" {
+	if args.Socks5Proxy != "" {
 		_, err = net.ResolveTCPAddr("", option.Socks5Proxy)
 	}
 
-	if Args.HttpProxy != "" {
+	if args.HttpProxy != "" {
 		_, err = net.ResolveTCPAddr("", option.HttpProxy)
 	}
 

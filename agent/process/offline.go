@@ -1,6 +1,7 @@
 package process
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
 	"log"
@@ -13,6 +14,7 @@ import (
 	"Stowaway/global"
 	"Stowaway/protocol"
 	"Stowaway/share"
+	"Stowaway/share/transport"
 	"Stowaway/utils"
 
 	reuseport "github.com/libp2p/go-reuseport"
@@ -92,9 +94,20 @@ func normalPassiveReconn(options *initial.Options) net.Conn {
 			continue
 		}
 
-		if err := share.PassivePreAuth(conn, options.Secret); err != nil {
+		if err := share.PassivePreAuth(conn); err != nil {
 			conn.Close()
 			continue
+		}
+
+		if global.G_TLSEnable {
+			var tlsConfig *tls.Config
+			tlsConfig, err = transport.NewServerTLSConfig()
+			if err != nil {
+				log.Printf("[*] Error occured: %s", err.Error())
+				conn.Close()
+				continue
+			}
+			conn = transport.WrapTLSServerConn(conn, tlsConfig)
 		}
 
 		rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, options.Secret, protocol.TEMP_UUID)
@@ -154,8 +167,6 @@ func soReusePassiveReconn(options *initial.Options) net.Conn {
 		Route:       protocol.TEMP_ROUTE,
 	}
 
-	secret := utils.GetStringMd5(options.Secret)
-
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -178,11 +189,22 @@ func soReusePassiveReconn(options *initial.Options) net.Conn {
 			}
 		}
 
-		if string(buffer[:count]) == secret[:16] {
-			conn.Write([]byte(secret[:16]))
+		if string(buffer[:count]) == share.AuthToken {
+			conn.Write([]byte(share.AuthToken))
 		} else {
 			go initial.ProxyStream(conn, buffer[:count], options.ReusePort)
 			continue
+		}
+
+		if global.G_TLSEnable {
+			var tlsConfig *tls.Config
+			tlsConfig, err = transport.NewServerTLSConfig()
+			if err != nil {
+				log.Printf("[*] Error occured: %s", err.Error())
+				conn.Close()
+				continue
+			}
+			conn = transport.WrapTLSServerConn(conn, tlsConfig)
 		}
 
 		rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, options.Secret, protocol.TEMP_UUID)
@@ -244,10 +266,21 @@ func normalReconnActiveReconn(options *initial.Options, proxy share.Proxy) net.C
 			continue
 		}
 
-		if err := share.ActivePreAuth(conn, options.Secret); err != nil {
+		if err := share.ActivePreAuth(conn); err != nil {
 			conn.Close()
 			time.Sleep(time.Duration(options.Reconnect) * time.Second)
 			continue
+		}
+
+		if global.G_TLSEnable {
+			var tlsConfig *tls.Config
+			tlsConfig, err = transport.NewClientTLSConfig(options.Domain)
+			if err != nil {
+				conn.Close()
+				time.Sleep(time.Duration(options.Reconnect) * time.Second)
+				continue
+			}
+			conn = transport.WrapTLSClientConn(conn, tlsConfig)
 		}
 
 		sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(conn, options.Secret, protocol.TEMP_UUID)

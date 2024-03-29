@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package main
@@ -25,6 +26,8 @@ func main() {
 	printer.InitPrinter()
 
 	options := initial.ParseOptions()
+
+	share.GeneratePreAuthToken(options.Secret)
 
 	protocol.DecideType("raw", options.Downstream)
 

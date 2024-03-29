@@ -19,6 +19,8 @@ func init() {
 func main() {
 	options := initial.ParseOptions()
 
+	share.GeneratePreAuthToken(options.Secret)
+
 	agent := process.NewAgent(options)
 
 	protocol.DecideType(options.Upstream, options.Downstream)
@@ -51,6 +53,7 @@ func main() {
 	}
 
 	global.InitialGComponent(conn, options.Secret, agent.UUID)
+	global.G_TLSEnable = options.TlsEnable
 
 	agent.Run()
 }

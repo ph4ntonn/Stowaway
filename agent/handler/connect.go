@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"crypto/tls"
 	"errors"
 	"net"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"Stowaway/global"
 	"Stowaway/protocol"
 	"Stowaway/share"
+	"Stowaway/share/transport"
 )
 
 type Connect struct {
@@ -78,8 +80,19 @@ func (connect *Connect) start(mgr *manager.Manager) {
 		return
 	}
 
-	if err = share.ActivePreAuth(conn, global.G_Component.Secret); err != nil {
+	if err = share.ActivePreAuth(conn); err != nil {
 		return
+	}
+
+	if global.G_TLSEnable {
+		var tlsConfig *tls.Config
+		// Set domain as null since we are in the intranet
+		tlsConfig, err = transport.NewClientTLSConfig("")
+		if err != nil {
+			conn.Close()
+			return
+		}
+		conn = transport.WrapTLSClientConn(conn, tlsConfig)
 	}
 
 	sLMessage = protocol.PrepareAndDecideWhichSProtoToLower(conn, global.G_Component.Secret, protocol.ADMIN_UUID)
