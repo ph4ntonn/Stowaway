@@ -10,7 +10,7 @@ import (
 	"fmt"
 )
 
-const STOWAWAY_VERSION = "v2.1"
+const STOWAWAY_VERSION = "v2.2"
 
 // Banner 程序图标
 func Banner() {
