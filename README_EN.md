@@ -525,7 +525,9 @@ Under this mode, the tab key will be forbidden
 
 Note that the port 7777 here is not opened on the agent, but on the admin
 
-In addition, if you want to set a socks5 username and password, you can change the above command to ```socks 7777 <your username> <your password>```
+If you want to set a socks5 username and password, you can change the above command to ```socks 7777 <your username> <your password>```
+
+If you need to specify the listening interface, you can change the above command to ```socks xxx.xxx.xxx.xxx:7777```
 
 - ```stopsocks```: Stop the socks5 service running on the current node
 

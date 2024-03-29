@@ -528,7 +528,9 @@ bash-3.2$
 
 注意一点，此处的7777端口不是在agent上开启的，而是在admin上开启
 
-另外，若需要设置用户名密码，可将上方命令改为```socks 7777 <your username> <your password>```
+若需要设置用户名密码，可将上方命令改为```socks 7777 <your username> <your password>```
+
+若需要指定监听的接口，可将上方命令改为```socks xxx.xxx.xxx.xxx:7777```
 
 - ```stopsocks```: 停止在当前节点上的socks5服务
 
