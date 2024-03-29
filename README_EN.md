@@ -35,7 +35,7 @@ PPS: **Please read the usage method and the precautions at the end of the articl
 - Port Reuse
 - Open/Close all the services arbitrarily
 - Authenicate each other between nodes
-- Traffic encryption with AES-256-GCM
+- Traffic encryption with TLS/AES-256-GCM
 - Compared with v1.0, the file size is reduced by 25%
 - Multiple platforms support(Linux/Mac/Windows/MIPS/ARM)
 
@@ -74,6 +74,8 @@ parameter:
 --socks5-proxyp socks5 proxy server password (optional)
 --http-proxy http proxy server address
 --down downstream protocol type, default is bare TCP traffic, optional HTTP
+--tls-enable Enable TLS for node communication, after enabling TLS, AES encryption will be disabled
+--domain Specify the TLS SNI domain name. If it is empty, it defaults to the target node address.
 ```
 
 - agent
@@ -93,13 +95,15 @@ parameter:
 --up upstream protocol type, default is bare TCP traffic, optional HTTP
 --down downstream protocol type, default is bare TCP traffic, optional HTTP
 --cs platform's console encoding type,default is utf-8，optional gbk
+--tls-enable Enable TLS for node communication, after enabling TLS, AES encryption will be disabled
+--domain Specify the TLS SNI domain name. If it is empty, it defaults to the target node address.
 ```
 
 ### Parameter usage
 
 #### -l
 
-This parameter can be used on admin&&agent, only can be used in passive mode 
+This parameter can be used on admin&&agent, under passive mode 
 
 If you do not specify an IP address, the default monitoring IP address will be  ```0.0.0.0```
 
@@ -109,7 +113,7 @@ If you do not specify an IP address, the default monitoring IP address will be  
 
 #### -s
 
-This parameter can be used on admin&&agent, can be used in both active && passive mode
+This parameter can be used on admin&&agent, under both active && passive mode
 
 This parameter is optional, if it is not set, it means that the communication is not encrypted, otherwise, the communication is encrypted based on the key given by the user
 
@@ -119,7 +123,7 @@ This parameter is optional, if it is not set, it means that the communication is
 
 #### -c
 
-This parameter  can be used on admin&&agent, only can be used under active mode 
+This parameter can be used on admin&&agent, under active mode 
 
 Declaring the address of the node you want to connect to
 
@@ -129,7 +133,7 @@ Declaring the address of the node you want to connect to
 
 #### --socks5-proxy/--socks5-proxyu/--socks5-proxyp/--http-proxy
 
-These four parameters can be used on admin&&agent , only can be used under active mode
+These four parameters can be used on admin&&agent , under active mode
 
 ```--socks5-proxy``` represents the address of the socks5 proxy server, ```--socks5-proxyu``` and ```--socks5-proxyp``` are optional
 
@@ -149,7 +153,7 @@ Username and password:
 
 #### --up/--down
 
-These two parameter can be used on admin&&agent, can be used both under active && passive mode
+These two parameter can be used on admin&&agent, under active && passive mode
 
 But note that there is no ```--up``` parameter on admin
 
@@ -181,7 +185,7 @@ Then, agent-2 must also set ```--up``` to http, otherwise it will cause network 
 
 #### --reconnect
 
-This parameter can be used on agent , only can be used under active mode
+This parameter can be used on agent , under active mode
 
 The parameter is optional. If not set, it means that the node will not actively reconnect after the network connection is disconnected.Otherwise, it means that the node will try to reconnect to the parent node every x (the number of seconds you set) seconds.
 
@@ -200,17 +204,45 @@ And ```--reconnect``` parameter can be used together with ```--socks5-proxy```/`
 These two parameters are quite special and can be only used on the agent side. For details, please check the port reuse mechanism below
 
 #### --cs
-This parameter can be used on agent, can be used both under active && passive mode
+
+This parameter can be used on agent, under active && passive mode
+
 This parameter is aim to solve the problem of garbled characters between different platforms. When the user runs the agent on a platform whose console is encoded as gbk (such as Windows in general) and meanwhile the admin is running on a platform whose console is encoded as utf-8 , please be sure to set this parameter as 'gbk' 
+
 - Windows: ```./stowaway_agent -c 127.0.0.1:9999 -s 123 --cs gbk```
+
+#### --tls-enable
+
+These two parameter can be used on admin&&agent, under active && passive mode
+
+By setting this option, inter-node traffic can be encrypted with TLS
+
+- admin: ./stowaway_admin -l 10000 --tls-enable -s 123
+- agent: ./stowaway_agent -c localhost:10000 --tls-enable -s 123
+
+Note that when this parameter is enabled, aes encryption will be disabled by default, and the -s parameter will only be used for mutual authentication between nodes & port reuse function
+
+In addition, when this parameter is enabled, **Please ensure that every node in the network (including admin) has this parameter enabled**
+
+#### --domain
+
+These two parameter can be used on admin&&agent, under active mode
+
+By setting this parameter, you can set the SNI during TLS negotiation for this node.
+
+- admin: ./stowaway_admin -l 10000 --tls-enable -s 123
+- agent: ./stowaway_agent -c localhost:10000 --tls-enable -s 123 --domain xxx.com
+
+Note that this parameter must be enabled with the --tls-enable parameter, otherwise this parameter will be invalid.
+
 ## Port reuse
 
-  Now Stowaway provide two port reuse functions:One is based on SO_REUSEPORT/SO_REUSEADDR features and the other is base on IPTABLES features
+Now Stowaway provide two port reuse functions:One is based on SO_REUSEPORT/SO_REUSEADDR features and the other is base on IPTABLES features
 
 - In Linux environment, stowaway can reuse most ports
 - In Windows environment,it cannot reuse service port like IIS,RDP, but can reuse Mysql,Apache and so on
 
-### 复用方式
+### How To?
 
 - SO_REUSEPORT/SO_REUSEADDR
 
@@ -228,7 +260,6 @@ This parameter is aim to solve the problem of garbled characters between differe
 
   - admin：```./stowaway_admin -c 192.168.0.105:80 -s 123```
   - agent： ```./stowaway_agent  --report 80 --rehost 192.168.0.105 -s 123```
-
 
 - IPTABLES
 
@@ -639,8 +670,8 @@ $
 
 ## TODO
 
-- [ ] Fix the bug that may exists
-- [ ] Support TLS
+- [x] Fix the bug that may exists
+- [x] Support TLS
 - [ ] Support multi startnode
 
 ### Attention

@@ -37,7 +37,7 @@ PPS:**请务必在使用前详细阅读使用方法及文末的注意事项**
 - 节点可端口复用
 - 自由开关各类服务
 - 节点间相互认证
-- 节点间流量以AES-256-GCM进行加密
+- 节点间流量以TLS/AES-256-GCM进行加密
 - 相较于v1.0，文件体积减小25%
 - 支持各类平台(Linux/Mac/Windows/MIPS/ARM)
 
@@ -76,6 +76,8 @@ Stowaway一共包含两种角色，分别是：
 --socks5-proxyp socks5代理服务器密码(可选)
 --http-proxy http代理服务器地址
 --down 下游协议类型,默认为裸TCP流量,可选HTTP
+--tls-enable 为节点通信启用TLS，在启用TLS后，AES加密将被禁用
+--domain 指定TLS SNI域名，若为空，默认为目标节点地址
 ```
 
 - agent
@@ -95,6 +97,8 @@ Stowaway一共包含两种角色，分别是：
 --up 上游协议类型,默认为裸TCP流量,可选HTTP
 --down 下游协议类型,默认为裸TCP流量,可选HTTP
 --cs 运行平台的shell编码类型，默认为utf-8，可选gbk
+--tls-enable 为节点通信启用TLS，在启用TLS后，AES加密将被禁用
+--domain 指定TLS SNI域名，若为空，默认为目标节点地址
 ```
 
 ### 参数用法
@@ -205,6 +209,30 @@ agent之间也与上面情况一致
 此参数仅用在agent，可用在主动&&被动模式下
 主要旨在解决'shell'功能乱码问题，当用户将agent运行于控制台编码为gbk的平台上(例如一般情况下的Windows)并且同时admin运行于控制台编码为utf-8的平台上时，请务必将此参数设置为'gbk'
 - Windows: ```./stowaway_agent -c 127.0.0.1:9999 -s 123 --cs gbk```
+
+#### --tls-enable
+这两个参数admin&&agent用法一致，可用在主动&&被动模式下
+
+通过设置此选项，可以将节点间流量以TLS加密
+
+示例如下
+- admin: ./stowaway_admin -l 10000 --tls-enable -s 123
+- agent: ./stowaway_agent -c localhost:10000 --tls-enable -s 123
+
+注意，当此参数启用时，aes加密将被默认禁用，-s参数将仅用于节点间相互验证&端口复用功能
+
+另外，当此参数启用时，**请保证网络中每一个节点(包括admin)都启用此参数**
+
+#### --domain
+这两个参数admin&&agent用法一致，仅可用在主动模式下
+
+通过设置此选项，可以设置当前此节点TLS协商时的SNI选项
+
+示例如下
+- admin: ./stowaway_admin -l 10000 --tls-enable -s 123
+- agent: ./stowaway_agent -c localhost:10000 --tls-enable -s 123 --domain xxx.com
+
+注意，此参数启用必须配合--tls-enable参数，否则此参数无效
 
 ## 端口复用机制
 
@@ -645,8 +673,8 @@ $
 
 ## TODO
 
-- [ ] 修复bug
-- [ ] 支持TLS
+- [x] 修复bug
+- [x] 支持TLS
 - [ ] 支持多startnode的形式
 
 ## 注意事项
