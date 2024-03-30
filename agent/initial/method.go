@@ -79,10 +79,6 @@ func NormalActive(userOptions *Options, proxy share.Proxy) (net.Conn, string) {
 			log.Fatalf("[*] Error occurred: %s", err.Error())
 		}
 
-		if err := share.ActivePreAuth(conn); err != nil {
-			log.Fatalf("[*] Error occurred: %s", err.Error())
-		}
-
 		if userOptions.TlsEnable {
 			var tlsConfig *tls.Config
 			tlsConfig, err = transport.NewClientTLSConfig(userOptions.Domain)
@@ -95,6 +91,10 @@ func NormalActive(userOptions *Options, proxy share.Proxy) (net.Conn, string) {
 			// As we have already used TLS, we don't need to use aes inside
 			// Set userOptions.Secret as null to disable aes
 			userOptions.Secret = ""
+		}
+
+		if err := share.ActivePreAuth(conn); err != nil {
+			log.Fatalf("[*] Error occurred: %s", err.Error())
 		}
 
 		sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(conn, userOptions.Secret, protocol.TEMP_UUID)
@@ -161,12 +161,7 @@ func NormalPassive(userOptions *Options) (net.Conn, string) {
 		conn, err := listener.Accept()
 		if err != nil {
 			log.Printf("[*] Error occurred: %s\n", err.Error())
-			conn.Close()
 			continue
-		}
-
-		if err := share.PassivePreAuth(conn); err != nil {
-			log.Fatalf("[*] Error occurred: %s", err.Error())
 		}
 
 		if userOptions.TlsEnable {
@@ -181,6 +176,10 @@ func NormalPassive(userOptions *Options) (net.Conn, string) {
 			// As we have already used TLS, we don't need to use aes inside
 			// Set userOptions.Secret as null to disable aes
 			userOptions.Secret = ""
+		}
+
+		if err := share.PassivePreAuth(conn); err != nil {
+			log.Fatalf("[*] Error occurred: %s", err.Error())
 		}
 
 		rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, userOptions.Secret, protocol.TEMP_UUID)
@@ -304,10 +303,23 @@ func SoReusePassive(userOptions *Options) (net.Conn, string) {
 
 	for {
 		conn, err := listener.Accept()
-
 		if err != nil {
-			conn.Close()
+			log.Printf("[*] Error occurred: %s\n", err.Error())
 			continue
+		}
+
+		if userOptions.TlsEnable {
+			var tlsConfig *tls.Config
+			tlsConfig, err = transport.NewServerTLSConfig()
+			if err != nil {
+				log.Printf("[*] Error occured: %s", err.Error())
+				conn.Close()
+				continue
+			}
+			conn = transport.WrapTLSServerConn(conn, tlsConfig)
+			// As we have already used TLS, we don't need to use aes inside
+			// Set userOptions.Secret as null to disable aes
+			userOptions.Secret = ""
 		}
 
 		defer conn.SetReadDeadline(time.Time{})
@@ -331,20 +343,6 @@ func SoReusePassive(userOptions *Options) (net.Conn, string) {
 		} else {
 			go ProxyStream(conn, buffer[:count], userOptions.ReusePort)
 			continue
-		}
-
-		if userOptions.TlsEnable {
-			var tlsConfig *tls.Config
-			tlsConfig, err = transport.NewServerTLSConfig()
-			if err != nil {
-				log.Printf("[*] Error occured: %s", err.Error())
-				conn.Close()
-				continue
-			}
-			conn = transport.WrapTLSServerConn(conn, tlsConfig)
-			// As we have already used TLS, we don't need to use aes inside
-			// Set userOptions.Secret as null to disable aes
-			userOptions.Secret = ""
 		}
 
 		rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, userOptions.Secret, protocol.TEMP_UUID)

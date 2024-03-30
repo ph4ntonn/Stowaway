@@ -110,12 +110,7 @@ func (listen *Listen) normalListen(mgr *manager.Manager, options *initial.Option
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			conn.Close()
-			continue
-		}
-
-		if err := share.PassivePreAuth(conn); err != nil {
-			conn.Close()
+			log.Printf("[*] Error occurred: %s\n", err.Error())
 			continue
 		}
 
@@ -128,6 +123,11 @@ func (listen *Listen) normalListen(mgr *manager.Manager, options *initial.Option
 				continue
 			}
 			conn = transport.WrapTLSServerConn(conn, tlsConfig)
+		}
+
+		if err := share.PassivePreAuth(conn); err != nil {
+			conn.Close()
+			continue
 		}
 
 		rMessage := protocol.PrepareAndDecideWhichRProtoFromLower(conn, global.G_Component.Secret, protocol.ADMIN_UUID) //fake admin
@@ -285,12 +285,7 @@ func (listen *Listen) iptablesListen(mgr *manager.Manager, options *initial.Opti
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			conn.Close()
-			continue
-		}
-
-		if err := share.PassivePreAuth(conn); err != nil {
-			conn.Close()
+			log.Printf("[*] Error occurred: %s\n", err.Error())
 			continue
 		}
 
@@ -303,6 +298,11 @@ func (listen *Listen) iptablesListen(mgr *manager.Manager, options *initial.Opti
 				continue
 			}
 			conn = transport.WrapTLSServerConn(conn, tlsConfig)
+		}
+
+		if err := share.PassivePreAuth(conn); err != nil {
+			conn.Close()
+			continue
 		}
 
 		rMessage := protocol.PrepareAndDecideWhichRProtoFromLower(conn, global.G_Component.Secret, protocol.ADMIN_UUID) //fake admin
@@ -458,8 +458,19 @@ func (listen *Listen) soReuseListen(mgr *manager.Manager, options *initial.Optio
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			conn.Close()
+			log.Printf("[*] Error occurred: %s\n", err.Error())
 			continue
+		}
+
+		if global.G_TLSEnable {
+			var tlsConfig *tls.Config
+			tlsConfig, err = transport.NewServerTLSConfig()
+			if err != nil {
+				log.Printf("[*] Error occured: %s", err.Error())
+				conn.Close()
+				continue
+			}
+			conn = transport.WrapTLSServerConn(conn, tlsConfig)
 		}
 
 		defer conn.SetReadDeadline(time.Time{})
@@ -483,17 +494,6 @@ func (listen *Listen) soReuseListen(mgr *manager.Manager, options *initial.Optio
 		} else {
 			go initial.ProxyStream(conn, buffer[:count], options.ReusePort)
 			continue
-		}
-
-		if global.G_TLSEnable {
-			var tlsConfig *tls.Config
-			tlsConfig, err = transport.NewServerTLSConfig()
-			if err != nil {
-				log.Printf("[*] Error occured: %s", err.Error())
-				conn.Close()
-				continue
-			}
-			conn = transport.WrapTLSServerConn(conn, tlsConfig)
 		}
 
 		rMessage := protocol.PrepareAndDecideWhichRProtoFromLower(conn, global.G_Component.Secret, protocol.ADMIN_UUID) //fake admin

@@ -80,10 +80,6 @@ func (connect *Connect) start(mgr *manager.Manager) {
 		return
 	}
 
-	if err = share.ActivePreAuth(conn); err != nil {
-		return
-	}
-
 	if global.G_TLSEnable {
 		var tlsConfig *tls.Config
 		// Set domain as null since we are in the intranet
@@ -93,6 +89,10 @@ func (connect *Connect) start(mgr *manager.Manager) {
 			return
 		}
 		conn = transport.WrapTLSClientConn(conn, tlsConfig)
+	}
+
+	if err = share.ActivePreAuth(conn); err != nil {
+		return
 	}
 
 	sLMessage = protocol.PrepareAndDecideWhichSProtoToLower(conn, global.G_Component.Secret, protocol.ADMIN_UUID)
