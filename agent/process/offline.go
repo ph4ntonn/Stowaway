@@ -111,7 +111,7 @@ func normalPassiveReconn(options *initial.Options) net.Conn {
 			continue
 		}
 
-		rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, options.Secret, protocol.TEMP_UUID)
+		rMessage = protocol.NewUpMsg(conn, options.Secret, protocol.TEMP_UUID)
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 
 		if err != nil {
@@ -122,7 +122,7 @@ func normalPassiveReconn(options *initial.Options) net.Conn {
 		if fHeader.MessageType == protocol.HI {
 			mmess := fMessage.(*protocol.HIMess)
 			if mmess.Greeting == "Shhh..." && mmess.IsAdmin == 1 {
-				sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(conn, options.Secret, protocol.TEMP_UUID)
+				sMessage = protocol.NewUpMsg(conn, options.Secret, protocol.TEMP_UUID)
 				protocol.ConstructMessage(sMessage, header, hiMess, false)
 				sMessage.SendMessage()
 				return conn
@@ -209,7 +209,7 @@ func soReusePassiveReconn(options *initial.Options) net.Conn {
 			continue
 		}
 
-		rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, options.Secret, protocol.TEMP_UUID)
+		rMessage = protocol.NewUpMsg(conn, options.Secret, protocol.TEMP_UUID)
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 
 		if err != nil {
@@ -220,7 +220,7 @@ func soReusePassiveReconn(options *initial.Options) net.Conn {
 		if fHeader.MessageType == protocol.HI {
 			mmess := fMessage.(*protocol.HIMess)
 			if mmess.Greeting == "Shhh..." && mmess.IsAdmin == 1 {
-				sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(conn, options.Secret, protocol.TEMP_UUID)
+				sMessage = protocol.NewUpMsg(conn, options.Secret, protocol.TEMP_UUID)
 				protocol.ConstructMessage(sMessage, header, hiMess, false)
 				sMessage.SendMessage()
 				return conn
@@ -285,12 +285,12 @@ func normalReconnActiveReconn(options *initial.Options, proxy share.Proxy) net.C
 			continue
 		}
 
-		sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(conn, options.Secret, protocol.TEMP_UUID)
+		sMessage = protocol.NewUpMsg(conn, options.Secret, protocol.TEMP_UUID)
 
 		protocol.ConstructMessage(sMessage, header, hiMess, false)
 		sMessage.SendMessage()
 
-		rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, options.Secret, protocol.TEMP_UUID)
+		rMessage = protocol.NewUpMsg(conn, options.Secret, protocol.TEMP_UUID)
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 
 		if err != nil {
@@ -347,7 +347,7 @@ func broadcastOfflineMess(mgr *manager.Manager) {
 		mgr.ChildrenManager.TaskChan <- task
 		result = <-mgr.ChildrenManager.ResultChan
 
-		sMessage := protocol.PrepareAndDecideWhichSProtoToLower(result.Conn, global.G_Component.Secret, global.G_Component.UUID)
+		sMessage := protocol.NewDownMsg(result.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 		header := &protocol.Header{
 			Sender:      global.G_Component.UUID,
@@ -382,7 +382,7 @@ func broadcastReonlineMess(mgr *manager.Manager) {
 		mgr.ChildrenManager.TaskChan <- task
 		result = <-mgr.ChildrenManager.ResultChan
 
-		sMessage := protocol.PrepareAndDecideWhichSProtoToLower(result.Conn, global.G_Component.Secret, global.G_Component.UUID)
+		sMessage := protocol.NewDownMsg(result.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 		header := &protocol.Header{
 			Sender:      global.G_Component.UUID,
@@ -410,7 +410,7 @@ func downStreamOffline(mgr *manager.Manager, options *initial.Options, uuid stri
 	mgr.ChildrenManager.TaskChan <- childrenTask
 	<-mgr.ChildrenManager.ResultChan
 
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sMessage := protocol.NewUpMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
 		Sender:      global.G_Component.UUID,
@@ -437,7 +437,7 @@ func tellAdminReonline(mgr *manager.Manager) {
 	mgr.ChildrenManager.TaskChan <- childrenTask
 	result := <-mgr.ChildrenManager.ResultChan
 
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sMessage := protocol.NewUpMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	reheader := &protocol.Header{
 		Sender:      global.G_Component.UUID,

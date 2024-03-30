@@ -28,7 +28,7 @@ func (shell *Shell) start() {
 	var cmd *exec.Cmd
 	var err error
 
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sMessage := protocol.NewUpMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	shellResHeader := &protocol.Header{
 		Sender:      global.G_Component.UUID,

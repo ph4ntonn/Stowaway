@@ -35,7 +35,7 @@ func (listen *Listen) LetListen(mgr *manager.Manager, route, uuid string) error 
 		}
 	}
 
-	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sMessage := protocol.NewDownMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
@@ -99,7 +99,7 @@ func dispatchChildUUID(mgr *manager.Manager, topo *topology.Topology, parentUUID
 	topoResult = <-topo.ResultChan
 	route := topoResult.Route
 
-	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sMessage := protocol.NewDownMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,

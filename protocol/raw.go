@@ -11,6 +11,8 @@ import (
 	"Stowaway/crypto"
 )
 
+type RawProto struct{}
+
 type RawMessage struct {
 	// Essential component to apply a Message
 	UUID         string
@@ -20,6 +22,10 @@ type RawMessage struct {
 	HeaderBuffer []byte
 	DataBuffer   []byte
 }
+
+func (proto *RawProto) CNegotiate() error { return nil }
+
+func (proto *RawProto) SNegotiate() error { return nil }
 
 func (message *RawMessage) ConstructHeader() {}
 

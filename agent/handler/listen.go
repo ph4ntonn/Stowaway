@@ -37,7 +37,7 @@ func newListen(method int, addr string) *Listen {
 }
 
 func (listen *Listen) start(mgr *manager.Manager, options *initial.Options) {
-	sUMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sUMessage := protocol.NewUpMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	resHeader := &protocol.Header{
 		Sender:      global.G_Component.UUID,
@@ -77,7 +77,7 @@ func (listen *Listen) start(mgr *manager.Manager, options *initial.Options) {
 }
 
 func (listen *Listen) normalListen(mgr *manager.Manager, options *initial.Options) {
-	sUMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sUMessage := protocol.NewUpMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	resHeader := &protocol.Header{
 		Sender:      global.G_Component.UUID,
@@ -130,7 +130,7 @@ func (listen *Listen) normalListen(mgr *manager.Manager, options *initial.Option
 			continue
 		}
 
-		rMessage := protocol.PrepareAndDecideWhichRProtoFromLower(conn, global.G_Component.Secret, protocol.ADMIN_UUID) //fake admin
+		rMessage := protocol.NewDownMsg(conn, global.G_Component.Secret, protocol.ADMIN_UUID) //fake admin
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 		if err != nil {
 			conn.Close()
@@ -143,7 +143,7 @@ func (listen *Listen) normalListen(mgr *manager.Manager, options *initial.Option
 			if mmess.Greeting == "Shhh..." && mmess.IsAdmin == 0 {
 				var childUUID string
 
-				sLMessage := protocol.PrepareAndDecideWhichSProtoToLower(conn, global.G_Component.Secret, protocol.ADMIN_UUID) //fake admin
+				sLMessage := protocol.NewDownMsg(conn, global.G_Component.Secret, protocol.ADMIN_UUID) //fake admin
 
 				hiMess := &protocol.HIMess{
 					GreetingLen: uint16(len("Keep slient")),
@@ -248,7 +248,7 @@ func (listen *Listen) normalListen(mgr *manager.Manager, options *initial.Option
 }
 
 func (listen *Listen) iptablesListen(mgr *manager.Manager, options *initial.Options) {
-	sUMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sUMessage := protocol.NewUpMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	resHeader := &protocol.Header{
 		Sender:      global.G_Component.UUID,
@@ -305,7 +305,7 @@ func (listen *Listen) iptablesListen(mgr *manager.Manager, options *initial.Opti
 			continue
 		}
 
-		rMessage := protocol.PrepareAndDecideWhichRProtoFromLower(conn, global.G_Component.Secret, protocol.ADMIN_UUID) //fake admin
+		rMessage := protocol.NewDownMsg(conn, global.G_Component.Secret, protocol.ADMIN_UUID) //fake admin
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 
 		if err != nil {
@@ -319,7 +319,7 @@ func (listen *Listen) iptablesListen(mgr *manager.Manager, options *initial.Opti
 			if mmess.Greeting == "Shhh..." && mmess.IsAdmin == 0 {
 				var childUUID string
 
-				sLMessage := protocol.PrepareAndDecideWhichSProtoToLower(conn, global.G_Component.Secret, protocol.ADMIN_UUID) //fake admin
+				sLMessage := protocol.NewDownMsg(conn, global.G_Component.Secret, protocol.ADMIN_UUID) //fake admin
 
 				hiMess := &protocol.HIMess{
 					GreetingLen: uint16(len("Keep slient")),
@@ -424,7 +424,7 @@ func (listen *Listen) iptablesListen(mgr *manager.Manager, options *initial.Opti
 }
 
 func (listen *Listen) soReuseListen(mgr *manager.Manager, options *initial.Options) {
-	sUMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sUMessage := protocol.NewUpMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	resHeader := &protocol.Header{
 		Sender:      global.G_Component.UUID,
@@ -496,7 +496,7 @@ func (listen *Listen) soReuseListen(mgr *manager.Manager, options *initial.Optio
 			continue
 		}
 
-		rMessage := protocol.PrepareAndDecideWhichRProtoFromLower(conn, global.G_Component.Secret, protocol.ADMIN_UUID) //fake admin
+		rMessage := protocol.NewDownMsg(conn, global.G_Component.Secret, protocol.ADMIN_UUID) //fake admin
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 
 		if err != nil {
@@ -510,7 +510,7 @@ func (listen *Listen) soReuseListen(mgr *manager.Manager, options *initial.Optio
 			if mmess.Greeting == "Shhh..." && mmess.IsAdmin == 0 {
 				var childUUID string
 
-				sLMessage := protocol.PrepareAndDecideWhichSProtoToLower(conn, global.G_Component.Secret, protocol.ADMIN_UUID) //fake admin
+				sLMessage := protocol.NewDownMsg(conn, global.G_Component.Secret, protocol.ADMIN_UUID) //fake admin
 
 				hiMess := &protocol.HIMess{
 					GreetingLen: uint16(len("Keep slient")),

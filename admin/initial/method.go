@@ -30,7 +30,7 @@ func dispatchUUID(conn net.Conn, secret string) string {
 		Route:       protocol.TEMP_ROUTE,
 	}
 
-	sMessage = protocol.PrepareAndDecideWhichSProtoToLower(conn, secret, protocol.ADMIN_UUID)
+	sMessage = protocol.NewDownMsg(conn, secret, protocol.ADMIN_UUID)
 
 	protocol.ConstructMessage(sMessage, header, uuidMess, false)
 	sMessage.SendMessage()
@@ -95,12 +95,12 @@ func NormalActive(userOptions *Options, topo *topology.Topology, proxy share.Pro
 			os.Exit(0)
 		}
 
-		sMessage = protocol.PrepareAndDecideWhichSProtoToLower(conn, userOptions.Secret, protocol.ADMIN_UUID)
+		sMessage = protocol.NewDownMsg(conn, userOptions.Secret, protocol.ADMIN_UUID)
 
 		protocol.ConstructMessage(sMessage, header, hiMess, false)
 		sMessage.SendMessage()
 
-		rMessage = protocol.PrepareAndDecideWhichRProtoFromLower(conn, userOptions.Secret, protocol.ADMIN_UUID)
+		rMessage = protocol.NewDownMsg(conn, userOptions.Secret, protocol.ADMIN_UUID)
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 
 		if err != nil {
@@ -213,7 +213,7 @@ func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 			continue
 		}
 
-		rMessage = protocol.PrepareAndDecideWhichRProtoFromLower(conn, userOptions.Secret, protocol.ADMIN_UUID)
+		rMessage = protocol.NewDownMsg(conn, userOptions.Secret, protocol.ADMIN_UUID)
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 
 		if err != nil {
@@ -225,7 +225,7 @@ func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 		if fHeader.MessageType == protocol.HI {
 			mmess := fMessage.(*protocol.HIMess)
 			if mmess.Greeting == "Shhh..." && mmess.IsAdmin == 0 {
-				sMessage = protocol.PrepareAndDecideWhichSProtoToLower(conn, userOptions.Secret, protocol.ADMIN_UUID)
+				sMessage = protocol.NewDownMsg(conn, userOptions.Secret, protocol.ADMIN_UUID)
 				protocol.ConstructMessage(sMessage, header, hiMess, false)
 				sMessage.SendMessage()
 

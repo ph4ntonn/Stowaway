@@ -1,5 +1,4 @@
 //go:build !windows
-// +build !windows
 
 package cli
 
@@ -1043,7 +1042,7 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 }
 
 func (console *Console) handleShellPanelCommand(route string, uuid string) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sMessage := protocol.NewDownMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
@@ -1071,7 +1070,7 @@ func (console *Console) handleShellPanelCommand(route string, uuid string) {
 }
 
 func (console *Console) handleSSHPanelCommand(route string, uuid string) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sMessage := protocol.NewDownMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,

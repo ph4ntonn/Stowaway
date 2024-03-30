@@ -28,7 +28,7 @@ func (forward *Forward) LetForward(mgr *manager.Manager, route string, uuid stri
 		return err
 	}
 
-	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sMessage := protocol.NewDownMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
@@ -103,7 +103,7 @@ func (forward *Forward) handleForwardListener(mgr *manager.Manager, listener net
 }
 
 func (forward *Forward) handleForward(mgr *manager.Manager, conn net.Conn, route string, uuid string, seq uint64) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sMessage := protocol.NewDownMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 	// tell agent to start
 	startHeader := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,

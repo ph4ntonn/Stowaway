@@ -37,7 +37,7 @@ func (mySSH *SSH) start() {
 	var authPayload ssh.AuthMethod
 	var err error
 
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sMessage := protocol.NewUpMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	sshResheader := &protocol.Header{
 		Sender:      global.G_Component.UUID,

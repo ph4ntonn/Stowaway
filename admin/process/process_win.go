@@ -1,4 +1,4 @@
-// +build windows
+//go:build windows
 
 package process
 
@@ -49,7 +49,7 @@ func (admin *Admin) Run() {
 }
 
 func (admin *Admin) handleMessFromDownstream(console *cli.Console) {
-	rMessage := protocol.PrepareAndDecideWhichRProtoFromLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	rMessage := protocol.NewDownMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	for {
 		header, message, err := protocol.DestructMessage(rMessage)

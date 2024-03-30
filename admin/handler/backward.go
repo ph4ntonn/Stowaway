@@ -24,7 +24,7 @@ func NewBackward(lPort, rPort string) *Backward {
 }
 
 func (backward *Backward) LetBackward(mgr *manager.Manager, route string, uuid string) error {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sMessage := protocol.NewDownMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 	// test if node can listen on assigned port
 	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,
@@ -63,7 +63,7 @@ func (backward *Backward) LetBackward(mgr *manager.Manager, route string, uuid s
 }
 
 func (backward *Backward) start(mgr *manager.Manager, topo *topology.Topology, uuid string) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sMessage := protocol.NewDownMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 	// first , admin need to know the route to target node,so ask topo for the answer
 	topoTask := &topology.TopoTask{
 		Mode: topology.GETROUTE,
@@ -214,7 +214,7 @@ func GetBackwardInfo(mgr *manager.Manager, uuid string) (int, bool) {
 }
 
 func StopBackward(mgr *manager.Manager, uuid, route string, choice int) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sMessage := protocol.NewDownMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,

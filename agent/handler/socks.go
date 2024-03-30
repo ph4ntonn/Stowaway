@@ -33,7 +33,7 @@ func newSocks() *Socks {
 }
 
 func (socks *Socks) start(mgr *manager.Manager) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sMessage := protocol.NewUpMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
 		Sender:      global.G_Component.UUID,
@@ -69,7 +69,7 @@ func (socks *Socks) start(mgr *manager.Manager) {
 func (socks *Socks) handleSocks(mgr *manager.Manager, dataChan chan []byte, seq uint64) {
 	setting := new(Setting)
 
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sMessage := protocol.NewUpMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	defer func() { // no matter what happened, after the function return,tell admin that works done
 		finHeader := &protocol.Header{
@@ -128,7 +128,7 @@ func (socks *Socks) handleSocks(mgr *manager.Manager, dataChan chan []byte, seq 
 }
 
 func (socks *Socks) checkMethod(setting *Setting, data []byte, seq uint64) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sMessage := protocol.NewUpMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
 		Sender:      global.G_Component.UUID,
@@ -208,7 +208,7 @@ func (socks *Socks) checkMethod(setting *Setting, data []byte, seq uint64) {
 }
 
 func (socks *Socks) auth(setting *Setting, data []byte, seq uint64) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sMessage := protocol.NewUpMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
 		Sender:      global.G_Component.UUID,
@@ -254,7 +254,7 @@ func (socks *Socks) auth(setting *Setting, data []byte, seq uint64) {
 }
 
 func (socks *Socks) buildConn(mgr *manager.Manager, setting *Setting, data []byte, seq uint64) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sMessage := protocol.NewUpMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
 		Sender:      global.G_Component.UUID,
@@ -298,7 +298,7 @@ func tcpConnect(mgr *manager.Manager, setting *Setting, data []byte, seq uint64,
 	var host string
 	var err error
 
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sMessage := protocol.NewUpMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
 		Sender:      global.G_Component.UUID,
@@ -385,7 +385,7 @@ func proxyC2STCP(conn net.Conn, dataChan chan []byte) {
 }
 
 func proxyS2CTCP(conn net.Conn, seq uint64) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sMessage := protocol.NewUpMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
 		Sender:      global.G_Component.UUID,
@@ -438,7 +438,7 @@ func (addr *socksLocalAddr) byteArray() []byte {
 func udpAssociate(mgr *manager.Manager, setting *Setting, data []byte, seq uint64, length int) {
 	setting.isUDP = true
 
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sMessage := protocol.NewUpMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	dataHeader := &protocol.Header{
 		Sender:      global.G_Component.UUID,
@@ -662,7 +662,7 @@ func proxyC2SUDP(mgr *manager.Manager, listener *net.UDPConn, seq uint64) {
 
 // proxyS2CUDP 代理S-->Cudp流量
 func proxyS2CUDP(mgr *manager.Manager, listener *net.UDPConn, seq uint64) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sMessage := protocol.NewUpMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
 		Sender:      global.G_Component.UUID,

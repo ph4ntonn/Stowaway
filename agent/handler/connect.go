@@ -26,7 +26,7 @@ func newConnect(addr string) *Connect {
 func (connect *Connect) start(mgr *manager.Manager) {
 	var sUMessage, sLMessage, rMessage protocol.Message
 
-	sUMessage = protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sUMessage = protocol.NewUpMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	hiHeader := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID, // fake admin
@@ -95,12 +95,12 @@ func (connect *Connect) start(mgr *manager.Manager) {
 		return
 	}
 
-	sLMessage = protocol.PrepareAndDecideWhichSProtoToLower(conn, global.G_Component.Secret, protocol.ADMIN_UUID)
+	sLMessage = protocol.NewDownMsg(conn, global.G_Component.Secret, protocol.ADMIN_UUID)
 
 	protocol.ConstructMessage(sLMessage, hiHeader, hiMess, false)
 	sLMessage.SendMessage()
 
-	rMessage = protocol.PrepareAndDecideWhichRProtoFromLower(conn, global.G_Component.Secret, protocol.ADMIN_UUID)
+	rMessage = protocol.NewDownMsg(conn, global.G_Component.Secret, protocol.ADMIN_UUID)
 	fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 
 	if err != nil {

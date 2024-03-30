@@ -15,7 +15,7 @@ func AddMemo(taskChan chan *topology.TopoTask, info []string, uuid string, route
 		memo = memo + " " + i
 	}
 
-	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sMessage := protocol.NewDownMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	topoTask := &topology.TopoTask{
 		Mode: topology.UPDATEMEMO,
@@ -51,7 +51,7 @@ func DelMemo(taskChan chan *topology.TopoTask, uuid string, route string) {
 	}
 	taskChan <- topoTask
 
-	sMessage := protocol.PrepareAndDecideWhichSProtoToLower(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sMessage := protocol.NewDownMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
 		Sender:      protocol.ADMIN_UUID,

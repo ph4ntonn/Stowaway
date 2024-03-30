@@ -33,7 +33,7 @@ func (backward *Backward) start(mgr *manager.Manager) {
 	mgr.BackwardManager.TaskChan <- mgrTask
 	<-mgr.BackwardManager.ResultChan
 
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sMessage := protocol.NewUpMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	for {
 		conn, err := backward.Listener.Accept()
@@ -84,7 +84,7 @@ func (backward *Backward) start(mgr *manager.Manager) {
 }
 
 func (backward *Backward) handleBackward(mgr *manager.Manager, conn net.Conn, seq uint64) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sMessage := protocol.NewUpMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	defer func() {
 		finHeader := &protocol.Header{
@@ -170,7 +170,7 @@ func (backward *Backward) handleBackward(mgr *manager.Manager, conn net.Conn, se
 }
 
 func testBackward(mgr *manager.Manager, lPort, rPort string) {
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sMessage := protocol.NewUpMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
 		Sender:      global.G_Component.UUID,
@@ -207,7 +207,7 @@ func testBackward(mgr *manager.Manager, lPort, rPort string) {
 func sendDoneMess(all uint16, rPort string) {
 	// here is a problem,if some of the backward conns cannot send FIN before DONE,then the FIN they send cannot be processed by admin
 	// but it's not a really big problem,because users must know some data maybe lost since they choose to close backward
-	sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+	sMessage := protocol.NewUpMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 	header := &protocol.Header{
 		Sender:      global.G_Component.UUID,
@@ -249,7 +249,7 @@ func DispatchBackwardMess(mgr *manager.Manager) {
 				result.SeqChan <- mess.Seq
 				<-mgr.BackwardManager.SeqReady
 			} else {
-				sMessage := protocol.PrepareAndDecideWhichSProtoToUpper(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
+				sMessage := protocol.NewUpMsg(global.G_Component.Conn, global.G_Component.Secret, global.G_Component.UUID)
 
 				finHeader := &protocol.Header{
 					Sender:      global.G_Component.UUID,

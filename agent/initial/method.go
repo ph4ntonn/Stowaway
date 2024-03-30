@@ -27,7 +27,7 @@ var START_FORWARDING string
 var STOP_FORWARDING string
 
 func achieveUUID(conn net.Conn, secret string) (uuid string) {
-	rMessage := protocol.PrepareAndDecideWhichRProtoFromUpper(conn, secret, protocol.TEMP_UUID)
+	rMessage := protocol.NewUpMsg(conn, secret, protocol.TEMP_UUID)
 	fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 
 	if err != nil {
@@ -97,12 +97,12 @@ func NormalActive(userOptions *Options, proxy share.Proxy) (net.Conn, string) {
 			log.Fatalf("[*] Error occurred: %s", err.Error())
 		}
 
-		sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(conn, userOptions.Secret, protocol.TEMP_UUID)
+		sMessage = protocol.NewUpMsg(conn, userOptions.Secret, protocol.TEMP_UUID)
 
 		protocol.ConstructMessage(sMessage, header, hiMess, false)
 		sMessage.SendMessage()
 
-		rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, userOptions.Secret, protocol.TEMP_UUID)
+		rMessage = protocol.NewUpMsg(conn, userOptions.Secret, protocol.TEMP_UUID)
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 
 		if err != nil {
@@ -182,7 +182,7 @@ func NormalPassive(userOptions *Options) (net.Conn, string) {
 			log.Fatalf("[*] Error occurred: %s", err.Error())
 		}
 
-		rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, userOptions.Secret, protocol.TEMP_UUID)
+		rMessage = protocol.NewUpMsg(conn, userOptions.Secret, protocol.TEMP_UUID)
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 
 		if err != nil {
@@ -194,7 +194,7 @@ func NormalPassive(userOptions *Options) (net.Conn, string) {
 		if fHeader.MessageType == protocol.HI {
 			mmess := fMessage.(*protocol.HIMess)
 			if mmess.Greeting == "Shhh..." && mmess.IsAdmin == 1 {
-				sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(conn, userOptions.Secret, protocol.TEMP_UUID)
+				sMessage = protocol.NewUpMsg(conn, userOptions.Secret, protocol.TEMP_UUID)
 				protocol.ConstructMessage(sMessage, header, hiMess, false)
 				sMessage.SendMessage()
 				uuid := achieveUUID(conn, userOptions.Secret)
@@ -345,7 +345,7 @@ func SoReusePassive(userOptions *Options) (net.Conn, string) {
 			continue
 		}
 
-		rMessage = protocol.PrepareAndDecideWhichRProtoFromUpper(conn, userOptions.Secret, protocol.TEMP_UUID)
+		rMessage = protocol.NewUpMsg(conn, userOptions.Secret, protocol.TEMP_UUID)
 		fHeader, fMessage, err := protocol.DestructMessage(rMessage)
 
 		if err != nil {
@@ -357,7 +357,7 @@ func SoReusePassive(userOptions *Options) (net.Conn, string) {
 		if fHeader.MessageType == protocol.HI {
 			mmess := fMessage.(*protocol.HIMess)
 			if mmess.Greeting == "Shhh..." && mmess.IsAdmin == 1 {
-				sMessage = protocol.PrepareAndDecideWhichSProtoToUpper(conn, userOptions.Secret, protocol.TEMP_UUID)
+				sMessage = protocol.NewUpMsg(conn, userOptions.Secret, protocol.TEMP_UUID)
 				protocol.ConstructMessage(sMessage, header, hiMess, false)
 				sMessage.SendMessage()
 				uuid := achieveUUID(conn, userOptions.Secret)

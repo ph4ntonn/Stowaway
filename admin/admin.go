@@ -1,5 +1,4 @@
 //go:build !windows
-// +build !windows
 
 package main
 
@@ -34,7 +33,7 @@ func main() {
 
 	share.GeneratePreAuthToken(options.Secret)
 
-	protocol.DecideType("raw", options.Downstream)
+	protocol.SetUpDownStream("raw", options.Downstream)
 
 	cli.Banner()
 

@@ -23,7 +23,7 @@ func main() {
 
 	agent := process.NewAgent(options)
 
-	protocol.DecideType(options.Upstream, options.Downstream)
+	protocol.SetUpDownStream(options.Upstream, options.Downstream)
 
 	var conn net.Conn
 	switch options.Mode {
