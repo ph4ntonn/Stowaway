@@ -27,15 +27,18 @@ func main() {
 	printer.InitPrinter()
 
 	termbox.Init()
+	termbox.SetCursor(0, 0)
+	termbox.Flush()
+
 	go listenCtrlC()
 
 	options := initial.ParseOptions()
 
+	cli.Banner()
+
 	share.GeneratePreAuthToken(options.Secret)
 
 	protocol.SetUpDownStream("raw", options.Downstream)
-
-	cli.Banner()
 
 	topo := topology.NewTopology()
 	go topo.Run()

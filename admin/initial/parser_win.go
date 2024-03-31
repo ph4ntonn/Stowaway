@@ -46,7 +46,7 @@ func init() {
 	flag.StringVar(&args.Socks5ProxyP, "socks5-proxyp", "", "socks5 password")
 	flag.StringVar(&args.HttpProxy, "http-proxy", "", "The http proxy server ip:port you want to use")
 	flag.StringVar(&args.Downstream, "down", "raw", "")
-	flag.StringVar(&args.Domain, "domain", "", "Domain name for TLS SNI/WS HOST")
+	flag.StringVar(&args.Domain, "domain", "", "Domain name for TLS SNI")
 	flag.BoolVar(&args.TlsEnable, "tls-enable", false, "Encrypt connection by TLS")
 
 	flag.Usage = newUsage

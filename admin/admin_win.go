@@ -26,11 +26,11 @@ func main() {
 
 	options := initial.ParseOptions()
 
+	cli.Banner()
+
 	share.GeneratePreAuthToken(options.Secret)
 
 	protocol.SetUpDownStream("raw", options.Downstream)
-
-	cli.Banner()
 
 	topo := topology.NewTopology()
 	go topo.Run()
