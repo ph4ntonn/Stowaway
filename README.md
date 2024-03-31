@@ -43,16 +43,17 @@ PPS:**请务必在使用前详细阅读使用方法及文末的注意事项**
 
 ## 编译及演示
 
-- 使用```make```直接编译多平台完整程序，或参看Makefile编译特定程序
+- 使用`make`直接编译多平台完整程序，或参看Makefile编译特定程序
 - 不想编译的盆油可以直接用[release](https://github.com/ph4ntonn/Stowaway/releases)下编译完成的程序
 - 演示视频：[Youtube](https://www.youtube.com/watch?v=Lh5Q0RPWKMU&list=PLkbGxnHFIhA_g5XZtKzN4u-JXRq41L2g-)
 
 ## 使用方法
 
 ### 角色
+
 Stowaway一共包含两种角色，分别是：
-- ```admin```    渗透测试者使用的主控端
-- ```agent```    渗透测试者部署的被控端
+- `admin`    渗透测试者使用的主控端
+- `agent`    渗透测试者部署的被控端
 
 ### 名词定义
 
@@ -107,11 +108,11 @@ Stowaway一共包含两种角色，分别是：
 
 此参数admin&&agent用法一致，仅用在被动模式下 
 
-若不指定IP地址，则默认监听在```0.0.0.0```上
+若不指定IP地址，则默认监听在`0.0.0.0`上
 
-- admin:  ```./stowaway_admin -l 9999``` or ```./stowaway_admin -l 127.0.0.1:9999```
+- admin:  `./stowaway_admin -l 9999` or `./stowaway_admin -l 127.0.0.1:9999`
 
-- agent:  ```./stowaway_agent -l 9999```  or ```./stowaway_agent -l 127.0.0.1:9999```
+- agent:  `./stowaway_agent -l 9999`  or `./stowaway_agent -l 127.0.0.1:9999`
 
 #### -s
 
@@ -119,9 +120,9 @@ Stowaway一共包含两种角色，分别是：
 
 可选，若为空，则代表通信不被加密，反之则通信基于用户所给出的密钥加密
 
-- admin:  ```./stowaway_admin -l 9999 -s 123``` 
+- admin:  `./stowaway_admin -l 9999 -s 123`
 
-- agent:  ```./stowaway_agent -l 9999 -s 123``` 
+- agent:  `./stowaway_agent -l 9999 -s 123`
 
 #### -c
 
@@ -129,61 +130,61 @@ Stowaway一共包含两种角色，分别是：
 
 代表了希望连接到的节点的地址
 
-- admin:  ```./stowaway_admin -c 127.0.0.1:9999``` 
+- admin:  `./stowaway_admin -c 127.0.0.1:9999`
 
-- agent:  ```./stowaway_agent -c 127.0.0.1:9999``` 
+- agent:  `./stowaway_agent -c 127.0.0.1:9999`
 
 #### --socks5-proxy/--socks5-proxyu/--socks5-proxyp/--http-proxy
 
 这四个参数admin&&agent用法一致，仅用在主动模式下
 
-```--socks5-proxy```代表socks5代理服务器地址，```--socks5-proxyu```以及```--socks5-proxyp```可选
+`--socks5-proxy`代表socks5代理服务器地址，`--socks5-proxyu`以及`--socks5-proxyp`可选
 
-```--http-proxy```代表http代理服务器地址,与socks5使用方式相同
+`--http-proxy`代表http代理服务器地址,与socks5使用方式相同
 
 无用户名密码：
 
-- admin:  ```./stowaway_admin -c 127.0.0.1:9999 --socks5-proxy xxx.xxx.xxx.xxx```
+- admin:  `./stowaway_admin -c 127.0.0.1:9999 --socks5-proxy xxx.xxx.xxx.xxx`
 
-- agent:  ```./stowaway_agent -c 127.0.0.1:9999 --socks5-proxy xxx.xxx.xxx.xxx``` 
+- agent:  `./stowaway_agent -c 127.0.0.1:9999 --socks5-proxy xxx.xxx.xxx.xxx`
 
 有用户名密码:
 
-- admin:  ```./stowaway_admin -c 127.0.0.1:9999 --socks5-proxy xxx.xxx.xxx.xxx --socks5-proxyu xxx --socks5-proxyp xxx```
+- admin:  `./stowaway_admin -c 127.0.0.1:9999 --socks5-proxy xxx.xxx.xxx.xxx --socks5-proxyu xxx --socks5-proxyp xxx`
 
-- agent:  ```./stowaway_agent -c 127.0.0.1:9999 --socks5-proxy xxx.xxx.xxx.xxx --socks5-proxyu xxx --socks5-proxyp xxx``` 
+- agent:  `./stowaway_agent -c 127.0.0.1:9999 --socks5-proxy xxx.xxx.xxx.xxx --socks5-proxyu xxx --socks5-proxyp xxx`
 
 #### --up/--down
 
 这两个参数admin&&agent用法一致，可用在主动&&被动模式下
 
-但注意admin上没有```--up```参数
+但注意admin上没有`--up`参数
 
 这两个参数可选，若为空，则代表上/下游流量为裸TCP流量
 
 若希望上/下游流量为HTTP流量，设置此两参数即可
 
-- admin:  ```./stowaway_admin -c 127.0.0.1:9999 --down http``` 
+- admin:  `./stowaway_admin -c 127.0.0.1:9999 --down http`
 
-- agent:  ```./stowaway_agent -c 127.0.0.1:9999 --up http```  or ```./stowaway_agent -c 127.0.0.1:9999 --up http --down http```
+- agent:  `./stowaway_agent -c 127.0.0.1:9999 --up http` or `./stowaway_agent -c 127.0.0.1:9999 --up http --down http`
 
-**注意一点，当你设置了某一节点上/下游为TCP/HTTP流量后，与其连接的父/子节点的下/上游流量必须设置为一致！！！**
+**注意一点，当你设置了某一节点上/下游为TCP/HTTP流量后，与其连接的父/子节点的下/上游流量必须设置为一致！**
 
 如下
 
-- admin:  ```./stowaway_admin -c 127.0.0.1:9999 --down http``` 
+- admin:  `./stowaway_admin -c 127.0.0.1:9999 --down http`
 
-- agent:  ```./stowaway_agent -l 9999 --up http```
+- agent:  `./stowaway_agent -l 9999 --up http`
 
-上面这种情况，agent必须设置```--up```为http，否则会导致网络出错
+上面这种情况，agent必须设置`--up`为http，否则会导致网络出错
 
 agent间也一样
 
-假设agent-1正在```127.0.0.1:10000```端口上等待子节点的连接，并且设置了```--down http```
+假设agent-1正在`127.0.0.1:10000`端口上等待子节点的连接，并且设置了`--down http`
 
-那么agent-2也必须设置```--up```为http，否则会导致网络出错
+那么agent-2也必须设置`--up`为http，否则会导致网络出错
 
-- agent-2:  ```./stowaway_agent -c 127.0.0.1:10000 --up http```
+- agent-2:  `./stowaway_agent -c 127.0.0.1:10000 --up http`
 
 #### --reconnect
 
@@ -191,118 +192,124 @@ agent间也一样
 
 参数可选，若不设置，则代表节点在网络连接断开后不会主动重连，若设置，则代表节点会每隔x(你设置的秒数)秒尝试重连至父节点
 
-- admin:  ```./stowaway_admin -l 9999``` 
+- admin:  `./stowaway_admin -l 9999`
 
-- agent:  ```./stowaway_agent -c 127.0.0.1:9999 --reconnect 10```
+- agent:  `./stowaway_agent -c 127.0.0.1:9999 --reconnect 10`
 
 上面这种情况下，代表如果agent与admin之间的连接断开，agent会每隔十秒尝试重连回admin
 
 agent之间也与上面情况一致
 
-并且```--reconnect```参数可以与```--socks5-proxy```/```--socks5-proxyu```/```--socks5-proxyp```/```--http-proxy```一起使用，agent将会参照启动时的设置，通过代理尝试重连
+并且`--reconnect`参数可以与`--socks5-proxy`/`--socks5-proxyu`/`--socks5-proxyp`/`--http-proxy`一起使用，agent将会参照启动时的设置，通过代理尝试重连
 
 #### --rehost/--report
 
 这两个参数比较特别，仅用在agent端，详细请参见下方的端口复用机制
 
 #### --cs
+
 此参数仅用在agent，可用在主动&&被动模式下
+
 主要旨在解决'shell'功能乱码问题，当用户将agent运行于控制台编码为gbk的平台上(例如一般情况下的Windows)并且同时admin运行于控制台编码为utf-8的平台上时，请务必将此参数设置为'gbk'
-- Windows: ```./stowaway_agent -c 127.0.0.1:9999 -s 123 --cs gbk```
+
+- Windows: `./stowaway_agent -c 127.0.0.1:9999 -s 123 --cs gbk`
 
 #### --tls-enable
+
 这两个参数admin&&agent用法一致，可用在主动&&被动模式下
 
 通过设置此选项，可以将节点间流量以TLS加密
 
 示例如下
-- admin: ./stowaway_admin -l 10000 --tls-enable -s 123
-- agent: ./stowaway_agent -c localhost:10000 --tls-enable -s 123
+- admin: `./stowaway_admin -l 10000 --tls-enable -s 123`
+- agent: `./stowaway_agent -c localhost:10000 --tls-enable -s 123`
 
 注意，当此参数启用时，aes加密将被默认禁用，-s参数将仅用于节点间相互验证&端口复用功能
 
 另外，当此参数启用时，**请保证网络中每一个节点(包括admin)都启用此参数**
 
 #### --domain
+
 这两个参数admin&&agent用法一致，仅可用在主动模式下
 
 通过设置此选项，可以设置当前此节点TLS协商时的SNI选项
 
 示例如下
-- admin: ./stowaway_admin -l 10000 --tls-enable -s 123
-- agent: ./stowaway_agent -c localhost:10000 --tls-enable -s 123 --domain xxx.com
+- admin: `./stowaway_admin -l 10000 --tls-enable -s 123`
+- agent: `./stowaway_agent -c localhost:10000 --tls-enable -s 123 --domain xxx.com`
 
 注意，此参数启用必须配合--tls-enable参数，否则此参数无效
 
 ## 端口复用机制
 
-  当前Stowaway提供基于SO_REUSEPORT和SO_REUSEADDR特性的端口复用功能及基于IPTABLES的端口复用功能
+当前Stowaway提供基于SO_REUSEPORT和SO_REUSEADDR特性的端口复用功能及基于IPTABLES的端口复用功能
 
-   - 在linux下可以大部分的功能端口
+- 在linux下可以大部分的功能端口
 
-   - 在windows下不可复用iis，rdp端口，可以复用mysql，apache服务的端口
-
+- 在windows下不可复用iis，rdp端口，可以复用mysql，apache服务的端口
 
 ### 复用方式
+
 - SO_REUSEPORT和SO_REUSEADDR模式
 
   假设agent端采用端口复用机制复用80端口
 
-  此时agent端必须设置```--rehost```&&```--report```&&```-s```参数
+  此时agent端必须设置`--rehost`&&`--report`&&`-s`参数
 
-  - --rehost代表希望复用的IP地址，不可为0.0.0.0，普遍应当是网卡的外部地址
+  - `--rehost`: 代表希望复用的IP地址，不可为0.0.0.0，普遍应当是网卡的外部地址
 
-  - --report代表希望复用的端口
+  - `--report`: 代表希望复用的端口
 
-  - -s代表通信密钥
+  - `-s`: 代表通信密钥
 
   **主要支持windows、mac环境下的复用，linux亦可，但限制较多**
   
-  - admin端：```./stowaway_admin -c 192.168.0.105:80 -s 123```
-  - agent端： ```./stowaway_agent  --report 80 --rehost 192.168.0.105 -s 123```
+  - admin端：`./stowaway_admin -c 192.168.0.105:80 -s 123`
+  - agent端：`./stowaway_agent  --report 80 --rehost 192.168.0.105 -s 123`
 
 
 - IPTABLES模式
 
   假设agent端采用端口复用机制复用22端口
 
-  此时agent端必须设置```-l```&&```--report```&&```-s```参数
+  此时agent端必须设置`-l`&&`--report`&&`-s`参数
 
-  - -l 代表无法被正常访问的端口，也就是你真正想让agent监听并接受连接的端口
+  - `-l`: 代表无法被正常访问的端口，也就是你真正想让agent监听并接受连接的端口
 
-  - --report代表希望复用的端口
+  - `--report`: 代表希望复用的端口
 
-  - -s代表通信密钥
+  - `-s`: 代表通信密钥
 
   **仅支持linux环境下的复用，agent会自动修改IPTABLES，需要root权限**
 
-  - agent端： ```./stowaway_agent --report 22 -l 10000 -s 123```
+  - agent端： `./stowaway_agent --report 22 -l 10000 -s 123`
 
-    在agent启动后，请使用```script```目录下的```reuse.py```
+    在agent启动后，请使用`script`目录下的`reuse.py`
 
     先设置SECRET的值(SECRET的值就是在启动各个节点时所设置的通信密钥),
 
-    之后执行：```python reuse.py --start --rhost xxx.xxx.xxx.xxx --rport xxx```
+    之后执行：`python reuse.py --start --rhost xxx.xxx.xxx.xxx --rport xxx`
 
-    - --rhost代表agent的地址
+    - `--rhost`: 代表agent的地址
 
-    - --rport代表被复用的端口,在本例中应当为22
-  
-  - 此时admin端就可以连接：```./stowaway_admin -c 192.168.0.105:22 -s 123```
+    - `--rport`: 代表被复用的端口,在本例中应当为22
+
+  - 此时admin端就可以连接：`./stowaway_admin -c 192.168.0.105:22 -s 123`
   
 
 ### 注意
+
 - 以上情况只是列举了admin以及agent之间的连接，agent与agent之间的连接亦同，并无差异
 
 - 如果agent被ctrl-c或者kill命令杀死，程序将会自动清理iptables规则，但如果被kill -9 杀死，则无法自动清除
 
   故而为了防止agent异常退出后，iptables规则没有被清理导致被复用的服务无法访问
 
-  所以当需要关闭时，需运行：```python reuse.py --stop --rhost xxx.xxx.xxx.xxx --rport xxx```
+  所以当需要关闭时，需运行：`python reuse.py --stop --rhost xxx.xxx.xxx.xxx --rport xxx`
 
   即可关闭转发规则，使得原服务能够被正常访问
 
-- 如果使用IPTABLES模式下的端口复用模式，将会强制监听在0.0.0.0，无法由```-l```参数来指定ip
+- 如果使用IPTABLES模式下的端口复用模式，将会强制监听在0.0.0.0，无法由`-l`参数来指定ip
 
 ## 如何组成多级网络？
 
@@ -310,33 +317,33 @@ agent之间也与上面情况一致
 
 而多级网络才是核心
 
-在stowaway中，组成多级网络需要借助admin中的```listen```、```connect```、 ```sshtunnel```命令来实现
+在stowaway中，组成多级网络需要借助admin中的`listen`、`connect`、 `sshtunnel`命令来实现
 
 举一个简单的例子
 
-- admin: ```./stowaway_admin -l 9999 -s 123``` 
+- admin: `./stowaway_admin -l 9999 -s 123`
 
 此时agent-1已经连上admin
 
-- agent-1:  ```./stowaway_agent -c 127.0.0.1:9999 -s 123```
+- agent-1:  `./stowaway_agent -c 127.0.0.1:9999 -s 123`
 
  此时用户还想连接agent-2，如下
 
-- agent-2:  ```./stowaway_agent -l 10000 -s 123```
+- agent-2:  `./stowaway_agent -l 10000 -s 123`
 
-那么，此时用户可以通过admin,输入```use 0``` -> ```connect agent-2的IP:10000```来将其加入网络，并成为agent-1的一个子节点
+那么，此时用户可以通过admin,输入`use 0` -> `connect agent-2的IP:10000`来将其加入网络，并成为agent-1的一个子节点
 
 假如此时用户还希望连入一个节点agent-3，但是通过agent-1无法访问agent-3
 
-那么，此时用户可以通过admin,输入```use 0``` -> ```listen``` -> 选择```1.Normal Passive``` -> 输入```10001``` 从而使得agent-1监听在10001端口上，并等待子节点的连接
+那么，此时用户可以通过admin,输入`use 0` -> `listen` -> 选择`1.Normal Passive` -> 输入`10001` 从而使得agent-1监听在10001端口上，并等待子节点的连接
 
 等admin操作完成后，agent-3启动如下
 
-- agent-3: ```./stowaway_agent -c 127.0.0.1:10001 -s 123```
+- agent-3: `./stowaway_agent -c 127.0.0.1:10001 -s 123`
 
 就可以将agent-3作为agent-1的另一个子节点加入网络了
 
-关于```listen```以及```sshtunnel```的详细介绍，可以参看下方的命令解析
+关于`listen`以及`sshtunnel`的详细介绍，可以参看下方的命令解析
 
 ## 如何重连？
 
@@ -346,12 +353,12 @@ Stowaway当前支持多种方式的重连，简单概括如下
 
 如果设置了重连，那么节点将会在指定的时间间隔中尝试重连
 
-另外，所有被动模式启动的节点都不会主动退出，而是会基于启动时的参数重新监听在指定端口上，此时用户仍然可以通过```connect```、```sshtunnel```来将这些节点连回网络
+另外，所有被动模式启动的节点都不会主动退出，而是会基于启动时的参数重新监听在指定端口上，此时用户仍然可以通过`connect`、`sshtunnel`来将这些节点连回网络
 
 ### 注意
 
-1. **如因网络波动或中间节点掉线，导致某一个分支断开，在主动重连时请务必连接缺失链的头节点**
-   **举个例子，admin后接着node1，node1后分为两支，一支是node1->node 2 -> node 3 -> node 4, 一支是node1->node 5 ->node 6，那么如果node2掉线，node3及node4将不会掉线，而是继续保持存活。此时用户若想将node3及node4重新加入网络，那么用户有两种选择，一种是假如node1可以直接访问node3，那么用户可随时在node1将node3用connect或者sshtunnel命令重新加入网络（切记，就算node1同时也可以访问node4，也请不要直接连接node4，请连接整个缺失链(node3->node4)的头节点node3），这样就可以将node3及node4重新加入网络；另一种选择是当node1无法直接访问node3时（即必须经过node2），那么请先将node2重启并加入网络，之后再在node2上使用connect或者sshtunnel命令连接node3，从而将node3及node4加入网络。**
+1. **如因网络波动或中间节点掉线，导致某一个分支断开，在主动重连时请务必连接缺失链的头节点.**举个例子，admin后接着node1，node1后分为两支，一支是node1->node 2 -> node 3 -> node 4, 一支是node1->node 5 ->node 6，那么如果node2掉线，node3及node4将不会掉线，而是继续保持存活。此时用户若想将node3及node4重新加入网络，那么用户有两种选择，一种是假如node1可以直接访问node3，那么用户可随时在node1将node3用connect或者sshtunnel命令重新加入网络（切记，就算node1同时也可以访问node4，也请不要直接连接node4，请连接整个缺失链(node3->node4)的头节点node3），这样就可以将node3及node4重新加入网络；另一种选择是当node1无法直接访问node3时（即必须经过node2），那么请先将node2重启并加入网络，之后再在node2上使用connect或者sshtunnel命令连接node3，从而将node3及node4加入网络
+
 2. **当有节点掉线时，那么此时与此节点及其子节点有关的所有socks，backward，forward服务都会被强制停止**
 
 ## 命令解析
@@ -360,7 +367,7 @@ Stowaway当前支持多种方式的重连，简单概括如下
 
 admin控制台分为两个层级，第一层为主panel，包含的命令如下
 
-- ```help```: 展示主panel的帮助信息
+- `help`: 展示主panel的帮助信息
 
 ```
 (admin) >> help
@@ -371,7 +378,7 @@ admin控制台分为两个层级，第一层为主panel，包含的命令如下
   exit                                     		Exit Stowaway
 ```
 
-- ```detail```: 展示在线节点的详细信息
+- `detail`: 展示在线节点的详细信息
 
 ```
 (admin) >> detail
@@ -379,7 +386,7 @@ Node[0] -> IP: 127.0.0.1:10000  Hostname: ph4ntoms-MBP.lan  User: ph4ntom
 Memo:
 ```
 
-- ```topo```: 展示在线节点的父子关系
+- `topo`: 展示在线节点的父子关系
 
 ```
 (admin) >> topo
@@ -389,14 +396,14 @@ Node[1]
 Node[1]'s children ->
 ```
 
-- ```use```: 使用某个agent
+- `use`: 使用某个agent
 
 ```
 (admin) >> use 0
 (node 0) >>
 ```
 
-- ```exit```: 退出stowaway
+- `exit`: 退出stowaway
 
 ```
 (admin) >> exit
@@ -404,9 +411,9 @@ Node[1]'s children ->
 [*] BYE!
 ```
 
-当用户使用```use```命令选择了一个agent后，进入第二层node panel，其包含的命令如下
+当用户使用`use`命令选择了一个agent后，进入第二层node panel，其包含的命令如下
 
-- ```help```: 展示node panel的帮助信息
+- `help`: 展示node panel的帮助信息
 
 ```
 (node 0) >> help
@@ -431,7 +438,7 @@ Node[1]'s children ->
   exit                                            Exit Stowaway 
 ```
 
-- ```listen```: 命令agent监听某个端口并等待子节点的连入
+- `listen`: 命令agent监听某个端口并等待子节点的连入
 
 ```
 (node 0) >> listen
@@ -443,21 +450,21 @@ Node[1]'s children ->
 [*] Node is listening on 10001
 ```
 
-注意，```listen```是比较特殊的一个命令，可以看到，```listen```命令有三种模式
+注意，`listen`是比较特殊的一个命令，可以看到，`listen`命令有三种模式
 
-1. ```Normal passive```: 此选项意味着agent将会以普通的方式监听在目标端口，并等待子节点连入
-2. ```IPTables Reuse```：此选项意味着agent将会以IPTables Reuse的方式复用端口，并等待子节点连入
-3. ```SOReuse```：此选项意味着agent将会以SOReuse的方式复用端口，并等待子节点连入
+1. `Normal passive`: 此选项意味着agent将会以普通的方式监听在目标端口，并等待子节点连入
+2. `IPTables Reuse`：此选项意味着agent将会以IPTables Reuse的方式复用端口，并等待子节点连入
+3. `SOReuse`：此选项意味着agent将会以SOReuse的方式复用端口，并等待子节点连入
 
-第一个模式是最普遍使用的，若父节点以这种方式监听，那么子节点仅需要```-c 父节点ip:port```就可以加入网络
+第一个模式是最普遍使用的，若父节点以这种方式监听，那么子节点仅需要`-c 父节点ip:port`就可以加入网络
 
 第二个和第三个模式是比较特殊的，若用户选择第二或第三个模式，那么用户必须保证当前操作的节点本身就是以端口复用的方式启动的，否则将无法使用这两个模式
 
 第二和第三个模式将不需要用户输入任何信息，节点将会自动使用其自身启动时的参数来复用端口，并准备接受子节点的连接
 
-另外，```listen```一次只能接受一个子节点的连入，若需要多个子节点连入，请执行相应次数的```listen```命令
+另外，`listen`一次只能接受一个子节点的连入，若需要多个子节点连入，请执行相应次数的`listen`命令
 
-- ```addmemo```: 为当前节点添加备忘
+- `addmemo`: 为当前节点添加备忘
 
 ```
 (node 0) >> addmemo test
@@ -468,7 +475,7 @@ Node[0] -> IP: 127.0.0.1:10000  Hostname: ph4ntoms-MBP.lan  User: ph4ntom
 Memo:  test
 ```
 
-- ```delmemo```: 删除当前节点的备忘
+- `delmemo`: 删除当前节点的备忘
 
 ```
 (node 0) >> delmemo
@@ -479,7 +486,7 @@ Node[0] -> IP: 127.0.0.1:10000  Hostname: ph4ntoms-MBP.lan  User: ph4ntom
 Memo:
 ```
 
-- ```ssh```: 命令节点以ssh方式连接目标机器
+- `ssh`: 命令节点以ssh方式连接目标机器
 
 ```
 (node 0) >> ssh 127.0.0.1:22
@@ -497,7 +504,7 @@ $
 
 在此模式下，tab键将被禁止
 
-- ```shell```: 获取当前节点的shell
+- `shell`: 获取当前节点的shell
 
 ```
 (node 0) >> shell
@@ -516,7 +523,7 @@ bash-3.2$
 
 在此模式下，tab键将被禁止
 
-- ```socks```：在当前节点上启动socks5服务
+- `socks`：在当前节点上启动socks5服务
 
 ```
 (node 0) >> socks 7777
@@ -528,11 +535,11 @@ bash-3.2$
 
 注意一点，此处的7777端口不是在agent上开启的，而是在admin上开启
 
-若需要设置用户名密码，可将上方命令改为```socks 7777 <your username> <your password>```
+若需要设置用户名密码，可将上方命令改为`socks 7777 <your username> <your password>`
 
-若需要指定监听的接口，可将上方命令改为```socks xxx.xxx.xxx.xxx:7777```
+若需要指定监听的接口，可将上方命令改为`socks xxx.xxx.xxx.xxx:7777`
 
-- ```stopsocks```: 停止在当前节点上的socks5服务
+- `stopsocks`: 停止在当前节点上的socks5服务
 
 ```
 (node 0) >> stopsocks
@@ -543,7 +550,7 @@ Socks Info ---> ListenAddr: 0.0.0.0:7777    Username: <null>    Password: <null>
 (node 0) >>
 ```
 
-- ```connect```: 命令当前节点连接至另一个子节点
+- `connect`: 命令当前节点连接至另一个子节点
 
 ```
 agent-1: ./stowaway_agent -l 10002
@@ -557,7 +564,7 @@ agent-1: ./stowaway_agent -l 10002
 (node 0) >>
 ```
 
-- ```sshtunnel```: 命令当前节点以ssh隧道的方式连接至另一个子节点
+- `sshtunnel`: 命令当前节点以ssh隧道的方式连接至另一个子节点
 
 ```
 agent-2: ./stowaway_agent -l 10003
@@ -576,7 +583,7 @@ agent-2: ./stowaway_agent -l 10003
 
 在严格受限的网络环境下，可以利用ssh隧道的方式来将stowaway的流量伪装为ssh流量，从而避开防火墙的限制
 
-- ```upload```: 向当前节点上传文件
+- `upload`: 向当前节点上传文件
 
 ```
 (node 0) >> upload test.7z test.xxx
@@ -584,7 +591,7 @@ agent-2: ./stowaway_agent -l 10003
 136.07 KiB / 136.07 KiB [-----------------------------------------------------------------------------------] 100.00% ? p/s 0s
 ```
 
-- ```download```: 下载当前节点上的文件
+- `download`: 下载当前节点上的文件
 
 ```
 (node 0) >> download test.xxx test.xxxx
@@ -592,7 +599,7 @@ agent-2: ./stowaway_agent -l 10003
 136.07 KiB / 136.07 KiB [-----------------------------------------------------------------------------------] 100.00% ? p/s 0s
 ```
 
-- ```forward```: 映射admin上的端口至远程端口
+- `forward`: 映射admin上的端口至远程端口
 
 ```
 (node 0) >> forward 9000 127.0.0.1:22
@@ -609,7 +616,7 @@ Password:
 $
 ```
 
-- ```stopforward```: 关闭当前节点的远程映射
+- `stopforward`: 关闭当前节点的远程映射
 
 ```
 (node 0) >> stopforward
@@ -621,7 +628,7 @@ $
 [*] Forward service has been closed successfully!
 ```
 
-- ```backward```: 反向映射当前agent上的端口至admin的本地端口
+- `backward`: 反向映射当前agent上的端口至admin的本地端口
 
 ```
 (node 0) >> backward 9001 22
@@ -638,7 +645,7 @@ Password:
 $
 ```
 
-- ```stopbackward```: 关闭当前节点的反向映射
+- `stopbackward`: 关闭当前节点的反向映射
 
 ```
 (node 0) >> stopbackward
@@ -650,7 +657,7 @@ $
 [*] Backward service has been closed successfully!
 ```
 
-- ```shutdown```: 命令当前节点下线
+- `shutdown`: 命令当前节点下线
 
 ```
 (node 1) >> shutdown
@@ -658,14 +665,14 @@ $
 [*] Node 1 is offline!
 ```
 
-- ```back```: 退回到主panel
+- `back`: 退回到主panel
 
 ```
 (node 1) >> back
 (admin) >>
 ```
 
-- ```exit```: 退出stowaway
+- `exit`: 退出stowaway
 
 ```
 (node 1) >> exit
@@ -684,8 +691,8 @@ $
 - 此程序仅是闲暇时开发学习，结构及代码结构不够严谨，功能可能存在bug，请多多谅解
 - admin不在线时，新节点将不允许加入
 - admin仅支持一个直接连接的agent节点，agent节点则无此限制
-- 如果用户使用windows下的admin端，请先下载[ansicon](https://github.com/adoxa/ansicon/releases)，或者在[这里]()下载，之后进入对应系统位数的文件夹，执行```ansicon.exe -i```即可，不然admin端会出现乱码的问题
-- 本程序仅支持标准的基于[RFC1928](https://www.ietf.org/rfc/rfc1928.txt)所阐述的```UDP ASSOCIATE```，请在使用socks5 udp代理时注意您所使用的程序(例如扫描器等)，包构造方式必须遵守标准的[RFC1928](https://www.ietf.org/rfc/rfc1928.txt)，并且需要自行处理丢包状况。
+- 如果用户使用windows下的admin端，请先下载[ansicon](https://github.com/adoxa/ansicon/releases)，或者在[这里]()下载，之后进入对应系统位数的文件夹，执行`ansicon.exe -i`即可，不然admin端会出现乱码的问题
+- 本程序仅支持标准的基于[RFC1928](https://www.ietf.org/rfc/rfc1928.txt)所阐述的`UDP ASSOCIATE`，请在使用socks5 udp代理时注意您所使用的程序(例如扫描器等)，包构造方式必须遵守标准的[RFC1928](https://www.ietf.org/rfc/rfc1928.txt)，并且需要自行处理丢包状况。
 
 ## 404星链计划
 <img src="https://github.com/knownsec/404StarLink/raw/master/Images/logo.png" width="30%">
