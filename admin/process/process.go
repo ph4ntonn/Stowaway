@@ -48,9 +48,9 @@ func (admin *Admin) Run() {
 	go handler.DispatchShellMess(admin.mgr)
 	go handler.DispatchInfoMess(admin.mgr, admin.Topology)
 	go DispatchChildrenMess(admin.mgr, admin.Topology)
-	// if options.keep set, send hearbeat package to agent
-	if admin.Options.Keep {
-		go handler.LetKeep(admin.Topology)
+	// if options.Heartbeat set, send hearbeat package to agent
+	if admin.Options.Heartbeat {
+		go handler.LetHeartbeat(admin.Topology)
 	}
 	// start interactive panel
 	console.Run()

@@ -33,7 +33,7 @@ type Options struct {
 	Downstream   string
 	Domain       string
 	TlsEnable    bool
-	Keep         bool
+	Heartbeat    bool
 }
 
 var args *Options
@@ -51,7 +51,7 @@ func init() {
 	flag.StringVar(&args.Downstream, "down", "raw", "Downstream data type you want to use")
 	flag.StringVar(&args.Domain, "domain", "", "Domain name for TLS SNI/WS")
 	flag.BoolVar(&args.TlsEnable, "tls-enable", false, "Encrypt connection by TLS")
-	flag.BoolVar(&args.Keep, "keep", false, "Send heartbeat package to first agent")
+	flag.BoolVar(&args.Heartbeat, "heartbeat", false, "Send heartbeat package to first agent")
 
 	flag.Usage = newUsage
 }

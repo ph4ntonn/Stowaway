@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func LetKeep(topo *topology.Topology) {
+func LetHeartbeat(topo *topology.Topology) {
 	topoTask := &topology.TopoTask{
 		Mode:    topology.GETUUID,
 		UUIDNum: 0,
@@ -33,16 +33,16 @@ func LetKeep(topo *topology.Topology) {
 		header := &protocol.Header{
 			Sender:      protocol.ADMIN_UUID,
 			Accepter:    uuid,
-			MessageType: protocol.KEEP,
+			MessageType: protocol.HEARTBEAT,
 			RouteLen:    uint32(len([]byte(route))),
 			Route:       route,
 		}
 
-		keepMess := &protocol.KeepMsg{
+		HBMess := &protocol.HeartbeatMsg{
 			Ping: 1,
 		}
 
-		protocol.ConstructMessage(sMessage, header, keepMess, false)
+		protocol.ConstructMessage(sMessage, header, HBMess, false)
 		sMessage.SendMessage()
 	}
 }

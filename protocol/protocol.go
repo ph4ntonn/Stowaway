@@ -63,7 +63,7 @@ const (
 	UPSTREAMOFFLINE
 	UPSTREAMREONLINE
 	SHUTDOWN
-	KEEP
+	HEARTBEAT
 )
 
 const ADMIN_UUID = "IAMADMINXD"
@@ -416,7 +416,7 @@ type Shutdown struct {
 	OK uint16
 }
 
-type KeepMsg struct {
+type HeartbeatMsg struct {
 	Ping uint16
 }
 
