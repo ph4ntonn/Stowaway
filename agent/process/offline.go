@@ -106,6 +106,11 @@ func normalPassiveReconn(options *initial.Options) net.Conn {
 			conn = transport.WrapTLSServerConn(conn, tlsConfig)
 		}
 
+		param := new(protocol.NegParam)
+		param.Conn = conn
+		proto := protocol.NewUpProto(param)
+		proto.SNegotiate()
+
 		if err := share.PassivePreAuth(conn); err != nil {
 			conn.Close()
 			continue
@@ -185,6 +190,11 @@ func soReusePassiveReconn(options *initial.Options) net.Conn {
 			}
 			conn = transport.WrapTLSServerConn(conn, tlsConfig)
 		}
+
+		param := new(protocol.NegParam)
+		param.Conn = conn
+		proto := protocol.NewUpProto(param)
+		proto.SNegotiate()
 
 		defer conn.SetReadDeadline(time.Time{})
 		conn.SetReadDeadline(time.Now().Add(2 * time.Second))
@@ -278,6 +288,13 @@ func normalReconnActiveReconn(options *initial.Options, proxy share.Proxy) net.C
 			}
 			conn = transport.WrapTLSClientConn(conn, tlsConfig)
 		}
+
+		param := new(protocol.NegParam)
+		param.Addr = options.Connect
+		param.Conn = conn
+		param.Domain = options.Domain
+		proto := protocol.NewUpProto(param)
+		proto.CNegotiate()
 
 		if err := share.ActivePreAuth(conn); err != nil {
 			conn.Close()

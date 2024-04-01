@@ -14,7 +14,8 @@ import (
 	"time"
 )
 
-// TODO: websocket数据帧还有些问题，暂时不启用
+// TODO: The WebSocket data frames still have some issues See: https://datatracker.ietf.org/doc/html/rfc6455#section-5.
+// But in actual testing, the NGINX reverse proxy works fine. Let's temporarily enable it, and if any issues arise, we can make improvements later.
 const websocketGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 const websocketPath = "/deadbeef"
 
@@ -35,11 +36,23 @@ func (proto *WSProto) CNegotiate() error {
 		return err
 	}
 
-	addrSlice := strings.SplitN(proto.addr, ":", 2)
-	if len(addrSlice) < 2 {
-		return errors.New("addr is error")
+	var addrSlice []string
+	if proto.addr != "" {
+		addrSlice = strings.SplitN(proto.addr, ":", 2)
+		if len(addrSlice) < 2 {
+			return errors.New("addr is error")
+		}
+	} else {
+		proto.addr = "stowaway.com:22"
+		addrSlice = strings.SplitN(proto.addr, ":", 2)
 	}
-	host := proto.domain + ":" + addrSlice[1]
+
+	var host string
+	if proto.domain != "" {
+		host = proto.domain + ":" + addrSlice[1]
+	} else {
+		host = proto.addr
+	}
 
 	// 发送websocket头
 	wsHeaders := fmt.Sprintf(`GET %s HTTP/1.1

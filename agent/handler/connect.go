@@ -90,6 +90,11 @@ func (connect *Connect) start(mgr *manager.Manager) {
 		}
 		conn = transport.WrapTLSClientConn(conn, tlsConfig)
 	}
+	// There's no need for the "domain" parameter between intranet nodes
+	param := new(protocol.NegParam)
+	param.Conn = conn
+	proto := protocol.NewDownProto(param)
+	proto.CNegotiate()
 
 	if err = share.ActivePreAuth(conn); err != nil {
 		return

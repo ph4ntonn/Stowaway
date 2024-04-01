@@ -125,6 +125,11 @@ func (listen *Listen) normalListen(mgr *manager.Manager, options *initial.Option
 			conn = transport.WrapTLSServerConn(conn, tlsConfig)
 		}
 
+		param := new(protocol.NegParam)
+		param.Conn = conn
+		proto := protocol.NewDownProto(param)
+		proto.SNegotiate()
+
 		if err := share.PassivePreAuth(conn); err != nil {
 			conn.Close()
 			continue
@@ -300,6 +305,11 @@ func (listen *Listen) iptablesListen(mgr *manager.Manager, options *initial.Opti
 			conn = transport.WrapTLSServerConn(conn, tlsConfig)
 		}
 
+		param := new(protocol.NegParam)
+		param.Conn = conn
+		proto := protocol.NewDownProto(param)
+		proto.SNegotiate()
+
 		if err := share.PassivePreAuth(conn); err != nil {
 			conn.Close()
 			continue
@@ -472,6 +482,11 @@ func (listen *Listen) soReuseListen(mgr *manager.Manager, options *initial.Optio
 			}
 			conn = transport.WrapTLSServerConn(conn, tlsConfig)
 		}
+
+		param := new(protocol.NegParam)
+		param.Conn = conn
+		proto := protocol.NewDownProto(param)
+		proto.SNegotiate()
 
 		defer conn.SetReadDeadline(time.Time{})
 		conn.SetReadDeadline(time.Now().Add(2 * time.Second))

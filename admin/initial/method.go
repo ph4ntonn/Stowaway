@@ -90,6 +90,13 @@ func NormalActive(userOptions *Options, topo *topology.Topology, proxy share.Pro
 			userOptions.Secret = ""
 		}
 
+		param := new(protocol.NegParam)
+		param.Addr = userOptions.Connect
+		param.Conn = conn
+		param.Domain = userOptions.Domain
+		proto := protocol.NewDownProto(param)
+		proto.CNegotiate()
+
 		if err := share.ActivePreAuth(conn); err != nil {
 			printer.Fail("[*] Error occurred: %s", err.Error())
 			os.Exit(0)
@@ -206,6 +213,11 @@ func NormalPassive(userOptions *Options, topo *topology.Topology) net.Conn {
 			// Set userOptions.Secret as null to disable aes
 			userOptions.Secret = ""
 		}
+
+		param := new(protocol.NegParam)
+		param.Conn = conn
+		proto := protocol.NewDownProto(param)
+		proto.SNegotiate()
 
 		if err := share.PassivePreAuth(conn); err != nil {
 			printer.Fail("[*] Error occurred: %s\r\n", err.Error())

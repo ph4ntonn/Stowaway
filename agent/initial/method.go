@@ -93,6 +93,13 @@ func NormalActive(userOptions *Options, proxy share.Proxy) (net.Conn, string) {
 			userOptions.Secret = ""
 		}
 
+		param := new(protocol.NegParam)
+		param.Addr = userOptions.Connect
+		param.Conn = conn
+		param.Domain = userOptions.Domain
+		proto := protocol.NewUpProto(param)
+		proto.CNegotiate()
+
 		if err := share.ActivePreAuth(conn); err != nil {
 			log.Fatalf("[*] Error occurred: %s", err.Error())
 		}
@@ -177,6 +184,11 @@ func NormalPassive(userOptions *Options) (net.Conn, string) {
 			// Set userOptions.Secret as null to disable aes
 			userOptions.Secret = ""
 		}
+
+		param := new(protocol.NegParam)
+		param.Conn = conn
+		proto := protocol.NewUpProto(param)
+		proto.SNegotiate()
 
 		if err := share.PassivePreAuth(conn); err != nil {
 			log.Fatalf("[*] Error occurred: %s", err.Error())
@@ -321,6 +333,11 @@ func SoReusePassive(userOptions *Options) (net.Conn, string) {
 			// Set userOptions.Secret as null to disable aes
 			userOptions.Secret = ""
 		}
+
+		param := new(protocol.NegParam)
+		param.Conn = conn
+		proto := protocol.NewUpProto(param)
+		proto.SNegotiate()
 
 		defer conn.SetReadDeadline(time.Time{})
 		conn.SetReadDeadline(time.Now().Add(2 * time.Second))
