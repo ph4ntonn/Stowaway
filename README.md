@@ -28,7 +28,7 @@ PPS:**请务必在使用前详细阅读使用方法及文末的注意事项**
 - 节点间支持重连
 - 节点间可通过socks5/http代理进行连接
 - 节点间可通过ssh隧道连接
-- 节点间流量可选择TCP/HTTP
+- 节点间流量可选择TCP/HTTP/WS
 - 多级socks5流量代理转发,支持UDP/TCP,IPV4/IPV6
 - 节点支持ssh访问远程主机
 - 远程shell
@@ -76,9 +76,10 @@ Stowaway一共包含两种角色，分别是：
 --socks5-proxyu socks5代理服务器用户名(可选)
 --socks5-proxyp socks5代理服务器密码(可选)
 --http-proxy http代理服务器地址
---down 下游协议类型,默认为裸TCP流量,可选HTTP
+--down 下游协议类型,默认为裸TCP流量,可选HTTP/WS
 --tls-enable 为节点通信启用TLS，在启用TLS后，AES加密将被禁用
 --domain 指定TLS SNI域名，若为空，默认为目标节点地址
+--heartbeat 开启心跳包
 ```
 
 - agent
@@ -95,8 +96,8 @@ Stowaway一共包含两种角色，分别是：
 --reconnect 重连时间间隔
 --rehost 端口复用时复用的IP地址
 --report 端口复用时复用的端口号
---up 上游协议类型,默认为裸TCP流量,可选HTTP
---down 下游协议类型,默认为裸TCP流量,可选HTTP
+--up 上游协议类型,默认为裸TCP流量,可选HTTP/WS
+--down 下游协议类型,默认为裸TCP流量,可选HTTP/WS
 --cs 运行平台的shell编码类型，默认为utf-8，可选gbk
 --tls-enable 为节点通信启用TLS，在启用TLS后，AES加密将被禁用
 --domain 指定TLS SNI域名，若为空，默认为目标节点地址
@@ -162,29 +163,29 @@ Stowaway一共包含两种角色，分别是：
 
 这两个参数可选，若为空，则代表上/下游流量为裸TCP流量
 
-若希望上/下游流量为HTTP流量，设置此两参数即可
+若希望上/下游流量为HTTP/WS流量，设置此两参数为`http`或`ws`即可
 
-- admin:  `./stowaway_admin -c 127.0.0.1:9999 --down http`
+- admin:  `./stowaway_admin -c 127.0.0.1:9999 --down ws`
 
-- agent:  `./stowaway_agent -c 127.0.0.1:9999 --up http` or `./stowaway_agent -c 127.0.0.1:9999 --up http --down http`
+- agent:  `./stowaway_agent -c 127.0.0.1:9999 --up ws` or `./stowaway_agent -c 127.0.0.1:9999 --up ws --down ws`
 
-**注意一点，当你设置了某一节点上/下游为TCP/HTTP流量后，与其连接的父/子节点的下/上游流量必须设置为一致！**
+**注意一点，当你设置了某一节点上/下游为TCP/HTTP/WS流量后，与其连接的父/子节点的下/上游流量必须设置为一致！**
 
 如下
 
-- admin:  `./stowaway_admin -c 127.0.0.1:9999 --down http`
+- admin:  `./stowaway_admin -c 127.0.0.1:9999 --down ws`
 
-- agent:  `./stowaway_agent -l 9999 --up http`
+- agent:  `./stowaway_agent -l 9999 --up ws`
 
-上面这种情况，agent必须设置`--up`为http，否则会导致网络出错
+上面这种情况，agent必须设置`--up`为ws，否则会导致网络出错
 
 agent间也一样
 
-假设agent-1正在`127.0.0.1:10000`端口上等待子节点的连接，并且设置了`--down http`
+假设agent-1正在`127.0.0.1:10000`端口上等待子节点的连接，并且设置了`--down ws`
 
-那么agent-2也必须设置`--up`为http，否则会导致网络出错
+那么agent-2也必须设置`--up`为ws，否则会导致网络出错
 
-- agent-2:  `./stowaway_agent -c 127.0.0.1:10000 --up http`
+- agent-2:  `./stowaway_agent -c 127.0.0.1:10000 --up ws`
 
 #### --reconnect
 
@@ -236,9 +237,19 @@ agent之间也与上面情况一致
 
 示例如下
 - admin: `./stowaway_admin -l 10000 --tls-enable -s 123`
-- agent: `./stowaway_agent -c localhost:10000 --tls-enable -s 123 --domain xxx.com`
+- agent: `./stowaway_agent -c xxx.xxx.xxx.xxx:10000 --tls-enable -s 123 --domain xxx.com`
 
 注意，此参数启用必须配合--tls-enable参数，否则此参数无效
+
+#### --heartbeat
+
+这个参数仅用在admin端，可用在主动&被动模式下
+
+通过设置此选项，可以使admin持续向第一个节点发送心跳包，从而在中间有反向代理的情况下维持长链接
+
+假设admin和agent中有类似nginx的反向代理设备将8080端口代理至8000端口,示例如下 
+- admin: `./stowaway_admin -l 8000 --tls-enable -s 123 --down ws --heartbeat`
+- agent: `./stowaway_agent -c xxx.xxx.xxx.xxx:8080 --tls-enable -s 123 --domain xxx.com --up ws`
 
 ## 端口复用机制
 

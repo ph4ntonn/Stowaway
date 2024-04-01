@@ -26,7 +26,7 @@ PPS: **Please be sure to read the usage method and the notes at the end before u
 - Support reconnection between nodes
 - Nodes can be connected through socks5/http proxy
 - Nodes can be connected through ssh tunnel
-- TCP/HTTP can be selected for inter-node traffic
+- TCP/HTTP/WS can be selected for inter-node traffic
 - Multi-hop socks5 traffic proxy forwarding, support UDP/TCP, IPV4/IPV6
 - Nodes can access arbitrary host via ssh
 - Remote shell
@@ -74,9 +74,10 @@ parameter:
 --socks5-proxyu socks5 proxy server username
 --socks5-proxyp socks5 proxy server password
 --http-proxy http proxy server address
---down downstream protocol type, default is raw TCP traffic, optional HTTP
+--down downstream protocol type, default is raw TCP traffic, optional HTTP/WS
 --tls-enable Enable TLS for node communication, after enabling TLS, AES encryption will be disabled
---domain Specify the TLS SNI domain name. If it is empty, it defaults to the target node address.
+--domain Specify the TLS SNI domain name. If it is empty, it defaults to the target node address
+--heartbeat Enable heartbeat 
 ```
 
 - agent
@@ -93,8 +94,8 @@ parameter:
 --reconnect reconnect time interval
 --rehost the IP address to be reused
 --report the Port number to be reused
---up upstream protocol type, default is raw TCP traffic, optional HTTP
---down downstream protocol type, default is raw TCP traffic, optional HTTP
+--up upstream protocol type, default is raw TCP traffic, optional HTTP/WS
+--down downstream protocol type, default is raw TCP traffic, optional HTTP/WS
 --cs platform's console encoding type,default is utf-8，optional gbk
 --tls-enable Enable TLS for node communication, after enabling TLS, AES encryption will be disabled
 --domain Specify the TLS SNI domain name. If it is empty, it defaults to the target node address.
@@ -160,29 +161,29 @@ However, note that there is no `--up` parameter on the admin
 
 These two parameters are optional. If left empty, it signifies that the upstream/downstream traffic will be in the form of raw TCP traffic
 
-If you wish for the upstream/downstream traffic to be HTTP traffic, simply set these two parameters to `http`
+If you wish for the upstream/downstream traffic to be HTTP/WS traffic, simply set these two parameters to `http` or `ws`
 
-- admin:  `./stowaway_admin -c 127.0.0.1:9999 --down http` 
+- admin:  `./stowaway_admin -c 127.0.0.1:9999 --down ws` 
 
-- agent:  `./stowaway_agent -c 127.0.0.1:9999 --up http`  or `./stowaway_agent -c 127.0.0.1:9999 --up http --down http`
+- agent:  `./stowaway_agent -c 127.0.0.1:9999 --up ws`  or `./stowaway_agent -c 127.0.0.1:9999 --up ws --down ws`
 
-**Please note, once you set the upstream/downstream traffic of a particular node to TCP/HTTP, the downstream/upstream traffic of its connected parent/child node must be set consistently**
+**Please note, once you set the upstream/downstream traffic of a particular node to TCP/HTTP/WS, the downstream/upstream traffic of its connected parent/child node must be set consistently**
 
 Like this:
 
-- admin:  `./stowaway_admin -c 127.0.0.1:9999 --down http`
+- admin:  `./stowaway_admin -c 127.0.0.1:9999 --down ws`
 
-- agent:  `./stowaway_agent -l 9999 --up http`
+- agent:  `./stowaway_agent -l 9999 --up ws`
 
-In the above case, the agent must set `--up` to http, otherwise it will cause network errors
+In the above case, the agent must set `--up` to ws, otherwise it will cause network errors
 
 The rules between admin<-->agent is as same as agent<-->agent
 
-Assuming agent-1 is waiting for the connection of child nodes on the port `127.0.0.1:10000` and has set `--down http`
+Assuming agent-1 is waiting for the connection of child nodes on the port `127.0.0.1:10000` and has set `--down ws`
 
-Then, agent-2 must also set `--up` to `http`, otherwise, it would lead to network errors
+Then, agent-2 must also set `--up` to `ws`, otherwise, it would lead to network errors
 
-- agent-2:  `./stowaway_agent -c 127.0.0.1:10000 --up http`
+- agent-2:  `./stowaway_agent -c 127.0.0.1:10000 --up ws`
 
 #### --reconnect
 
@@ -232,9 +233,19 @@ These two parameter can be used on admin&&agent, under active mode
 By setting this option, you can specify the SNI option for TLS negotiation for the current node
 
 - admin: `./stowaway_admin -l 10000 --tls-enable -s 123`
-- agent: `./stowaway_agent -c localhost:10000 --tls-enable -s 123 --domain xxx.com`
+- agent: `./stowaway_agent -c xxx.xxx.xxx.xxx:10000 --tls-enable -s 123 --domain xxx.com`
 
 Please note, this parameter must be used in conjunction with the `--tls-enable` parameter.Otherwise, this parameter will be ineffective
+
+#### --heartbeat
+
+This parameter can be used on admin, under active && passive mode
+
+By setting this option, it allows the admin to continuously send heartbeat packets to the first node, thus maintaining a persistent connection even in the presence of a reverse proxy in between.
+
+Assuming there are reverse proxy devices similar to NGINX between the admin and agent, proxying port 8080 to port 8000, an example is as follows:
+- admin: `./stowaway_admin -l 8000 --tls-enable -s 123 --down ws --heartbeat`
+- agent: `./stowaway_agent -c xxx.xxx.xxx.xxx:8080 --tls-enable -s 123 --domain xxx.com --up ws`
 
 ## Port reuse
 
