@@ -65,8 +65,8 @@ func main() {
 	termbox.Interrupt()
 
 	admin := process.NewAdmin()
-
 	admin.Topology = topo
+	admin.Options = options
 
 	topoTask := &topology.TopoTask{
 		Mode: topology.CALCULATE,

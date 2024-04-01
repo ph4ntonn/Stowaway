@@ -63,6 +63,7 @@ const (
 	UPSTREAMOFFLINE
 	UPSTREAMREONLINE
 	SHUTDOWN
+	KEEP
 )
 
 const ADMIN_UUID = "IAMADMINXD"
@@ -413,6 +414,10 @@ type UpstreamReonline struct {
 
 type Shutdown struct {
 	OK uint16
+}
+
+type KeepMsg struct {
+	Ping uint16
 }
 
 type MessageComponent struct {

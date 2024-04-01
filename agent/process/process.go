@@ -168,6 +168,7 @@ func (agent *Agent) handleDataFromUpstream() {
 				agent.mgr.OfflineManager.OfflineMessChan <- message
 			case protocol.SHUTDOWN:
 				os.Exit(0)
+			case protocol.KEEP:
 			default:
 				log.Println("[*] Unknown Message!")
 			}

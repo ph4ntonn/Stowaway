@@ -268,6 +268,8 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 		mess = new(UpstreamReonline)
 	case SHUTDOWN:
 		mess = new(Shutdown)
+	case KEEP:
+		mess = new(KeepMsg)
 	}
 
 	messType := reflect.TypeOf(mess).Elem()
