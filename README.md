@@ -368,7 +368,7 @@ Stowaway当前支持多种方式的重连，简单概括如下
 
 ### 注意
 
-1. **如因网络波动或中间节点掉线，导致某一个分支断开，在主动重连时请务必连接缺失链的头节点.**举个例子，admin后接着node1，node1后分为两支，一支是node1->node 2 -> node 3 -> node 4, 一支是node1->node 5 ->node 6，那么如果node2掉线，node3及node4将不会掉线，而是继续保持存活。此时用户若想将node3及node4重新加入网络，那么用户有两种选择，一种是假如node1可以直接访问node3，那么用户可随时在node1将node3用connect或者sshtunnel命令重新加入网络（切记，就算node1同时也可以访问node4，也请不要直接连接node4，请连接整个缺失链(node3->node4)的头节点node3），这样就可以将node3及node4重新加入网络；另一种选择是当node1无法直接访问node3时（即必须经过node2），那么请先将node2重启并加入网络，之后再在node2上使用connect或者sshtunnel命令连接node3，从而将node3及node4加入网络
+1. **如因网络波动或中间节点掉线，导致某一个分支断开，在主动重连时请务必连接缺失链的头节点**,举个例子，admin后接着node1，node1后分为两支，一支是node1->node 2 -> node 3 -> node 4, 一支是node1->node 5 ->node 6，那么如果node2掉线，node3及node4将不会掉线，而是继续保持存活。此时用户若想将node3及node4重新加入网络，那么用户有两种选择，一种是假如node1可以直接访问node3，那么用户可随时在node1将node3用connect或者sshtunnel命令重新加入网络（切记，就算node1同时也可以访问node4，也请不要直接连接node4，请连接整个缺失链(node3->node4)的头节点node3），这样就可以将node3及node4重新加入网络；另一种选择是当node1无法直接访问node3时（即必须经过node2），那么请先将node2重启并加入网络，之后再在node2上使用connect或者sshtunnel命令连接node3，从而将node3及node4加入网络
 
 2. **当有节点掉线时，那么此时与此节点及其子节点有关的所有socks，backward，forward服务都会被强制停止**
 
