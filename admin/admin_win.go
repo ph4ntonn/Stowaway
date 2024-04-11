@@ -53,9 +53,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	admin := process.NewAdmin()
-
-	admin.Topology = topo
+	admin := process.NewAdmin(options, topo)
 
 	topoTask := &topology.TopoTask{
 		Mode: topology.CALCULATE,

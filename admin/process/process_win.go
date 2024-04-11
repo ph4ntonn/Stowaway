@@ -17,13 +17,16 @@ import (
 )
 
 type Admin struct {
-	Options  *initial.Options
-	Topology *topology.Topology
 	mgr      *manager.Manager
+	options  *initial.Options
+	topology *topology.Topology
 }
 
-func NewAdmin() *Admin {
-	return new(Admin)
+func NewAdmin(opt *initial.Options, topo *topology.Topology) *Admin {
+	admin := new(Admin)
+	admin.topology = topo
+	admin.options = opt
+	return admin
 }
 
 func (admin *Admin) Run() {
@@ -31,24 +34,24 @@ func (admin *Admin) Run() {
 	go admin.mgr.Run()
 	// Init console
 	console := cli.NewConsole()
-	console.Init(admin.Topology, admin.mgr)
+	console.Init(admin.topology, admin.mgr)
 	// hanle all message comes from downstream
 	go admin.handleMessFromDownstream(console)
 	// run a dispatcher to dispatch different kinds of message
-	go handler.DispatchListenMess(admin.mgr, admin.Topology)
+	go handler.DispatchListenMess(admin.mgr, admin.topology)
 	go handler.DispatchConnectMess(admin.mgr)
-	go handler.DispathSocksMess(admin.mgr, admin.Topology)
+	go handler.DispathSocksMess(admin.mgr, admin.topology)
 	go handler.DispatchForwardMess(admin.mgr)
-	go handler.DispatchBackwardMess(admin.mgr, admin.Topology)
+	go handler.DispatchBackwardMess(admin.mgr, admin.topology)
 	go handler.DispatchFileMess(admin.mgr)
 	go handler.DispatchSSHMess(admin.mgr)
 	go handler.DispatchSSHTunnelMess(admin.mgr)
 	go handler.DispatchShellMess(admin.mgr)
-	go handler.DispatchInfoMess(admin.mgr, admin.Topology)
-	go DispatchChildrenMess(admin.mgr, admin.Topology)
+	go handler.DispatchInfoMess(admin.mgr, admin.topology)
+	go DispatchChildrenMess(admin.mgr, admin.topology)
 	// if options.Heartbeat set, send hearbeat packet to agent
-	if admin.Options.Heartbeat {
-		go handler.LetHeartbeat(admin.Topology)
+	if admin.options.Heartbeat {
+		go handler.LetHeartbeat(admin.topology)
 	}
 	// start interactive panel
 	console.Run()

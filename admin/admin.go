@@ -64,9 +64,7 @@ func main() {
 	// kill listenCtrlC
 	termbox.Interrupt()
 
-	admin := process.NewAdmin()
-	admin.Topology = topo
-	admin.Options = options
+	admin := process.NewAdmin(options, topo)
 
 	topoTask := &topology.TopoTask{
 		Mode: topology.CALCULATE,
