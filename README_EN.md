@@ -11,9 +11,9 @@ Stowaway is a Multi-hop proxy tool for security researchers and pentesters
 
 Users can use this program to proxy external traffic through multiple nodes to the core internal network, breaking through internal network access restrictions, constructing a tree-like node network, and easily realizing management functions.
 
-PS: Thank you everyone for the stars, and also welcome everyone to raise questions && bugs after use :kissing_heart:. 
+Thank you everyone for the stars, and also welcome everyone to raise questions && bugs after use :kissing_heart: 
 
-PPS: **Please be sure to read the usage method and the notes at the end before using**
+**And, please be sure to read the usage method and the notes at the end before using**
 
 > This tool is limited to security research and teaching, and the user bears all legal and related responsibilities caused by the use of this tool! The author does not assume any legal and related responsibilities!
 
