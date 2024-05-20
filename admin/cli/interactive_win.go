@@ -56,9 +56,6 @@ func (console *Console) Run() {
 	console.mainPanel()
 }
 
-// At first,i think "interactive console? That's too fxxking easy"
-// But after i actually sit down and code this part,i changed my mind Orz
-// iTerm2 yyds(FYI,yyds means sth is the best)
 func (console *Console) mainPanel() {
 	var (
 		isGoingOn    bool

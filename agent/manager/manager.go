@@ -4,7 +4,6 @@ import (
 	"Stowaway/share"
 )
 
-// Manager is used to maintain all status and keep different parts connected
 type Manager struct {
 	ChildrenManager  *childrenManager
 	FileManager      *fileManager

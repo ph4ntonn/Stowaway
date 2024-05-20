@@ -10,10 +10,6 @@ import (
 	"Stowaway/share"
 )
 
-// Manager is used to maintain all status and keep different parts connected
-// Really complicated when i trying to keep Stowaway running stable
-// So there may be some bugs in manager
-// Plz let me know if stowaway panic when you are using forward/stopforward/backward/stopbackward/socks/stopsocks or node offline
 type Manager struct {
 	ConsoleManager   *consoleManager
 	FileManager      *fileManager
