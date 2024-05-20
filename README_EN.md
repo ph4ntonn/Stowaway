@@ -685,7 +685,7 @@ $
 
 ### Attention
 
-- This porject is coding just 4 fun , the logic structure and code structure are not strict enough, please don't be so serious about it
+- This porject is coding just for fun , the logic structure and code structure are not strict enough, please don't be so serious about it
 - Admin node MUST be online if you want to add a new node into the network
 - The admin only supports one directly connected agent node, but the agent node has no such restriction
 - If users use the admin on windows, please download [ansicon](https://github.com/adoxa/ansicon/releases) first, or download from [here](), and then enter the folder corresponding to the number of system bits. Execute `ansicon.exe -i`, otherwise garbled characters will appear on the admin
@@ -699,9 +699,10 @@ Stowaway has joined [404Starlink](https://github.com/knownsec/404StarLink)
 
 ## Acknowledgement
 
+Thanks to the following developers and projects for their help during the development of Stowaway
 - [lz520520](https://github.com/lz520520)
 - [SignorMercurio](https://github.com/SignorMercurio)
 - [MM0x00](https://github.com/MM0x00)
 - [r0ck3rt](https://github.com/r0ck3rt)
-- [rootkiter#Termite](https://github.com/rootkiter/Termite)
+- [Termite](https://github.com/rootkiter/Termite)
 - [Venom](https://github.com/Dliv3/Venom)

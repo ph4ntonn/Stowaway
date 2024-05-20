@@ -712,6 +712,7 @@ Stowaway 现已加入 [404星链计划](https://github.com/knownsec/404StarLink)
 
 ## 致谢
 
+感谢以下师傅和项目在Stowaway开发过程中的帮助
 - [lz520520](https://github.com/lz520520)
 - [SignorMercurio](https://github.com/SignorMercurio)
 - [MM0x00](https://github.com/MM0x00)
