@@ -697,16 +697,11 @@ $
 
 Stowaway has joined [404Starlink](https://github.com/knownsec/404StarLink)
 
-## Thanks
-
-This project exists thanks to all the people who contribute
+## Acknowledgement
 
 - [lz520520](https://github.com/lz520520)
 - [SignorMercurio](https://github.com/SignorMercurio)
 - [MM0x00](https://github.com/MM0x00)
 - [r0ck3rt](https://github.com/r0ck3rt)
-
-### Reference
-
 - [rootkiter#Termite](https://github.com/rootkiter/Termite)
 - [Venom](https://github.com/Dliv3/Venom)

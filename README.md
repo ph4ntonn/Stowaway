@@ -712,13 +712,9 @@ Stowaway 现已加入 [404星链计划](https://github.com/knownsec/404StarLink)
 
 ## 致谢
 
-感谢所有为此项目贡献代码以及建议的师傅们~
 - [lz520520](https://github.com/lz520520)
 - [SignorMercurio](https://github.com/SignorMercurio)
 - [MM0x00](https://github.com/MM0x00)
 - [r0ck3rt](https://github.com/r0ck3rt)
-
-## 参考项目
-
-- [rootkiter#Termite](https://github.com/rootkiter/Termite)
+- [Termite](https://github.com/rootkiter/Termite)
 - [Venom](https://github.com/Dliv3/Venom)
