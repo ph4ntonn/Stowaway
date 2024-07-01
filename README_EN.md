@@ -68,13 +68,13 @@ Stowaway has two kinds of characters:
 ```
 parameter:
 -l Listening address in passive mode [ip]:<port>
--s node communication encryption key, all nodes (admin&&agent) must be consistent
--c target node address under active mode
---socks5-proxy socks5 proxy server address
---socks5-proxyu socks5 proxy server username
---socks5-proxyp socks5 proxy server password
---http-proxy http proxy server address
---down downstream protocol type, default is raw TCP traffic, optional HTTP/WS
+-s Node communication encryption key, all nodes (admin&&agent) must be consistent
+-c Target node address under active mode
+--socks5-proxy SOCKS5 proxy server address
+--socks5-proxyu SOCKS5 proxy server username
+--socks5-proxyp SOCKS5 proxy server password
+--http-proxy HTTP proxy server address
+--down Downstream protocol type, default is raw TCP traffic, optional HTTP/WS
 --tls-enable Enable TLS for node communication, after enabling TLS, AES encryption will be disabled
 --domain Specify the TLS SNI domain name. If it is empty, it defaults to the target node address
 --heartbeat Enable heartbeat 
