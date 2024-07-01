@@ -66,7 +66,7 @@ Stowaway has two kinds of characters:
 - admin
 
 ```
-parameter:
+Parameter:
 -l Listening address in passive mode [ip]:<port>
 -s Node communication encryption key, all nodes (admin&&agent) must be consistent
 -c Target node address under active mode
@@ -83,7 +83,7 @@ parameter:
 - agent
 
 ```
-parameter:
+Parameter:
 -l Listening address in passive mode [ip]:<port>
 -s Node communication encryption key
 -c Target node address under active mode
@@ -249,7 +249,7 @@ Assuming there are reverse proxy devices similar to NGINX between the admin and 
 
 ## Port reuse
 
-Stowaway currently offers port reuse functionality based on the SO_REUSEPORT and SO_REUSEADDR features, as well as port reuse functionality based on IPTABLES
+Stowaway currently supports port reuse functionality based on the SO_REUSEPORT and SO_REUSEADDR features, as well as port reuse functionality based on IPTABLES
 
 - In Linux environment, stowaway can reuse most ports
 - In Windows environment, it cannot reuse service port like IIS/RDP, but can reuse Mysql/Apache and so on
