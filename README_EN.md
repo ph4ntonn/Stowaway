@@ -85,18 +85,18 @@ parameter:
 ```
 parameter:
 -l Listening address in passive mode [ip]:<port>
--s node communication encryption key
--c target node address under active mode
---socks5-proxy socks5 proxy server address
---socks5-proxyu socks5 proxy server username (optional)
---socks5-proxyp socks5 proxy server password (optional)
---http-proxy http proxy server address
---reconnect reconnect time interval
---rehost the IP address to be reused
---report the Port number to be reused
---up upstream protocol type, default is raw TCP traffic, optional HTTP/WS
---down downstream protocol type, default is raw TCP traffic, optional HTTP/WS
---cs platform's console encoding type,default is utf-8，optional gbk
+-s Node communication encryption key
+-c Target node address under active mode
+--socks5-proxy SOCKS5 proxy server address
+--socks5-proxyu SOCKS5 proxy server username (optional)
+--socks5-proxyp SOCKS5 proxy server password (optional)
+--http-proxy HTTP proxy server address
+--reconnect Reconnect time interval
+--rehost The IP address to be reused
+--report The Port number to be reused
+--up Upstream protocol type, default is raw TCP traffic, optional HTTP/WS
+--down Downstream protocol type, default is raw TCP traffic, optional HTTP/WS
+--cs Platform's console encoding type,default is utf-8，optional gbk
 --tls-enable Enable TLS for node communication, after enabling TLS, AES encryption will be disabled
 --domain Specify the TLS SNI domain name. If it is empty, it defaults to the target node address.
 ```
