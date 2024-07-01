@@ -19,8 +19,8 @@ parser.add_argument('--stop', help='stop port reusing', action='store_true')
 parser.add_argument('--rhost', help='remote host', dest='ip')
 parser.add_argument('--rport', help='remote port', dest='port')
 
-first_checkcode = hashlib.md5(SECRET).hexdigest()
-second_checkcode = hashlib.md5(first_checkcode).hexdigest()
+first_checkcode = hashlib.md5(SECRET.encode()).hexdigest()
+second_checkcode = hashlib.md5(first_checkcode.encode()).hexdigest()
 final_checkcode = first_checkcode[:24] + second_checkcode[:24]
 
 START_PORT_REUSE = final_checkcode[16:32]
@@ -42,9 +42,9 @@ try:
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(2)
     s.connect((options.ip, int(options.port)))
-    s.send(data)
+    s.send(data.encode())
 except:
-    print "[*] Cannot connect to target"
+    print("[*] Cannot connect to target")
 
 try:
     s.recv(1024)
@@ -53,4 +53,4 @@ except:
 
 s.close()
 
-print "[*] Done!"
+print("[*] Done!")
