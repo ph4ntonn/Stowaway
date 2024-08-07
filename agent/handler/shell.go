@@ -142,13 +142,14 @@ func (shell *Shell) input(command string) {
 }
 
 func DispatchShellMess(mgr *manager.Manager, options *initial.Options) {
-	shell := newShell(options)
+	var shell *Shell
 
 	for {
 		message := <-mgr.ShellManager.ShellMessChan
 
 		switch mess := message.(type) {
 		case *protocol.ShellReq:
+			shell = newShell(options)
 			go shell.start()
 		case *protocol.ShellCommand:
 			shell.input(mess.Command)

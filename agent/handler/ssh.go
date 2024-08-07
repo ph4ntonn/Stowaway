@@ -177,13 +177,14 @@ func (mySSH *SSH) input(command string) {
 }
 
 func DispatchSSHMess(mgr *manager.Manager) {
-	mySSH := newSSH()
+	var mySSH *SSH
 
 	for {
 		message := <-mgr.SSHManager.SSHMessChan
 
 		switch mess := message.(type) {
 		case *protocol.SSHReq:
+			mySSH = newSSH()
 			mySSH.Addr = mess.Addr
 			mySSH.Method = int(mess.Method)
 			mySSH.Username = mess.Username
