@@ -70,14 +70,14 @@ func (console *Console) start() {
 	helper := NewHelper()
 	go helper.Run()
 
+	fmt.Print(console.status)
 	// Tested on:
 	// Macos Catalina iterm2/original terminal
 	// Ubuntu desktop 16.04/18.04
 	// Ubuntu server 16.04
 	// Centos 7
 	// Win10 x64 Professional
-	// May have problems when the console working on some terminal since I'm using escape sequence,so if ur checking code after face this situation,let me know if possible
-	fmt.Print(console.status)
+	// May have problems when the console working on some terminal since I'm using escape sequence.
 	for {
 		event := termbox.PollEvent()
 		if event.Err != nil {
