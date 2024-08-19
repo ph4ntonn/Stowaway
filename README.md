@@ -78,7 +78,7 @@ Stowaway一共包含两种角色，分别是：
 --http-proxy http代理服务器地址
 --down 下游协议类型,默认为裸TCP流量,可选HTTP/WS
 --tls-enable 为节点通信启用TLS，在启用TLS后，AES加密将被禁用
---domain 指定TLS SNI域名，若为空，默认为目标节点地址
+--domain 指定TLS SNI/WebSocket域名，若为空，默认为目标节点地址
 --heartbeat 开启心跳包
 ```
 
@@ -100,7 +100,7 @@ Stowaway一共包含两种角色，分别是：
 --down 下游协议类型,默认为裸TCP流量,可选HTTP/WS
 --cs 运行平台的shell编码类型，默认为utf-8，可选gbk
 --tls-enable 为节点通信启用TLS，在启用TLS后，AES加密将被禁用
---domain 指定TLS SNI域名，若为空，默认为目标节点地址
+--domain 指定TLS SNI/WebSocket域名，若为空，默认为目标节点地址
 ```
 
 ### 参数用法
@@ -233,13 +233,11 @@ agent之间也与上面情况一致
 
 这两个参数admin&&agent用法一致，仅可用在主动模式下
 
-通过设置此选项，可以设置当前此节点TLS协商时的SNI选项
+通过设置此选项，可以设置当前此节点TLS协商时的SNI选项或者WebSocket的目标Host
 
 示例如下
 - admin: `./stowaway_admin -l 10000 --tls-enable -s 123`
 - agent: `./stowaway_agent -c xxx.xxx.xxx.xxx:10000 --tls-enable -s 123 --domain xxx.com`
-
-注意，此参数启用必须配合--tls-enable参数，否则此参数无效
 
 #### --heartbeat
 

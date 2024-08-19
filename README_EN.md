@@ -76,7 +76,7 @@ Parameter:
 --http-proxy HTTP proxy server address
 --down Downstream protocol type, default is raw TCP traffic, optional HTTP/WS
 --tls-enable Enable TLS for node communication, after enabling TLS, AES encryption will be disabled
---domain Specify the TLS SNI domain name. If it is empty, it defaults to the target node address
+--domain Specify the TLS SNI/WebSocket domain name. If it is empty, it defaults to the target node address
 --heartbeat Enable heartbeat 
 ```
 
@@ -98,7 +98,7 @@ Parameter:
 --down Downstream protocol type, default is raw TCP traffic, optional HTTP/WS
 --cs Platform's console encoding type,default is utf-8，optional gbk
 --tls-enable Enable TLS for node communication, after enabling TLS, AES encryption will be disabled
---domain Specify the TLS SNI domain name. If it is empty, it defaults to the target node address.
+--domain Specify the TLS SNI/Websocket domain name. If it is empty, it defaults to the target node address.
 ```
 
 ### Parameter usage
@@ -230,12 +230,10 @@ Additionally, when this parameter is enabled, **ensure that every node in the ne
 
 These two parameter can be used on admin&&agent, under active mode
 
-By setting this option, you can specify the SNI option for TLS negotiation for the current node
+By setting this option, you can specify the SNI option for TLS negotiation or WebSocket target host for the current node
 
 - admin: `./stowaway_admin -l 10000 --tls-enable -s 123`
 - agent: `./stowaway_agent -c xxx.xxx.xxx.xxx:10000 --tls-enable -s 123 --domain xxx.com`
-
-Please note, this parameter must be used in conjunction with the `--tls-enable` parameter.Otherwise, this parameter will be ineffective
 
 #### --heartbeat
 
