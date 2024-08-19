@@ -36,24 +36,6 @@ func (proto *WSProto) CNegotiate() error {
 		return err
 	}
 
-	var addrSlice []string
-	if proto.addr != "" {
-		addrSlice = strings.SplitN(proto.addr, ":", 2)
-		if len(addrSlice) < 2 {
-			return errors.New("addr is error")
-		}
-	} else {
-		proto.addr = "stowaway.com:22"
-		addrSlice = strings.SplitN(proto.addr, ":", 2)
-	}
-
-	var host string
-	if proto.domain != "" {
-		host = proto.domain + ":" + addrSlice[1]
-	} else {
-		host = proto.addr
-	}
-
 	// 发送websocket头
 	wsHeaders := fmt.Sprintf(`GET %s HTTP/1.1
 Host: %s
@@ -63,7 +45,7 @@ Sec-WebSocket-Key: %s
 Origin: http://stowaway:22
 Sec-WebSocket-Version: 13
 
-`, websocketPath, host, nonce)
+`, websocketPath, proto.domain, nonce)
 
 	wsHeaders = strings.ReplaceAll(wsHeaders, "\n", "\r\n")
 	proto.conn.Write([]byte(wsHeaders))
