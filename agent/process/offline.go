@@ -290,7 +290,6 @@ func normalReconnActiveReconn(options *initial.Options, proxy share.Proxy) net.C
 		}
 
 		param := new(protocol.NegParam)
-		param.Addr = options.Connect
 		param.Conn = conn
 		param.Domain = options.Domain
 		proto := protocol.NewUpProto(param)

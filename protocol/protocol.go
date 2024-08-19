@@ -76,7 +76,6 @@ type Proto interface {
 }
 
 type NegParam struct {
-	Addr   string
 	Domain string
 	Conn   net.Conn
 }
@@ -454,7 +453,6 @@ func NewUpProto(param *NegParam) Proto {
 		return tProto
 	case "ws":
 		tProto := new(WSProto)
-		tProto.addr = param.Addr
 		tProto.domain = param.Domain
 		tProto.conn = param.Conn
 		return tProto
@@ -472,7 +470,6 @@ func NewDownProto(param *NegParam) Proto {
 		return tProto
 	case "ws":
 		tProto := new(WSProto)
-		tProto.addr = param.Addr
 		tProto.domain = param.Domain
 		tProto.conn = param.Conn
 		return tProto

@@ -94,7 +94,6 @@ func NormalActive(userOptions *Options, proxy share.Proxy) (net.Conn, string) {
 		}
 
 		param := new(protocol.NegParam)
-		param.Addr = userOptions.Connect
 		param.Conn = conn
 		param.Domain = userOptions.Domain
 		proto := protocol.NewUpProto(param)

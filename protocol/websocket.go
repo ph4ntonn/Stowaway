@@ -20,7 +20,6 @@ const websocketGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 const websocketPath = "/deadbeef"
 
 type WSProto struct {
-	addr   string
 	domain string
 	conn   net.Conn
 	*RawProto
@@ -42,7 +41,7 @@ Host: %s
 Upgrade: websocket
 Connection: Upgrade
 Sec-WebSocket-Key: %s
-Origin: http://stowaway:22
+Origin: https://google.com
 Sec-WebSocket-Version: 13
 
 `, websocketPath, proto.domain, nonce)
