@@ -65,8 +65,8 @@ Stowaway has two kinds of characters:
 
 The following command can quickly start the simplest stowaway instance
 
-- admin: ./stowaway_admin -l 9999
-- agent: ./stowaway_agent -c <stowaway_admin's IP>:9999
+- admin: `./stowaway_admin -l 9999`
+- agent: `./stowaway_agent -c <stowaway_admin's IP>:9999`
 
 ### Parameter analysis
 
