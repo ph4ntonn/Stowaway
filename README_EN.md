@@ -167,7 +167,9 @@ If you wish for the upstream/downstream traffic to be HTTP/WS traffic, simply se
 
 - agent:  `./stowaway_agent -c 127.0.0.1:9999 --up ws`  or `./stowaway_agent -c 127.0.0.1:9999 --up ws --down ws`
 
-**Please note, once you set the upstream/downstream traffic of a particular node to TCP/HTTP/WS, the downstream/upstream traffic of its connected parent/child node must be set consistently**
+There are two other points to note:
+
+First, once you set the upstream/downstream traffic of a particular node to TCP/HTTP/WS, the downstream/upstream traffic of its connected parent/child node must be set consistently
 
 Like this:
 
@@ -184,6 +186,10 @@ Assuming agent-1 is waiting for the connection of child nodes on the port `127.0
 Then, agent-2 must also set `--up` to `ws`, otherwise, it would lead to network errors
 
 - agent-2:  `./stowaway_agent -c 127.0.0.1:10000 --up ws`
+
+Second, since HTTP is a half-duplex protocol, it is not very suitable for the full-duplex communication nature of Stowaway. Therefore, the HTTP protocol here only implements the HTTP message format, not a fully functional HTTP workflow. So you can still use this protocol, but the traffic between Stowaway cannot be forwarded by nginx when choosing to transmit in the HTTP message format. This part of the code and function is retained on the one hand for the use of the HTTP protocol in some special cases, and on the other hand to provide a template for custom traffic, which is convenient for users to use as a reference when customizing other protocols.
+
+If you need to use reverse proxy services such as nginx, please use the Websocket (ws) protocol for communication(it would be better if it can be used with tls).
 
 #### --reconnect
 
