@@ -63,6 +63,13 @@ Stowaway一共包含两种角色，分别是：
 - 上游: 指当前操作的节点与其父节点之间的流量
 - 下游：指当前操作的节点与其**所有**子节点之间的流量
 
+### 快速启动
+
+以下命令可以快速启动最简单的stowaway实例
+
+- admin: ./stowaway_admin -l 9999
+- agent: ./stowaway_agent -c <stowaway_admin's IP>:9999
+
 ### 参数解析
 
 - admin
