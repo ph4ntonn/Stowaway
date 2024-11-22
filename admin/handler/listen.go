@@ -117,7 +117,7 @@ func dispatchChildUUID(mgr *manager.Manager, topo *topology.Topology, parentUUID
 	protocol.ConstructMessage(sMessage, header, cUUIDResMess, false)
 	sMessage.SendMessage()
 
-	printer.Success("\r\n[*] New node come! Node id is %d\r\n", childIDNum)
+	printer.Success("\r\n[*] New node online! Node id is %d\r\n", childIDNum)
 }
 
 func DispatchListenMess(mgr *manager.Manager, topo *topology.Topology) {

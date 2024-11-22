@@ -579,7 +579,7 @@ agent-1: ./stowaway_agent -l 10002
 ```
 (node 0) >> connect 127.0.0.1:10002
 [*] Waiting for response......
-[*] New node come! Node id is 1
+[*] New node online! Node id is 1
 
 (node 0) >>
 ```
@@ -596,7 +596,7 @@ agent-2: ./stowaway_agent -l 10003
 [*] Please enter the username: ph4ntom
 [*] Please enter the password: ******
 [*] Waiting for response.....
-[*] New node come! Node id is 2
+[*] New node online! Node id is 2
 
 (node 0) >>
 ```
