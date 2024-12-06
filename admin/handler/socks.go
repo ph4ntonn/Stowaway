@@ -25,6 +25,7 @@ func NewSocks(param string) *Socks {
 	slice := strings.SplitN(param, ":", 2)
 
 	if len(slice) < 2 {
+		socks.Addr = "0.0.0.0"
 		socks.Port = param
 	} else {
 		socks.Addr = slice[0]
@@ -37,11 +38,7 @@ func NewSocks(param string) *Socks {
 func (socks *Socks) LetSocks(mgr *manager.Manager, route string, uuid string) error {
 	var addr string
 
-	if socks.Addr != "" {
-		addr = fmt.Sprintf("%s:%s", socks.Addr, socks.Port)
-	} else {
-		addr = fmt.Sprintf("0.0.0.0:%s", socks.Port)
-	}
+	addr = fmt.Sprintf("%s:%s", socks.Addr, socks.Port)
 
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -52,6 +49,7 @@ func (socks *Socks) LetSocks(mgr *manager.Manager, route string, uuid string) er
 	mgrTask := &manager.SocksTask{
 		Mode:             manager.S_NEWSOCKS,
 		UUID:             uuid,
+		SocksAddr:        socks.Addr,
 		SocksPort:        socks.Port,
 		SocksUsername:    socks.Username,
 		SocksPassword:    socks.Password,
@@ -396,7 +394,15 @@ func GetSocksInfo(mgr *manager.Manager, uuid string) bool {
 	mgr.SocksManager.TaskChan <- mgrTask
 	result := <-mgr.SocksManager.ResultChan
 
-	fmt.Print(result.SocksInfo)
+	if result.OK {
+		fmt.Printf(
+			"\r\nSocks Info ---> ListenAddr: %s:%s    Username: %s   Password: %s",
+			result.SocksInfo.Addr,
+			result.SocksInfo.Port,
+			result.SocksInfo.Username,
+			result.SocksInfo.Password,
+		)
+	}
 
 	return result.OK
 }

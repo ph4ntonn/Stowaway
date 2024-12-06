@@ -212,8 +212,17 @@ func GetForwardInfo(mgr *manager.Manager, uuid string) (int, bool) {
 	mgr.ForwardManager.TaskChan <- mgrTask
 	result := <-mgr.ForwardManager.ResultChan
 
-	for _, info := range result.ForwardInfo {
-		fmt.Print(info)
+	if result.OK {
+		fmt.Print("\r\n[0] All")
+		for _, info := range result.ForwardInfo {
+			fmt.Printf(
+				"\r\n[%d] Listening Addr: %s , Remote Addr: %s , Current Active Connnections: %d",
+				info.Seq,
+				info.Laddr,
+				info.Raddr,
+				info.ActiveNum,
+			)
+		}
 	}
 
 	return len(result.ForwardInfo) - 1, result.OK

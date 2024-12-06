@@ -7,7 +7,6 @@
 package manager
 
 import (
-	"fmt"
 	"net"
 )
 
@@ -45,6 +44,7 @@ type SocksTask struct {
 	UUID string // node uuid
 	Seq  uint64 // seq
 
+	SocksAddr        string
 	SocksPort        string
 	SocksUsername    string
 	SocksPassword    string
@@ -59,12 +59,13 @@ type socksResult struct {
 
 	SocksSeq    uint64
 	TCPAddr     string
-	SocksInfo   string
+	SocksInfo   *socksInfo
 	TCPDataChan chan []byte
 	UDPDataChan chan []byte
 }
 
 type socks struct {
+	addr     string
 	port     string
 	username string
 	password string
@@ -77,6 +78,13 @@ type socksStatus struct {
 	isUDP bool
 	tcp   *tcpSocks
 	udp   *udpSocks
+}
+
+type socksInfo struct {
+	Addr     string
+	Port     string
+	Username string
+	Password string
 }
 
 type tcpSocks struct {
@@ -144,6 +152,7 @@ func (manager *socksManager) run() {
 func (manager *socksManager) newSocks(task *SocksTask) {
 	if _, ok := manager.socksMap[task.UUID]; !ok {
 		manager.socksMap[task.UUID] = new(socks)
+		manager.socksMap[task.UUID].addr = task.SocksAddr
 		manager.socksMap[task.UUID].port = task.SocksPort
 		manager.socksMap[task.UUID].username = task.SocksUsername
 		manager.socksMap[task.UUID].password = task.SocksPassword
@@ -291,30 +300,19 @@ func (manager *socksManager) updateUDP(task *SocksTask) {
 
 func (manager *socksManager) getSocksInfo(task *SocksTask) {
 	if _, ok := manager.socksMap[task.UUID]; ok {
-		if manager.socksMap[task.UUID].username == "" && manager.socksMap[task.UUID].password == "" {
-			info := fmt.Sprintf("\r\nSocks Info ---> ListenAddr: 0.0.0.0:%s    Username: <null>    Password: <null>",
-				manager.socksMap[task.UUID].port,
-			)
-			manager.ResultChan <- &socksResult{
-				OK:        true,
-				SocksInfo: info,
-			}
-		} else {
-			info := fmt.Sprintf("\r\nSocks Info ---> ListenAddr: 0.0.0.0:%s    Username: %s    Password: %s",
-				manager.socksMap[task.UUID].port,
-				manager.socksMap[task.UUID].username,
-				manager.socksMap[task.UUID].password,
-			)
-			manager.ResultChan <- &socksResult{
-				OK:        true,
-				SocksInfo: info,
-			}
+		manager.ResultChan <- &socksResult{
+			OK: true,
+			SocksInfo: &socksInfo{
+				Addr:     manager.socksMap[task.UUID].addr,
+				Port:     manager.socksMap[task.UUID].port,
+				Username: manager.socksMap[task.UUID].username,
+				Password: manager.socksMap[task.UUID].password,
+			},
 		}
 	} else {
-		info := "\r\nSocks service isn't running!"
 		manager.ResultChan <- &socksResult{
 			OK:        false,
-			SocksInfo: info,
+			SocksInfo: &socksInfo{},
 		}
 	}
 }

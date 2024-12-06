@@ -1,9 +1,5 @@
 package manager
 
-import (
-	"fmt"
-)
-
 const (
 	B_NEWBACKWARD = iota
 	B_GETNEWSEQ
@@ -47,7 +43,7 @@ type backwardResult struct {
 
 	DataChan     chan []byte
 	BackwardSeq  uint64
-	BackwardInfo []string
+	BackwardInfo []*backwardInfo
 	RPort        string
 }
 
@@ -64,6 +60,13 @@ type backwardStatus struct {
 type bwSeqRelationship struct {
 	uuid  string
 	rPort string
+}
+
+type backwardInfo struct {
+	Seq       int
+	LPort     string
+	RPort     string
+	ActiveNum int
 }
 
 func newBackwardManager() *backwardManager {
@@ -206,26 +209,23 @@ func (manager *backwardManager) closeTCP(task *BackwardTask) {
 func (manager *backwardManager) getBackwardInfo(task *BackwardTask) {
 	manager.backwardReadyDel = make(map[int]string)
 
-	var backwardInfo []string
-	infoNum := 1
+	var result []*backwardInfo
+	seq := 1
 
 	if _, ok := manager.backwardMap[task.UUID]; ok {
-		backwardInfo = append(backwardInfo, "\r\n[0] All")
 		for port, info := range manager.backwardMap[task.UUID] {
-			manager.backwardReadyDel[infoNum] = port
-			detail := fmt.Sprintf("\r\n[%d] Remote Port : %s , Local Port : %s , Current Active Connnections : %d", infoNum, port, info.localPort, len(info.backwardStatusMap))
-			backwardInfo = append(backwardInfo, detail)
-			infoNum++
+			manager.backwardReadyDel[seq] = port
+			result = append(result, &backwardInfo{Seq: seq, LPort: info.localPort, RPort: port, ActiveNum: len(info.backwardStatusMap)})
+			seq++
 		}
 		manager.ResultChan <- &backwardResult{
 			OK:           true,
-			BackwardInfo: backwardInfo,
+			BackwardInfo: result,
 		}
 	} else {
-		backwardInfo = append(backwardInfo, "\r\nBackward service isn't running!")
 		manager.ResultChan <- &backwardResult{
 			OK:           false,
-			BackwardInfo: backwardInfo,
+			BackwardInfo: result,
 		}
 	}
 }

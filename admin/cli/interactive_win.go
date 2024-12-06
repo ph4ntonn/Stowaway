@@ -797,7 +797,8 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				socks.Password = fCommand[3]
 			}
 
-			printer.Warning("\r\n[*] Trying to listen on 0.0.0.0:%s......", fCommand[1])
+			printer.Warning("\r\n[*] Trying to listen on %s:%s......", socks.Addr, socks.Port)
+
 			printer.Warning("\r\n[*] Waiting for agent's response......")
 
 			err := socks.LetSocks(console.mgr, route, uuid)
@@ -832,6 +833,8 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 					printer.Fail("\r\n[*] Please input y/n!")
 				}
 				console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
+			} else {
+				printer.Fail("\r\n[*] Socks service isn't running!")
 			}
 			console.ready <- true
 		case "forward":
@@ -889,6 +892,8 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 					printer.Fail("\r\n[*] Please input y/n!")
 				}
 				console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
+			} else {
+				printer.Fail("\r\n[*] Forward service isn't running!")
 			}
 			console.ready <- true
 		case "backward":
@@ -946,6 +951,8 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 					printer.Fail("\r\n[*] Please input y/n!")
 				}
 				console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
+			} else {
+				printer.Fail("\r\n[*] Backward service isn't running!")
 			}
 			console.ready <- true
 		case "upload":

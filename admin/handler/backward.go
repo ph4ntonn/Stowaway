@@ -206,8 +206,17 @@ func GetBackwardInfo(mgr *manager.Manager, uuid string) (int, bool) {
 	mgr.BackwardManager.TaskChan <- mgrTask
 	result := <-mgr.BackwardManager.ResultChan
 
-	for _, info := range result.BackwardInfo {
-		fmt.Print(info)
+	if result.OK {
+		fmt.Print("\r\n[0] All")
+		for _, info := range result.BackwardInfo {
+			fmt.Printf(
+				"\r\n[%d] Remote Port: %s , Local Port: %s , Current Active Connnections: %d",
+				info.Seq,
+				info.RPort,
+				info.LPort,
+				info.ActiveNum,
+			)
+		}
 	}
 
 	return len(result.BackwardInfo) - 1, result.OK

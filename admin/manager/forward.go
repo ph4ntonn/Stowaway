@@ -7,7 +7,6 @@
 package manager
 
 import (
-	"fmt"
 	"net"
 )
 
@@ -54,7 +53,7 @@ type forwardResult struct {
 
 	ForwardSeq  uint64
 	DataChan    chan []byte
-	ForwardInfo []string
+	ForwardInfo []*forwardInfo
 }
 
 type forward struct {
@@ -71,6 +70,13 @@ type forwardStatus struct {
 type fwSeqRelationship struct {
 	uuid string
 	port string
+}
+
+type forwardInfo struct {
+	Seq       int
+	Laddr     string
+	Raddr     string
+	ActiveNum int
 }
 
 func newForwardManager() *forwardManager {
@@ -183,26 +189,23 @@ func (manager *forwardManager) getDatachanWithoutUUID(task *ForwardTask) {
 func (manager *forwardManager) getForwardInfo(task *ForwardTask) {
 	manager.forwardReadyDel = make(map[int]string)
 
-	var forwardInfo []string
-	infoNum := 1
+	var result []*forwardInfo
+	seq := 1
 
 	if _, ok := manager.forwardMap[task.UUID]; ok {
-		forwardInfo = append(forwardInfo, "\r\n[0] All")
 		for port, info := range manager.forwardMap[task.UUID] {
-			manager.forwardReadyDel[infoNum] = port
-			detail := fmt.Sprintf("\r\n[%d] Listening Addr : %s , Remote Addr : %s , Current Active Connnections : %d", infoNum, info.listener.Addr().String(), info.remoteAddr, len(info.forwardStatusMap))
-			forwardInfo = append(forwardInfo, detail)
-			infoNum++
+			manager.forwardReadyDel[seq] = port
+			result = append(result, &forwardInfo{Seq: seq, Laddr: info.listener.Addr().String(), Raddr: info.remoteAddr, ActiveNum: len(info.forwardStatusMap)})
+			seq++
 		}
 		manager.ResultChan <- &forwardResult{
 			OK:          true,
-			ForwardInfo: forwardInfo,
+			ForwardInfo: result,
 		}
 	} else {
-		forwardInfo = append(forwardInfo, "\r\nForward service isn't running!")
 		manager.ResultChan <- &forwardResult{
 			OK:          false,
-			ForwardInfo: forwardInfo,
+			ForwardInfo: result,
 		}
 	}
 }
