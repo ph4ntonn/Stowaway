@@ -426,6 +426,7 @@ When user selects an node via `use` command, admin will enter the second level: 
 ```
 (node 0) >> help
   help                                            Show help information
+  status                                          Show node status,including socks/forward/backward
   listen                                          Start port listening on current node
   addmemo    <string>                             Add memo for current node
   delmemo                                         Delete memo of current node
@@ -444,6 +445,21 @@ When user selects an node via `use` command, admin will enter the second level: 
   shutdwon                                        Terminate current node
   back                                            Back to parent panel
   exit                                            Exit Stowaway 
+```
+
+- `status`: Display the socks/forward/backward status of the current node
+
+```
+(node 0) >> status
+Socks status:
+      ListenAddr: 0.0.0.0:10000    Username:    Password:
+-------------------------------------------------------------------------------------------
+Forward status:
+      [1] Listening Addr: [::]:20000 , Remote Addr: 192.168.1.1:22 , Active Connnections: 0
+      [2] Listening Addr: [::]:30000 , Remote Addr: 192.168.1.1:22 , Active Connnections: 0
+-------------------------------------------------------------------------------------------
+Backward status:
+      [1] Remote Port: 40000 , Local Port: 50000 , Active Connnections: 0
 ```
 
 - `listen`: Instruct the node to listen on a specific port and wait for connection from child node
@@ -629,7 +645,7 @@ $
 ```
 (node 0) >> stopforward
 [0] All
-[1] Listening Addr : [::]:9000 , Remote Addr : 127.0.0.1:22 , Current Active Connnections : 1
+[1] Listening Addr : [::]:9000 , Remote Addr : 127.0.0.1:22 , Active Connnections : 1
 [*] Do you really want to shutdown forward?(yes/no): yes
 [*] Please choose one to close: 1
 [*] Closing......
@@ -658,7 +674,7 @@ $
 ```
 (node 0) >> stopbackward
 [0] All
-[1] Remote Port : 9001 , Local Port : 22 , Current Active Connnections : 1
+[1] Remote Port : 9001 , Local Port : 22 , Active Connnections : 1
 [*] Do you really want to shutdown backward?(yes/no): yes
 [*] Please choose one to close: 1
 [*] Closing......

@@ -216,7 +216,7 @@ func GetForwardInfo(mgr *manager.Manager, uuid string) (int, bool) {
 		fmt.Print("\r\n[0] All")
 		for _, info := range result.ForwardInfo {
 			fmt.Printf(
-				"\r\n[%d] Listening Addr: %s , Remote Addr: %s , Current Active Connnections: %d",
+				"\r\n[%d] Listening Addr: %s , Remote Addr: %s , Active Connnections: %d",
 				info.Seq,
 				info.Laddr,
 				info.Raddr,

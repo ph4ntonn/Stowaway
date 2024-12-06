@@ -543,6 +543,13 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 		fCommand := strings.Split(tCommand, " ")
 
 		switch fCommand[0] {
+		case "status":
+			if !console.isOnline(uuidNum) {
+				return
+			}
+
+			handler.ShowStatus(console.mgr, uuid)
+			console.ready <- true
 		case "addmemo":
 			if !console.isOnline(uuidNum) {
 				return

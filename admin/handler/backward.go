@@ -210,7 +210,7 @@ func GetBackwardInfo(mgr *manager.Manager, uuid string) (int, bool) {
 		fmt.Print("\r\n[0] All")
 		for _, info := range result.BackwardInfo {
 			fmt.Printf(
-				"\r\n[%d] Remote Port: %s , Local Port: %s , Current Active Connnections: %d",
+				"\r\n[%d] Remote Port: %s , Local Port: %s , Active Connnections: %d",
 				info.Seq,
 				info.RPort,
 				info.LPort,

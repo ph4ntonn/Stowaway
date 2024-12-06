@@ -43,6 +43,7 @@ func ShowMainHelp() {
 func ShowNodeHelp() {
 	fmt.Print(`
 	help                                            Show help information
+	status                                          Show node status,including socks/forward/backward
 	listen                                          Start port listening on current node
 	addmemo    <string>                             Add memo for current node
 	delmemo                                         Delete memo of current node
