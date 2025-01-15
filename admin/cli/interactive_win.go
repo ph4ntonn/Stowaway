@@ -982,9 +982,9 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				go handler.StartBar(console.mgr.FileManager.File.StatusChan, console.mgr.FileManager.File.FileSize)
 				console.mgr.FileManager.File.Upload(route, uuid, share.ADMIN)
 			} else if err != nil {
-				printer.Fail("\r\n[*] Error: %s", err.Error())
+				printer.Fail("\r\n[*] Unable to upload file, Error: %s", err.Error())
 			} else {
-				printer.Fail("\r\n[*] Fail to upload file!")
+				printer.Fail("\r\n[*] Unable to create file, check %s status!", console.mgr.FileManager.File.FileName)
 			}
 			console.ready <- true
 		case "download":
@@ -1008,9 +1008,11 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				if err == nil {
 					go handler.StartBar(console.mgr.FileManager.File.StatusChan, console.mgr.FileManager.File.FileSize)
 					console.mgr.FileManager.File.Receive(route, uuid, share.ADMIN)
+				} else {
+					printer.Fail("\r\n[*] Unable to create file, Error: %s", err.Error())
 				}
 			} else {
-				printer.Fail("\r\n[*] Unable to download file!")
+				printer.Fail("\r\n[*] Unable to download file, check %s status!", console.mgr.FileManager.File.FilePath)
 			}
 			console.ready <- true
 		case "shutdown":
