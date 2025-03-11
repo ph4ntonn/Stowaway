@@ -1,7 +1,7 @@
 BUILD_ENV = CGO_ENABLED=0
 OPTIONS = -trimpath -ldflags "-w -s"
 
-.PHONY: all admin agent linux_agent windows_agent macos_agent mips_agent arm_agent windows_admin linux_admin macos_admin windows_nogui_agent clean
+.PHONY: all admin agent linux_agent windows_agent macos_agent mips_agent arm_agent windows_admin linux_admin macos_admin windows_nogui_agent freebsd_agent freebsd_admin clean
 
 all: admin agent
 
@@ -13,6 +13,8 @@ admin:
 	${BUILD_ENV} GOOS=windows GOARCH=386 go build ${OPTIONS} -o release/windows_x86_admin.exe admin/admin_win.go
 	${BUILD_ENV} GOOS=darwin GOARCH=amd64 go build ${OPTIONS} -o release/macos_x64_admin admin/admin.go
 	${BUILD_ENV} GOOS=darwin GOARCH=arm64 go build ${OPTIONS} -o release/macos_arm64_admin admin/admin.go
+	${BUILD_ENV} GOOS=freebsd GOARCH=386 go build ${OPTIONS} -o release/freebsd_x86_admin admin/admin.go
+	${BUILD_ENV} GOOS=freebsd GOARCH=arm GOARM=5 go build ${OPTIONS} -o release/freebsd_arm_admin admin/admin.go
 
 agent:
 	${BUILD_ENV} GOOS=linux GOARCH=386 go build ${OPTIONS} -o release/linux_x86_agent agent/agent.go
@@ -24,6 +26,8 @@ agent:
 	${BUILD_ENV} GOOS=darwin GOARCH=arm64 go build ${OPTIONS} -o release/macos_arm64_agent agent/agent.go
 	${BUILD_ENV} GOOS=linux GOARCH=arm GOARM=5 go build ${OPTIONS} -o release/arm_eabi5_agent agent/agent.go
 	${BUILD_ENV} GOOS=linux GOARCH=mipsle go build ${OPTIONS} -o release/mipsel_agent agent/agent.go
+	${BUILD_ENV} GOOS=freebsd GOARCH=386 go build ${OPTIONS} -o release/freebsd_x86_agent agent/agent.go
+	${BUILD_ENV} GOOS=freebsd GOARCH=arm GOARM=5 go build ${OPTIONS} -o release/freebsd_arm_agent agent/agent.go
 
 linux_agent:
 	${BUILD_ENV} GOOS=linux GOARCH=386 go build ${OPTIONS} -o release/linux_x86_agent agent/agent.go
@@ -44,6 +48,10 @@ mips_agent:
 arm_agent:
 	${BUILD_ENV} GOOS=linux GOARCH=arm GOARM=5 go build ${OPTIONS} -o release/arm_eabi5_agent agent/agent.go
 
+freebsd_agent:
+	${BUILD_ENV} GOOS=freebsd GOARCH=386 go build ${OPTIONS} -o release/freebsd_x86_agent agent/agent.go
+	${BUILD_ENV} GOOS=freebsd GOARCH=arm GOARM=5 go build ${OPTIONS} -o release/freebsd_arm_agent agent/agent.go
+
 windows_admin:
 	${BUILD_ENV} GOOS=windows GOARCH=amd64 go build ${OPTIONS} -o release/windows_x64_admin.exe admin/admin_win.go
 	${BUILD_ENV} GOOS=windows GOARCH=386 go build ${OPTIONS} -o release/windows_x86_admin.exe admin/admin_win.go
@@ -56,6 +64,10 @@ linux_admin:
 macos_admin:
 	${BUILD_ENV} GOOS=darwin GOARCH=amd64 go build ${OPTIONS} -o release/macos_x64_admin admin/admin.go
 	${BUILD_ENV} GOOS=darwin GOARCH=arm64 go build ${OPTIONS} -o release/macos_arm64_admin admin/admin.go
+
+freebsd_admin:
+	${BUILD_ENV} GOOS=freebsd GOARCH=386 go build ${OPTIONS} -o release/freebsd_x86_admin admin/admin.go
+	${BUILD_ENV} GOOS=freebsd GOARCH=arm GOARM=5 go build ${OPTIONS} -o release/freebsd_arm_admin admin/admin.go
 
 # Here is a special situation
 # You can see Stowaway get the params passed by the user through console by default
