@@ -15,7 +15,10 @@ Thank you everyone for the stars, and also welcome everyone to raise questions &
 
 **And please be sure to read the usage method and the notes at the end before using**
 
-> This tool is limited to security research and teaching, and the user bears all legal and related responsibilities caused by the use of this tool! The author does not assume any legal and related responsibilities!
+## Disclaimer:
+
+> This tool is intended strictly for authorized security research and educational purposes only. Any use of this tool must comply with all applicable laws and regulations. Users are solely responsible for obtaining all necessary permissions prior to conducting any testing.
+The author shall not be held liable for any legal consequences, damages, or other issues arising from the use or misuse of this tool.
 
 ## Features
 
@@ -174,7 +177,7 @@ If you wish for the upstream/downstream traffic to be HTTP/WS traffic, simply se
 
 - agent:  `./stowaway_agent -c 127.0.0.1:9999 --up ws`  or `./stowaway_agent -c 127.0.0.1:9999 --up ws --down ws`
 
-There are two other points to note:
+There are two other points you should know:
 
 First, once you set the upstream/downstream traffic of a particular node to TCP/HTTP/WS, the downstream/upstream traffic of its connected parent/child node must be set consistently
 
@@ -510,7 +513,7 @@ Node[0] -> IP: 127.0.0.1:10000  Hostname: ph4ntoms-MBP.lan  User: ph4ntom
 Memo:
 ```
 
-- `ssh`: Instruct the node to connect to the target host via SSH.
+- `ssh`: Instruct the node to establish an SSH connection to the target.
 
 ```
 (node 0) >> ssh 127.0.0.1:22
@@ -712,7 +715,7 @@ $
 
 ### Attention
 
-- This porject is coding just for fun , the logic structure and code structure are not strict enough, please don't be so serious about it
+- This porject is coding just for fun, the logic structure and code structure are not strict enough, please don't be so serious about it
 - Admin node MUST be online if you want to add a new node into the network
 - The admin only supports one directly connected agent node, but the agent node has no such restriction
 - If users use the admin on windows, please download [ansicon](https://github.com/adoxa/ansicon/releases) first, or download from [here](), and then enter the folder corresponding to the number of system bits. Execute `ansicon.exe -i`, otherwise garbled characters will appear on the admin
