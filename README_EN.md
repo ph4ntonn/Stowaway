@@ -17,8 +17,9 @@ Thank you everyone for the stars, and also welcome everyone to raise questions &
 
 ## Disclaimer:
 
-> This tool is intended strictly for authorized security research and educational purposes only. Any use of this tool must comply with all applicable laws and regulations. Users are solely responsible for obtaining all necessary permissions prior to conducting any testing.
-The author shall not be held liable for any legal consequences, damages, or other issues arising from the use or misuse of this tool.
+> This project is intended for cybersecurity research and educational purposes only. Any unauthorized or malicious use is strictly prohibited. Before conducting any testing, please ensure you have explicit authorization from the target system and fully comply with all applicable laws and regulations in your country or region.
+The user assumes full responsibility for any direct or indirect consequences resulting from the use of this tool, including but not limited to data loss, system damage, or legal issues. The author of this project does not accept any liability for misuse or illegal use of this tool.
+By using this tool, you acknowledge that you have read, understood, and agreed to the full contents of this disclaimer.
 
 ## Features
 
