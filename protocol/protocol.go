@@ -64,6 +64,11 @@ const (
 	UPSTREAMREONLINE
 	SHUTDOWN
 	HEARTBEAT
+	TERMINALSTART
+	TERMINALREADY
+	TERMINALDATA
+	TERMINALRESIZE
+	TERMINALEXIT
 )
 
 const ADMIN_UUID = "IAMADMINXD"
@@ -174,6 +179,37 @@ type ShellResult struct {
 
 type ShellExit struct {
 	OK uint16
+}
+
+type TerminalStart struct {
+	Start   uint16
+	Session uint64
+	Cols    uint16
+	Rows    uint16
+}
+
+type TerminalReady struct {
+	Session  uint64
+	OK       uint16
+	ErrorLen uint64
+	Error    string
+}
+
+type TerminalData struct {
+	Session uint64
+	DataLen uint64
+	Data    []byte
+}
+
+type TerminalResize struct {
+	Session uint64
+	Cols    uint16
+	Rows    uint16
+}
+
+type TerminalExit struct {
+	Session uint64
+	OK      uint16
 }
 
 type ListenReq struct {

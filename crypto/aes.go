@@ -41,6 +41,9 @@ func AESDecrypt(cryptedData, key []byte) []byte {
 	block, _ := aes.NewCipher(key)
 	gcm, _ := cipher.NewGCM(block)
 	nonceSize := gcm.NonceSize()
+	if len(cryptedData) < nonceSize {
+		return nil
+	}
 	nonce, cryptedData := cryptedData[:nonceSize], cryptedData[nonceSize:]
 	origData, _ := gcm.Open(nil, nonce, cryptedData, nil)
 	return origData

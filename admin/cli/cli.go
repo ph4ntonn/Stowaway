@@ -48,7 +48,8 @@ func ShowNodeHelp() {
 	addmemo    <string>                             Add memo for current node
 	delmemo                                         Delete memo of current node
 	ssh        <ip:port>                            Start SSH through current node
-	shell                                           Start an interactive shell on current node
+	shell                                           Start terminal stream if supported, otherwise legacy shell
+	legacy_shell                                    Start the original line-based shell on current node
 	socks      <lport> [username] [pass]            Start a socks5 server
 	stopsocks                                       Shut down socks services
 	connect    <ip:port>                            Connect to a new node

@@ -30,6 +30,8 @@ type ChildrenMess struct {
 	cMessage []byte
 }
 
+const terminalCapabilityMemoMark = "\x00stowaway-terminal-stream-v1"
+
 func NewAgent(options *initial.Options) *Agent {
 	agent := new(Agent)
 	agent.UUID = protocol.TEMP_UUID
@@ -53,6 +55,7 @@ func (agent *Agent) Run() {
 	go handler.DispatchSSHMess(agent.mgr)
 	go handler.DispatchSSHTunnelMess(agent.mgr)
 	go handler.DispatchShellMess(agent.mgr, agent.options)
+	go handler.DispatchTerminalMess(agent.mgr)
 	go DispatchOfflineMess(agent)
 	// run dispatcher to dispatch children's message
 	go agent.dispatchChildrenMess()
@@ -74,6 +77,7 @@ func (agent *Agent) sendMyInfo() {
 	}
 
 	hostname, username := utils.GetSystemInfo()
+	memo := agent.Memo + terminalCapabilityMemoMark
 
 	myInfoMess := &protocol.MyInfo{
 		UUIDLen:     uint16(len(agent.UUID)),
@@ -82,8 +86,8 @@ func (agent *Agent) sendMyInfo() {
 		Username:    username,
 		HostnameLen: uint64(len(hostname)),
 		Hostname:    hostname,
-		MemoLen:     uint64(len(agent.Memo)),
-		Memo:        agent.Memo,
+		MemoLen:     uint64(len(memo)),
+		Memo:        memo,
 	}
 
 	protocol.ConstructMessage(sMessage, header, myInfoMess, false)
@@ -112,6 +116,14 @@ func (agent *Agent) handleDataFromUpstream() {
 				fallthrough
 			case protocol.SHELLCOMMAND:
 				agent.mgr.ShellManager.ShellMessChan <- message
+			case protocol.TERMINALSTART:
+				fallthrough
+			case protocol.TERMINALDATA:
+				fallthrough
+			case protocol.TERMINALRESIZE:
+				fallthrough
+			case protocol.TERMINALEXIT:
+				agent.mgr.TerminalManager.TerminalMessChan <- message
 			case protocol.SSHREQ:
 				fallthrough
 			case protocol.SSHCOMMAND:

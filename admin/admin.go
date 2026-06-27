@@ -1,4 +1,5 @@
 //go:build !windows
+// +build !windows
 
 package main
 
@@ -26,13 +27,16 @@ func init() {
 func main() {
 	printer.InitPrinter()
 
-	termbox.Init()
+	options := initial.ParseOptions()
+
+	if err := termbox.Init(); err != nil {
+		printer.Fail("[*] Failed to initialize terminal: %s\r\n", err.Error())
+		os.Exit(1)
+	}
 	termbox.SetCursor(0, 0)
 	termbox.Flush()
 
 	go listenCtrlC()
-
-	options := initial.ParseOptions()
 
 	cli.Banner()
 

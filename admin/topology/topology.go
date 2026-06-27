@@ -15,6 +15,7 @@ const (
 	GETUUID
 	GETUUIDNUM
 	CHECKNODE
+	CHECKTERMINAL
 	CALCULATE
 	GETROUTE
 	DELNODE
@@ -45,6 +46,7 @@ type node struct {
 	currentHostname string
 	currentIP       string
 	memo            string
+	supportTerminal bool
 }
 
 type TopoTask struct {
@@ -56,15 +58,17 @@ type TopoTask struct {
 	HostName   string
 	UserName   string
 	Memo       string
+	Terminal   bool
 	IsFirst    bool
 }
 
 type topoResult struct {
-	IsExist  bool
-	UUID     string
-	Route    string
-	IDNum    int
-	AllNodes []string
+	IsExist         bool
+	SupportTerminal bool
+	UUID            string
+	Route           string
+	IDNum           int
+	AllNodes        []string
 }
 
 func NewTopology() *Topology {
@@ -97,6 +101,8 @@ func (topology *Topology) Run() {
 			topology.getUUIDNum(task)
 		case CHECKNODE:
 			topology.checkNode(task)
+		case CHECKTERMINAL:
+			topology.checkTerminal(task)
 		case UPDATEDETAIL:
 			topology.updateDetail(task)
 		case SHOWDETAIL:
@@ -141,6 +147,14 @@ func (topology *Topology) getUUIDNum(task *TopoTask) {
 func (topology *Topology) checkNode(task *TopoTask) {
 	if _, ok := topology.nodes[task.UUIDNum]; ok {
 		topology.ResultChan <- &topoResult{IsExist: true}
+	} else {
+		topology.ResultChan <- &topoResult{IsExist: false}
+	}
+}
+
+func (topology *Topology) checkTerminal(task *TopoTask) {
+	if node, ok := topology.nodes[task.UUIDNum]; ok {
+		topology.ResultChan <- &topoResult{IsExist: true, SupportTerminal: node.supportTerminal}
 	} else {
 		topology.ResultChan <- &topoResult{IsExist: false}
 	}
@@ -214,6 +228,7 @@ func (topology *Topology) updateDetail(task *TopoTask) {
 		topology.nodes[uuidNum].currentUser = task.UserName
 		topology.nodes[uuidNum].currentHostname = task.HostName
 		topology.nodes[uuidNum].memo = task.Memo
+		topology.nodes[uuidNum].supportTerminal = task.Terminal
 	}
 }
 

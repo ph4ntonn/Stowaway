@@ -1,4 +1,5 @@
 //go:build !windows
+// +build !windows
 
 package process
 
@@ -49,6 +50,7 @@ func (admin *Admin) Run() {
 	go handler.DispatchSSHMess(admin.mgr)
 	go handler.DispatchSSHTunnelMess(admin.mgr)
 	go handler.DispatchShellMess(admin.mgr)
+	go handler.DispatchTerminalMess(admin.mgr)
 	go handler.DispatchInfoMess(admin.mgr, admin.topology)
 	go DispatchChildrenMess(admin.mgr, admin.topology)
 	// if options.Heartbeat is set, send a heartbeat packet to the agent
@@ -83,6 +85,12 @@ func (admin *Admin) handleMessFromDownstream(console *cli.Console) {
 			fallthrough
 		case protocol.SHELLEXIT:
 			admin.mgr.ShellManager.ShellMessChan <- message
+		case protocol.TERMINALREADY:
+			fallthrough
+		case protocol.TERMINALDATA:
+			fallthrough
+		case protocol.TERMINALEXIT:
+			admin.mgr.TerminalManager.TerminalMessChan <- message
 		case protocol.SSHRES:
 			fallthrough
 		case protocol.SSHRESULT:

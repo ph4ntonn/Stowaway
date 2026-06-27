@@ -45,6 +45,16 @@ func newShellManager() *shellManager {
 	return manager
 }
 
+type terminalManager struct {
+	TerminalMessChan chan interface{}
+}
+
+func newTerminalManager() *terminalManager {
+	manager := new(terminalManager)
+	manager.TerminalMessChan = make(chan interface{}, 5)
+	return manager
+}
+
 type listenManager struct {
 	ListenMessChan chan interface{}
 	ChildUUIDChan  chan string

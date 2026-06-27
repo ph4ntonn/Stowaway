@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/cheggaaa/pb v2.0.7+incompatible
+	github.com/creack/pty v1.1.18
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/eiannone/keyboard v0.0.0-20200508000154-caf4b762e807
 	github.com/fatih/color v1.10.0

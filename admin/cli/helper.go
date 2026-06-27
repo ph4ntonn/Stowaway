@@ -50,6 +50,7 @@ func NewHelper() *Helper {
 		"delmemo",
 		"ssh",
 		"shell",
+		"legacy_shell",
 		"socks",
 		"sshtunnel",
 		"connect",
@@ -66,7 +67,7 @@ func NewHelper() *Helper {
 	}
 
 	helper.min = 0
-	helper.max = 11
+	helper.max = 12
 
 	helper.adminTree = new(tireTree)
 	helper.adminTree.root = new(tireNode)
@@ -185,7 +186,7 @@ func (helper *Helper) getSuffix(node *tireNode, suffix *[]string, tSuffix string
 
 	if len(node.children) != 0 {
 		for char := range node.children {
-			ttSuffix := tSuffix + string(char)
+			ttSuffix := tSuffix + string(rune(char))
 			tNode := node.children[char]
 			helper.getSuffix(tNode, suffix, ttSuffix)
 		}

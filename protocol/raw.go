@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"reflect"
@@ -12,6 +13,11 @@ import (
 )
 
 type RawProto struct{}
+
+const (
+	maxRouteLen = 64 * 1024
+	maxDataLen  = 64 * 1024 * 1024
+)
 
 type RawMessage struct {
 	// Essential component to apply a Message
@@ -132,6 +138,9 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 		return header, nil, err
 	}
 	header.RouteLen = binary.BigEndian.Uint32(routeLenBuf)
+	if header.RouteLen > maxRouteLen {
+		return header, nil, fmt.Errorf("route too large: %d", header.RouteLen)
+	}
 
 	routeBuf := make([]byte, header.RouteLen)
 	_, err = io.ReadFull(message.Conn, routeBuf)
@@ -145,6 +154,9 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 		return header, nil, err
 	}
 	header.DataLen = binary.BigEndian.Uint64(dataLenBuf)
+	if header.DataLen > maxDataLen {
+		return header, nil, fmt.Errorf("message data too large: %d", header.DataLen)
+	}
 
 	dataBuf := make([]byte, header.DataLen)
 	_, err = io.ReadFull(message.Conn, dataBuf)
@@ -184,6 +196,16 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 		mess = new(ShellResult)
 	case SHELLEXIT:
 		mess = new(ShellExit)
+	case TERMINALSTART:
+		mess = new(TerminalStart)
+	case TERMINALREADY:
+		mess = new(TerminalReady)
+	case TERMINALDATA:
+		mess = new(TerminalData)
+	case TERMINALRESIZE:
+		mess = new(TerminalResize)
+	case TERMINALEXIT:
+		mess = new(TerminalExit)
 	case LISTENREQ:
 		mess = new(ListenReq)
 	case LISTENRES:
@@ -271,6 +293,9 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 	case HEARTBEAT:
 		mess = new(HeartbeatMsg)
 	}
+	if mess == nil {
+		return header, nil, errors.New("unknown message type")
+	}
 
 	messType := reflect.TypeOf(mess).Elem()
 	messValue := reflect.ValueOf(mess).Elem()
@@ -294,16 +319,32 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 			case uint64:
 				stringLen = stringLenTmp
 			}
-			field.SetString(string(dataBuf[ptr : ptr+stringLen]))
+			fieldData, err := readDataField(dataBuf, ptr, stringLen)
+			if err != nil {
+				return header, nil, err
+			}
+			field.SetString(string(fieldData))
 			ptr += stringLen
 		case uint16:
-			field.SetUint(uint64(binary.BigEndian.Uint16(dataBuf[ptr : ptr+2])))
+			fieldData, err := readDataField(dataBuf, ptr, 2)
+			if err != nil {
+				return header, nil, err
+			}
+			field.SetUint(uint64(binary.BigEndian.Uint16(fieldData)))
 			ptr += 2
 		case uint32:
-			field.SetUint(uint64(binary.BigEndian.Uint32(dataBuf[ptr : ptr+4])))
+			fieldData, err := readDataField(dataBuf, ptr, 4)
+			if err != nil {
+				return header, nil, err
+			}
+			field.SetUint(uint64(binary.BigEndian.Uint32(fieldData)))
 			ptr += 4
 		case uint64:
-			field.SetUint(uint64(binary.BigEndian.Uint64(dataBuf[ptr : ptr+8])))
+			fieldData, err := readDataField(dataBuf, ptr, 8)
+			if err != nil {
+				return header, nil, err
+			}
+			field.SetUint(uint64(binary.BigEndian.Uint64(fieldData)))
 			ptr += 8
 		case []byte:
 			tmp := messValue.FieldByName(messType.Field(i).Name + "Len")
@@ -316,7 +357,11 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 			case uint64:
 				byteLen = byteLenTmp
 			}
-			field.SetBytes(dataBuf[ptr : ptr+byteLen])
+			fieldData, err := readDataField(dataBuf, ptr, byteLen)
+			if err != nil {
+				return header, nil, err
+			}
+			field.SetBytes(fieldData)
 			ptr += byteLen
 		default:
 			return header, nil, errors.New("unknown error")
@@ -326,12 +371,29 @@ func (message *RawMessage) DeconstructData() (*Header, interface{}, error) {
 	return header, mess, nil
 }
 
+func readDataField(data []byte, offset uint64, length uint64) ([]byte, error) {
+	if length > uint64(len(data)) || offset > uint64(len(data))-length {
+		return nil, errors.New("malformed message data")
+	}
+	return data[offset : offset+length], nil
+}
+
 func (message *RawMessage) DeconstructSuffix() {}
 
 func (message *RawMessage) SendMessage() {
 	finalBuffer := append(message.HeaderBuffer, message.DataBuffer...)
-	message.Conn.Write(finalBuffer)
+	writeFull(message.Conn, finalBuffer)
 	// Don't forget to set both Buffer to nil!!!
 	message.HeaderBuffer = nil
 	message.DataBuffer = nil
+}
+
+func writeFull(conn net.Conn, buf []byte) {
+	for len(buf) > 0 {
+		n, err := conn.Write(buf)
+		if err != nil || n <= 0 {
+			return
+		}
+		buf = buf[n:]
+	}
 }

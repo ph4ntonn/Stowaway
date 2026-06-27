@@ -75,7 +75,7 @@ func (message *HTTPMessage) DeconstructHeader() {
 func (message *HTTPMessage) SendMessage() {
 	finalBuffer := append(message.HTTPHeader, message.HeaderBuffer...)
 	finalBuffer = append(finalBuffer, message.DataBuffer...)
-	message.RawMessage.Conn.Write(finalBuffer)
+	writeFull(message.RawMessage.Conn, finalBuffer)
 	// Don't forget to set both Buffer to nil!!!
 	message.HeaderBuffer = nil
 	message.DataBuffer = nil

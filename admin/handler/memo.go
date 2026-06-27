@@ -1,12 +1,16 @@
 package handler
 
 import (
+	"strings"
+
 	"Stowaway/admin/manager"
 	"Stowaway/admin/printer"
 	"Stowaway/admin/topology"
 	"Stowaway/global"
 	"Stowaway/protocol"
 )
+
+const terminalCapabilityMemoMark = "\x00stowaway-terminal-stream-v1"
 
 func AddMemo(taskChan chan *topology.TopoTask, info []string, uuid string, route string) {
 	var memo string
@@ -78,14 +82,23 @@ func DispatchInfoMess(mgr *manager.Manager, topo *topology.Topology) {
 
 		switch mess := message.(type) {
 		case *protocol.MyInfo:
+			memo, supportTerminal := parseNodeMemo(mess.Memo)
 			task := &topology.TopoTask{
 				Mode:     topology.UPDATEDETAIL,
 				UUID:     mess.UUID,
 				UserName: mess.Username,
 				HostName: mess.Hostname,
-				Memo:     mess.Memo,
+				Memo:     memo,
+				Terminal: supportTerminal,
 			}
 			topo.TaskChan <- task
 		}
 	}
+}
+
+func parseNodeMemo(memo string) (string, bool) {
+	if strings.HasSuffix(memo, terminalCapabilityMemoMark) {
+		return strings.TrimSuffix(memo, terminalCapabilityMemoMark), true
+	}
+	return memo, false
 }

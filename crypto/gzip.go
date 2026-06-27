@@ -3,8 +3,11 @@ package crypto
 import (
 	"bytes"
 	"compress/gzip"
+	"io"
 	"io/ioutil"
 )
+
+const maxDecompressedDataLen = 64 * 1024 * 1024
 
 // Thx to code from @lz520520
 func GzipCompress(src []byte) []byte {
@@ -23,8 +26,11 @@ func GzipDecompress(src []byte) []byte {
 		return dst
 	}
 	defer gr.Close()
-	tmp, err := ioutil.ReadAll(gr)
+	tmp, err := ioutil.ReadAll(io.LimitReader(gr, maxDecompressedDataLen+1))
 	if err != nil {
+		return dst
+	}
+	if len(tmp) > maxDecompressedDataLen {
 		return dst
 	}
 	dst = tmp

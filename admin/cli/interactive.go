@@ -1,4 +1,5 @@
 //go:build !windows
+// +build !windows
 
 package cli
 
@@ -577,20 +578,43 @@ func (console *Console) handleNodePanelCommand(uuidNum int) {
 				break
 			}
 
-			printer.Warning("\r\n[*] Waiting for response.....")
-
-			handler.LetShellStart(route, uuid)
-
-			if <-console.mgr.ConsoleManager.OK {
-				console.status = ""
-				console.shellMode = true
-				console.handleShellPanelCommand(route, uuid)
-				console.shellMode = false
-				console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
+			console.shellMode = true
+			prompt := fmt.Sprintf("(node %d) >> ", uuidNum)
+			supportsTerminal := console.supportTerminal(uuidNum)
+			if supportsTerminal {
+				console.status = prompt
+				printer.Warning("\r\n[*] Starting terminal stream.....")
+				console.handleTerminalPanelCommand(route, uuid)
 			} else {
-				printer.Fail("\r\n[*] Shell cannot be started!")
-				console.ready <- true
+				console.status = ""
+				printer.Warning("\r\n[*] Target does not advertise terminal stream support, starting legacy shell.....")
+				if console.startLegacyShell(route, uuid) {
+					fmt.Print("\r\n")
+				}
 			}
+			console.shellMode = false
+			console.status = prompt
+			if !supportsTerminal {
+				fmt.Print(console.status)
+			}
+		case "legacy_shell":
+			if !console.isOnline(uuidNum) {
+				return
+			}
+
+			if console.expectParams(fCommand, 1, NODE, 0) {
+				break
+			}
+
+			printer.Warning("\r\n[*] Starting legacy shell.....")
+			console.status = ""
+			console.shellMode = true
+			if console.startLegacyShell(route, uuid) {
+				fmt.Print("\r\n")
+			}
+			console.shellMode = false
+			console.status = fmt.Sprintf("(node %d) >> ", uuidNum)
+			fmt.Print(console.status)
 		case "listen":
 			if !console.isOnline(uuidNum) {
 				return
@@ -1078,6 +1102,9 @@ func (console *Console) handleShellPanelCommand(route string, uuid string) {
 			}
 			protocol.ConstructMessage(sMessage, header, shellCommandMess, false)
 			sMessage.SendMessage()
+			if isLegacyShellExit(tCommand) {
+				return
+			}
 		case <-console.mgr.ConsoleManager.Exit:
 			return
 		}
@@ -1206,4 +1233,15 @@ func (console *Console) isOnline(uuidNum int) bool {
 
 	printer.Fail("\r\n[*] Node %d seems offline!", uuidNum)
 	return false
+}
+
+func (console *Console) supportTerminal(uuidNum int) bool {
+	task := &topology.TopoTask{
+		Mode:    topology.CHECKTERMINAL,
+		UUIDNum: uuidNum,
+	}
+	console.topology.TaskChan <- task
+
+	result := <-console.topology.ResultChan
+	return result.IsExist && result.SupportTerminal
 }
